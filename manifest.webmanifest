@@ -1,12 +1,14 @@
 {
-  "name": "Budget Duo",
-  "short_name": "Budget Duo",
-  "description": "Budget mensuel, annuel, individuel et de couple.",
-  "start_url": "./index.html",
+  "name": "Trace — Budget partagé",
+  "short_name": "Trace",
+  "description": "Prévoir, suivre et répartir le budget du ménage.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f5f7fb",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#101c3d",
   "theme_color": "#101c3d",
-  "lang": "fr-CA",
+  "orientation": "portrait-primary",
   "icons": [
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

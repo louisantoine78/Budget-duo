@@ -1,4 +1,4 @@
--- Budget Duo v3 — schéma Supabase
+-- Trace V4 — schéma Supabase pour une nouvelle installation
 -- À exécuter une seule fois dans Supabase > SQL Editor.
 -- Le modèle utilise des documents JSON par entité afin de conserver la structure actuelle de l’application
 -- tout en synchronisant les transactions, budgets, catégories, comptes et objectifs séparément.
@@ -13,7 +13,8 @@ create table if not exists public.households (
   created_by uuid not null references auth.users(id) on delete cascade,
   updated_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  schema_version integer not null default 4
 );
 
 create table if not exists public.household_members (
@@ -96,11 +97,14 @@ declare
   candidate text;
 begin
   loop
-    candidate := upper(substr(encode(gen_random_bytes(8), 'hex'), 1, 10));
+    candidate := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10));
     exit when not exists (
-      select 1 from public.households where invite_code = candidate
+      select 1
+      from public.households
+      where invite_code = candidate
     );
   end loop;
+
   return candidate;
 end;
 $$;
@@ -173,27 +177,38 @@ begin
 
   select hm.household_id
   into existing_household
-  from public.household_members hm
+  from public.household_members as hm
   where hm.user_id = auth.uid();
 
   if existing_household is not null then
     if exists (
-      select 1 from public.households h
+      select 1
+      from public.households as h
       where h.id = existing_household
         and h.invite_code = upper(trim(p_invite_code))
     ) then
       return query
-      select existing_household,
-             (select h.invite_code from public.households h where h.id = existing_household),
-             (select hm.slot from public.household_members hm where hm.user_id = auth.uid());
+      select
+        existing_household,
+        (
+          select h.invite_code
+          from public.households as h
+          where h.id = existing_household
+        ),
+        (
+          select hm.slot
+          from public.household_members as hm
+          where hm.user_id = auth.uid()
+        );
       return;
     end if;
+
     raise exception 'User already belongs to a household';
   end if;
 
   select h.*
   into target_household
-  from public.households h
+  from public.households as h
   where h.invite_code = upper(trim(p_invite_code))
   for update;
 
@@ -201,19 +216,31 @@ begin
     raise exception 'Invitation code not found';
   end if;
 
-  if (select count(*) from public.household_members where household_id = target_household.id) >= 2 then
+  if (
+    select count(*)
+    from public.household_members as hm_count
+    where hm_count.household_id = target_household.id
+  ) >= 2 then
     raise exception 'Household is full';
   end if;
 
   assigned_slot := case
     when exists (
-      select 1 from public.household_members
-      where household_id = target_household.id and slot = 'la'
+      select 1
+      from public.household_members as hm_slot
+      where hm_slot.household_id = target_household.id
+        and hm_slot.slot = 'la'
     ) then 'partner'
     else 'la'
   end;
 
-  insert into public.household_members (household_id, user_id, slot, role, display_name)
+  insert into public.household_members (
+    household_id,
+    user_id,
+    slot,
+    role,
+    display_name
+  )
   values (
     target_household.id,
     auth.uid(),
@@ -223,9 +250,13 @@ begin
   );
 
   return query
-  select target_household.id, target_household.invite_code, assigned_slot;
+  select
+    target_household.id,
+    target_household.invite_code,
+    assigned_slot;
 end;
 $$;
+
 
 revoke all on function public.join_household(text, text) from public, anon;
 grant execute on function public.join_household(text, text) to authenticated;

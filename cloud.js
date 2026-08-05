@@ -322,8 +322,8 @@
 
     const importLocal = $('#cloudImportLocal')?.checked;
     let initial = importLocal ? adapter.getLegacyState() : null;
-    initial = initial ? adapter.migrateState(initial) : adapter.buildEmptyState({ la: creatorName, partner: partnerName });
-    initial.version = 3;
+    initial = adapter.migrateState(initial ? initial : adapter.buildEmptyState({ la: creatorName, partner: partnerName }));
+    initial.version = 4;
     initial.household.name = name;
     initial.household.members[0].name = creatorName;
     initial.household.members[0].initials = initialsFor(creatorName);
@@ -381,14 +381,20 @@
     if ($('#cloudLoadingText')) $('#cloudLoadingText').textContent = 'Téléchargement du budget partagé…';
 
     const [householdResult, documentsResult] = await Promise.all([
-      client.from('households').select('id, name, invite_code, settings, created_by, updated_by, updated_at').eq('id', membership.household_id).single(),
+      client.from('households').select('id, name, invite_code, settings, schema_version, created_by, updated_by, updated_at').eq('id', membership.household_id).single(),
       client.from('documents').select('household_id, collection, item_id, data, updated_by, updated_at').eq('household_id', membership.household_id)
     ]);
     if (householdResult.error) throw householdResult.error;
     if (documentsResult.error) throw documentsResult.error;
 
     household = householdResult.data;
+    const shouldPersistMigration = Number(household.settings?.schemaVersion || 3) < 4;
     const remoteState = stateFromCloud(household, documentsResult.data);
+    if (shouldPersistMigration) {
+      await writeFullState(remoteState);
+      household.settings = sharedHouseholdSettings(remoteState);
+      household.schema_version = 4;
+    }
     snapshot = deepClone(remoteState);
     adapter.replaceState(remoteState, adapter.cloudCacheKey(household.id));
     ready = true;
@@ -408,7 +414,7 @@
     const cached = readCachedState(householdRow.id);
     const localPrefs = adapter.localPreferencesFrom(cached || adapter.getState());
     const base = adapter.buildEmptyState();
-    base.version = 3;
+    base.version = 4;
     base.household = {
       ...base.household,
       ...(householdRow.settings || {}),
@@ -443,7 +449,10 @@
       showSecondary: Boolean(h.showSecondary),
       members: deepClone(h.members || []),
       defaultSplit: deepClone(h.defaultSplit || { la: 50, partner: 50 }),
-      categorySplits: deepClone(h.categorySplits || {})
+      categorySplits: deepClone(h.categorySplits || {}),
+      openingBalance: h.openingBalance ?? null,
+      openingBalanceDate: h.openingBalanceDate || '',
+      schemaVersion: 4
     };
   }
 
@@ -523,6 +532,7 @@
         const { error } = await client.from('households').update({
           name: shared.name,
           settings: shared,
+          schema_version: 4,
           updated_by: currentSession.user.id
         }).eq('id', household.id);
         if (error) throw error;
@@ -573,6 +583,7 @@
     const householdUpdate = await client.from('households').update({
       name: shared.name,
       settings: shared,
+      schema_version: 4,
       updated_by: currentSession.user.id
     }).eq('id', household.id);
     if (householdUpdate.error) throw householdUpdate.error;
@@ -596,7 +607,7 @@
 
   async function fetchRemoteState() {
     const [householdResult, documentsResult] = await Promise.all([
-      client.from('households').select('id, name, invite_code, settings, created_by, updated_by, updated_at').eq('id', household.id).single(),
+      client.from('households').select('id, name, invite_code, settings, schema_version, created_by, updated_by, updated_at').eq('id', household.id).single(),
       client.from('documents').select('household_id, collection, item_id, data, updated_by, updated_at').eq('household_id', household.id)
     ]);
     if (householdResult.error) throw householdResult.error;
@@ -674,7 +685,7 @@
   async function copyInvite() {
     if (!household?.invite_code) return;
     const link = `${baseUrl()}?invite=${encodeURIComponent(household.invite_code)}`;
-    const message = `Rejoins mon espace Budget Duo avec ce lien : ${link}\nCode : ${household.invite_code}`;
+    const message = `Rejoins mon espace Trace avec ce lien : ${link}\nCode : ${household.invite_code}`;
     try {
       await navigator.clipboard.writeText(message);
       adapter.showToast('Lien et code d’invitation copiés.');
@@ -712,6 +723,8 @@
     queueSave,
     isReady,
     isConfigured,
-    reloadFromCloud
+    reloadFromCloud,
+    getCurrentMemberSlot: () => membership?.slot || null,
+    getCurrentUserEmail: () => currentSession?.user?.email || null
   };
 })();

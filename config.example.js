@@ -1,6 +1,4 @@
-// Configuration publique Supabase pour Budget Duo.
-// La clé publishable/anon peut être exposée dans GitHub Pages si les règles RLS du fichier supabase-schema.sql sont installées.
-// Ne place jamais une clé service_role ici.
+// Exemple uniquement. Ne remplace pas le config.js déjà fonctionnel de ton dépôt.
 window.BUDGET_DUO_CONFIG = {
   supabaseUrl: 'https://YOUR_PROJECT_REF.supabase.co',
   supabasePublishableKey: 'YOUR_PUBLISHABLE_OR_ANON_KEY'
