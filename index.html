@@ -15,7 +15,7 @@
   <div id="cloudGate" class="cloud-gate" aria-live="polite">
     <section class="cloud-card">
       <div class="cloud-brand">
-        <span class="brand-mark">T</span>
+        <span class="brand-mark"><img src="assets/icon-192.png" alt=""></span>
         <div><strong>Trace</strong><small>Votre budget suit son chemin.</small></div>
       </div>
 
@@ -87,7 +87,7 @@
   <div id="app" class="app-shell cloud-locked">
     <aside class="sidebar" aria-label="Navigation principale">
       <a class="brand" href="#dashboard" aria-label="Trace — Accueil">
-        <span class="brand-mark">T</span>
+        <span class="brand-mark"><img src="assets/icon-192.png" alt=""></span>
         <span><strong>Trace</strong><small>Prévoir. Suivre. Partager.</small></span>
       </a>
 
@@ -125,7 +125,7 @@
           </label>
           <label>Vue
             <select id="dashboardScope">
-              <option value="household">Total du ménage</option>
+              <option value="household">Total du couple</option>
               
               <option value="la">Moi</option>
               <option value="partner">Partenaire</option>
@@ -195,10 +195,11 @@
           <button class="secondary-button" id="saveAsTemplateBudget" title="Enregistre tout le mois sélectionné comme nouveau modèle">Définir comme mois type</button>
           <button class="primary-button" id="saveBudget">Enregistrer</button>
         </div>
-        <div class="info-banner"><span>ⓘ</span><div><strong>Un budget lisible, personne par personne</strong><p>Choisis Louis-Antoine, Élise ou « Ménage partagé ». Le total du ménage additionne ensuite les budgets personnels et partagés sans double comptage.</p></div></div>
-        <div class="budget-kpis">
-          <article class="kpi-card"><span>Budget affiché</span><strong id="budgetGrandTotal">0 $</strong></article>
-          <article class="kpi-card"><span>Total du ménage</span><strong id="budgetHouseholdTotal">0 $</strong></article>
+        <div class="info-banner"><span>ⓘ</span><div><strong>Un budget lisible, personne par personne</strong><p>Choisis Louis-Antoine, Élise ou « Dépenses à deux ». Le total du couple additionne les deux budgets personnels et les dépenses à deux, sans double comptage.</p></div></div>
+        <div class="budget-kpis budget-kpis-three">
+          <article class="kpi-card"><span>Revenus prévus — vue</span><strong id="budgetViewIncome">0 $</strong></article>
+          <article class="kpi-card"><span>Dépenses prévues — vue</span><strong id="budgetViewExpense">0 $</strong></article>
+          <article class="kpi-card"><span>Dépenses totales du couple</span><strong id="budgetHouseholdTotal">0 $</strong><small>Louis-Antoine + Élise + dépenses à deux</small></article>
         </div>
         <article class="panel budget-panel">
           <div class="panel-heading"><div><span class="panel-kicker">Prévisionnel</span><h2 id="budgetPanelTitle">Budget du mois</h2></div><button class="secondary-button" id="addCategoryButton">＋ Catégorie</button></div>
@@ -209,14 +210,14 @@
           <div class="annual-summary" id="annualSummary"></div>
           <div id="annualVisual" class="annual-visual"></div>
           <div id="annualCategoryCards" class="annual-category-grid"></div>
-          <details class="annual-details"><summary>Voir le tableau chiffré détaillé</summary><div class="table-scroll"><table class="data-table compact-table"><thead id="annualTableHead"></thead><tbody id="annualTableBody"></tbody></table></div></details>
+          <details class="annual-details" open><summary>Voir le tableau mensuel détaillé</summary><div class="table-scroll"><table class="data-table compact-table"><thead id="annualTableHead"></thead><tbody id="annualTableBody"></tbody></table></div></details>
         </article>
       </section>
 
       <section class="page" id="page-transactions" data-page="transactions">
         <div class="toolbar transaction-filters">
           <label>Mois<input type="month" id="transactionMonth"></label>
-          <label>Type<select id="transactionTypeFilter"><option value="all">Tous</option><option value="expense">Dépenses</option><option value="income">Revenus</option><option value="refund">Remboursements achat</option><option value="transfer">Entre nous</option><option value="person_payment">Paiements à une personne</option><option value="external_refund">Remboursements reçus</option></select></label>
+          <label>Type<select id="transactionTypeFilter"><option value="all">Tous</option><option value="expense">Dépenses</option><option value="group_expense">Dépenses à plusieurs</option><option value="income">Revenus</option><option value="refund">Remboursements</option><option value="transfer">Règlements entre nous</option><option value="person_payment">Paiements de ma part</option><option value="external_refund">Remboursements reçus</option></select></label>
           <label>Périmètre<select id="transactionScopeFilter"><option value="all">Tous</option><option value="la">Moi</option><option value="partner">Partenaire</option></select></label>
           <label class="search-field">Recherche<input type="search" id="transactionSearch" placeholder="Nom, personne, note…"></label>
         </div>
@@ -228,15 +229,22 @@
           <article class="kpi-card"><span>À vérifier</span><strong id="txPending">0</strong></article>
         </div>
 
-        <article class="panel">
-          <div class="panel-heading"><div><span class="panel-kicker">Réel</span><h2>Transactions</h2></div><div class="button-row"><button class="secondary-button" id="exportCsv">Exporter CSV</button><button class="primary-button" id="openQuickAdd2">Ajouter</button></div></div>
-          <div class="table-scroll">
-            <table class="data-table transaction-table">
-              <thead><tr><th>Date</th><th>Transaction</th><th>Catégorie</th><th>Payé / reçu par</th><th>Concerne</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
-              <tbody id="transactionsTableBody"></tbody>
-            </table>
-          </div>
-        </article>
+        <div class="panel-heading transactions-main-heading"><div><span class="panel-kicker">Réel</span><h2>Opérations du mois</h2><p class="muted">Les sorties et les entrées sont présentées séparément pour une lecture plus claire.</p></div><div class="button-row"><button class="secondary-button" id="exportCsv">Exporter CSV</button><button class="primary-button" id="openQuickAdd2">Ajouter</button></div></div>
+        <div id="transactionsEmpty" class="panel empty-state hidden">Aucune opération pour ces filtres.</div>
+        <div id="transactionsSections" class="transaction-sections">
+          <article class="panel transaction-section" id="transactionExpensesPanel">
+            <div class="panel-heading"><div><span class="panel-kicker">Sorties</span><h2>Dépenses et paiements</h2></div><strong id="transactionExpensesTotal" class="amount-negative">0 $</strong></div>
+            <div class="table-scroll"><table class="data-table transaction-table"><thead><tr><th>Date</th><th>Transaction</th><th>Catégorie</th><th>Payé par</th><th>Concerne</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody id="transactionExpensesBody"></tbody></table></div>
+          </article>
+          <article class="panel transaction-section" id="transactionIncomePanel">
+            <div class="panel-heading"><div><span class="panel-kicker">Entrées</span><h2>Revenus et remboursements</h2></div><strong id="transactionIncomeTotal" class="amount-positive">0 $</strong></div>
+            <div class="table-scroll"><table class="data-table transaction-table"><thead><tr><th>Date</th><th>Transaction</th><th>Catégorie</th><th>Reçu par</th><th>Concerne</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody id="transactionIncomeBody"></tbody></table></div>
+          </article>
+          <article class="panel transaction-section" id="transactionNeutralPanel">
+            <div class="panel-heading"><div><span class="panel-kicker">Neutres</span><h2>Règlements entre vous</h2></div></div>
+            <div class="table-scroll"><table class="data-table transaction-table"><thead><tr><th>Date</th><th>Transaction</th><th>Catégorie</th><th>Payé par</th><th>Reçu par</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody id="transactionNeutralBody"></tbody></table></div>
+          </article>
+        </div>
       </section>
 
       <section class="page" id="page-couple" data-page="couple">
@@ -258,9 +266,9 @@
         <div class="settings-grid">
           <article class="panel settings-card">
             <div class="panel-heading"><div><span class="panel-kicker">Foyer</span><h2>Profils</h2></div></div>
-            <label>Nom du membre 1<input id="memberLaName" type="text"></label>
+            <label>Nom de la personne 1<input id="memberLaName" type="text"></label>
             <label>Initiales<input id="memberLaInitials" type="text" maxlength="3"></label>
-            <label>Nom du membre 2<input id="memberPartnerName" type="text"></label>
+            <label>Nom de la personne 2<input id="memberPartnerName" type="text"></label>
             <label>Initiales<input id="memberPartnerInitials" type="text" maxlength="3"></label>
             <button class="primary-button" id="saveProfiles">Enregistrer</button>
           </article>
@@ -282,12 +290,12 @@
             <p class="muted" id="currentRateLabel">Taux non chargé</p>
           </article>
 
-          <article class="panel settings-card">
-            <div class="panel-heading"><div><span class="panel-kicker">Position estimée</span><h2>Solde de départ</h2></div></div>
-            <label>Solde du ménage à une date donnée<input id="openingBalance" type="number" step="0.01" inputmode="decimal" placeholder="Ex. 4500"></label>
-            <label>Date du solde<input id="openingBalanceDate" type="date"></label>
-            <p class="muted">Ce montant permet d’estimer la position actuelle à partir des opérations saisies. Il ne remplace pas un rapprochement bancaire.</p>
-            <button class="primary-button" id="saveOpeningBalance">Enregistrer</button>
+          <article class="panel settings-card opening-balances-card">
+            <div class="panel-heading"><div><span class="panel-kicker">Position estimée</span><h2>Soldes de départ individuels</h2></div></div>
+            <div class="opening-person-block"><h3 id="openingBalanceLaLabel">Louis-Antoine</h3><label>Solde à une date donnée<input id="openingBalanceLa" type="number" step="0.01" inputmode="decimal" placeholder="Ex. 2500"></label><label>Date du solde<input id="openingBalanceDateLa" type="date"></label></div>
+            <div class="opening-person-block"><h3 id="openingBalancePartnerLabel">Élise</h3><label>Solde à une date donnée<input id="openingBalancePartner" type="number" step="0.01" inputmode="decimal" placeholder="Ex. 2000"></label><label>Date du solde<input id="openingBalanceDatePartner" type="date"></label></div>
+            <p class="muted">Trace calcule séparément la position estimée de chacun, puis les additionne pour la vue du couple. Ces montants ne remplacent pas un rapprochement bancaire.</p>
+            <button class="primary-button" id="saveOpeningBalance">Enregistrer les deux soldes</button>
           </article>
 
           <article class="panel settings-card">
@@ -346,7 +354,7 @@
       <div class="form-grid quick-form">
         <label class="full-span">Nom / libellé *<input id="txName" type="text" required placeholder="Ex. Épicerie de la semaine"></label>
         <label>Type *<select id="txType" required>
-          <option value="expense">Dépense</option><option value="income">Revenu</option><option value="refund">Remboursement d’un achat</option><option value="transfer">Remboursement entre nous</option><option value="person_payment">Paiement à une personne</option><option value="external_refund">Remboursement reçu d’une personne</option>
+          <option value="expense">Dépense</option><option value="group_expense">Dépense à plusieurs</option><option value="income">Revenu</option><option value="refund">Remboursement</option><option value="transfer">Règlement entre nous</option><option value="person_payment">Paiement de ma part à quelqu’un</option><option value="external_refund">Remboursement reçu</option>
         </select></label>
         <label>Montant *<input id="txAmount" type="number" min="0.01" step="0.01" required inputmode="decimal"></label>
         <label>Date *<input id="txDate" type="date" required></label>
@@ -362,8 +370,8 @@
         <div class="form-grid advanced-grid">
           <label>Taux vers CAD<input id="txRate" type="number" min="0" step="0.000001" value="1"></label>
           <label>Montant réellement débité en CAD<input id="txBankAmount" type="number" min="0" step="0.01" placeholder="Facultatif"></label>
-          <fieldset class="external-fieldset full-span"><legend>Dépense avec des personnes extérieures</legend>
-            <label class="toggle-row"><input id="txExternalEnabled" type="checkbox"><span>Une partie doit être remboursée par des amis</span></label>
+          <fieldset class="external-fieldset full-span"><legend>Dépense à plusieurs</legend>
+            <label class="toggle-row"><input id="txExternalEnabled" type="checkbox"><span>Des personnes extérieures doivent rembourser une partie</span></label>
             <div id="externalFields" class="form-grid full-span hidden">
               <label>Nombre de personnes extérieures<input id="txExternalCount" type="number" min="1" max="20" step="1" value="2"></label>
               <label>Noms facultatifs<input id="txExternalNames" type="text" placeholder="Ex. Thomas, Julie"></label>
@@ -372,7 +380,7 @@
               <p class="field-help full-span" id="externalSummary"></p>
             </div>
           </fieldset>
-          <fieldset class="split-fieldset full-span"><legend>Répartition dans le ménage</legend>
+          <fieldset class="split-fieldset full-span"><legend>Répartition entre vous deux</legend>
             <div class="split-mode-toggle full-span"><label><input type="radio" name="splitMode" value="percent" checked> Pourcentage</label><label><input type="radio" name="splitMode" value="amount"> Montant CAD</label></div>
             <div id="splitPercentFields" class="split-input-grid full-span"><label><span id="splitLaLabel">Membre 1</span><input id="txSplitLa" type="number" min="0" max="100" step="0.01"></label><label><span id="splitPartnerLabel">Membre 2</span><input id="txSplitPartner" type="number" min="0" max="100" step="0.01"></label><span>%</span></div>
             <div id="splitAmountFields" class="split-input-grid full-span hidden"><label><span id="splitAmountLaLabel">Membre 1</span><input id="txSplitAmountLa" type="number" min="0" step="0.01"></label><label><span id="splitAmountPartnerLabel">Membre 2</span><input id="txSplitAmountPartner" type="number" min="0" step="0.01"></label><span>CAD</span></div>
@@ -428,7 +436,7 @@
 
   <dialog id="onboardingDialog" class="modal onboarding-modal">
     <form method="dialog" id="onboardingForm">
-      <div class="onboarding-brand"><span class="brand-mark">T</span><div><h2>Créer votre espace Trace</h2><p>Chaque espace Supabase est privé et synchronisé uniquement entre ses membres.</p></div></div>
+      <div class="onboarding-brand"><span class="brand-mark"><img src="assets/icon-192.png" alt=""></span><div><h2>Créer votre espace Trace</h2><p>Chaque espace Supabase est privé et synchronisé uniquement entre ses membres.</p></div></div>
       <div class="form-grid">
         <label>Prénom du membre 1<input id="onboardingName1" value="Louis-Antoine" required></label>
         <label>Prénom du membre 2<input id="onboardingName2" value="Élise" required></label>

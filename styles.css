@@ -518,3 +518,37 @@ textarea { resize: vertical; }
   .cloud-card input, .cloud-card button { font-size:16px; }
   .update-banner { bottom:calc(84px + env(safe-area-inset-bottom)); flex-direction:column; align-items:stretch; }
 }
+
+
+/* TRACE V4.1 — clarté budget, réel et soldes individuels */
+.brand-mark { overflow:hidden; padding:0; background:var(--navy); }
+.brand-mark img { width:100%; height:100%; display:block; object-fit:cover; }
+.budget-kpis .kpi-card small { margin-top:5px; color:var(--muted); font-size:10px; line-height:1.35; }
+.transactions-main-heading { margin:0 0 14px; padding:0 2px; }
+.transactions-main-heading p { margin:5px 0 0; }
+.transaction-sections { display:grid; gap:14px; }
+.transaction-section { margin:0; }
+.transaction-section .panel-heading > strong { font-size:20px; }
+.opening-balances-card { gap:14px; }
+.opening-person-block { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:13px; border:1px solid var(--border); border-radius:14px; background:var(--card-soft); }
+.opening-person-block h3 { grid-column:1/-1; margin:0; font-size:14px; }
+.opening-person-block label { margin:0; }
+.annual-visual { min-height:250px; }
+.annual-month-grid { min-width:720px; }
+.annual-details[open] summary { margin-bottom:12px; }
+@media (max-width:820px){
+  .annual-visual { min-height:220px; }
+  .annual-month-grid { min-width:650px; grid-template-columns:repeat(12,minmax(42px,1fr)); height:180px; }
+}
+@media (max-width:560px){
+  .opening-person-block { grid-template-columns:1fr; }
+  .opening-person-block h3 { grid-column:auto; }
+  .transactions-main-heading { align-items:stretch; }
+  .transactions-main-heading .button-row { width:100%; }
+  .transactions-main-heading .button-row button { flex:1; }
+  .annual-visual { margin-left:-4px; margin-right:-4px; padding:14px 10px; }
+  .annual-month-grid { min-width:620px; height:170px; }
+}
+
+.budget-kpis-three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media (max-width:720px){ .budget-kpis-three { grid-template-columns:1fr; } }
