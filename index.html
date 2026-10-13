@@ -303,7 +303,7 @@
         throw new Error('Supabase indisponible');
       }
       stage('Ouverture de Trace…');
-      await loadScript('./v5-app.js?v=5.1.0',5000);
+      await loadScript('./v5-app.js?v=5.1.1',5000);
       loadScript('./onboarding.js?v=1.6.0',5000).catch(function(){});
     }catch(err){
       console.error('Trace boot error',err);
@@ -312,8 +312,8 @@
   }
 
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistration()
-      .then(function(reg){ if(reg) reg.update().catch(function(){}); })
+    navigator.serviceWorker.getRegistrations()
+      .then(function(regs){ regs.forEach(function(reg){ reg.unregister().catch(function(){}); }); })
       .catch(function(){});
   }
 
