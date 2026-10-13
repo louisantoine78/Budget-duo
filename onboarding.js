@@ -350,5 +350,15 @@ function autoStartWhenReady(){
 window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(updateSpot,80)},{passive:true});
 window.addEventListener('scroll',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(updateSpot,50)},{passive:true,capture:true});
 window.TraceGuide={start};
-document.addEventListener('DOMContentLoaded',()=>{ensureMarkup();watchProfile();$('#helpBtn')?.addEventListener('click',()=>start(true));autoStartWhenReady()});
+function bootTraceGuide(){
+  ensureMarkup();
+  watchProfile();
+  $('#helpBtn')?.addEventListener('click',()=>start(true));
+  autoStartWhenReady();
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',bootTraceGuide,{once:true});
+}else{
+  bootTraceGuide();
+}
 })();
