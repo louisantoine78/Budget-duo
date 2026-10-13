@@ -1,465 +1,221 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#101c3d">
-  <meta name="description" content="Trace, application de budget partagé pour prévoir, suivre et répartir les dépenses.">
-  <title>Trace — Budget partagé</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="assets/icon-192.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123f38">
+<meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
+<title>Trace 5</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="stylesheet" href="v5.css">
 </head>
 <body>
-  <div id="cloudGate" class="cloud-gate" aria-live="polite">
-    <section class="cloud-card">
-      <div class="cloud-brand">
-        <span class="brand-mark"><img src="assets/icon-192.png" alt=""></span>
-        <div><strong>Trace</strong><small>Votre budget suit son chemin.</small></div>
+<div id="cloudGate" class="cloud-gate">
+  <section class="cloud-card">
+    <div class="cloud-brand">
+      <img src="assets/icon-192.png" alt="">
+      <div><strong>Trace</strong><small>Votre budget suit son chemin.</small></div>
+    </div>
+    <div id="cloudLoadingPanel" class="cloud-panel">
+      <div class="cloud-loader"></div>
+      <h1>Connexion à Trace</h1>
+      <p id="cloudLoadingText">Vérification de la session et chargement de vos données…</p>
+    </div>
+    <div id="cloudConfigPanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Configuration</span>
+      <h1>Supabase non configuré</h1>
+      <p>Le fichier <code>config.js</code> doit contenir l’URL du projet et la clé publique.</p>
+    </div>
+    <div id="cloudAuthPanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Espace sécurisé</span>
+      <h1 id="cloudAuthTitle">Se connecter</h1>
+      <p>Utilise le même compte que sur Trace aujourd’hui.</p>
+      <div class="cloud-tabs">
+        <button class="cloud-tab active" data-auth-tab="login">Connexion</button>
+        <button class="cloud-tab" data-auth-tab="signup">Créer un compte</button>
+      </div>
+      <form id="cloudLoginForm" class="cloud-form">
+        <label>Adresse courriel<input id="cloudLoginEmail" type="email" autocomplete="email" required></label>
+        <label>Mot de passe<input id="cloudLoginPassword" type="password" autocomplete="current-password" minlength="6" required></label>
+        <button class="primary full" type="submit">Se connecter</button>
+      </form>
+      <form id="cloudSignupForm" class="cloud-form hidden">
+        <label>Prénom<input id="cloudSignupName" type="text" autocomplete="name" required></label>
+        <label>Adresse courriel<input id="cloudSignupEmail" type="email" autocomplete="email" required></label>
+        <label>Mot de passe<input id="cloudSignupPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="primary full" type="submit">Créer mon compte</button>
+      </form>
+      <p id="cloudAuthMessage" class="cloud-message"></p>
+    </div>
+    <div id="cloudWorkspacePanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Première connexion</span>
+      <h1>Choisir votre espace</h1>
+      <p>Crée un espace ou rejoins celui de ton partenaire.</p>
+      <div class="cloud-tabs">
+        <button class="cloud-tab active" data-workspace-tab="create">Créer</button>
+        <button class="cloud-tab" data-workspace-tab="join">Rejoindre</button>
+      </div>
+      <form id="cloudCreateHouseholdForm" class="cloud-form">
+        <label>Nom de l’espace<input id="cloudHouseholdName" value="Notre budget" required></label>
+        <label>Ton prénom<input id="cloudCreatorName" required></label>
+        <label>Prénom du partenaire<input id="cloudPartnerName" required></label>
+        <button class="primary full" type="submit">Créer l’espace</button>
+      </form>
+      <form id="cloudJoinHouseholdForm" class="cloud-form hidden">
+        <label>Ton prénom<input id="cloudJoinName" required></label>
+        <label>Code d’invitation<input id="cloudInviteCode" maxlength="12" required></label>
+        <button class="primary full" type="submit">Rejoindre</button>
+      </form>
+      <p id="cloudWorkspaceMessage" class="cloud-message"></p>
+    </div>
+  </section>
+</div>
+
+<div id="app" class="app cloud-locked">
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/icon-192.png" alt="">
+      <div><strong>Trace</strong><small id="brandSubtitle">Simple. Clair. À jour.</small></div>
+    </div>
+    <div class="top-actions">
+      <div class="sync-pill" id="syncPill" data-status="loading"><span class="status-dot"></span><span id="syncLabel">Connexion…</span></div>
+      <button id="profileBtn" class="avatar" aria-label="Profil">LA</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="page active" data-page="home">
+      <div class="hero-row">
+        <div><div class="eyebrow" id="homeMonthLabel">Novembre 2026</div><h1 class="title" id="homeGreeting">Bonjour</h1></div>
+        <div class="segment" id="homeScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <div class="grid grid-2">
+        <article class="card hero-card">
+          <div class="label">Disponible sur le budget</div>
+          <div class="big" id="homeBudgetAvailable">—</div>
+          <div class="sub" id="homeBudgetSub">Chargement…</div>
+          <div class="progress"><i id="homeBudgetProgress" style="width:0%"></i></div>
+          <div class="progress-row"><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
+        </article>
+        <article class="card liquid clickable" id="balanceCard">
+          <div class="eyebrow">Solde estimé</div>
+          <div class="money" id="homeBalance">—</div>
+          <span class="badge" id="reconcileBadge">À rapprocher</span>
+          <div class="mini-account"><span>Compte courant</span><span id="homeChecking">—</span></div>
+          <div class="mini-account"><span>Carte de crédit</span><span id="homeCard">—</span></div>
+          <div class="scope-label">Compte courant − solde carte</div>
+        </article>
       </div>
 
-      <div id="cloudLoadingPanel" class="cloud-panel">
-        <div class="cloud-loader" aria-hidden="true"></div>
-        <h1>Connexion à votre espace</h1>
-        <p id="cloudLoadingText">Vérification de la session et des données…</p>
+      <div class="grid grid-3" style="margin-top:14px">
+        <button class="card kpi clickable" data-kpi="income"><div class="k-label">Revenus</div><div class="k-value" id="homeIncome">—</div><div class="k-note" id="homeIncomeNote">Voir le détail</div></button>
+        <button class="card kpi clickable" data-kpi="spending"><div class="k-label">Dépenses</div><div class="k-value" id="homeSpending">—</div><div class="k-note" id="homeSpendingNote">Voir le détail</div></button>
+        <button class="card kpi clickable" data-kpi="saving"><div class="k-label">Épargne</div><div class="k-value" id="homeSaving">—</div><div class="k-note" id="homeSavingNote">Voir le détail</div></button>
       </div>
 
-      <div id="cloudConfigPanel" class="cloud-panel hidden">
-        <span class="cloud-kicker">Configuration requise</span>
-        <h1>Connecter Supabase</h1>
-        <p>Renseigne l’URL du projet et la clé publique dans <code>config.js</code>, puis recharge cette page.</p>
-        <div class="cloud-code">window.BUDGET_DUO_CONFIG = {<br>
-&nbsp;&nbsp;supabaseUrl: 'https://…supabase.co',<br>
-&nbsp;&nbsp;supabasePublishableKey: 'sb_publishable_…'<br>
-};</div>
-        <p class="field-help">N’utilise jamais la clé <code>service_role</code> dans GitHub Pages.</p>
-      </div>
+      <div class="section-head"><h2>À faire</h2><button class="linkbtn" data-go="activity">Voir l’activité</button></div>
+      <button class="alert-card" style="width:100%;text-align:left" data-go="review">
+        <span class="alert-icon" id="pendingCountBadge">0</span>
+        <span class="alert-text"><strong>Transactions à valider</strong><div id="pendingText">Tout est à jour</div></span><span class="chev">›</span>
+      </button>
 
-      <div id="cloudAuthPanel" class="cloud-panel hidden">
-        <span class="cloud-kicker">Espace sécurisé</span>
-        <h1 id="cloudAuthTitle">Se connecter</h1>
-        <p>Chaque utilisateur possède son compte. Les données sont ensuite partagées uniquement avec les membres du même espace.</p>
-        <div class="cloud-tabs">
-          <button type="button" class="cloud-tab active" data-auth-tab="login">Connexion</button>
-          <button type="button" class="cloud-tab" data-auth-tab="signup">Créer un compte</button>
+      <div class="section-head"><h2>Budget en direct</h2><button class="linkbtn" data-go="budget">Voir le budget</button></div>
+      <article class="card" id="homeBudgetCategories"></article>
+
+      <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="analysisBtn">Analyses</button></div>
+      <article class="card clickable" id="homeTrendCard">
+        <div class="eyebrow">Épargne mensuelle · 6 mois</div>
+        <div class="chart" id="homeTrend"></div>
+        <div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div>
+      </article>
+
+      <div class="section-head"><h2>Partage</h2><button class="linkbtn" id="shareOpen">Ouvrir</button></div>
+      <button class="card share-card" id="shareCard" style="width:100%;text-align:left;border:1px solid rgba(18,63,56,.06)">
+        <span class="share-avatar" id="partnerAvatar">É</span>
+        <span class="share-main"><b id="shareLabel">Solde avec votre partenaire</b><strong id="shareBalance">—</strong><small id="shareSmall">Solde continu</small></span>
+        <span class="chev">›</span>
+      </button>
+    </section>
+
+    <section class="page" data-page="budget">
+      <div class="hero-row">
+        <div><div class="eyebrow" id="budgetMonthLabel">Mois</div><h1 class="title">Budget</h1></div>
+        <div class="segment" id="budgetScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <article class="card hero-card" style="min-height:150px">
+        <div class="label" id="budgetHeroLabel">Budget mensuel</div><div class="big" id="budgetHeroTotal">—</div><div class="sub" id="budgetHeroSub">—</div>
+      </article>
+      <div id="budgetSections"></div>
+      <div class="section-head"><h2>Vue annuelle</h2><button class="linkbtn" id="annualBudgetDetails">Détails</button></div>
+      <article class="card clickable" id="annualBudgetCard"><div class="chart" id="annualBudgetChart"></div><div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div></article>
+    </section>
+
+    <section class="page" data-page="activity">
+      <div class="hero-row"><div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title">Activité</h1></div></div>
+      <div class="tabs" id="activityTabs">
+        <button class="tab active" data-tab="transactions">Transactions</button>
+        <button class="tab" data-tab="review">À valider <span id="reviewTabCount"></span></button>
+        <button class="tab" data-tab="import">Importer</button>
+      </div>
+      <div id="activityTransactions">
+        <div class="activity-stats">
+          <div class="statbox"><span>Dépenses</span><b id="activityExpenses">—</b></div>
+          <div class="statbox"><span>Revenus</span><b id="activityIncome">—</b></div>
+          <div class="statbox"><span>Flux net</span><b id="activityNet">—</b></div>
         </div>
-        <form id="cloudLoginForm" class="cloud-form">
-          <label>Adresse courriel<input id="cloudLoginEmail" type="email" autocomplete="email" required></label>
-          <label>Mot de passe<input id="cloudLoginPassword" type="password" autocomplete="current-password" minlength="6" required></label>
-          <button class="primary-button full-button" type="submit">Se connecter</button>
-        </form>
-        <form id="cloudSignupForm" class="cloud-form hidden">
-          <label>Prénom ou nom affiché<input id="cloudSignupName" type="text" autocomplete="name" required></label>
-          <label>Adresse courriel<input id="cloudSignupEmail" type="email" autocomplete="email" required></label>
-          <label>Mot de passe<input id="cloudSignupPassword" type="password" autocomplete="new-password" minlength="8" required></label>
-          <button class="primary-button full-button" type="submit">Créer mon compte</button>
-        </form>
-        <p id="cloudAuthMessage" class="cloud-message"></p>
+        <article class="card" id="transactionList"></article>
       </div>
-
-      <div id="cloudWorkspacePanel" class="cloud-panel hidden">
-        <span class="cloud-kicker">Première connexion</span>
-        <h1>Choisir votre espace</h1>
-        <p>Crée un nouvel espace pour ton couple ou rejoins celui qui t’a été partagé.</p>
-        <div class="cloud-tabs">
-          <button type="button" class="cloud-tab active" data-workspace-tab="create">Créer un espace</button>
-          <button type="button" class="cloud-tab" data-workspace-tab="join">Rejoindre</button>
-        </div>
-        <form id="cloudCreateHouseholdForm" class="cloud-form">
-          <label>Nom de l’espace<input id="cloudHouseholdName" type="text" value="Notre budget" required></label>
-          <label>Ton prénom<input id="cloudCreatorName" type="text" required></label>
-          <label>Prénom du partenaire<input id="cloudPartnerName" type="text" placeholder="Ex. Élise" required></label>
-          <label id="cloudImportLocalRow" class="toggle-row"><input id="cloudImportLocal" type="checkbox" checked><span>Importer les données locales de la version précédente</span></label>
-          <button class="primary-button full-button" type="submit">Créer l’espace partagé</button>
-        </form>
-        <form id="cloudJoinHouseholdForm" class="cloud-form hidden">
-          <label>Ton prénom<input id="cloudJoinName" type="text" required></label>
-          <label>Code d’invitation<input id="cloudInviteCode" type="text" autocomplete="one-time-code" maxlength="12" placeholder="Ex. A1B2C3D4" required></label>
-          <button class="primary-button full-button" type="submit">Rejoindre l’espace</button>
-        </form>
-        <p id="cloudWorkspaceMessage" class="cloud-message"></p>
-        <button class="text-button" id="cloudWorkspaceSignOut" type="button">Utiliser un autre compte</button>
+      <div id="activityReview" class="hidden">
+        <div class="section-head"><h2 id="reviewHeading">À valider</h2><button class="linkbtn" id="validateComplete">Valider les complètes</button></div>
+        <div id="reviewList"></div>
+      </div>
+      <div id="activityImport" class="hidden">
+        <div class="section-head"><h2>Importer des opérations</h2></div>
+        <article class="drop" id="importDrop">
+          <div class="up">⇧</div><b>Capture, PDF ou CSV</b>
+          <small>Trace reconnaîtra le type de fichier, détectera les doublons et placera les opérations dans À valider.</small>
+          <input type="file" id="importFile" accept="image/*,.pdf,.csv,text/csv" hidden>
+          <button class="primary" id="chooseImport" style="margin-top:14px">Choisir un fichier</button>
+        </article>
+        <div id="importResult" style="margin-top:14px"></div>
       </div>
     </section>
-  </div>
 
-  <div id="app" class="app-shell cloud-locked">
-    <aside class="sidebar" aria-label="Navigation principale">
-      <a class="brand" href="#dashboard" aria-label="Trace — Accueil">
-        <span class="brand-mark"><img src="assets/icon-192.png" alt=""></span>
-        <span><strong>Trace</strong><small>Prévoir. Suivre. Partager.</small></span>
-      </a>
-
-      <nav class="side-nav">
-        <button class="nav-item active" data-route="dashboard"><span>⌂</span> Synthèse</button>
-        <button class="nav-item" data-route="budget"><span>◎</span> Budget</button>
-        <button class="nav-item" data-route="transactions"><span>↕</span> Réel</button>
-        <button class="nav-item" data-route="couple"><span>⇄</span> Couple</button>
-        <button class="nav-item" data-route="goals"><span>◇</span> Objectifs</button>
-        <button class="nav-item" data-route="settings"><span>⚙</span> Paramètres</button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="sync-pill" id="syncPill"><span class="status-dot"></span><span id="syncLabel">Connexion…</span></div>
-        <small id="syncDetail">Supabase + GitHub Pages</small>
+    <section class="page" data-page="wealth">
+      <div class="hero-row">
+        <div><div class="eyebrow">Patrimoine</div><h1 class="title">Mes actifs</h1></div>
+        <div class="segment" id="wealthScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
       </div>
-    </aside>
+      <article class="card hero-card" style="min-height:160px"><div class="label">Patrimoine suivi</div><div class="big" id="wealthTotal">—</div><div class="sub" id="wealthSub">Liquidités, épargne et investissements</div></article>
+      <div class="section-head"><h2>Comptes</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
+      <div class="portfolio-grid" id="assetGrid"></div>
+      <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="wealthAnalysis">Analyses</button></div>
+      <article class="card clickable" id="wealthChart"><div class="chart" id="wealthTrend"></div><div class="legend"><span><i class="dot dark"></i>Patrimoine</span></div></article>
+    </section>
+  </main>
 
-    <main class="main-content">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow" id="pageEyebrow">Vue d’ensemble</p>
-          <h1 id="pageTitle">Synthèse</h1>
-        </div>
-        <div class="topbar-actions">
-          <button class="icon-button" id="themeToggle" aria-label="Changer le thème">☾</button>
-          <button class="primary-button" id="openQuickAdd"><span>＋</span> Ajouter</button>
-        </div>
-      </header>
+  <nav class="nav" aria-label="Navigation">
+    <button class="navbtn active" data-nav="home"><span class="ico">⌂</span><span>Accueil</span></button>
+    <button class="navbtn" data-nav="budget"><span class="ico">◎</span><span>Budget</span></button>
+    <button class="navbtn plus" id="quickAdd"><span class="ico">＋</span><span>Ajouter</span></button>
+    <button class="navbtn" data-nav="activity"><span class="ico">↕</span><span>Activité</span></button>
+    <button class="navbtn" data-nav="wealth"><span class="ico">◇</span><span>Patrimoine</span></button>
+  </nav>
+</div>
 
-      <section class="page active" id="page-dashboard" data-page="dashboard">
-        <div class="toolbar dashboard-toolbar">
-          <label>Mois
-            <input type="month" id="dashboardMonth">
-          </label>
-          <label>Vue
-            <select id="dashboardScope">
-              <option value="household">Total du couple</option>
-              
-              <option value="la">Moi</option>
-              <option value="partner">Partenaire</option>
-            </select>
-          </label>
-          <label>Affichage
-            <select id="dashboardMode">
-              <option value="comparison">Budget vs réel</option>
-              <option value="actual">Réel uniquement</option>
-              <option value="budget">Budget uniquement</option>
-            </select>
-          </label>
-        </div>
+<div id="sheetBackdrop" class="sheet-backdrop">
+  <section class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><h2 id="sheetTitle">Détail</h2><button class="closebtn" id="closeSheet">×</button></div>
+    <div id="sheetBody"></div>
+  </section>
+</div>
+<div id="toast" class="toast"></div>
 
-        <div class="hero-card">
-          <div>
-            <span class="hero-label" id="heroLabel">Budget de dépenses encore disponible</span>
-            <strong id="heroAvailable">0 $</strong>
-            <p id="heroProjection">Projection en cours de calcul</p><button type="button" class="inline-info" id="projectionInfo">Comment est calculée la projection?</button><p id="bankBalanceHint" class="hero-subhint"></p>
-          </div>
-          <div class="hero-progress-wrap">
-            <div class="hero-progress-label"><span id="heroProgressTitle">Budget consommé</span><strong id="heroPercent">0 %</strong></div>
-            <div class="progress-track"><div class="progress-fill" id="heroProgress"></div></div>
-          </div>
-        </div>
-
-        <div class="kpi-grid">
-          <article class="kpi-card"><span id="kpiIncomeLabel">Revenus réels</span><strong id="kpiIncomeActual">0 $</strong><small id="kpiIncomeBudget">Budget : 0 $</small></article>
-          <article class="kpi-card"><span id="kpiExpenseLabel">Dépenses réelles</span><strong id="kpiExpenseActual">0 $</strong><small id="kpiExpenseBudget">Budget : 0 $</small></article>
-          <article class="kpi-card"><span>Écart au budget</span><strong id="kpiVariance">0 $</strong><small id="kpiVarianceLabel">Dans la cible</small></article>
-          <article class="kpi-card"><span id="kpiSavingsLabel">Épargne potentielle</span><strong id="kpiSavings">0 $</strong><small id="kpiSavingsRate">Taux : 0 %</small></article>
-        </div>
-
-        <div class="content-grid two-thirds">
-          <article class="panel">
-            <div class="panel-heading">
-              <div><span class="panel-kicker">Analyse</span><h2>Budget par catégorie</h2></div>
-              <span class="legend"><i class="legend-budget"></i> Budget <i class="legend-actual"></i> Réel</span>
-            </div>
-            <div id="categoryChart" class="bar-chart"></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-heading"><div><span class="panel-kicker">Alertes</span><h2>À surveiller</h2></div></div>
-            <div id="alertsList" class="alert-list"></div>
-          </article>
-        </div>
-
-        <div class="content-grid two-thirds">
-          <article class="panel">
-            <div class="panel-heading"><div><span class="panel-kicker">Année</span><h2>Évolution mensuelle</h2></div><span class="legend"><i class="legend-budget"></i> Budget <i class="legend-actual"></i> Réel</span></div>
-            <div id="trendChart" class="trend-chart"></div>
-          </article>
-          <article class="panel">
-            <div class="panel-heading"><div><span class="panel-kicker">Dernières opérations</span><h2>Activité récente</h2></div><button class="text-button" data-route="transactions">Tout voir</button></div>
-            <div id="recentTransactions" class="transaction-mini-list"></div>
-          </article>
-        </div>
-      </section>
-
-      <section class="page" id="page-budget" data-page="budget">
-        <div class="toolbar budget-toolbar">
-          <label>Mois à modifier<input type="month" id="budgetMonth"></label>
-          <label>Budget de<select id="budgetOwner"></select></label>
-          <button class="secondary-button" id="copyPreviousBudget">Copier le mois précédent</button>
-          <button class="secondary-button" id="applyTemplateBudget" title="Remplace le mois sélectionné par votre modèle mensuel">Appliquer le mois type</button>
-          <button class="secondary-button" id="saveAsTemplateBudget" title="Enregistre tout le mois sélectionné comme nouveau modèle">Définir comme mois type</button>
-          <button class="primary-button" id="saveBudget">Enregistrer</button>
-        </div>
-        <div class="info-banner"><span>ⓘ</span><div><strong>Un budget lisible, personne par personne</strong><p>Choisis Louis-Antoine, Élise ou « Dépenses à deux ». Le total du couple additionne les deux budgets personnels et les dépenses à deux, sans double comptage.</p></div></div>
-        <div class="budget-kpis budget-kpis-three">
-          <article class="kpi-card"><span>Revenus prévus — vue</span><strong id="budgetViewIncome">0 $</strong></article>
-          <article class="kpi-card"><span>Dépenses prévues — vue</span><strong id="budgetViewExpense">0 $</strong></article>
-          <article class="kpi-card"><span>Dépenses totales du couple</span><strong id="budgetHouseholdTotal">0 $</strong><small>Louis-Antoine + Élise + dépenses à deux</small></article>
-        </div>
-        <article class="panel budget-panel">
-          <div class="panel-heading"><div><span class="panel-kicker">Prévisionnel</span><h2 id="budgetPanelTitle">Budget du mois</h2></div><button class="secondary-button" id="addCategoryButton">＋ Catégorie</button></div>
-          <div id="budgetCards" class="budget-card-grid"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-heading"><div><span class="panel-kicker">Vue annuelle</span><h2>Budget et réel sur 12 mois</h2></div><select id="annualScope"></select></div>
-          <div class="annual-summary" id="annualSummary"></div>
-          <div id="annualVisual" class="annual-visual"></div>
-          <div id="annualCategoryCards" class="annual-category-grid"></div>
-          <details class="annual-details" open><summary>Voir le tableau mensuel détaillé</summary><div class="table-scroll"><table class="data-table compact-table"><thead id="annualTableHead"></thead><tbody id="annualTableBody"></tbody></table></div></details>
-        </article>
-      </section>
-
-      <section class="page" id="page-transactions" data-page="transactions">
-        <div class="toolbar transaction-filters">
-          <label>Mois<input type="month" id="transactionMonth"></label>
-          <label>Type<select id="transactionTypeFilter"><option value="all">Tous</option><option value="expense">Dépenses</option><option value="group_expense">Dépenses à plusieurs</option><option value="income">Revenus</option><option value="refund">Remboursements</option><option value="transfer">Règlements entre nous</option><option value="person_payment">Paiements de ma part</option><option value="external_refund">Remboursements reçus</option></select></label>
-          <label>Périmètre<select id="transactionScopeFilter"><option value="all">Tous</option><option value="la">Moi</option><option value="partner">Partenaire</option></select></label>
-          <label class="search-field">Recherche<input type="search" id="transactionSearch" placeholder="Nom, personne, note…"></label>
-        </div>
-
-        <div class="kpi-grid compact-kpis">
-          <article class="kpi-card"><span>Transactions</span><strong id="txCount">0</strong></article>
-          <article class="kpi-card"><span>Dépenses filtrées</span><strong id="txExpenses">0 $</strong></article>
-          <article class="kpi-card"><span>Revenus filtrés</span><strong id="txIncome">0 $</strong></article>
-          <article class="kpi-card"><span>À vérifier</span><strong id="txPending">0</strong></article>
-        </div>
-
-        <div class="panel-heading transactions-main-heading"><div><span class="panel-kicker">Réel</span><h2>Opérations du mois</h2><p class="muted">Les sorties et les entrées sont présentées séparément pour une lecture plus claire.</p></div><div class="button-row"><button class="secondary-button" id="exportCsv">Exporter CSV</button><button class="primary-button" id="openQuickAdd2">Ajouter</button></div></div>
-        <div id="transactionsEmpty" class="panel empty-state hidden">Aucune opération pour ces filtres.</div>
-        <div id="transactionsSections" class="transaction-sections">
-          <article class="panel transaction-section" id="transactionExpensesPanel">
-            <div class="panel-heading"><div><span class="panel-kicker">Sorties</span><h2>Dépenses et paiements</h2></div><strong id="transactionExpensesTotal" class="amount-negative">0 $</strong></div>
-            <div class="table-scroll"><table class="data-table transaction-table"><thead><tr><th>Date</th><th>Transaction</th><th>Catégorie</th><th>Payé par</th><th>Concerne</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody id="transactionExpensesBody"></tbody></table></div>
-          </article>
-          <article class="panel transaction-section" id="transactionIncomePanel">
-            <div class="panel-heading"><div><span class="panel-kicker">Entrées</span><h2>Revenus et remboursements</h2></div><strong id="transactionIncomeTotal" class="amount-positive">0 $</strong></div>
-            <div class="table-scroll"><table class="data-table transaction-table"><thead><tr><th>Date</th><th>Transaction</th><th>Catégorie</th><th>Reçu par</th><th>Concerne</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody id="transactionIncomeBody"></tbody></table></div>
-          </article>
-          <article class="panel transaction-section" id="transactionNeutralPanel">
-            <div class="panel-heading"><div><span class="panel-kicker">Neutres</span><h2>Règlements entre vous</h2></div></div>
-            <div class="table-scroll"><table class="data-table transaction-table"><thead><tr><th>Date</th><th>Transaction</th><th>Catégorie</th><th>Payé par</th><th>Reçu par</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody id="transactionNeutralBody"></tbody></table></div>
-          </article>
-        </div>
-      </section>
-
-      <section class="page" id="page-couple" data-page="couple">
-        <div class="toolbar"><label>Mois de référence<input type="month" id="coupleMonth"></label><button class="secondary-button" id="showAllTimeBalance">Afficher uniquement le mois</button><button class="primary-button" id="addSettlement">Ajouter un remboursement</button></div>
-        <div class="settlement-hero" id="settlementHero"></div><div class="balance-breakdown" id="balanceBreakdown"></div><div class="external-receivable" id="externalReceivable"></div>
-        <div class="content-grid equal">
-          <article class="panel"><div class="panel-heading"><div><span class="panel-kicker">Contributions</span><h2>Payé vs part réelle</h2></div></div><div id="contributionCards" class="contribution-grid"></div></article>
-          <article class="panel"><div class="panel-heading"><div><span class="panel-kicker">Répartition</span><h2>Règles des dépenses communes</h2></div><button class="text-button" id="editSplitRules">Modifier</button></div><div id="splitRules" class="split-rule-list"></div></article>
-        </div>
-        <article class="panel"><div class="panel-heading"><div><span class="panel-kicker">Historique</span><h2>Dépenses communes du mois</h2></div></div><div id="coupleTransactions" class="couple-transaction-list"></div></article>
-      </section>
-
-      <section class="page" id="page-goals" data-page="goals">
-        <div class="toolbar"><button class="primary-button" id="addGoal">＋ Nouvel objectif</button></div>
-        <div class="goal-grid" id="goalGrid"></div>
-      </section>
-
-      <section class="page" id="page-settings" data-page="settings">
-        <div class="settings-grid">
-          <article class="panel settings-card">
-            <div class="panel-heading"><div><span class="panel-kicker">Foyer</span><h2>Profils</h2></div></div>
-            <label>Nom de la personne 1<input id="memberLaName" type="text"></label>
-            <label>Initiales<input id="memberLaInitials" type="text" maxlength="3"></label>
-            <label>Nom de la personne 2<input id="memberPartnerName" type="text"></label>
-            <label>Initiales<input id="memberPartnerInitials" type="text" maxlength="3"></label>
-            <button class="primary-button" id="saveProfiles">Enregistrer</button>
-          </article>
-
-          <article class="panel settings-card">
-            <div class="panel-heading"><div><span class="panel-kicker">Répartition</span><h2>Règle par défaut</h2></div></div>
-            <label>Part membre 1 (%)<input id="defaultSplitLa" type="number" min="0" max="100"></label>
-            <label>Part membre 2 (%)<input id="defaultSplitPartner" type="number" min="0" max="100"></label>
-            <p class="muted">Chaque catégorie peut ensuite avoir sa propre règle.</p>
-            <button class="primary-button" id="saveDefaultSplit">Enregistrer</button>
-          </article>
-
-          <article class="panel settings-card">
-            <div class="panel-heading"><div><span class="panel-kicker">Devises</span><h2>Affichage</h2></div></div>
-            <label>Devise principale<select id="baseCurrency"><option value="CAD">CAD — Dollar canadien</option></select></label>
-            <label>Devise secondaire<select id="secondaryCurrency"><option value="EUR">EUR — Euro</option><option value="USD">USD — Dollar américain</option><option value="GBP">GBP — Livre sterling</option></select></label>
-            <label class="toggle-row"><input type="checkbox" id="showSecondaryCurrency"><span>Afficher l’équivalent secondaire</span></label>
-            <button class="secondary-button" id="refreshRate">Actualiser le taux</button>
-            <p class="muted" id="currentRateLabel">Taux non chargé</p>
-          </article>
-
-          <article class="panel settings-card opening-balances-card">
-            <div class="panel-heading"><div><span class="panel-kicker">Position estimée</span><h2>Soldes de départ individuels</h2></div></div>
-            <div class="opening-person-block"><h3 id="openingBalanceLaLabel">Louis-Antoine</h3><label>Solde à une date donnée<input id="openingBalanceLa" type="number" step="0.01" inputmode="decimal" placeholder="Ex. 2500"></label><label>Date du solde<input id="openingBalanceDateLa" type="date"></label></div>
-            <div class="opening-person-block"><h3 id="openingBalancePartnerLabel">Élise</h3><label>Solde à une date donnée<input id="openingBalancePartner" type="number" step="0.01" inputmode="decimal" placeholder="Ex. 2000"></label><label>Date du solde<input id="openingBalanceDatePartner" type="date"></label></div>
-            <p class="muted">Trace calcule séparément la position estimée de chacun, puis les additionne pour la vue du couple. Ces montants ne remplacent pas un rapprochement bancaire.</p>
-            <button class="primary-button" id="saveOpeningBalance">Enregistrer les deux soldes</button>
-          </article>
-
-          <article class="panel settings-card">
-            <div class="panel-heading"><div><span class="panel-kicker">Sécurité locale</span><h2>Code PIN</h2></div></div>
-            <label>Nouveau PIN<input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="4 à 6 chiffres"></label>
-            <button class="primary-button" id="savePin">Définir le PIN</button>
-            <button class="secondary-button" id="lockApp">Verrouiller maintenant</button>
-          </article>
-
-
-          <article class="panel settings-card wide-setting" id="cloudAccountCard">
-            <div class="panel-heading"><div><span class="panel-kicker">Synchronisation</span><h2>Compte et espace partagé</h2></div><span class="sync-badge" id="cloudSettingsStatus">Connexion…</span></div>
-            <div class="cloud-account-grid">
-              <div><span>Compte</span><strong id="cloudAccountEmail">—</strong></div>
-              <div><span>Espace</span><strong id="cloudHouseholdLabel">—</strong></div>
-              <div><span>Membres</span><strong id="cloudMembersLabel">—</strong></div>
-              <div><span>Code d’invitation</span><strong id="cloudInviteLabel">—</strong></div>
-            </div>
-            <label>Lien d’invitation<input id="cloudInviteLink" type="text" readonly></label>
-            <div class="button-row wrap">
-              <button class="primary-button" id="cloudCopyInvite" type="button">Copier l’invitation</button>
-              <button class="secondary-button" id="cloudRotateInvite" type="button">Créer un nouveau code</button>
-              <button class="secondary-button" id="cloudReloadData" type="button">Recharger depuis le cloud</button>
-              <button class="danger-button" id="cloudSignOut" type="button">Se déconnecter</button>
-            </div>
-            <p class="muted">Tes amis doivent créer leur propre espace. Ils ne rejoignent le tien que si tu leur transmets volontairement ce code.</p>
-          </article>
-
-          <article class="panel settings-card wide-setting">
-            <div class="panel-heading"><div><span class="panel-kicker">Organisation</span><h2>Catégories personnalisées</h2></div><button class="secondary-button" id="addCategoryButtonSettings">＋ Ajouter</button></div>
-            <div id="categoryManager" class="category-manager"></div>
-          </article>
-
-          <article class="panel settings-card wide-setting">
-            <div class="panel-heading"><div><span class="panel-kicker">Données</span><h2>Sauvegarde et restauration</h2></div></div>
-            <div class="button-row wrap"><button class="primary-button" id="exportJson">Télécharger la sauvegarde JSON</button><label class="secondary-button file-button">Importer une sauvegarde<input id="importJson" type="file" accept="application/json"></label><button class="danger-button" id="resetDemo">Créer un nouvel espace local</button></div>
-            <p class="muted">Les données sont synchronisées dans Supabase. Le fichier JSON reste une sauvegarde de sécurité indépendante.</p>
-          </article>
-        </div>
-      </section>
-    </main>
-
-    <nav class="mobile-nav" aria-label="Navigation mobile">
-      <button class="mobile-nav-item active" data-route="dashboard"><span>⌂</span><small>Synthèse</small></button>
-      <button class="mobile-nav-item" data-route="budget"><span>◎</span><small>Budget</small></button>
-      <button class="mobile-add" id="openQuickAddMobile" aria-label="Ajouter une transaction">＋</button>
-      <button class="mobile-nav-item" data-route="transactions"><span>↕</span><small>Réel</small></button>
-      <button class="mobile-nav-item" data-route="couple"><span>⇄</span><small>Couple</small></button>
-    </nav>
-  </div>
-
-  <dialog id="transactionDialog" class="modal transaction-modal">
-    <form method="dialog" id="transactionForm">
-      <div class="modal-header"><div><span class="panel-kicker">Nouvelle opération</span><h2 id="transactionDialogTitle">Ajouter une transaction</h2></div><button class="icon-button" type="button" value="cancel" aria-label="Fermer">×</button></div>
-      <input type="hidden" id="transactionId">
-      <div class="form-grid quick-form">
-        <label class="full-span">Nom / libellé *<input id="txName" type="text" required placeholder="Ex. Épicerie de la semaine"></label>
-        <label>Type *<select id="txType" required>
-          <option value="expense">Dépense</option><option value="group_expense">Dépense à plusieurs</option><option value="income">Revenu</option><option value="refund">Remboursement</option><option value="transfer">Règlement entre nous</option><option value="person_payment">Paiement de ma part à quelqu’un</option><option value="external_refund">Remboursement reçu</option>
-        </select></label>
-        <label>Montant *<input id="txAmount" type="number" min="0.01" step="0.01" required inputmode="decimal"></label>
-        <label>Date *<input id="txDate" type="date" required></label>
-        <label>Devise<select id="txCurrency"><option>CAD</option><option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option><option>AUD</option><option>JPY</option><option>MXN</option></select></label>
-        <label>Catégorie *<select id="txCategory" required></select></label>
-        <label id="payerLabel">Payé / reçu par *<select id="txPayer" required></select></label>
-        <label>Concerne *<select id="txBeneficiary" required></select></label>
-        <label id="counterpartyRow" class="full-span hidden">Personne concernée<input id="txCounterparty" type="text" placeholder="Ex. Thomas"></label>
-        <p class="field-help full-span" id="transactionTypeHint"></p>
-      </div>
-      <details class="advanced-fields" open>
-        <summary>Répartition et options</summary>
-        <div class="form-grid advanced-grid">
-          <label>Taux vers CAD<input id="txRate" type="number" min="0" step="0.000001" value="1"></label>
-          <label>Montant réellement débité en CAD<input id="txBankAmount" type="number" min="0" step="0.01" placeholder="Facultatif"></label>
-          <fieldset class="external-fieldset full-span"><legend>Dépense à plusieurs</legend>
-            <label class="toggle-row"><input id="txExternalEnabled" type="checkbox"><span>Des personnes extérieures doivent rembourser une partie</span></label>
-            <div id="externalFields" class="form-grid full-span hidden">
-              <label>Nombre de personnes extérieures<input id="txExternalCount" type="number" min="1" max="20" step="1" value="2"></label>
-              <label>Noms facultatifs<input id="txExternalNames" type="text" placeholder="Ex. Thomas, Julie"></label>
-              <label>Montant total à recevoir<input id="txExternalAmount" type="number" min="0" step="0.01" inputmode="decimal"></label>
-              <button type="button" class="secondary-button equal-split-button" id="calculateEqualExternal">Calculer à parts égales</button>
-              <p class="field-help full-span" id="externalSummary"></p>
-            </div>
-          </fieldset>
-          <fieldset class="split-fieldset full-span"><legend>Répartition entre vous deux</legend>
-            <div class="split-mode-toggle full-span"><label><input type="radio" name="splitMode" value="percent" checked> Pourcentage</label><label><input type="radio" name="splitMode" value="amount"> Montant CAD</label></div>
-            <div id="splitPercentFields" class="split-input-grid full-span"><label><span id="splitLaLabel">Membre 1</span><input id="txSplitLa" type="number" min="0" max="100" step="0.01"></label><label><span id="splitPartnerLabel">Membre 2</span><input id="txSplitPartner" type="number" min="0" max="100" step="0.01"></label><span>%</span></div>
-            <div id="splitAmountFields" class="split-input-grid full-span hidden"><label><span id="splitAmountLaLabel">Membre 1</span><input id="txSplitAmountLa" type="number" min="0" step="0.01"></label><label><span id="splitAmountPartnerLabel">Membre 2</span><input id="txSplitAmountPartner" type="number" min="0" step="0.01"></label><span>CAD</span></div>
-            <p class="field-help full-span" id="splitSummary"></p>
-          </fieldset>
-          <label>Statut<select id="txStatus"><option value="confirmed">Comptabilisé</option><option value="pending">À vérifier</option></select><small class="field-help">Une opération à vérifier reste visible mais n’alimente pas encore le réel.</small></label>
-          <label class="toggle-row"><input id="txRecurring" type="checkbox"><span>Transaction récurrente</span></label>
-          <div id="recurrenceFields" class="recurrence-grid full-span hidden">
-            <label>Fréquence<select id="txRecurrenceFrequency"><option value="weekly">Chaque semaine</option><option value="biweekly">Toutes les deux semaines</option><option value="monthly">Chaque mois</option><option value="yearly">Chaque année</option></select></label>
-            <label>Prochaine occurrence<input id="txRecurrenceNextDate" type="date"></label>
-            <label>Date de fin facultative<input id="txRecurrenceEndDate" type="date"></label>
-            <label class="toggle-row"><input id="txRecurrenceAutoConfirm" type="checkbox"><span>Comptabiliser automatiquement</span></label>
-          </div>
-          <label class="full-span">Note<textarea id="txNote" rows="3" placeholder="Information complémentaire"></textarea></label>
-        </div>
-      </details>
-      <div id="currencyHint" class="currency-hint hidden"></div>
-      <div class="modal-actions"><button class="secondary-button" type="button" value="cancel">Annuler</button><button class="primary-button" id="saveTransactionButton" value="default">Enregistrer</button></div>
-    </form>
-  </dialog>
-
-  <dialog id="goalDialog" class="modal small-modal">
-    <form method="dialog" id="goalForm">
-      <div class="modal-header"><div><span class="panel-kicker">Objectif</span><h2>Nouvel objectif</h2></div><button class="icon-button" type="button" value="cancel">×</button></div>
-      <label>Nom<input id="goalName" required placeholder="Ex. Voyage au Japon"></label>
-      <label>Montant cible<input id="goalTarget" type="number" required min="1" step="0.01"></label>
-      <label>Montant déjà accumulé<input id="goalCurrent" type="number" min="0" step="0.01" value="0"></label>
-      <label>Date cible<input id="goalDate" type="date"></label>
-      <label>Propriétaire<select id="goalOwner"><option value="la">Moi</option><option value="partner">Partenaire</option></select></label>
-      <div class="modal-actions"><button class="secondary-button" type="button" value="cancel">Annuler</button><button class="primary-button" value="default">Créer</button></div>
-    </form>
-  </dialog>
-
-  <dialog id="categoryDialog" class="modal small-modal">
-    <form method="dialog" id="categoryForm">
-      <div class="modal-header"><div><span class="panel-kicker">Personnalisation</span><h2>Ajouter une catégorie</h2></div><button class="icon-button" type="button" value="cancel">×</button></div>
-      <label>Nom de la catégorie<input id="categoryName" required placeholder="Ex. Animaux"></label>
-      <label>Type<select id="categoryType"><option value="expense">Dépense</option><option value="income">Revenu</option></select></label>
-      <label>Groupe<select id="categoryGroupSelect" required></select></label><label id="customGroupRow" class="hidden">Nouveau groupe<input id="categoryGroupCustom" placeholder="Ex. Vie quotidienne"></label>
-      <label>Icône courte<input id="categoryIcon" maxlength="3" value="＋" placeholder="Ex. 🐾"></label>
-      <div class="modal-actions"><button class="secondary-button" type="button" value="cancel">Annuler</button><button class="primary-button" value="default">Ajouter</button></div>
-    </form>
-  </dialog>
-
-  <dialog id="splitRulesDialog" class="modal">
-    <form method="dialog" id="splitRulesForm">
-      <div class="modal-header"><div><span class="panel-kicker">Dépenses communes</span><h2>Modifier les règles de répartition</h2></div><button class="icon-button" type="button" value="cancel">×</button></div>
-      <p class="field-help">Les pourcentages servent de règle par défaut. Les montants estimés sont calculés à partir du budget commun du mois sélectionné; chaque transaction peut toujours utiliser sa propre répartition en pourcentage ou en montant.</p>
-      <div id="splitRulesEditor" class="split-rules-editor"></div>
-      <div class="modal-actions"><button class="secondary-button" type="button" value="cancel">Annuler</button><button class="primary-button" value="default">Enregistrer</button></div>
-    </form>
-  </dialog>
-
-  <dialog id="onboardingDialog" class="modal onboarding-modal">
-    <form method="dialog" id="onboardingForm">
-      <div class="onboarding-brand"><span class="brand-mark"><img src="assets/icon-192.png" alt=""></span><div><h2>Créer votre espace Trace</h2><p>Chaque espace Supabase est privé et synchronisé uniquement entre ses membres.</p></div></div>
-      <div class="form-grid">
-        <label>Prénom du membre 1<input id="onboardingName1" value="Louis-Antoine" required></label>
-        <label>Prénom du membre 2<input id="onboardingName2" value="Élise" required></label>
-      </div>
-      <div class="onboarding-actions"><button class="primary-button" id="startEmptyButton" value="default">Démarrer à zéro</button><button class="secondary-button" id="startDemoButton" type="button">Explorer avec des données de démonstration</button></div>
-      <p class="field-help">Les données seront synchronisées entre les comptes reliés au même espace.</p>
-    </form>
-  </dialog>
-
-  <dialog id="pinDialog" class="modal small-modal lock-modal">
-    <form method="dialog" id="pinForm">
-      <div class="lock-icon">⌾</div><h2>Trace est verrouillée</h2><p>Entre ton code PIN local pour continuer.</p>
-      <label>Code PIN<input id="unlockPin" type="password" inputmode="numeric" maxlength="6" autofocus></label>
-      <p class="form-error" id="pinError"></p>
-      <button class="primary-button full-button" value="default">Déverrouiller</button>
-    </form>
-  </dialog>
-
-  <div id="updateBanner" class="update-banner hidden"><span>Une nouvelle version de Trace est disponible.</span><button id="applyUpdate" class="primary-button" type="button">Mettre à jour</button></div>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <script src="cloud.js"></script>
-  <script src="app.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="v5-app.js"></script>
 </body>
 </html>
