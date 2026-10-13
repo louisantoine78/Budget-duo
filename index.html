@@ -248,6 +248,18 @@
 </div>
 <div id="toast" class="toast"></div>
 
+<script id="trace-boot-error-fallback">
+window.addEventListener('error',function(){
+  var loading=document.getElementById('cloudLoadingPanel');
+  var auth=document.getElementById('cloudAuthPanel');
+  var msg=document.getElementById('cloudAuthMessage');
+  if(loading && !loading.classList.contains('hidden')){
+    loading.classList.add('hidden');
+    if(auth)auth.classList.remove('hidden');
+    if(msg)msg.textContent='Trace a rencontré un problème de chargement. Ferme complètement l’app puis rouvre-la.';
+  }
+});
+</script>
 <script src="config.js"></script>
 <script>
 (function(){
@@ -303,7 +315,7 @@
         throw new Error('Supabase indisponible');
       }
       stage('Ouverture de Trace…');
-      await loadScript('./v5-app.js?v=5.1.1',5000);
+      await loadScript('./v5-app.js?v=5.1.2',5000);
       loadScript('./onboarding.js?v=1.6.0',5000).catch(function(){});
     }catch(err){
       console.error('Trace boot error',err);
