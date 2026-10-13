@@ -2,7 +2,7 @@
   "name": "Trace",
   "short_name": "Trace",
   "description": "Budget, activité, partage et patrimoine — simple, clair et à jour.",
-  "start_url": "./trace-fresh-20261013.html?build=5.2.2",
+  "start_url": "./trace-fresh-20261013.html?build=5.2.3",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
