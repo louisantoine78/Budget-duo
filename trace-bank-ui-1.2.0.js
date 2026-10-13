@@ -1,0 +1,83 @@
+(()=>{'use strict';
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+async function readDocument(file){
+ const target=$('#importResult');
+ target.innerHTML='<article class="card"><b>Lecture sur cet appareil…</b><div class="empty-note" id="readProgress"></div></article>';
+ try{
+  const extracted=await window.TraceBankDocuments.extract(file,msg=>{const e=$('#readProgress');if(e)e.textContent=msg;});
+  showDocumentReview(file,extracted);
+ }catch(error){target.innerHTML='<div class="empty-note">'+esc(error.message)+'</div>';}
+}
+function showDocumentReview(file,data){
+ const root=$('#importResult');
+ const accounts=window.TraceBankBridge.accounts();
+ root.innerHTML='<article class="card"><b>'+esc(file.name)+'</b><div class="empty-note">Texte détecté localement : corrige-le puis vérifie les montants avant import.</div>'+
+ '<textarea id="docText" class="input" style="width:100%;min-height:140px;font-size:16px">'+esc(data.text)+'</textarea>'+
+ '<label class="label2">Compte</label><select class="input" id="docAccount">'+accounts.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>').join('')+'</select>'+
+ '<label class="label2">Format de date</label><select class="input" id="docFormat"><option value="dmy">JJ/MM/AAAA</option><option value="mdy">MM/JJ/AAAA</option></select>'+
+ '<button id="docParse" class="primary full" style="margin-top:10px">Préparer les lignes</button><div id="docRows"></div></article>';
+ $('#docParse').onclick=()=>renderCandidateRows(file,data);
+ $('#docParse').click();
+}
+function renderCandidateRows(file,data){
+ const importer=window.TraceBankDocuments,bridge=window.TraceBankBridge;
+ const parsed=importer.extractCandidates($('#docText').value,$('#docFormat').value);
+ const accountId=$('#docAccount').value;
+ const records=parsed.candidates.slice(0,150);
+ const statuses=bridge.inspect(records,accountId);
+ const labels={historical:'Hors période du solde · conservable en historique',already:'Déjà dans Trace',possible:'Ressemblance trouvée · vérification nécessaire',missing:'Nouvelle opération potentielle'};
+ const counts=statuses.reduce((n,r)=>(n[r.status]=(n[r.status]||0)+1,n),{});
+ const isPdf=file.name.toLowerCase().endsWith('.pdf');
+ const node=$('#docRows');
+ node.innerHTML='<div class="trace-import-report">'+
+  '<b>'+(isPdf?'Contrôle mensuel du relevé':'Ajout depuis une capture')+'</b>'+
+  '<div class="trace-import-metrics"><span>Déjà présentes : '+(counts.already||0)+'</span><span>À vérifier : '+(counts.possible||0)+'</span><span>Potentiellement manquantes : '+(counts.missing||0)+'</span><span>Hors période : '+(counts.historical||0)+'</span></div>'+
+  '<small>Les lignes historiques ne sont pas supprimées ; elles sont simplement exclues des calculs de solde, de Budget et de Partage. '+(parsed.skippedPayments||0)+' paiement(s) de carte écarté(s) par le relevé.</small>'+
+  '</div>'+
+  (records.length?records.map((r,i)=>{
+   const st=statuses[i],include=st.status==='missing'&&r.selected;
+   const matched=st.matchName?'<small>Correspondance : '+esc(st.matchName)+' ('+esc(st.matchDate)+')'+(st.matchStatus==='confirmed'?' · validée':' · à valider')+'</small>':'';
+   return '<div class="trace-doc-row '+(st.status==='historical'?'trace-historical':'')+'" data-record="'+i+'">'+
+    '<div class="trace-import-flag"><strong>'+esc(labels[st.status])+'</strong><label><input type="checkbox" class="docSelected" '+(include?'checked':'')+'> Sélectionner</label></div>'+
+    matched+
+    '<div class="formrow"><div><label class="label2">Date d’opération</label><input type="date" class="input docDate" value="'+esc(r.date)+'"></div>'+
+    '<div><label class="label2">Nature</label><select class="input docType"><option value="expense" '+(r.type==='expense'?'selected':'')+'>Dépense</option><option value="income" '+(r.type==='income'?'selected':'')+'>Revenu</option><option value="refund" '+(r.type==='refund'?'selected':'')+'>Remboursement</option></select></div></div>'+
+    '<label class="label2">Libellé</label><input class="input docName" maxlength="80" value="'+esc(r.name)+'">'+
+    '<label class="label2">Montant en CAD</label><input class="input docAmount" type="number" inputmode="decimal" min="0.01" step="0.01" value="'+esc(r.amount)+'">'+
+    '<small class="trace-source-line">Source : '+esc(r.raw)+'</small></div>';
+  }).join(''):'<div class="empty-note">Aucune opération identifiable. Modifie le texte extrait ou utilise un CSV.</div>')+
+  (records.length?'<button type="button" class="primary full" id="docSave" style="margin-top:14px">Envoyer la sélection dans À valider</button>':'')+
+  '<div class="trace-feedback" id="docError" role="status"></div>';
+ if(!records.length)return;
+ $('#docSave').onclick=async()=>{
+  const chosen=[...node.querySelectorAll('[data-record]')].filter(el=>el.querySelector('.docSelected').checked);
+  if(!chosen.length){$('#docError').textContent='Coche au moins une opération réellement manquante.';return;}
+  const rows=chosen.map(el=>{
+   const i=Number(el.dataset.record),stat=statuses[i];
+   return{date:el.querySelector('.docDate').value,name:el.querySelector('.docName').value.trim(),
+    amount:Number(el.querySelector('.docAmount').value),type:el.querySelector('.docType').value,
+    allowPossibleDuplicate:stat.status==='possible'};
+  });
+  if(rows.some(r=>!r.date||!r.name||!(r.amount>0)||!Number.isFinite(r.amount))){$('#docError').textContent='Corrige les lignes sélectionnées : date, libellé et montant obligatoires.';return;}
+  const suspicious=chosen.filter(el=>['possible','already','historical'].includes(statuses[Number(el.dataset.record)].status));
+  if(suspicious.length){
+   const yes=window.confirm(suspicious.length+' opération(s) déjà présentes, ressemblantes ou hors période sont sélectionnées. Confirmer leur import en attente de validation ?');
+   if(!yes)return;
+  }
+  const btn=$('#docSave');btn.disabled=true;btn.textContent='Enregistrement…';
+  try{
+   const r=await bridge.submit(rows,accountId,file.name,data.ocrPages?'ocr':'pdf');
+   $('#importResult').innerHTML='<div class="empty-note">'+r.added+' ajoutée(s) dans À valider ; '+r.duplicates+' doublon(s) ignoré(s). Vérifie les catégories et le partage avant de confirmer.</div>';
+  }catch(error){btn.disabled=false;btn.textContent='Réessayer';$('#docError').textContent=esc(error.message);}
+ };
+}
+
+document.addEventListener('change',e=>{
+ if(e.target?.id!=='importFile')return;
+ const input=e.target,file=input.files?.[0];
+ if(!file||/\.csv$/i.test(file.name)||file.type==='text/csv')return;
+ e.preventDefault();e.stopImmediatePropagation();input.value='';
+ void readDocument(file);
+},true);
+})();

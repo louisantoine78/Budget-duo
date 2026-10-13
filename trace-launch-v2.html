@@ -1,19 +1,19 @@
 <!doctype html>
-<html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#123F38"><title>Trace</title><style>html,body{margin:0;background:#f7f5ef}</style></head>
-<body>
-<script>
-(async function(){
-  try{
-    const r=await fetch('./trace-version.json?ts='+Date.now(),{cache:'no-store'});
-    const v=await r.json();
-    const u=new URL('./'+v.entry,location.href);
-    u.searchParams.set('launch',Date.now().toString());
-    location.replace(u.toString());
-  }catch(_){
-    location.replace('./trace-5.7.1.html?launch='+Date.now());
-  }
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123F38"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Trace">
+<link rel="manifest" href="manifest.webmanifest"><title>Trace</title>
+<style>html,body{margin:0;background:#f7f5ef;color:#123f38;font:16px system-ui}body{padding:24px}</style>
+</head><body><p>Ouverture de Trace…</p><script>
+(async()=>{
+ try{
+  const r=await fetch('./trace-version.json?t='+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw Error('Version indisponible');
+  const v=await r.json();
+  if(!/^\d+\.\d+\.\d+$/.test(v.build))throw Error('Version incorrecte');
+  location.replace('./index.html?build='+encodeURIComponent(v.build)+'&t='+Date.now());
+ }catch(e){
+  location.replace('./index.html?offline=1&t='+Date.now());
+ }
 })();
-</script>
-</body>
-</html>
+</script></body></html>
