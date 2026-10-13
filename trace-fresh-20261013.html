@@ -10,12 +10,12 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.2.2">
+<meta name="trace-build" content="5.2.3">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="v5.css?v=5.0.6">
+<link rel="stylesheet" href="v5.css?v=5.0.7">
 <link rel="stylesheet" href="onboarding.css?v=1.2.0">
 </head>
 <body>
@@ -154,19 +154,23 @@
       </div>
       <div class="budget-period" id="budgetPeriodControl">
         <div class="budget-month-nav">
-          <button class="period-arrow" id="budgetPrevMonth" type="button" aria-label="Mois précédent">‹</button>
+          <button class="period-arrow" id="budgetPrevMonth" type="button" aria-label="Mois précédent">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
           <label class="budget-month-picker">
-            <span>Mois affiché</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="3"/><path d="M8 3.5v4M16 3.5v4M3.5 10h17"/></svg>
             <input type="month" id="budgetMonthPicker" aria-label="Choisir le mois du budget">
           </label>
-          <button class="period-arrow" id="budgetNextMonth" type="button" aria-label="Mois suivant">›</button>
+          <button class="period-arrow" id="budgetNextMonth" type="button" aria-label="Mois suivant">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
         </div>
         <div class="budget-period-actions">
-          <button class="linkbtn hidden" id="budgetCurrentMonth" type="button">Revenir à ce mois</button>
-          <button class="secondary budget-copy-btn" id="budgetCopyPrevious" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8Z"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
-            <span>Copier le mois précédent</span>
+          <button class="budget-copy-btn" id="budgetCopyPrevious" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+            <span>Reprendre septembre 2026</span>
           </button>
+          <button class="budget-current-link hidden" id="budgetCurrentMonth" type="button">Aujourd’hui</button>
         </div>
       </div>
       <article class="card hero-card" style="min-height:150px">
@@ -251,8 +255,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app.js?v=5.2.2"></script>
-<script src="onboarding.js?v=1.7.2"></script>
+<script src="v5-app.js?v=5.2.3"></script>
+<script src="onboarding.js?v=1.7.3"></script>
 <script>
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){
