@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="v5.css?v=5.0.3">
+<link rel="stylesheet" href="v5.css?v=5.0.4">
 </head>
 <body>
 <div id="cloudGate" class="cloud-gate">
@@ -201,12 +201,22 @@
     </section>
   </main>
 
-  <nav class="nav" aria-label="Navigation">
-    <button class="navbtn active" data-nav="home"><span class="ico">⌂</span><span>Accueil</span></button>
-    <button class="navbtn" data-nav="budget"><span class="ico">◎</span><span>Budget</span></button>
-    <button class="navbtn plus" id="quickAdd"><span class="ico">＋</span><span>Ajouter</span></button>
-    <button class="navbtn" data-nav="activity"><span class="ico">↕</span><span>Activité</span></button>
-    <button class="navbtn" data-nav="wealth"><span class="ico">◇</span><span>Patrimoine</span></button>
+  <nav class="nav" aria-label="Navigation principale">
+    <button class="navbtn active" data-nav="home" aria-label="Accueil">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.75l8.5 6.75"/><path d="M5.5 9.4V20h13V9.4"/><path d="M9.5 20v-6h5v6"/></svg></span><span>Accueil</span>
+    </button>
+    <button class="navbtn" data-nav="budget" aria-label="Budget">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5h16"/><path d="M6 4.5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z"/><path d="M15.5 13h4.5"/><circle cx="16.5" cy="13" r=".7" fill="currentColor" stroke="none"/></svg></span><span>Budget</span>
+    </button>
+    <button class="navbtn plus" id="quickAdd" aria-label="Ajouter une opération">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span><span>Ajouter</span>
+    </button>
+    <button class="navbtn" data-nav="activity" aria-label="Activité">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4v16M4.5 6.5 7 4l2.5 2.5"/><path d="M17 20V4M14.5 17.5 17 20l2.5-2.5"/></svg></span><span>Activité</span>
+    </button>
+    <button class="navbtn" data-nav="wealth" aria-label="Patrimoine">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18.5V13l4-3 4 2 4-6 4 2.5"/><path d="M4 20h16"/></svg></span><span>Patrimoine</span>
+    </button>
   </nav>
 </div>
 
@@ -221,6 +231,6 @@
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
-<script src="v5-app.js?v=5.0.3"></script>
+<script src="v5-app.js?v=5.0.4"></script>
 </body>
 </html>
