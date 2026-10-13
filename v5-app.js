@@ -53,15 +53,75 @@ function renderBudget(){
   $('#budgetHeroTotal').textContent=money(s.eb);
   $('#budgetHeroSub').textContent=money(Math.max(0,s.ib-s.eb))+' de marge prévue · '+money(s.ib)+' de revenus';
   const rows=state.budgets.filter(b=>b.month===month&&budgetAmt(b,sId)>0);
-  const secs=[
-    ['Revenus',b=>cat(b.categoryId).type==='income'],
-    ['Dépenses fixes',b=>cat(b.categoryId).type==='expense'&&['rent','subscriptions','phone','taxes'].includes(b.categoryId)],
-    ['Dépenses variables',b=>cat(b.categoryId).type==='expense'&&!['rent','subscriptions','phone','taxes'].includes(b.categoryId)]
+  const sectionDefs=[
+    ['Revenus','income',b=>cat(b.categoryId).type==='income'],
+    ['Dépenses fixes','fixed',b=>cat(b.categoryId).type==='expense'&&['rent','subscriptions','phone','taxes'].includes(b.categoryId)],
+    ['Dépenses variables','variable',b=>cat(b.categoryId).type==='expense'&&!['rent','subscriptions','phone','taxes'].includes(b.categoryId)]
   ];
-  $('#budgetSections').innerHTML=secs.map(([t,f])=>'<div class="section-head"><h2>'+t+'</h2><button class="linkbtn" disabled>+ Ajouter</button></div><article class="card budget-section">'+(rows.filter(f).length?rows.filter(f).map(b=>'<div class="budget-card"><span class="bicon">'+esc(cat(b.categoryId).icon||'•')+'</span><span class="bmain"><strong>'+esc(cat(b.categoryId).name)+'</strong><small>'+(b.scope==='couple'?'Budget commun':'Personnel')+'</small></span><span class="bvalue"><strong>'+money(budgetAmt(b,sId))+'</strong></span></div>').join(''):'<div class="empty-note">Aucun poste.</div>')+'</article>').join('');
+  $('#budgetSections').innerHTML=sectionDefs.map(([t,kind,f])=>'<div class="section-head"><h2>'+t+'</h2><button class="linkbtn budget-add-link" type="button" data-budget-add="'+kind+'">+ Ajouter</button></div><article class="card budget-section">'+(rows.filter(f).length?rows.filter(f).map(b=>'<button class="budget-card budget-edit-row" type="button" data-budget-edit="'+esc(b.id)+'"><span class="bicon">'+esc(cat(b.categoryId).icon||'•')+'</span><span class="bmain"><strong>'+esc(cat(b.categoryId).name)+'</strong><small>'+(b.scope==='couple'?'Budget commun':'Personnel')+'</small></span><span class="bvalue"><strong>'+money(budgetAmt(b,sId))+'</strong></span></button>').join(''):'<div class="empty-note">Aucun poste.</div>')+'</article>').join('');
+  $('[data-budget-add]').forEach(btn=>btn.onclick=()=>openBudgetAdd(btn.dataset.budgetAdd));
+  $('[data-budget-edit]').forEach(btn=>btn.onclick=()=>openBudgetEdit(btn.dataset.budgetEdit));
   const year=month.slice(0,4),ms=Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0')),vs=ms.map(m=>summary(m,sId)),max=Math.max(1,...vs.flatMap(v=>[v.eb,v.expense]));
   $('#annualBudgetChart').innerHTML=ms.map((m,i)=>'<div class="monthbar '+(m===month?'selected':'')+'"><i style="height:'+Math.max(2,vs[i].eb/max*100)+'%"></i><b style="height:'+Math.max(2,vs[i].expense/max*100)+'%"></b><em>'+shortMonth(m)+'</em></div>').join('');
   updateSegments();
+}
+function budgetCategoriesFor(kind){
+  const active=state.categories.filter(c=>!c.archived);
+  if(kind==='income')return active.filter(c=>c.type==='income');
+  const expenses=active.filter(c=>c.type==='expense');
+  if(kind==='fixed')return expenses.filter(c=>['rent','subscriptions','phone','taxes'].includes(c.id));
+  return expenses.filter(c=>!['rent','subscriptions','phone','taxes'].includes(c.id));
+}
+function budgetKindLabel(kind){return kind==='income'?'Revenu':kind==='fixed'?'Dépense fixe':'Dépense variable';}
+function openBudgetAdd(kind='variable'){
+  const cats=budgetCategoriesFor(kind);
+  const owner=budgetScope==='mine'?me:'couple';
+  const options=cats.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  openSheet('Ajouter au budget',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(monthLabel(budgetMonth))+'</b><small>'+esc(budgetKindLabel(kind))+' · '+(owner==='couple'?'Budget Couple':'Budget personnel')+'</small></div></div>'+
+    '<label class="label2">Catégorie</label><select class="input" id="budgetAddCategory">'+options+'</select>'+
+    '<label class="label2" style="margin-top:12px">Montant prévu</label><div class="budget-amount-field"><input class="input" id="budgetAddAmount" type="number" inputmode="decimal" min="0" step="1" placeholder="0"><span>$</span></div>'+
+    '<button class="primary full" id="saveBudgetAdd" type="button" style="margin-top:18px">Ajouter au budget</button>'+
+    '<button class="secondary full" id="cancelBudgetAdd" type="button" style="margin-top:8px">Annuler</button>'
+  );
+  $('#cancelBudgetAdd').onclick=closeSheet;
+  $('#budgetAddAmount')?.focus();
+  $('#saveBudgetAdd').onclick=async()=>{
+    const categoryId=$('#budgetAddCategory').value;
+    const amount=Number($('#budgetAddAmount').value||0);
+    if(!categoryId||!Number.isFinite(amount)||amount<0)return;
+    const current=state.budgets.find(b=>b.month===budgetMonth&&b.scope===owner&&b.categoryId===categoryId);
+    const item={id:current?.id||budgetDocId(),month:budgetMonth,scope:owner,categoryId,amount};
+    const btn=$('#saveBudgetAdd');btn.disabled=true;btn.textContent='Enregistrement…';
+    try{
+      if(current)Object.assign(current,item);else state.budgets.push(item);
+      await saveDocument('budgets',item);
+      closeSheet();renderBudget();renderHome();
+    }catch(err){
+      console.error(err);btn.disabled=false;btn.textContent='Réessayer';
+    }
+  };
+}
+function openBudgetEdit(id){
+  const item=state.budgets.find(b=>b.id===id);
+  if(!item)return;
+  const category=cat(item.categoryId);
+  openSheet('Modifier le budget',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(category.name)+'</b><small>'+esc(monthLabel(item.month))+' · '+(item.scope==='couple'?'Budget Couple':'Budget personnel')+'</small></div></div>'+
+    '<label class="label2">Montant prévu</label><div class="budget-amount-field"><input class="input" id="budgetEditAmount" type="number" inputmode="decimal" min="0" step="1" value="'+Number(item.amount||0)+'"><span>$</span></div>'+
+    '<button class="primary full" id="saveBudgetEdit" type="button" style="margin-top:18px">Enregistrer</button>'+
+    '<button class="secondary full" id="cancelBudgetEdit" type="button" style="margin-top:8px">Annuler</button>'
+  );
+  $('#cancelBudgetEdit').onclick=closeSheet;
+  $('#saveBudgetEdit').onclick=async()=>{
+    const amount=Number($('#budgetEditAmount').value||0);
+    if(!Number.isFinite(amount)||amount<0)return;
+    const next={...item,amount};
+    const btn=$('#saveBudgetEdit');btn.disabled=true;btn.textContent='Enregistrement…';
+    try{
+      Object.assign(item,next);await saveDocument('budgets',next);closeSheet();renderBudget();renderHome();
+    }catch(err){console.error(err);btn.disabled=false;btn.textContent='Réessayer';}
+  };
 }
 async function copyPreviousBudget(){
   const target=budgetMonth,prev=monthOffset(target,-1),owner=budgetScope==='mine'?me:'couple';
@@ -346,7 +406,7 @@ async function init(){
   }
 }
 function fatal(e){console.error(e);showGate('cloudAuthPanel');$('#cloudAuthMessage').textContent=e?.message||'Erreur de chargement';}
-function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=()=>openSheet('Ajouter','<div class="empty-note">Le formulaire connecté arrive dans la prochaine passe. Pour l’instant aucune donnée n’est modifiée depuis ce bouton.</div>');$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>openSheet('Partage',`<div class="money2">${esc($('#shareBalance').textContent)}</div><div class="empty-note" style="margin-top:12px">Le détail des mouvements sera activé dans la prochaine passe.</div>`);$('#shareOpen').onclick=$('#shareCard').onclick;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetPrevMonth')?.addEventListener('click',e=>{e.preventDefault();setBudgetMonth(monthOffset(budgetMonth,-1));});$('#budgetNextMonth')?.addEventListener('click',e=>{e.preventDefault();setBudgetMonth(monthOffset(budgetMonth,1));});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#wealthAnalysis').onclick=()=>openSheet('Analyse du patrimoine','<div class="empty-note">Analyse patrimoine en préparation.</div>');$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{$('#importResult').innerHTML=`<article class="card"><b>${esc(e.target.files?.[0]?.name||'Fichier')}</b><div class="empty-note" style="margin-top:10px">Fichier reconnu. L’extraction automatique sera branchée dans l’étape suivante.</div></article>`;};$$('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée. Réessaie dans quelques secondes.');session=data.session;await loadWorkspace();$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=err?.message||'Connexion impossible. Réessaie.';}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{data:{display_name:$('#cloudSignupName').value.trim()}}});$('#cloudAuthMessage').textContent=error?error.message:'Compte créé.';};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
+function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=()=>{const page=$('.page.active')?.dataset.page;if(page==='budget')openBudgetAdd('variable');else openSheet('Ajouter','<div class="empty-note">L’ajout manuel de transaction sera activé dans la prochaine passe.</div>');};$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>openSheet('Partage',`<div class="money2">${esc($('#shareBalance').textContent)}</div><div class="empty-note" style="margin-top:12px">Le détail des mouvements sera activé dans la prochaine passe.</div>`);$('#shareOpen').onclick=$('#shareCard').onclick;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#wealthAnalysis').onclick=()=>openSheet('Analyse du patrimoine','<div class="empty-note">Analyse patrimoine en préparation.</div>');$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{$('#importResult').innerHTML=`<article class="card"><b>${esc(e.target.files?.[0]?.name||'Fichier')}</b><div class="empty-note" style="margin-top:10px">Fichier reconnu. L’extraction automatique sera branchée dans l’étape suivante.</div></article>`;};$$('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée. Réessaie dans quelques secondes.');session=data.session;await loadWorkspace();$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=err?.message||'Connexion impossible. Réessaie.';}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{data:{display_name:$('#cloudSignupName').value.trim()}}});$('#cloudAuthMessage').textContent=error?error.message:'Compte créé.';};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
 function bootTrace(){
   try{
     bind();
