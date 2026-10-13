@@ -1,5 +1,5 @@
-const CACHE_NAME = 'trace-v5-auth-repair-20261013';
-const ASSETS = ['./','./index.html','./v5.css?v=5.0.5','./v5-app.js?v=5.0.7','./onboarding.css?v=1.2.0','./onboarding.js?v=1.4.0','./config.js','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
+const CACHE_NAME = 'trace-v5-auth-watchdog-20261013';
+const ASSETS = ['./','./index.html','./v5.css?v=5.0.5','./v5-app.js?v=5.0.8','./onboarding.css?v=1.2.0','./onboarding.js?v=1.4.0','./config.js','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
