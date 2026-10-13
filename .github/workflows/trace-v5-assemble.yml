@@ -1,0 +1,37 @@
+name: Trace V5 assemble preview
+
+on:
+  push:
+    branches:
+      - trace-v5-integration
+    paths:
+      - "tmp/v5b64-*.txt"
+      - ".github/workflows/trace-v5-assemble.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    if: ${{ !contains(github.event.head_commit.message, '[trace-v5-build]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: trace-v5-integration
+          fetch-depth: 0
+      - name: Assemble and syntax-check app
+        shell: bash
+        run: |
+          cat tmp/v5b64-1.txt tmp/v5b64-2.txt tmp/v5b64-3a.txt tmp/v5b64-3b.txt tmp/v5b64-4.txt | tr -d '\\r\\n' | base64 --decode > v5-app.js
+          node --check v5-app.js
+          test "$(wc -c < v5-app.js)" -gt 20000
+      - name: Commit generated preview
+        shell: bash
+        run: |
+          rm -f tmp/v5b64-*.txt
+          git config user.name "Trace V5 Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add v5-app.js tmp
+          git commit -m "[trace-v5-build] assemble connected preview"
+          git push origin HEAD:trace-v5-integration
