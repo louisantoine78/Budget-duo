@@ -10,12 +10,12 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.2.3">
+<meta name="trace-build" content="5.2.4">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="v5.css?v=5.0.7">
+<link rel="stylesheet" href="v5.css?v=5.0.8">
 <link rel="stylesheet" href="onboarding.css?v=1.2.0">
 </head>
 <body>
@@ -152,29 +152,32 @@
         <div><div class="eyebrow" id="budgetMonthLabel">Mois</div><h1 class="title">Budget</h1></div>
         <div class="segment" id="budgetScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
       </div>
-      <div class="budget-period" id="budgetPeriodControl">
+      <div class="budget-context-row" id="budgetPeriodControl">
         <div class="budget-month-nav">
           <button class="period-arrow" id="budgetPrevMonth" type="button" aria-label="Mois précédent">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <label class="budget-month-picker">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="3"/><path d="M8 3.5v4M16 3.5v4M3.5 10h17"/></svg>
+            <span id="budgetMonthLabel">octobre 2026</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg>
             <input type="month" id="budgetMonthPicker" aria-label="Choisir le mois du budget">
           </label>
           <button class="period-arrow" id="budgetNextMonth" type="button" aria-label="Mois suivant">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </div>
-        <div class="budget-period-actions">
-          <button class="budget-copy-btn" id="budgetCopyPrevious" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
-            <span>Reprendre septembre 2026</span>
-          </button>
-          <button class="budget-current-link hidden" id="budgetCurrentMonth" type="button">Aujourd’hui</button>
-        </div>
+        <button class="budget-current-link hidden" id="budgetCurrentMonth" type="button">Ce mois</button>
       </div>
-      <article class="card hero-card" style="min-height:150px">
-        <div class="label" id="budgetHeroLabel">Budget mensuel</div><div class="big" id="budgetHeroTotal">—</div><div class="sub" id="budgetHeroSub">—</div>
+      <article class="card hero-card budget-hero-card" style="min-height:150px">
+        <div class="budget-hero-top">
+          <div class="label" id="budgetHeroLabel">Budget mensuel</div>
+          <button class="budget-copy-chip" id="budgetCopyPrevious" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+            <span>Reprendre septembre</span>
+          </button>
+        </div>
+        <div class="big" id="budgetHeroTotal">—</div>
+        <div class="sub" id="budgetHeroSub">—</div>
       </article>
       <div id="budgetSections"></div>
       <div class="section-head"><h2>Vue annuelle</h2><button class="linkbtn" id="annualBudgetDetails">Détails</button></div>
@@ -255,8 +258,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app.js?v=5.2.3"></script>
-<script src="onboarding.js?v=1.7.3"></script>
+<script src="v5-app.js?v=5.2.4"></script>
+<script src="onboarding.js?v=1.7.4"></script>
 <script>
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){
