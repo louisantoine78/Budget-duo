@@ -1,10 +1,13 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.4.1';
+(()=>{'use strict';window.__TRACE_BUILD__='5.5.0';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
 const monthLabel=m=>new Intl.DateTimeFormat('fr-CA',{month:'long',year:'numeric'}).format(new Date(`${m}-01T12:00:00`));
 const shortMonth=m=>new Intl.DateTimeFormat('fr-CA',{month:'short'}).format(new Date(`${m}-01T12:00:00`)).replace('.','');
 const monthOffset=(m,delta)=>{const [y,mo]=String(m).split('-').map(Number),d=new Date(y,mo-1+delta,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
+const localDateISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const txDocId=()=>`t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+const investmentDocId=()=>`inv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
 const budgetDocId=()=>`b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
@@ -19,8 +22,8 @@ function scope(s){return s==='mine'?me:'couple';}
 function showGate(id){$('#cloudGate').classList.remove('hidden');['cloudLoadingPanel','cloudConfigPanel','cloudAuthPanel','cloudWorkspacePanel'].forEach(x=>$('#'+x)?.classList.toggle('hidden',x!==id));$('#app').classList.add('cloud-locked');}
 function hideGate(){$('#cloudGate').classList.add('hidden');$('#app').classList.remove('cloud-locked');}
 function sync(k,t){$('#syncPill').dataset.status=k;$('#syncLabel').textContent=t||({synced:'Synchronisé',loading:'Connexion…',error:'Erreur'}[k]||k);}
-function openSheet(t,h){$('#sheetTitle').textContent=t;$('#sheetBody').innerHTML=h;$('#sheetBackdrop').classList.add('open');}
-function closeSheet(){$('#sheetBackdrop').classList.remove('open');}
+function openSheet(t,h){$('#sheetTitle').textContent=t;$('#sheetBody').innerHTML=h;$('#sheetBackdrop').classList.add('open');document.body.classList.add('sheet-open');}
+function closeSheet(){$('#sheetBackdrop').classList.remove('open');document.body.classList.remove('sheet-open');}
 function split(t,id){const d=state.household.defaultSplit||{la:50,partner:50};return Number(t.amountCAD||0)*Number(t.split?.[id]??d[id]??50)/100;}
 function alloc(t,s){const a=Number(t.amountCAD||0);if(s==='couple')return a;if(t.beneficiary===s)return a;if(t.beneficiary==='couple')return split(t,s);return 0;}
 function budgetAmt(b,s){const a=Number(b.amount||0);if(s==='couple'||b.scope===s)return a;if(b.scope==='couple'){const d=state.household.categorySplits?.[b.categoryId]||state.household.defaultSplit||{la:50,partner:50};return a*Number(d[s]||0)/100;}return 0;}
@@ -65,6 +68,96 @@ function renderBudget(){
   $('#annualBudgetChart').innerHTML=ms.map((m,i)=>'<div class="monthbar '+(m===month?'selected':'')+'"><i style="height:'+Math.max(2,vs[i].eb/max*100)+'%"></i><b style="height:'+Math.max(2,vs[i].expense/max*100)+'%"></b><em>'+shortMonth(m)+'</em></div>').join('');
   updateSegments();
 }
+function manualCategories(type){
+  const active=state.categories.filter(c=>!c.archived);
+  if(type==='income')return active.filter(c=>c.type==='income');
+  return active.filter(c=>c.type==='expense');
+}
+function openManualTransaction(){
+  let txType='expense';
+  const mineAccounts=state.accounts.filter(a=>a.owner===me||a.id==='cash');
+  const accountOptions=mineAccounts.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>').join('');
+  const beneficiaryOptions='<option value="'+esc(me)+'">Moi</option><option value="couple">Nous deux</option>';
+  openSheet('Ajouter une opération',
+    '<div class="manual-transaction-intro"><div><b>Ajout manuel</b><small>L’opération sera ajoutée directement dans Activité.</small></div></div>'+
+    '<div class="manual-type-grid">'+
+      '<button class="choice selected" data-manual-type="expense" type="button">Dépense</button>'+
+      '<button class="choice" data-manual-type="income" type="button">Revenu</button>'+
+      '<button class="choice" data-manual-type="refund" type="button">Remboursement</button>'+
+    '</div>'+
+    '<label class="label2">Description</label><input class="input" id="manualTxName" type="text" maxlength="80" placeholder="Ex. Épicerie, salaire, remboursement">'+
+    '<div class="formrow manual-money-row"><div><label class="label2">Montant</label><div class="budget-amount-field"><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"><span>$</span></div></div>'+
+    '<div><label class="label2">Date</label><input class="input" id="manualTxDate" type="date" value="'+localDateISO()+'"></div></div>'+
+    '<label class="label2">Catégorie</label><select class="input" id="manualTxCategory"></select>'+
+    '<div class="formrow"><div><label class="label2">Compte</label><select class="input" id="manualTxAccount">'+accountOptions+'</select></div>'+
+    '<div><label class="label2">Pour qui ?</label><select class="input" id="manualTxBeneficiary">'+beneficiaryOptions+'</select></div></div>'+
+    '<div class="manual-transaction-note" id="manualTxNote">Une dépense commune utilise automatiquement votre répartition par défaut.</div>'+
+    '<button class="primary full" id="saveManualTx" type="button" style="margin-top:18px">Ajouter à l’activité</button>'+
+    '<button class="secondary full" id="cancelManualTx" type="button" style="margin-top:8px">Annuler</button>'
+  );
+  const category=$('#manualTxCategory');
+  const refreshCategories=()=>{
+    const cats=manualCategories(txType);
+    category.innerHTML=cats.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+    $('#manualTxBeneficiary').disabled=txType==='income';
+    if(txType==='income')$('#manualTxBeneficiary').value=me;
+    $('#manualTxNote').textContent=txType==='refund'?'Le remboursement réduira la dépense de la catégorie choisie.':txType==='income'?'Le revenu sera rattaché à ton profil.':'Une dépense commune utilise automatiquement votre répartition par défaut.';
+  };
+  document.querySelectorAll('[data-manual-type]').forEach(btn=>btn.onclick=()=>{
+    txType=btn.dataset.manualType;
+    document.querySelectorAll('[data-manual-type]').forEach(x=>x.classList.toggle('selected',x===btn));
+    refreshCategories();
+  });
+  refreshCategories();
+  $('#cancelManualTx').onclick=closeSheet;
+  $('#saveManualTx').onclick=async()=>{
+    const amount=Number($('#manualTxAmount').value||0);
+    const name=$('#manualTxName').value.trim()||(txType==='income'?'Revenu':txType==='refund'?'Remboursement':'Dépense');
+    const categoryId=$('#manualTxCategory').value;
+    const beneficiary=txType==='income'?me:$('#manualTxBeneficiary').value;
+    if(!Number.isFinite(amount)||amount<=0||!categoryId)return;
+    const defaultSplit=state.household.defaultSplit||{la:50,partner:50};
+    const splitValue=beneficiary==='couple'?{la:Number(defaultSplit.la??50),partner:Number(defaultSplit.partner??50)}:(beneficiary==='la'?{la:100,partner:0}:{la:0,partner:100});
+    const item={
+      id:txDocId(),date:$('#manualTxDate').value||localDateISO(),name,note:'',merchant:'',
+      type:txType,status:'confirmed',currency:'CAD',rate:1,
+      amountCAD:amount,amountOriginal:amount,bankAmount:null,
+      categoryId,accountId:$('#manualTxAccount').value||'cash',
+      payerId:me,beneficiary,split:splitValue,splitMode:'percent',
+      splitAmounts:beneficiary==='couple'?{la:amount*splitValue.la/100,partner:amount*splitValue.partner/100}:null,
+      recurring:false,recurrence:{enabled:false,endDate:null,nextDate:null,frequency:null,autoConfirm:false,needsReview:false},
+      counterparty:'',externalAmount:0,externalParticipants:[]
+    };
+    const btn=$('#saveManualTx');btn.disabled=true;btn.textContent='Enregistrement…';
+    try{
+      state.transactions.push(item);
+      await saveDocument('transactions',item);
+      closeSheet();renderAll();navigate('activity');showTab('transactions');
+    }catch(err){
+      console.error(err);state.transactions=state.transactions.filter(t=>t.id!==item.id);btn.disabled=false;btn.textContent='Réessayer';
+    }
+  };
+}
+function openInvestmentAccountAdd(){
+  openSheet('Ajouter un compte',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('chart')+'</span><div><b>Nouveau compte de patrimoine</b><small>Ajoute le compte maintenant ; les opérations et la valorisation viendront ensuite.</small></div></div>'+
+    '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. PEA Boursorama, CELI">'+
+    '<div class="formrow"><div><label class="label2">Type</label><select class="input" id="investmentAccountType"><option value="PEA">PEA</option><option value="CELI">CELI</option><option value="REER">REER</option><option value="Épargne">Épargne</option><option value="Courtage">Courtage</option><option value="Autre">Autre</option></select></div>'+
+    '<div><label class="label2">Devise</label><select class="input" id="investmentAccountCurrency"><option value="CAD">CAD</option><option value="EUR">EUR</option><option value="USD">USD</option></select></div></div>'+
+    '<button class="primary full" id="saveInvestmentAccount" type="button" style="margin-top:18px">Ajouter le compte</button>'+
+    '<button class="secondary full" id="cancelInvestmentAccount" type="button" style="margin-top:8px">Annuler</button>'
+  );
+  $('#cancelInvestmentAccount').onclick=closeSheet;
+  $('#saveInvestmentAccount').onclick=async()=>{
+    const name=$('#investmentAccountName').value.trim(),type=$('#investmentAccountType').value,currency=$('#investmentAccountCurrency').value;
+    if(!name)return;
+    const item={id:investmentDocId(),owner:me,name,type,currency,currentValueCad:0,valueCad:0};
+    const btn=$('#saveInvestmentAccount');btn.disabled=true;btn.textContent='Enregistrement…';
+    try{
+      state.investmentAccounts.push(item);await saveDocument('investment_accounts',item);closeSheet();renderWealth();
+    }catch(err){console.error(err);state.investmentAccounts=state.investmentAccounts.filter(a=>a.id!==item.id);btn.disabled=false;btn.textContent='Réessayer';}
+  };
+}
 function budgetCategoriesFor(kind){
   const active=state.categories.filter(c=>!c.archived);
   if(kind==='income')return active.filter(c=>c.type==='income');
@@ -85,7 +178,6 @@ function openBudgetAdd(kind='variable'){
     '<button class="secondary full" id="cancelBudgetAdd" type="button" style="margin-top:8px">Annuler</button>'
   );
   $('#cancelBudgetAdd').onclick=closeSheet;
-  $('#budgetAddAmount')?.focus();
   $('#saveBudgetAdd').onclick=async()=>{
     const categoryId=$('#budgetAddCategory').value;
     const amount=Number($('#budgetAddAmount').value||0);
@@ -163,11 +255,11 @@ async function copyPreviousBudget(){
 function txRow(t){const c=cat(t.categoryId),pos=['income','refund','external_refund'].includes(t.type);return`<div class="tx"><span class="tx-icon">${esc(c.icon||'•')}</span><span class="tx-main"><b>${esc(t.name||t.merchant||'Transaction')}</b><small>${esc(c.name)} · ${esc(t.date||'')}</small></span><span class="tx-amt ${pos?'positive':''}">${pos?'+':'−'}${money(t.amountCAD)}</span></div>`;}
 function renderActivity(){const ts=state.transactions.filter(t=>String(t.date||'').startsWith(CM)&&t.status==='confirmed').sort((a,b)=>String(b.date).localeCompare(String(a.date))),exp=ts.filter(t=>['expense','group_expense','person_payment'].includes(t.type)).reduce((x,t)=>x+Number(t.amountCAD||0),0),inc=ts.filter(t=>t.type==='income').reduce((x,t)=>x+Number(t.amountCAD||0),0);$('#activityMonthLabel').textContent=monthLabel(CM);$('#activityExpenses').textContent=money(exp);$('#activityIncome').textContent=money(inc);$('#activityNet').textContent=money(inc-exp);$('#transactionList').innerHTML=ts.length?ts.map(txRow).join(''):'<div class="empty-note">Aucune transaction validée ce mois-ci.</div>';const p=state.transactions.filter(t=>t.status!=='confirmed');$('#reviewTabCount').textContent=p.length?`(${p.length})`:'';$('#reviewHeading').textContent=`${p.length} transaction${p.length>1?'s':''} à valider`;$('#reviewList').innerHTML=p.length?p.map(t=>`<article class="card review-card" style="margin-bottom:12px"><div class="review-top"><div><div class="merchant">${esc(t.name||t.merchant||'Transaction')}</div><div class="review-date">${esc(t.date||'')}</div></div><div class="review-amount">${money(t.amountCAD)}</div></div><div class="review-fields"><div class="fieldline"><span>Catégorie</span><button>${esc(t.categoryId?cat(t.categoryId).name:'À classer ⚠')}</button></div><div class="fieldline"><span>Pour qui ?</span><button>${t.beneficiary?(t.beneficiary==='couple'?'Nous deux':member(t.beneficiary).name):'À choisir ⚠'}</button></div></div><div class="review-hint">Validation interactive activée dans la prochaine passe</div></article>`).join(''):'<div class="empty-note">Tout est à jour.</div>';showTab(tab);}
 function showTab(t){tab=t;$$('#activityTabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));$('#activityTransactions').classList.toggle('hidden',t!=='transactions');$('#activityReview').classList.toggle('hidden',t!=='review');$('#activityImport').classList.toggle('hidden',t!=='import');}
-function renderWealth(){const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),inv=state.investmentAccounts.filter(a=>owners.includes(a.owner)),total=(bk.net||0)+inv.reduce((x,a)=>x+Number(a.currentValueCad||a.valueCad||0),0);$('#wealthTotal').textContent=money(total);$('#assetGrid').innerHTML=[`<button class="asset-card"><span class="a-icon">$</span><span>Liquidités</span><b>${bk.net===null?'À configurer':money(bk.net)}</b><small>Compte − carte</small></button>`,...inv.map(a=>`<button class="asset-card"><span class="a-icon">◇</span><span>${esc(a.name||a.type||'Investissement')}</span><b>${money(a.currentValueCad||a.valueCad||0)}</b><small>${esc(a.currency||'CAD')}</small></button>`)].join('');const ms=months6(),max=Math.max(1,total);$('#wealthTrend').innerHTML=ms.map((m,i)=>`<div class="monthbar"><b style="height:${Math.max(12,(.9+i*.02)*total/max*90)}%"></b><em>${shortMonth(m)}</em></div>`).join('');updateSegments();}
+function renderWealth(){const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),inv=state.investmentAccounts.filter(a=>owners.includes(a.owner)),total=(bk.net||0)+inv.reduce((x,a)=>x+Number(a.currentValueCad||a.valueCad||0),0);$('#wealthTotal').textContent=money(total);$('#assetGrid').innerHTML=[`<button class="asset-card"><span class="a-icon">$</span><span>Liquidités</span><b>${bk.net===null?'À configurer':money(bk.net)}</b><small>Compte − carte</small></button>`,...inv.map(a=>`<button class="asset-card"><span class="a-icon">◇</span><span>${esc(a.name||a.type||'Investissement')}</span><b>${money(a.currentValueCad||a.valueCad||0)}</b><small>${esc(a.type||'Compte')} · ${esc(a.currency||'CAD')}</small></button>`),`<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon">＋</span><span>Ajouter un compte</span><b>Nouveau</b><small>PEA, CELI, REER…</small></button>`].join('');$('#wealthAddCard')?.addEventListener('click',openInvestmentAccountAdd);const ms=months6(),max=Math.max(1,total);$('#wealthTrend').innerHTML=ms.map((m,i)=>`<div class="monthbar"><b style="height:${Math.max(12,(.9+i*.02)*total/max*90)}%"></b><em>${shortMonth(m)}</em></div>`).join('');updateSegments();}
 function renderAll(){renderHome();renderBudget();renderActivity();renderWealth();}
 function navigate(p){$$('.page').forEach(x=>x.classList.toggle('active',x.dataset.page===p));$$('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===p));location.hash=p==='home'?'':p;window.scrollTo({top:0,behavior:'smooth'});}
 function analysis(){analysisScope=homeScope;renderAnalysis();}
-function renderAnalysis(){const sId=scope(analysisScope),ms=months6(),vs=ms.map(m=>summary(m,sId)),inc=vs.reduce((x,v)=>x+v.income,0),exp=vs.reduce((x,v)=>x+v.expense,0),sav=inc-exp;openSheet('Analyses',`<div class="segment" id="analysisScope"><button class="seg ${analysisScope==='mine'?'active':''}" data-scope="mine">Moi</button><button class="seg ${analysisScope==='couple'?'active':''}" data-scope="couple">Couple</button></div><div class="metric-strip" style="margin-top:14px"><div class="metric-mini"><span>Dépenses · 6 mois</span><b>${money(exp)}</b></div><div class="metric-mini"><span>Moyenne</span><b>${money(exp/6)}</b></div><div class="metric-mini"><span>Épargne</span><b>${money(sav)}</b></div><div class="metric-mini"><span>Taux</span><b>${inc?(sav/inc*100).toFixed(1):0} %</b></div></div><div class="section-head"><h2>Évolution</h2></div><div class="chart" id="analysisChart"></div>`);chart($('#analysisChart'),sId,'expense');$$('#analysisScope .seg').forEach(b=>b.onclick=()=>{analysisScope=b.dataset.scope;renderAnalysis();});}
+function renderAnalysis(){const sId=scope(analysisScope),ms=months6(),vs=ms.map(m=>summary(m,sId)),inc=vs.reduce((x,v)=>x+v.income,0),exp=vs.reduce((x,v)=>x+v.expense,0),sav=inc-exp;openSheet('Analyses',`<div class="segment analysis-scope" id="analysisScope"><button class="seg ${analysisScope==='mine'?'active':''}" data-scope="mine">Moi</button><button class="seg ${analysisScope==='couple'?'active':''}" data-scope="couple">Couple</button></div><div class="metric-strip" style="margin-top:14px"><div class="metric-mini"><span>Dépenses · 6 mois</span><b>${money(exp)}</b></div><div class="metric-mini"><span>Moyenne</span><b>${money(exp/6)}</b></div><div class="metric-mini"><span>Épargne</span><b>${money(sav)}</b></div><div class="metric-mini"><span>Taux</span><b>${inc?(sav/inc*100).toFixed(1):0} %</b></div></div><div class="section-head"><h2>Évolution</h2></div><div class="chart" id="analysisChart"></div>`);chart($('#analysisChart'),sId,'expense');$$('#analysisScope .seg').forEach(b=>b.onclick=()=>{analysisScope=b.dataset.scope;renderAnalysis();});}
 function detail(type){const sId=scope(homeScope),rows=txs(CM,sId,true).filter(t=>type==='income'?t.type==='income':type==='spending'?['expense','group_expense','person_payment','refund'].includes(t.type):false);if(type==='saving'){const s=summary(CM,sId);openSheet('Épargne',`<div class="money2">${money(s.saving)}</div><div class="micro">${s.income?(s.saving/s.income*100).toFixed(1):0} % des revenus</div>`);return;}openSheet(type==='income'?'Revenus':'Dépenses',rows.length?rows.map(txRow).join(''):'<div class="empty-note">Aucune opération.</div>');}
 
 function uiIcon(name){
@@ -464,7 +556,7 @@ function fatal(e){
   openSheet('Trace a rencontré un problème','<div class="empty-note">Une partie de Trace n’a pas pu se charger correctement.</div><button class="primary full" id="traceReloadBtn" type="button" style="margin-top:14px">Recharger Trace</button>');
   $('#traceReloadBtn').onclick=()=>location.reload();
 }
-function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=()=>{const page=$('.page.active')?.dataset.page;if(page==='budget')openBudgetAdd('variable');else openSheet('Ajouter','<div class="empty-note">L’ajout manuel de transaction sera activé dans la prochaine passe.</div>');};$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>openSheet('Partage',`<div class="money2">${esc($('#shareBalance').textContent)}</div><div class="empty-note" style="margin-top:12px">Le détail des mouvements sera activé dans la prochaine passe.</div>`);$('#shareOpen').onclick=$('#shareCard').onclick;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#wealthAnalysis').onclick=()=>openSheet('Analyse du patrimoine','<div class="empty-note">Analyse patrimoine en préparation.</div>');$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{$('#importResult').innerHTML=`<article class="card"><b>${esc(e.target.files?.[0]?.name||'Fichier')}</b><div class="empty-note" style="margin-top:10px">Fichier reconnu. L’extraction automatique sera branchée dans l’étape suivante.</div></article>`;};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
+function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>openSheet('Partage',`<div class="money2">${esc($('#shareBalance').textContent)}</div><div class="empty-note" style="margin-top:12px">Le détail des mouvements sera activé dans la prochaine passe.</div>`);$('#shareOpen').onclick=$('#shareCard').onclick;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=()=>openSheet('Analyse du patrimoine','<div class="empty-note">Analyse patrimoine en préparation.</div>');$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{$('#importResult').innerHTML=`<article class="card"><b>${esc(e.target.files?.[0]?.name||'Fichier')}</b><div class="empty-note" style="margin-top:10px">Fichier reconnu. L’extraction automatique sera branchée dans l’étape suivante.</div></article>`;};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
 function bootTrace(){
   try{
     bind();
