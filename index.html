@@ -231,22 +231,84 @@
 </div>
 <div id="toast" class="toast"></div>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'"></script>
 <script src="config.js"></script>
-<script src="v5-app.js?v=5.0.8"></script>
-<script src="onboarding.js?v=1.4.0"></script>
-<script id="trace-login-watchdog">
-setTimeout(function(){
-  var loading=document.getElementById('cloudLoadingPanel');
-  var gate=document.getElementById('cloudGate');
-  if(gate && !gate.classList.contains('hidden') && loading && !loading.classList.contains('hidden')){
-    loading.classList.add('hidden');
-    var auth=document.getElementById('cloudAuthPanel');
-    if(auth) auth.classList.remove('hidden');
-    var msg=document.getElementById('cloudAuthMessage');
-    if(msg) msg.textContent='La connexion prend trop de temps. Reconnecte-toi pour relancer la session.';
+<script>
+(function(){
+  var loading=document.getElementById('cloudLoadingText');
+  var authPanel=document.getElementById('cloudAuthPanel');
+  var loadingPanel=document.getElementById('cloudLoadingPanel');
+  var authMessage=document.getElementById('cloudAuthMessage');
+
+  function stage(text){ if(loading) loading.textContent=text; }
+  function showError(text){
+    if(loadingPanel) loadingPanel.classList.add('hidden');
+    if(authPanel) authPanel.classList.remove('hidden');
+    if(authMessage) authMessage.textContent=text;
   }
-},9000);
+  function loadScript(src,timeout){
+    return new Promise(function(resolve,reject){
+      var script=document.createElement('script');
+      var done=false;
+      var timer=setTimeout(function(){
+        if(done)return;
+        done=true;
+        script.remove();
+        reject(new Error('timeout'));
+      },timeout||5000);
+      script.src=src;
+      script.async=true;
+      script.onload=function(){
+        if(done)return;
+        done=true;
+        clearTimeout(timer);
+        resolve();
+      };
+      script.onerror=function(){
+        if(done)return;
+        done=true;
+        clearTimeout(timer);
+        reject(new Error('load'));
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  async function boot(){
+    try{
+      stage('Chargement du service sécurisé…');
+      try{
+        await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',4500);
+      }catch(_){
+        stage('Deuxième tentative de connexion…');
+        await loadScript('https://unpkg.com/@supabase/supabase-js@2',4500);
+      }
+      if(!window.supabase || !window.supabase.createClient){
+        throw new Error('Supabase indisponible');
+      }
+      stage('Ouverture de Trace…');
+      await loadScript('./v5-app.js?v=5.0.9',5000);
+      loadScript('./onboarding.js?v=1.5.0',5000).catch(function(){});
+    }catch(err){
+      console.error('Trace boot error',err);
+      showError('Le service de connexion n’a pas pu démarrer. Ferme puis rouvre Trace, ou réessaie dans Safari.');
+    }
+  }
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistration()
+      .then(function(reg){ if(reg) reg.update().catch(function(){}); })
+      .catch(function(){});
+  }
+
+  setTimeout(function(){
+    if(window.__TRACE_BOOTED__)return;
+    if(loadingPanel && !loadingPanel.classList.contains('hidden')){
+      showError('La connexion prend trop de temps. Ferme puis rouvre Trace pour relancer proprement la session.');
+    }
+  },12000);
+
+  boot();
+})();
 </script>
 </body>
 </html>
