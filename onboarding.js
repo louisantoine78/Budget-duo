@@ -52,14 +52,14 @@ const steps=[
     ]
   },
   {
-    page:'budget', target:'[data-page="budget"] .hero-card', icon:'budget', kicker:'Budget · Prévision',
+    page:'budget', target:'#budgetPeriodControl', icon:'budget', kicker:'Budget · Prévision',
     title:'Le Budget définit le cadre du mois',
     body:'Cette section sépare clairement ce que vous prévoyez de ce qui s’est réellement produit.',
     points:[
+      'Choisis librement le mois avec les flèches ou le sélecteur de date.',
+      'Copier le mois précédent reprend les montants du même périmètre sans toucher aux transactions réelles.',
       'Revenus, dépenses fixes et dépenses variables sont présentés séparément.',
-      'Le budget personnel et le budget Couple ont chacun leur vue.',
-      'Les dépenses réelles viennent des transactions validées : pas besoin de les ressaisir ici.',
-      'La vue annuelle compare le budget et le réel sur les 12 mois.'
+      'Le budget personnel et le budget Couple ont chacun leur vue ; la vue annuelle compare prévu et réel.'
     ]
   },
   {
