@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v2';
+const VERSION='v3';
 let index=0;
 let active=false;
 let currentKey='';
@@ -157,7 +157,7 @@ function $(s){return document.querySelector(s)}
 function $$(s){return [...document.querySelectorAll(s)]}
 function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(icons[name]||icons.guide)+'</svg>'}
 function key(){
-  const who=($('#profileBtn')?.textContent||'user').trim().toLowerCase().replace(/\s+/g,'-');
+  const who=document.documentElement.dataset.traceUserId||($('#profileBtn')?.textContent||'user').trim().toLowerCase().replace(/\s+/g,'-');
   return 'trace:onboarding:'+VERSION+':'+who;
 }
 function seen(){
@@ -350,5 +350,5 @@ function autoStartWhenReady(){
 window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(updateSpot,80)},{passive:true});
 window.addEventListener('scroll',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(updateSpot,50)},{passive:true,capture:true});
 window.TraceGuide={start};
-document.addEventListener('DOMContentLoaded',()=>{ensureMarkup();watchProfile();autoStartWhenReady()});
+document.addEventListener('DOMContentLoaded',()=>{ensureMarkup();watchProfile();$('#helpBtn')?.addEventListener('click',()=>start(true));autoStartWhenReady()});
 })();
