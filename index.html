@@ -650,7 +650,7 @@ function bootTrace(){
     }catch(_){}
     showGate('cloudAuthPanel');
     const msg=$('#cloudAuthMessage');
-    if(msg)msg.textContent='Trace a détecté une ancienne version en cache. Ferme complètement l’app puis rouvre-la.';
+    if(msg)msg.textContent='Trace a rencontré une erreur au démarrage. Ferme complètement l’app puis rouvre-la.';
   }
 }
 if(document.readyState==='loading'){
@@ -1026,7 +1026,7 @@ if(document.readyState==='loading'){
 })();</script>
 <script>
 (function(){
-  window.__TRACE_EMBEDDED_BUILD__='5.1.3';
+  window.__TRACE_EMBEDDED_BUILD__='5.1.4';
   var loading=document.getElementById('cloudLoadingText');
   var authPanel=document.getElementById('cloudAuthPanel');
   var loadingPanel=document.getElementById('cloudLoadingPanel');
