@@ -14,7 +14,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="v5.css?v=5.0.5">\n<link rel="stylesheet" href="onboarding.css?v=1.2.0">
+<link rel="stylesheet" href="v5.css?v=5.0.5">
+<link rel="stylesheet" href="onboarding.css?v=1.2.0">
 </head>
 <body>
 <div id="cloudGate" class="cloud-gate">
@@ -86,7 +87,8 @@
     </div>
     <div class="top-actions">
       <div class="sync-pill" id="syncPill" data-status="loading"><span class="status-dot"></span><span id="syncLabel">Connexion…</span></div>
-      <button id="helpBtn" class="help-btn" aria-label="Ouvrir le guide Trace" title="Guide Trace"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.4a2.4 2.4 0 0 1 2.4-2.1c1.5 0 2.7.9 2.7 2.3 0 1.7-1.3 2.2-2.2 2.9-.6.5-.7.9-.7 1.6"/><circle cx="12" cy="17.2" r=".7" fill="currentColor" stroke="none"/></svg></button>\n      <button id="profileBtn" class="avatar" aria-label="Profil">LA</button>
+      <button id="helpBtn" class="help-btn" aria-label="Ouvrir le guide Trace" title="Guide Trace"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.4a2.4 2.4 0 0 1 2.4-2.1c1.5 0 2.7.9 2.7 2.3 0 1.7-1.3 2.2-2.2 2.9-.6.5-.7.9-.7 1.6"/><circle cx="12" cy="17.2" r=".7" fill="currentColor" stroke="none"/></svg></button>
+      <button id="profileBtn" class="avatar" aria-label="Profil">LA</button>
     </div>
   </header>
 
@@ -229,8 +231,22 @@
 </div>
 <div id="toast" class="toast"></div>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'"></script>
 <script src="config.js"></script>
-<script src="v5-app.js?v=5.0.7"></script>\n<script src="onboarding.js?v=1.4.0"></script>
+<script src="v5-app.js?v=5.0.8"></script>
+<script src="onboarding.js?v=1.4.0"></script>
+<script id="trace-login-watchdog">
+setTimeout(function(){
+  var loading=document.getElementById('cloudLoadingPanel');
+  var gate=document.getElementById('cloudGate');
+  if(gate && !gate.classList.contains('hidden') && loading && !loading.classList.contains('hidden')){
+    loading.classList.add('hidden');
+    var auth=document.getElementById('cloudAuthPanel');
+    if(auth) auth.classList.remove('hidden');
+    var msg=document.getElementById('cloudAuthMessage');
+    if(msg) msg.textContent='La connexion prend trop de temps. Reconnecte-toi pour relancer la session.';
+  }
+},9000);
+</script>
 </body>
 </html>
