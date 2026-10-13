@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trace-v5-network-first-20261013';
+const CACHE_NAME = 'trace-v5-budget-months-20261013';
 const FALLBACK = ['./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
 
 self.addEventListener('install', event => {
