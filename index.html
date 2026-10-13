@@ -303,8 +303,8 @@
         throw new Error('Supabase indisponible');
       }
       stage('Ouverture de Trace…');
-      await loadScript('./v5-app.js?v=5.0.9',5000);
-      loadScript('./onboarding.js?v=1.5.0',5000).catch(function(){});
+      await loadScript('./v5-app.js?v=5.1.0',5000);
+      loadScript('./onboarding.js?v=1.6.0',5000).catch(function(){});
     }catch(err){
       console.error('Trace boot error',err);
       showError('Le service de connexion n’a pas pu démarrer. Ferme puis rouvre Trace, ou réessaie dans Safari.');
