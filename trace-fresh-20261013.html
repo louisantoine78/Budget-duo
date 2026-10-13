@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123f38">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Trace">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
+<title>Trace 5</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="stylesheet" href="v5.css?v=5.0.6">
+<link rel="stylesheet" href="onboarding.css?v=1.2.0">
+</head>
+<body>
+<div id="cloudGate" class="cloud-gate">
+  <section class="cloud-card">
+    <div class="cloud-brand">
+      <img src="assets/icon-192.png" alt="">
+      <div><strong>Trace</strong><small>Votre budget suit son chemin.</small></div>
+    </div>
+    <div id="cloudLoadingPanel" class="cloud-panel">
+      <div class="cloud-loader"></div>
+      <h1>Connexion à Trace</h1>
+      <p id="cloudLoadingText">Vérification de la session et chargement de vos données…</p>
+    </div>
+    <div id="cloudConfigPanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Configuration</span>
+      <h1>Supabase non configuré</h1>
+      <p>Le fichier <code>config.js</code> doit contenir l’URL du projet et la clé publique.</p>
+    </div>
+    <div id="cloudAuthPanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Espace sécurisé</span>
+      <h1 id="cloudAuthTitle">Se connecter</h1>
+      <p>Utilise le même compte que sur Trace aujourd’hui.</p>
+      <div class="cloud-tabs">
+        <button class="cloud-tab active" data-auth-tab="login">Connexion</button>
+        <button class="cloud-tab" data-auth-tab="signup">Créer un compte</button>
+      </div>
+      <form id="cloudLoginForm" class="cloud-form">
+        <label>Adresse courriel<input id="cloudLoginEmail" type="email" autocomplete="email" required></label>
+        <label>Mot de passe<input id="cloudLoginPassword" type="password" autocomplete="current-password" minlength="6" required></label>
+        <button class="primary full" type="submit">Se connecter</button>
+      </form>
+      <form id="cloudSignupForm" class="cloud-form hidden">
+        <label>Prénom<input id="cloudSignupName" type="text" autocomplete="name" required></label>
+        <label>Adresse courriel<input id="cloudSignupEmail" type="email" autocomplete="email" required></label>
+        <label>Mot de passe<input id="cloudSignupPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="primary full" type="submit">Créer mon compte</button>
+      </form>
+      <p id="cloudAuthMessage" class="cloud-message"></p>
+    </div>
+    <div id="cloudWorkspacePanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Première connexion</span>
+      <h1>Choisir votre espace</h1>
+      <p>Crée un espace ou rejoins celui de ton partenaire.</p>
+      <div class="cloud-tabs">
+        <button class="cloud-tab active" data-workspace-tab="create">Créer</button>
+        <button class="cloud-tab" data-workspace-tab="join">Rejoindre</button>
+      </div>
+      <form id="cloudCreateHouseholdForm" class="cloud-form">
+        <label>Nom de l’espace<input id="cloudHouseholdName" value="Notre budget" required></label>
+        <label>Ton prénom<input id="cloudCreatorName" required></label>
+        <label>Prénom du partenaire<input id="cloudPartnerName" required></label>
+        <button class="primary full" type="submit">Créer l’espace</button>
+      </form>
+      <form id="cloudJoinHouseholdForm" class="cloud-form hidden">
+        <label>Ton prénom<input id="cloudJoinName" required></label>
+        <label>Code d’invitation<input id="cloudInviteCode" maxlength="12" required></label>
+        <button class="primary full" type="submit">Rejoindre</button>
+      </form>
+      <p id="cloudWorkspaceMessage" class="cloud-message"></p>
+    </div>
+  </section>
+</div>
+
+<div id="app" class="app cloud-locked">
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/icon-192.png" alt="">
+      <div><strong>Trace</strong><small id="brandSubtitle">Simple. Clair. À jour.</small></div>
+    </div>
+    <div class="top-actions">
+      <div class="sync-pill" id="syncPill" data-status="loading"><span class="status-dot"></span><span id="syncLabel">Connexion…</span></div>
+      <button id="helpBtn" class="help-btn" aria-label="Ouvrir le guide Trace" title="Guide Trace"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.4a2.4 2.4 0 0 1 2.4-2.1c1.5 0 2.7.9 2.7 2.3 0 1.7-1.3 2.2-2.2 2.9-.6.5-.7.9-.7 1.6"/><circle cx="12" cy="17.2" r=".7" fill="currentColor" stroke="none"/></svg></button>
+      <button id="profileBtn" class="avatar" aria-label="Profil">LA</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="page active" data-page="home">
+      <div class="hero-row">
+        <div><div class="eyebrow" id="homeMonthLabel">Novembre 2026</div><h1 class="title" id="homeGreeting">Bonjour</h1></div>
+        <div class="segment" id="homeScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <div class="grid grid-2">
+        <article class="card hero-card">
+          <div class="label">Disponible sur le budget</div>
+          <div class="big" id="homeBudgetAvailable">—</div>
+          <div class="sub" id="homeBudgetSub">Chargement…</div>
+          <div class="progress"><i id="homeBudgetProgress" style="width:0%"></i></div>
+          <div class="progress-row"><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
+        </article>
+        <article class="card liquid clickable" id="balanceCard">
+          <div class="eyebrow">Solde estimé</div>
+          <div class="money" id="homeBalance">—</div>
+          <span class="badge" id="reconcileBadge">À rapprocher</span>
+          <div class="mini-account"><span>Compte courant</span><span id="homeChecking">—</span></div>
+          <div class="mini-account"><span>Carte de crédit</span><span id="homeCard">—</span></div>
+          <div class="scope-label">Compte courant − solde carte</div>
+        </article>
+      </div>
+
+      <div class="grid grid-3" style="margin-top:14px">
+        <button class="card kpi clickable" data-kpi="income"><div class="k-label">Revenus</div><div class="k-value" id="homeIncome">—</div><div class="k-note" id="homeIncomeNote">Voir le détail</div></button>
+        <button class="card kpi clickable" data-kpi="spending"><div class="k-label">Dépenses</div><div class="k-value" id="homeSpending">—</div><div class="k-note" id="homeSpendingNote">Voir le détail</div></button>
+        <button class="card kpi clickable" data-kpi="saving"><div class="k-label">Épargne</div><div class="k-value" id="homeSaving">—</div><div class="k-note" id="homeSavingNote">Voir le détail</div></button>
+      </div>
+
+      <div class="section-head"><h2>À faire</h2><button class="linkbtn" data-go="activity">Voir l’activité</button></div>
+      <button class="alert-card" style="width:100%;text-align:left" data-go="review">
+        <span class="alert-icon" id="pendingCountBadge">0</span>
+        <span class="alert-text"><strong>Transactions à valider</strong><div id="pendingText">Tout est à jour</div></span><span class="chev">›</span>
+      </button>
+
+      <div class="section-head"><h2>Budget en direct</h2><button class="linkbtn" data-go="budget">Voir le budget</button></div>
+      <article class="card" id="homeBudgetCategories"></article>
+
+      <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="analysisBtn">Analyses</button></div>
+      <article class="card clickable" id="homeTrendCard">
+        <div class="eyebrow">Épargne mensuelle · 6 mois</div>
+        <div class="chart" id="homeTrend"></div>
+        <div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div>
+      </article>
+
+      <div class="section-head"><h2>Partage</h2><button class="linkbtn" id="shareOpen">Ouvrir</button></div>
+      <button class="card share-card" id="shareCard" style="width:100%;text-align:left;border:1px solid rgba(18,63,56,.06)">
+        <span class="share-avatar" id="partnerAvatar">É</span>
+        <span class="share-main"><b id="shareLabel">Solde avec votre partenaire</b><strong id="shareBalance">—</strong><small id="shareSmall">Solde continu</small></span>
+        <span class="chev">›</span>
+      </button>
+    </section>
+
+    <section class="page" data-page="budget">
+      <div class="hero-row">
+        <div><div class="eyebrow" id="budgetMonthLabel">Mois</div><h1 class="title">Budget</h1></div>
+        <div class="segment" id="budgetScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <div class="budget-period" id="budgetPeriodControl">
+        <div class="budget-month-nav">
+          <button class="period-arrow" id="budgetPrevMonth" type="button" aria-label="Mois précédent">‹</button>
+          <label class="budget-month-picker">
+            <span>Mois affiché</span>
+            <input type="month" id="budgetMonthPicker" aria-label="Choisir le mois du budget">
+          </label>
+          <button class="period-arrow" id="budgetNextMonth" type="button" aria-label="Mois suivant">›</button>
+        </div>
+        <div class="budget-period-actions">
+          <button class="linkbtn hidden" id="budgetCurrentMonth" type="button">Revenir à ce mois</button>
+          <button class="secondary budget-copy-btn" id="budgetCopyPrevious" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8Z"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+            <span>Copier le mois précédent</span>
+          </button>
+        </div>
+      </div>
+      <article class="card hero-card" style="min-height:150px">
+        <div class="label" id="budgetHeroLabel">Budget mensuel</div><div class="big" id="budgetHeroTotal">—</div><div class="sub" id="budgetHeroSub">—</div>
+      </article>
+      <div id="budgetSections"></div>
+      <div class="section-head"><h2>Vue annuelle</h2><button class="linkbtn" id="annualBudgetDetails">Détails</button></div>
+      <article class="card clickable" id="annualBudgetCard"><div class="chart" id="annualBudgetChart"></div><div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div></article>
+    </section>
+
+    <section class="page" data-page="activity">
+      <div class="hero-row"><div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title">Activité</h1></div></div>
+      <div class="tabs" id="activityTabs">
+        <button class="tab active" data-tab="transactions">Transactions</button>
+        <button class="tab" data-tab="review">À valider <span id="reviewTabCount"></span></button>
+        <button class="tab" data-tab="import">Importer</button>
+      </div>
+      <div id="activityTransactions">
+        <div class="activity-stats">
+          <div class="statbox"><span>Dépenses</span><b id="activityExpenses">—</b></div>
+          <div class="statbox"><span>Revenus</span><b id="activityIncome">—</b></div>
+          <div class="statbox"><span>Flux net</span><b id="activityNet">—</b></div>
+        </div>
+        <article class="card" id="transactionList"></article>
+      </div>
+      <div id="activityReview" class="hidden">
+        <div class="section-head"><h2 id="reviewHeading">À valider</h2><button class="linkbtn" id="validateComplete">Valider les complètes</button></div>
+        <div id="reviewList"></div>
+      </div>
+      <div id="activityImport" class="hidden">
+        <div class="section-head"><h2>Importer des opérations</h2></div>
+        <article class="drop" id="importDrop">
+          <div class="up">⇧</div><b>Capture, PDF ou CSV</b>
+          <small>Trace reconnaîtra le type de fichier, détectera les doublons et placera les opérations dans À valider.</small>
+          <input type="file" id="importFile" accept="image/*,.pdf,.csv,text/csv" hidden>
+          <button class="primary" id="chooseImport" style="margin-top:14px">Choisir un fichier</button>
+        </article>
+        <div id="importResult" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="wealth">
+      <div class="hero-row">
+        <div><div class="eyebrow">Patrimoine</div><h1 class="title">Mes actifs</h1></div>
+        <div class="segment" id="wealthScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <article class="card hero-card" style="min-height:160px"><div class="label">Patrimoine suivi</div><div class="big" id="wealthTotal">—</div><div class="sub" id="wealthSub">Liquidités, épargne et investissements</div></article>
+      <div class="section-head"><h2>Comptes</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
+      <div class="portfolio-grid" id="assetGrid"></div>
+      <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="wealthAnalysis">Analyses</button></div>
+      <article class="card clickable" id="wealthChart"><div class="chart" id="wealthTrend"></div><div class="legend"><span><i class="dot dark"></i>Patrimoine</span></div></article>
+    </section>
+  </main>
+
+  <nav class="nav" aria-label="Navigation principale">
+    <button class="navbtn active" data-nav="home" aria-label="Accueil">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.75l8.5 6.75"/><path d="M5.5 9.4V20h13V9.4"/><path d="M9.5 20v-6h5v6"/></svg></span><span>Accueil</span>
+    </button>
+    <button class="navbtn" data-nav="budget" aria-label="Budget">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5h16"/><path d="M6 4.5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z"/><path d="M15.5 13h4.5"/><circle cx="16.5" cy="13" r=".7" fill="currentColor" stroke="none"/></svg></span><span>Budget</span>
+    </button>
+    <button class="navbtn plus" id="quickAdd" aria-label="Ajouter une opération">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span><span>Ajouter</span>
+    </button>
+    <button class="navbtn" data-nav="activity" aria-label="Activité">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4v16M4.5 6.5 7 4l2.5 2.5"/><path d="M17 20V4M14.5 17.5 17 20l2.5-2.5"/></svg></span><span>Activité</span>
+    </button>
+    <button class="navbtn" data-nav="wealth" aria-label="Patrimoine">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18.5V13l4-3 4 2 4-6 4 2.5"/><path d="M4 20h16"/></svg></span><span>Patrimoine</span>
+    </button>
+  </nav>
+</div>
+
+<div id="sheetBackdrop" class="sheet-backdrop">
+  <section class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><h2 id="sheetTitle">Détail</h2><button class="closebtn" id="closeSheet">×</button></div>
+    <div id="sheetBody"></div>
+  </section>
+</div>
+<div id="toast" class="toast"></div>
+
+<script id="trace-boot-error-fallback">
+window.addEventListener('error',function(){
+  var loading=document.getElementById('cloudLoadingPanel');
+  var auth=document.getElementById('cloudAuthPanel');
+  var msg=document.getElementById('cloudAuthMessage');
+  if(loading && !loading.classList.contains('hidden')){
+    loading.classList.add('hidden');
+    if(auth)auth.classList.remove('hidden');
+    if(msg)msg.textContent='Trace a rencontré un problème de chargement. Ferme complètement l’app puis rouvre-la.';
+  }
+});
+</script>
+<script src="config.js?v=20261013-2"></script>
+<script type="text/plain" id="trace-app-source">(()=>{'use strict';
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
+const monthLabel=m=>new Intl.DateTimeFormat('fr-CA',{month:'long',year:'numeric'}).format(new Date(`${m}-01T12:00:00`));
+const shortMonth=m=>new Intl.DateTimeFormat('fr-CA',{month:'short'}).format(new Date(`${m}-01T12:00:00`)).replace('.','');
+const monthOffset=(m,delta)=>{const [y,mo]=String(m).split('-').map(Number),d=new Date(y,mo-1+delta,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
+const budgetDocId=()=>`b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+let client,session,household,me='la',partner='partner',homeScope='mine',budgetScope='mine',budgetMonth=CM,wealthScope='mine',analysisScope='mine',tab='transactions';
+let state={household:{},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[]};
+function withTimeout(promise,ms,label){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label||'Délai dépassé')),ms))]);}
+function loadingStage(text){const el=$('#cloudLoadingText');if(el)el.textContent=text;}
+function member(id){return(state.household.members||[]).find(x=>x.id===id)||{id,name:id==='la'?'Louis-Antoine':'Élise',initials:id==='la'?'LA':'É'};}
+function cat(id){return state.categories.find(x=>x.id===id)||{name:'À classer',icon:'•',type:'expense'};}
+function scope(s){return s==='mine'?me:'couple';}
+function showGate(id){$('#cloudGate').classList.remove('hidden');['cloudLoadingPanel','cloudConfigPanel','cloudAuthPanel','cloudWorkspacePanel'].forEach(x=>$('#'+x)?.classList.toggle('hidden',x!==id));$('#app').classList.add('cloud-locked');}
+function hideGate(){$('#cloudGate').classList.add('hidden');$('#app').classList.remove('cloud-locked');}
+function sync(k,t){$('#syncPill').dataset.status=k;$('#syncLabel').textContent=t||({synced:'Synchronisé',loading:'Connexion…',error:'Erreur'}[k]||k);}
+function openSheet(t,h){$('#sheetTitle').textContent=t;$('#sheetBody').innerHTML=h;$('#sheetBackdrop').classList.add('open');}
+function closeSheet(){$('#sheetBackdrop').classList.remove('open');}
+function split(t,id){const d=state.household.defaultSplit||{la:50,partner:50};return Number(t.amountCAD||0)*Number(t.split?.[id]??d[id]??50)/100;}
+function alloc(t,s){const a=Number(t.amountCAD||0);if(s==='couple')return a;if(t.beneficiary===s)return a;if(t.beneficiary==='couple')return split(t,s);return 0;}
+function budgetAmt(b,s){const a=Number(b.amount||0);if(s==='couple'||b.scope===s)return a;if(b.scope==='couple'){const d=state.household.categorySplits?.[b.categoryId]||state.household.defaultSplit||{la:50,partner:50};return a*Number(d[s]||0)/100;}return 0;}
+function txs(m,s,confirmed=true){return state.transactions.filter(t=>String(t.date||'').startsWith(m)&&(!confirmed||t.status==='confirmed')&&(s==='couple'||t.beneficiary===s||t.beneficiary==='couple'||(t.payerId===s&&['income','transfer','external_refund'].includes(t.type))));}
+function summary(m,s){let income=0,expense=0,refund=0;txs(m,s,true).forEach(t=>{if(t.type==='income')income+=alloc(t,s);else if(['expense','group_expense','person_payment'].includes(t.type))expense+=alloc(t,s);else if(t.type==='refund')refund+=alloc(t,s);});expense=Math.max(0,expense-refund);const bs=state.budgets.filter(b=>b.month===m),ib=bs.filter(b=>cat(b.categoryId).type==='income').reduce((x,b)=>x+budgetAmt(b,s),0),eb=bs.filter(b=>cat(b.categoryId).type==='expense').reduce((x,b)=>x+budgetAmt(b,s),0);return{income,expense,ib,eb,saving:income-expense};}
+function breakdown(m,s){return state.categories.filter(c=>c.type==='expense'&&!c.archived).map(c=>{const budget=state.budgets.filter(b=>b.month===m&&b.categoryId===c.id).reduce((x,b)=>x+budgetAmt(b,s),0),actual=txs(m,s,true).filter(t=>t.categoryId===c.id).reduce((x,t)=>x+(['expense','group_expense','person_payment'].includes(t.type)?alloc(t,s):t.type==='refund'?-alloc(t,s):0),0);return{...c,budget,actual:Math.max(0,actual),ratio:budget?actual/budget:0};}).filter(x=>x.budget||x.actual).sort((a,b)=>b.ratio-a.ratio||b.actual-a.actual);}
+function months6(){return Array.from({length:6},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth()-5+i,1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;});}
+function chart(node,s,metric='saving'){const ms=months6(),vs=ms.map(m=>summary(m,s)),r=vs.map(v=>metric==='expense'?v.expense:Math.max(0,v.saving)),b=vs.map(v=>metric==='expense'?v.eb:Math.max(0,v.ib-v.eb)),max=Math.max(1,...r,...b);node.innerHTML=ms.map((m,i)=>`<div class="monthbar"><i style="height:${Math.max(3,b[i]/max*100)}%"></i><b style="height:${Math.max(3,r[i]/max*100)}%"></b><em>${shortMonth(m)}</em></div>`).join('');}
+function accountType(a){const s=(String(a.id||'')+' '+String(a.name||'')).toLowerCase();if(/card|carte|visa|master/.test(s))return'card';if(/checking|courant|chequ/.test(s))return'checking';if(/saving|épargne|epargne/.test(s))return'saving';return'other';}
+function accountEstimate(a){const r=state.reconciliations.filter(x=>x.accountId===a.id).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];const b=state.household.accountOpeningBalances||{},d=state.household.accountOpeningBalanceDates||{};const start=r?.date||d[a.id],base=r?Number(r.actualBalance||0):(b[a.id]===undefined?null:Number(b[a.id]));if(base===null||!start)return null;const movement=state.transactions.filter(t=>t.status==='confirmed'&&t.accountId===a.id&&String(t.date||'')>start).reduce((x,t)=>{const v=Number(t.amountCAD||0);if(accountType(a)==='card'){if(['expense','group_expense','person_payment'].includes(t.type))return x-v;if(['refund','external_refund','transfer'].includes(t.type))return x+v;}else{if(['income','refund','external_refund'].includes(t.type))return x+v;if(['expense','group_expense','person_payment','transfer'].includes(t.type))return x-v;}return x;},0);return base+movement;}
+function bank(s){const owners=s==='couple'?['la','partner']:[s];let checking=0,card=0,hc=false,hv=false;state.accounts.filter(a=>owners.includes(a.owner)).forEach(a=>{const v=accountEstimate(a);if(v===null)return;if(accountType(a)==='checking'){checking+=v;hc=true;}if(accountType(a)==='card'){card+=v;hv=true;}});return{checking:hc?checking:null,card:hv?card:null,net:hc?checking+(hv?card:0):null};}
+function coupleBalance(){let b=Number(state.household.sharingOpeningBalance||0),ref=state.household.referenceDate||'';state.transactions.filter(t=>t.status==='confirmed'&&(!ref||String(t.date||'')>=ref)).forEach(t=>{const a=Number(t.amountCAD||0);if(['expense','group_expense','refund'].includes(t.type)){const sg=t.type==='refund'?-1:1,paid=t.payerId==='la'?a*sg:0,share=t.beneficiary==='couple'?split(t,'la')*sg:t.beneficiary==='la'?a*sg:0;b+=paid-share;}else if(t.type==='transfer'){if(t.payerId==='la'&&t.beneficiary==='partner')b+=a;if(t.payerId==='partner'&&t.beneficiary==='la')b-=a;}});return b;}
+function updateSegments(){[['homeScope',homeScope],['budgetScope',budgetScope],['wealthScope',wealthScope]].forEach(([id,v])=>$$('#'+id+' .seg').forEach(b=>b.classList.toggle('active',b.dataset.scope===v)));}
+function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.expense/s.eb*100:0,b=bank(sId);$('#homeMonthLabel').textContent=monthLabel(CM);$('#homeGreeting').textContent=homeScope==='mine'?`Bonjour ${member(me).name}`:'Votre situation';$('#homeBudgetAvailable').textContent=money(s.eb-s.expense);$('#homeBudgetSub').textContent=s.eb?`sur ${money(s.eb)} prévus ce mois`:'Budget du mois à compléter';$('#homeBudgetProgress').style.width=`${Math.min(100,Math.max(0,cons))}%`;$('#homeBudgetPercent').textContent=`${cons.toFixed(0)} % consommé`;$('#homeBudgetSpent').textContent=`${money(s.expense)} dépensés`;$('#homeBalance').textContent=b.net===null?'À configurer':money(b.net);$('#homeChecking').textContent=b.checking===null?'—':money(b.checking);$('#homeCard').textContent=b.card===null?'—':money(b.card);$('#reconcileBadge').textContent=state.reconciliations.length?'✓ Rapproché':'À rapprocher';$('#homeIncome').textContent=money(s.income);$('#homeSpending').textContent=money(s.expense);$('#homeSaving').textContent=money(s.saving);const p=state.transactions.filter(t=>t.status!=='confirmed');$('#pendingCountBadge').textContent=p.length;$('#pendingText').textContent=p.length?`${p.length} à vérifier`:'Tout est à jour';const cs=breakdown(CM,sId).slice(0,4);$('#homeBudgetCategories').innerHTML=cs.length?cs.map(c=>`<div class="budget-row"><div class="name">${esc(c.name)}</div><div class="bar ${c.ratio>=.8?'warn':''}"><i style="width:${Math.min(100,c.ratio*100)}%"></i></div><div class="amount"><strong>${money(c.actual)}</strong> / ${money(c.budget)}</div></div>`).join(''):'<div class="empty-note">Ajoute ton budget pour voir les catégories importantes.</div>';chart($('#homeTrend'),sId);const cb=coupleBalance(),pa=member(partner),la=member('la');$('#partnerAvatar').textContent=pa.initials||initials(pa.name);$('#shareLabel').textContent=`Solde avec ${pa.name}`;$('#shareBalance').textContent=Math.abs(cb)<.01?'Vous êtes à l’équilibre':cb>0?`${pa.name} doit ${money(cb)} à ${la.name}`:`${la.name} doit ${money(Math.abs(cb))} à ${pa.name}`;updateSegments();}
+function renderBudget(){
+  const month=budgetMonth,sId=scope(budgetScope),s=summary(month,sId);
+  $('#budgetMonthLabel').textContent=monthLabel(month);
+  const monthPicker=$('#budgetMonthPicker');if(monthPicker)monthPicker.value=month;
+  const currentBtn=$('#budgetCurrentMonth');if(currentBtn)currentBtn.classList.toggle('hidden',month===CM);
+  const prev=monthOffset(month,-1);
+  const copyLabel=$('#budgetCopyPrevious span');if(copyLabel)copyLabel.textContent='Copier '+monthLabel(prev);
+  $('#budgetHeroTotal').textContent=money(s.eb);
+  $('#budgetHeroSub').textContent=money(Math.max(0,s.ib-s.eb))+' de marge prévue · '+money(s.ib)+' de revenus';
+  const rows=state.budgets.filter(b=>b.month===month&&budgetAmt(b,sId)>0);
+  const secs=[
+    ['Revenus',b=>cat(b.categoryId).type==='income'],
+    ['Dépenses fixes',b=>cat(b.categoryId).type==='expense'&&['rent','subscriptions','phone','taxes'].includes(b.categoryId)],
+    ['Dépenses variables',b=>cat(b.categoryId).type==='expense'&&!['rent','subscriptions','phone','taxes'].includes(b.categoryId)]
+  ];
+  $('#budgetSections').innerHTML=secs.map(([t,f])=>'<div class="section-head"><h2>'+t+'</h2><button class="linkbtn" disabled>+ Ajouter</button></div><article class="card budget-section">'+(rows.filter(f).length?rows.filter(f).map(b=>'<div class="budget-card"><span class="bicon">'+esc(cat(b.categoryId).icon||'•')+'</span><span class="bmain"><strong>'+esc(cat(b.categoryId).name)+'</strong><small>'+(b.scope==='couple'?'Budget commun':'Personnel')+'</small></span><span class="bvalue"><strong>'+money(budgetAmt(b,sId))+'</strong></span></div>').join(''):'<div class="empty-note">Aucun poste.</div>')+'</article>').join('');
+  const year=month.slice(0,4),ms=Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0')),vs=ms.map(m=>summary(m,sId)),max=Math.max(1,...vs.flatMap(v=>[v.eb,v.expense]));
+  $('#annualBudgetChart').innerHTML=ms.map((m,i)=>'<div class="monthbar '+(m===month?'selected':'')+'"><i style="height:'+Math.max(2,vs[i].eb/max*100)+'%"></i><b style="height:'+Math.max(2,vs[i].expense/max*100)+'%"></b><em>'+shortMonth(m)+'</em></div>').join('');
+  updateSegments();
+}
+async function copyPreviousBudget(){
+  const target=budgetMonth,prev=monthOffset(target,-1),owner=budgetScope==='mine'?me:'couple';
+  const source=state.budgets.filter(b=>b.month===prev&&b.scope===owner);
+  if(!source.length){
+    openSheet('Copier le budget','<div class="empty-note">Aucun budget '+(budgetScope==='mine'?'personnel':'commun')+' n’est enregistré pour '+esc(monthLabel(prev))+'.</div><button class="primary full" id="budgetCopyClose" type="button" style="margin-top:14px">Compris</button>');
+    $('#budgetCopyClose').onclick=closeSheet;
+    return;
+  }
+  const existing=state.budgets.filter(b=>b.month===target&&b.scope===owner);
+  const sumSource=source.reduce((n,b)=>n+Number(b.amount||0),0);
+  openSheet('Copier le mois précédent',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(monthLabel(prev))+' → '+esc(monthLabel(target))+'</b><small>'+(budgetScope==='mine'?'Budget personnel':'Budget Couple')+' · '+source.length+' postes</small></div></div>'+
+    '<div class="setting-summary"><span>Montant prévu à recopier</span><b>'+money(sumSource)+'</b></div>'+
+    (existing.length?'<div class="empty-note" style="margin-top:12px">Les catégories déjà présentes sur le mois sélectionné seront mises à jour avec les montants du mois précédent. Les autres postes déjà créés seront conservés.</div>':'<div class="empty-note" style="margin-top:12px">Le budget du mois précédent sera recopié sur le mois sélectionné. Les transactions réelles ne sont jamais modifiées.</div>')+
+    '<button class="primary full" id="confirmBudgetCopy" type="button" style="margin-top:16px">Copier le budget</button>'+
+    '<button class="secondary full" id="cancelBudgetCopy" type="button" style="margin-top:8px">Annuler</button>'
+  );
+  $('#cancelBudgetCopy').onclick=closeSheet;
+  $('#confirmBudgetCopy').onclick=async()=>{
+    const btn=$('#confirmBudgetCopy');btn.disabled=true;btn.textContent='Copie en cours…';
+    try{
+      let count=0;
+      for(const src of source){
+        const current=state.budgets.find(b=>b.month===target&&b.scope===owner&&b.categoryId===src.categoryId);
+        const item={...src,id:current?.id||budgetDocId(),month:target,scope:owner};
+        if(current)Object.assign(current,item);else state.budgets.push(item);
+        await saveDocument('budgets',item);
+        count++;
+      }
+      closeSheet();renderBudget();
+      openSheet('Budget copié','<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(monthLabel(target))+' est prêt</b><small>'+count+' postes copiés depuis '+esc(monthLabel(prev))+'</small></div></div><div class="empty-note">Tu peux ensuite ajuster les montants qui changent d’un mois à l’autre.</div><button class="primary full" id="budgetCopyDone" type="button" style="margin-top:14px">Voir le budget</button>');
+      $('#budgetCopyDone').onclick=closeSheet;
+    }catch(err){
+      console.error(err);btn.disabled=false;btn.textContent='Réessayer';
+    }
+  };
+}
+function txRow(t){const c=cat(t.categoryId),pos=['income','refund','external_refund'].includes(t.type);return`<div class="tx"><span class="tx-icon">${esc(c.icon||'•')}</span><span class="tx-main"><b>${esc(t.name||t.merchant||'Transaction')}</b><small>${esc(c.name)} · ${esc(t.date||'')}</small></span><span class="tx-amt ${pos?'positive':''}">${pos?'+':'−'}${money(t.amountCAD)}</span></div>`;}
+function renderActivity(){const ts=state.transactions.filter(t=>String(t.date||'').startsWith(CM)&&t.status==='confirmed').sort((a,b)=>String(b.date).localeCompare(String(a.date))),exp=ts.filter(t=>['expense','group_expense','person_payment'].includes(t.type)).reduce((x,t)=>x+Number(t.amountCAD||0),0),inc=ts.filter(t=>t.type==='income').reduce((x,t)=>x+Number(t.amountCAD||0),0);$('#activityMonthLabel').textContent=monthLabel(CM);$('#activityExpenses').textContent=money(exp);$('#activityIncome').textContent=money(inc);$('#activityNet').textContent=money(inc-exp);$('#transactionList').innerHTML=ts.length?ts.map(txRow).join(''):'<div class="empty-note">Aucune transaction validée ce mois-ci.</div>';const p=state.transactions.filter(t=>t.status!=='confirmed');$('#reviewTabCount').textContent=p.length?`(${p.length})`:'';$('#reviewHeading').textContent=`${p.length} transaction${p.length>1?'s':''} à valider`;$('#reviewList').innerHTML=p.length?p.map(t=>`<article class="card review-card" style="margin-bottom:12px"><div class="review-top"><div><div class="merchant">${esc(t.name||t.merchant||'Transaction')}</div><div class="review-date">${esc(t.date||'')}</div></div><div class="review-amount">${money(t.amountCAD)}</div></div><div class="review-fields"><div class="fieldline"><span>Catégorie</span><button>${esc(t.categoryId?cat(t.categoryId).name:'À classer ⚠')}</button></div><div class="fieldline"><span>Pour qui ?</span><button>${t.beneficiary?(t.beneficiary==='couple'?'Nous deux':member(t.beneficiary).name):'À choisir ⚠'}</button></div></div><div class="review-hint">Validation interactive activée dans la prochaine passe</div></article>`).join(''):'<div class="empty-note">Tout est à jour.</div>';showTab(tab);}
+function showTab(t){tab=t;$$('#activityTabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));$('#activityTransactions').classList.toggle('hidden',t!=='transactions');$('#activityReview').classList.toggle('hidden',t!=='review');$('#activityImport').classList.toggle('hidden',t!=='import');}
+function renderWealth(){const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),inv=state.investmentAccounts.filter(a=>owners.includes(a.owner)),total=(bk.net||0)+inv.reduce((x,a)=>x+Number(a.currentValueCad||a.valueCad||0),0);$('#wealthTotal').textContent=money(total);$('#assetGrid').innerHTML=[`<button class="asset-card"><span class="a-icon">$</span><span>Liquidités</span><b>${bk.net===null?'À configurer':money(bk.net)}</b><small>Compte − carte</small></button>`,...inv.map(a=>`<button class="asset-card"><span class="a-icon">◇</span><span>${esc(a.name||a.type||'Investissement')}</span><b>${money(a.currentValueCad||a.valueCad||0)}</b><small>${esc(a.currency||'CAD')}</small></button>`)].join('');const ms=months6(),max=Math.max(1,total);$('#wealthTrend').innerHTML=ms.map((m,i)=>`<div class="monthbar"><b style="height:${Math.max(12,(.9+i*.02)*total/max*90)}%"></b><em>${shortMonth(m)}</em></div>`).join('');updateSegments();}
+function renderAll(){renderHome();renderBudget();renderActivity();renderWealth();}
+function navigate(p){$$('.page').forEach(x=>x.classList.toggle('active',x.dataset.page===p));$$('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===p));location.hash=p==='home'?'':p;window.scrollTo({top:0,behavior:'smooth'});}
+function analysis(){analysisScope=homeScope;renderAnalysis();}
+function renderAnalysis(){const sId=scope(analysisScope),ms=months6(),vs=ms.map(m=>summary(m,sId)),inc=vs.reduce((x,v)=>x+v.income,0),exp=vs.reduce((x,v)=>x+v.expense,0),sav=inc-exp;openSheet('Analyses',`<div class="segment" id="analysisScope"><button class="seg ${analysisScope==='mine'?'active':''}" data-scope="mine">Moi</button><button class="seg ${analysisScope==='couple'?'active':''}" data-scope="couple">Couple</button></div><div class="metric-strip" style="margin-top:14px"><div class="metric-mini"><span>Dépenses · 6 mois</span><b>${money(exp)}</b></div><div class="metric-mini"><span>Moyenne</span><b>${money(exp/6)}</b></div><div class="metric-mini"><span>Épargne</span><b>${money(sav)}</b></div><div class="metric-mini"><span>Taux</span><b>${inc?(sav/inc*100).toFixed(1):0} %</b></div></div><div class="section-head"><h2>Évolution</h2></div><div class="chart" id="analysisChart"></div>`);chart($('#analysisChart'),sId,'expense');$$('#analysisScope .seg').forEach(b=>b.onclick=()=>{analysisScope=b.dataset.scope;renderAnalysis();});}
+function detail(type){const sId=scope(homeScope),rows=txs(CM,sId,true).filter(t=>type==='income'?t.type==='income':type==='spending'?['expense','group_expense','person_payment','refund'].includes(t.type):false);if(type==='saving'){const s=summary(CM,sId);openSheet('Épargne',`<div class="money2">${money(s.saving)}</div><div class="micro">${s.income?(s.saving/s.income*100).toFixed(1):0} % des revenus</div>`);return;}openSheet(type==='income'?'Revenus':'Dépenses',rows.length?rows.map(txRow).join(''):'<div class="empty-note">Aucune opération.</div>');}
+
+function uiIcon(name){
+  const paths={
+    user:'<circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6"/>',
+    heart:'<path d="M20 8.5c0 5-8 10.5-8 10.5S4 13.5 4 8.5C4 5.8 5.9 4 8.3 4c1.6 0 3 .8 3.7 2 .7-1.2 2.1-2 3.7-2C18.1 4 20 5.8 20 8.5Z"/>',
+    bank:'<path d="m3 9 9-5 9 5"/><path d="M5 10h14M6 10v7m4-7v7m4-7v7m4-7v7M4 20h16"/>',
+    refresh:'<path d="M19 8a7 7 0 0 0-12-2L4 9"/><path d="M4 5v4h4"/><path d="M5 16a7 7 0 0 0 12 2l3-3"/><path d="M20 19v-4h-4"/>',
+    bell:'<path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 6 2.2 6.5 2.2 6.5H4.3S6.5 15 6.5 9Z"/><path d="M10 19h4"/>',
+    chart:'<path d="M4 20V10m5 10V5m5 15v-7m5 7V8"/>',
+    shield:'<path d="M12 3 5 6v5c0 4.6 2.8 7.7 7 10 4.2-2.3 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.7 1.7 3.7-4"/>',
+    logout:'<path d="M10 5H5v14h5"/><path d="M14 8l4 4-4 4M8 12h10"/>',
+    calendar:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 9h16"/>',
+    chevron:'<path d="m9 6 6 6-6 6"/>'
+  };
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(paths[name]||paths.user)+'</svg>';
+}
+async function saveHouseholdSettings(){
+  sync('saving');
+  const settings={...(household.settings||{}),...state.household,schemaVersion:5};
+  const{error}=await client.from('households').update({settings}).eq('id',household.id);
+  if(error){sync('error');throw error;}
+  household.settings=settings;
+  sync('synced');
+}
+async function saveDocument(collection,item){
+  sync('saving');
+  const{error}=await client.from('documents').upsert({
+    household_id:household.id,
+    collection,
+    item_id:String(item.id),
+    data:item,
+    updated_by:session.user.id
+  },{onConflict:'household_id,collection,item_id'});
+  if(error){sync('error');throw error;}
+  sync('synced');
+}
+function settingsBack(){return '<button class="secondary full settings-back" type="button" style="margin-top:16px">Retour aux paramètres</button>';}
+function bindSettingsBack(){$('.settings-back')?.addEventListener('click',profile);}
+function profileMenuItem(id,icon,title,sub){
+  return '<button class="profile-action settings-row" id="'+id+'"><span class="pico">'+uiIcon(icon)+'</span><span class="pmain"><b>'+esc(title)+'</b><small>'+esc(sub)+'</small></span><span class="profile-chevron">'+uiIcon('chevron')+'</span></button>';
+}
+function profile(){
+  const meObj=member(me),partnerObj=member(partner);
+  openSheet('Profil & paramètres',
+    '<div class="profile-card profile-card-premium">'+
+      '<div class="big-avatar">'+esc(meObj.initials||initials(meObj.name))+'</div>'+
+      '<b>'+esc(meObj.name)+'</b>'+
+      '<div class="review-date">'+esc(session?.user?.email||'')+'</div>'+
+      '<div class="profile-connection"><span class="status-dot"></span> Connecté avec '+esc(partnerObj.name)+'</div>'+
+    '</div>'+
+    '<div class="settings-group"><div class="settings-group-title">Compte</div>'+
+      profileMenuItem('settingsProfile','user','Mon profil','Nom, courriel et devise')+
+      profileMenuItem('settingsCouple','heart','Mon couple','Partage et répartition par défaut')+
+    '</div>'+
+    '<div class="settings-group"><div class="settings-group-title">Finances</div>'+
+      profileMenuItem('settingsAccounts','bank','Mes comptes','Soldes de référence et cartes')+
+      profileMenuItem('settingsReconcile','refresh','Rapprochement','Vérifier Trace avec la banque')+
+      profileMenuItem('settingsInvest','chart','Investissements','PEA, CELI, REER et autres')+
+    '</div>'+
+    '<div class="settings-group"><div class="settings-group-title">Préférences</div>'+
+      profileMenuItem('settingsGuide','guide','Guide Trace','Revoir la formation complète à tout moment')+
+      profileMenuItem('settingsNotifications','bell','Notifications','Validation, import et rapprochement')+
+      profileMenuItem('settingsData','shield','Données & confidentialité','Date de référence et données partagées')+
+    '</div>'+
+    '<button class="profile-action settings-row danger-row" id="logout"><span class="pico">'+uiIcon('logout')+'</span><span class="pmain"><b>Se déconnecter</b><small>Fermer la session sur cet appareil</small></span></button>'
+  );
+  $('#settingsProfile').onclick=openProfileSettings;
+  $('#settingsCouple').onclick=openCoupleSettings;
+  $('#settingsAccounts').onclick=openAccountSettings;
+  $('#settingsReconcile').onclick=openReconcileSettings;
+  $('#settingsInvest').onclick=()=>{closeSheet();wealthScope='mine';renderWealth();navigate('wealth');};
+  $('#settingsGuide').onclick=()=>{closeSheet();setTimeout(()=>window.TraceGuide?.start(true),80);};
+  $('#settingsNotifications').onclick=openNotificationSettings;
+  $('#settingsData').onclick=openDataSettings;
+  $('#logout').onclick=async()=>{await client.auth.signOut();location.reload();};
+}
+function openProfileSettings(){
+  openSheet('Mon profil',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('user')+'</span><div><b>'+esc(member(me).name)+'</b><small>'+esc(session?.user?.email||'')+'</small></div></div>'+
+    '<label class="label2">Nom affiché</label><input id="settingsDisplayName" class="input" value="'+esc(member(me).name)+'">'+
+    '<label class="label2">Courriel</label><input class="input" value="'+esc(session?.user?.email||'')+'" disabled>'+
+    '<label class="label2">Devise principale</label><select class="input" disabled><option>CAD — Dollar canadien</option></select>'+
+    '<button class="primary full" id="saveProfileSettings" style="margin-top:16px">Enregistrer</button>'+settingsBack()
+  );
+  $('#saveProfileSettings').onclick=async()=>{
+    const name=$('#settingsDisplayName').value.trim();
+    if(!name)return;
+    sync('saving');
+    const{error}=await client.from('household_members').update({display_name:name}).eq('household_id',household.id).eq('user_id',session.user.id);
+    if(error){sync('error');return;}
+    const m=(state.household.members||[]).find(x=>x.id===me);
+    if(m){m.name=name;m.initials=initials(name);}
+    await saveHouseholdSettings();
+    $('#profileBtn').textContent=initials(name);
+    renderAll();profile();
+  };
+  bindSettingsBack();
+}
+function openCoupleSettings(){
+  const d=state.household.defaultSplit||{la:50,partner:50};
+  openSheet('Mon couple',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('heart')+'</span><div><b>'+esc(member(partner).name)+'</b><small>Espace partagé actif</small></div></div>'+
+    '<div class="setting-summary"><span>Budget partagé</span><b>Actif</b></div>'+
+    '<div class="setting-summary"><span>Solde Partage</span><b>'+money(Math.abs(coupleBalance()))+'</b></div>'+
+    '<div class="section-head"><h2>Répartition par défaut</h2></div>'+
+    '<div class="formrow"><div><label class="label2">'+esc(member('la').name)+' %</label><input id="splitLaSetting" class="input" type="number" min="0" max="100" value="'+Number(d.la??50)+'"></div>'+
+    '<div><label class="label2">'+esc(member('partner').name)+' %</label><input id="splitPartnerSetting" class="input" type="number" min="0" max="100" value="'+Number(d.partner??50)+'"></div></div>'+
+    '<button class="primary full" id="saveCoupleSettings" style="margin-top:16px">Enregistrer la répartition</button>'+settingsBack()
+  );
+  $('#splitLaSetting').oninput=()=>{$('#splitPartnerSetting').value=Math.max(0,100-Number($('#splitLaSetting').value||0));};
+  $('#saveCoupleSettings').onclick=async()=>{
+    const la=Number($('#splitLaSetting').value||0),pa=Number($('#splitPartnerSetting').value||0);
+    if(Math.abs(la+pa-100)>.01)return;
+    state.household.defaultSplit={la,partner:pa};
+    await saveHouseholdSettings();renderAll();profile();
+  };
+  bindSettingsBack();
+}
+function openAccountSettings(){
+  const mine=state.accounts.filter(a=>a.owner===me);
+  const balances=state.household.accountOpeningBalances||{};
+  const dates=state.household.accountOpeningBalanceDates||{};
+  openSheet('Mes comptes',
+    '<div class="empty-note">Renseigne les soldes de référence. Trace utilise ensuite les transactions et les rapprochements pour estimer le solde actuel.</div>'+
+    (mine.length?mine.map(a=>'<div class="account-setting-card"><div class="settings-hero compact"><span class="pico">'+uiIcon('bank')+'</span><div><b>'+esc(a.name)+'</b><small>'+esc(accountType(a)==='card'?'Carte de crédit':'Compte bancaire')+'</small></div></div><label class="label2">Solde de référence</label><input class="input account-opening" data-id="'+esc(a.id)+'" type="number" step="0.01" value="'+(balances[a.id]??'')+'"><label class="label2">Date</label><input class="input account-date" data-id="'+esc(a.id)+'" type="date" value="'+esc(dates[a.id]||state.household.referenceDate||'2026-11-01')+'"></div>').join(''):'<div class="empty-note" style="margin-top:12px">Aucun compte bancaire n’est encore configuré.</div>')+
+    (mine.length?'<button class="primary full" id="saveAccountSettings" style="margin-top:16px">Enregistrer les soldes</button>':'')+settingsBack()
+  );
+  if(mine.length)$('#saveAccountSettings').onclick=async()=>{
+    state.household.accountOpeningBalances||={};
+    state.household.accountOpeningBalanceDates||={};
+    $$('.account-opening').forEach(i=>{if(i.value!=='')state.household.accountOpeningBalances[i.dataset.id]=Number(i.value);});
+    $$('.account-date').forEach(i=>state.household.accountOpeningBalanceDates[i.dataset.id]=i.value);
+    await saveHouseholdSettings();renderAll();profile();
+  };
+  bindSettingsBack();
+}
+function openReconcileSettings(){
+  const mine=state.accounts.filter(a=>a.owner===me&&['checking','card'].includes(accountType(a)));
+  openSheet('Rapprochement',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('refresh')+'</span><div><b>Vérifier les comptes</b><small>Une fois par semaine suffit</small></div></div>'+
+    (mine.length?mine.map(a=>{const r=state.reconciliations.filter(x=>x.accountId===a.id).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];const est=accountEstimate(a);return '<div class="reconcile-card"><div><b>'+esc(a.name)+'</b><small>'+(r?'Dernier rapprochement : '+esc(r.date):'Jamais rapproché')+'</small></div><div class="reconcile-estimate">'+(est===null?'—':money(est))+'</div><button class="secondary reconcile-one" data-id="'+esc(a.id)+'">Rapprocher</button></div>';}).join(''):'<div class="empty-note">Ajoute d’abord tes comptes bancaires.</div>')+settingsBack()
+  );
+  $$('.reconcile-one').forEach(b=>b.onclick=()=>openSingleReconcile(b.dataset.id));
+  bindSettingsBack();
+}
+function openSingleReconcile(id){
+  const a=state.accounts.find(x=>x.id===id);if(!a)return;
+  const est=accountEstimate(a)??0;
+  openSheet('Rapprocher · '+a.name,
+    '<div class="setting-summary"><span>Solde estimé Trace</span><b>'+money(est)+'</b></div>'+
+    '<label class="label2">Solde réel dans la banque</label><input id="reconcileActual" class="input" type="number" step="0.01" value="'+Number(est).toFixed(2)+'">'+
+    '<label class="label2">Date</label><input id="reconcileDate" class="input" type="date" value="'+new Date().toISOString().slice(0,10)+'">'+
+    '<button class="primary full" id="saveReconciliation" style="margin-top:16px">Valider le rapprochement</button>'+settingsBack()
+  );
+  $('#saveReconciliation').onclick=async()=>{
+    const actual=Number($('#reconcileActual').value||0);
+    const item={id:'rec_'+Date.now().toString(36),accountId:a.id,owner:me,date:$('#reconcileDate').value,estimatedBalance:est,actualBalance:actual,difference:actual-est};
+    state.reconciliations.push(item);
+    await saveDocument('reconciliations',item);
+    renderAll();openReconcileSettings();
+  };
+  bindSettingsBack();
+}
+function notificationToggle(key,label,sub,on){
+  return '<button class="setting notification-setting" data-key="'+key+'" type="button"><span class="pico">'+uiIcon('bell')+'</span><div><b>'+esc(label)+'</b><small>'+esc(sub)+'</small></div><span class="switch '+(on?'on':'')+'"></span></button>';
+}
+function openNotificationSettings(){
+  const n=state.household.notifications||{review:true,staleImport:true,reconcile:true};
+  openSheet('Notifications',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('bell')+'</span><div><b>Notifications utiles</b><small>Pas de spam, uniquement les actions à faire</small></div></div>'+
+    notificationToggle('review','Transactions à valider','Quand une action est nécessaire',n.review!==false)+
+    notificationToggle('staleImport','Import à faire','Si aucun import depuis 7 jours',n.staleImport!==false)+
+    notificationToggle('reconcile','Rapprochement hebdomadaire','Rappel une fois par semaine',n.reconcile!==false)+
+    '<div class="empty-note" style="margin-top:14px">Ces préférences sont enregistrées dans Trace. Les notifications push iPhone seront activées quand le moteur de notifications sera branché.</div>'+
+    '<button class="primary full" id="saveNotifications" style="margin-top:16px">Enregistrer</button>'+settingsBack()
+  );
+  $$('.notification-setting').forEach(row=>row.onclick=()=>row.querySelector('.switch').classList.toggle('on'));
+  $('#saveNotifications').onclick=async()=>{
+    const prefs={};
+    $$('.notification-setting').forEach(row=>prefs[row.dataset.key]=row.querySelector('.switch').classList.contains('on'));
+    state.household.notifications=prefs;await saveHouseholdSettings();profile();
+  };
+  bindSettingsBack();
+}
+function openDataSettings(){
+  openSheet('Données & confidentialité',
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('shield')+'</span><div><b>Données Trace</b><small>Votre espace couple reste privé à ses membres</small></div></div>'+
+    '<label class="label2">Date de référence</label><input id="referenceDateSetting" class="input" type="date" value="'+esc(state.household.referenceDate||'2026-11-01')+'">'+
+    '<label class="label2">Solde Partage d’ouverture</label><input id="sharingOpeningSetting" class="input" type="number" step="0.01" value="'+Number(state.household.sharingOpeningBalance||0)+'">'+
+    '<div class="empty-note" style="margin-top:12px">Valeur positive : '+esc(member('partner').name)+' doit à '+esc(member('la').name)+'. Valeur négative : '+esc(member('la').name)+' doit à '+esc(member('partner').name)+'. L’historique antérieur reste conservé.</div>'+
+    '<div class="setting-summary" style="margin-top:14px"><span>Sauvegarde de migration V5</span><b>Active</b></div>'+
+    '<button class="primary full" id="saveDataSettings" style="margin-top:16px">Enregistrer</button>'+settingsBack()
+  );
+  $('#saveDataSettings').onclick=async()=>{
+    state.household.referenceDate=$('#referenceDateSetting').value;
+    state.household.sharingOpeningBalance=Number($('#sharingOpeningSetting').value||0);
+    await saveHouseholdSettings();renderAll();profile();
+  };
+  bindSettingsBack();
+}
+async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Chargement de votre espace…');const{data:m,error:e}=await withTimeout(client.from('household_members').select('household_id,user_id,slot,display_name').eq('user_id',session.user.id).maybeSingle(),7000,'Chargement du profil trop long.');if(e)throw e;if(!m){showGate('cloudWorkspacePanel');return;}document.documentElement.dataset.traceUserId=session.user.id;me=m.slot;partner=me==='la'?'partner':'la';loadingStage('Synchronisation de vos données…');const[{data:h,error:he},{data:docs,error:de},{data:members,error:mee}]=await withTimeout(Promise.all([client.from('households').select('id,name,settings,schema_version').eq('id',m.household_id).single(),client.from('documents').select('collection,item_id,data').eq('household_id',m.household_id),client.from('household_members').select('slot,display_name').eq('household_id',m.household_id)]),9000,'Synchronisation trop longue.');if(he||de||mee)throw he||de||mee;household=h;state={household:{...(h.settings||{}),name:h.name},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[]};if(!Array.isArray(state.household.members)||!state.household.members.length)state.household.members=members.map(x=>({id:x.slot,name:x.display_name,initials:initials(x.display_name)}));members.forEach(x=>{const mm=state.household.members.find(y=>y.id===x.slot);if(mm){mm.name=x.display_name||mm.name;mm.initials=initials(mm.name);}});const map={categories:'categories',accounts:'accounts',budgets:'budgets',transactions:'transactions',investmentAccounts:'investment_accounts',investmentOperations:'investment_operations',reconciliations:'reconciliations'};Object.entries(map).forEach(([k,c])=>state[k]=docs.filter(d=>d.collection===c).map(d=>d.data).filter(Boolean));state.household.referenceDate||='2026-11-01';$('#profileBtn').textContent=member(me).initials||initials(member(me).name);hideGate();sync('synced');renderAll();navigate((location.hash||'#').slice(1)||'home');}
+async function init(){
+  const cfg=window.BUDGET_DUO_CONFIG||{};
+  if(!cfg.supabaseUrl||!cfg.supabasePublishableKey){showGate('cloudConfigPanel');return;}
+  if(!window.supabase?.createClient){
+    showGate('cloudAuthPanel');
+    $('#cloudAuthMessage').textContent='Le service de connexion n’a pas chargé. Ferme puis rouvre Trace.';
+    return;
+  }
+
+  loadingStage('Vérification de votre session…');
+  client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{
+    auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+  });
+
+  let startupResolved=false;
+  const startupTimeout=setTimeout(()=>{
+    if(startupResolved)return;
+    startupResolved=true;
+    showGate('cloudAuthPanel');
+    $('#cloudAuthMessage').textContent='La session a mis trop de temps à démarrer. Reconnecte-toi pour la relancer.';
+  },8000);
+
+  const openWorkspace=(s)=>{
+    if(!s||startupResolved)return;
+    startupResolved=true;
+    clearTimeout(startupTimeout);
+    session=s;
+    loadingStage('Synchronisation de vos données…');
+    setTimeout(()=>loadWorkspace().catch(fatal),0);
+  };
+
+  client.auth.onAuthStateChange((ev,s)=>{
+    session=s;
+    if(ev==='INITIAL_SESSION'){
+      if(s)openWorkspace(s);
+      else if(!startupResolved){
+        startupResolved=true;
+        clearTimeout(startupTimeout);
+        showGate('cloudAuthPanel');
+      }
+      return;
+    }
+    if(ev==='SIGNED_IN'){
+      if(s&&!household){
+        startupResolved=false;
+        openWorkspace(s);
+      }
+      return;
+    }
+    if(ev==='TOKEN_REFRESHED'){
+      sync('synced');
+      if(s&&!household){
+        startupResolved=false;
+        openWorkspace(s);
+      }
+      return;
+    }
+    if(ev==='SIGNED_OUT'){
+      startupResolved=true;
+      clearTimeout(startupTimeout);
+      household=null;
+      showGate('cloudAuthPanel');
+    }
+  });
+}
+function fatal(e){console.error(e);showGate('cloudAuthPanel');$('#cloudAuthMessage').textContent=e?.message||'Erreur de chargement';}
+function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=()=>openSheet('Ajouter','<div class="empty-note">Le formulaire connecté arrive dans la prochaine passe. Pour l’instant aucune donnée n’est modifiée depuis ce bouton.</div>');$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>openSheet('Partage',`<div class="money2">${esc($('#shareBalance').textContent)}</div><div class="empty-note" style="margin-top:12px">Le détail des mouvements sera activé dans la prochaine passe.</div>`);$('#shareOpen').onclick=$('#shareCard').onclick;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});$('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetPrevMonth')?.addEventListener('click',()=>{budgetMonth=monthOffset(budgetMonth,-1);renderBudget();});$('#budgetNextMonth')?.addEventListener('click',()=>{budgetMonth=monthOffset(budgetMonth,1);renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>{if(/^\d{4}-\d{2}$/.test(e.target.value)){budgetMonth=e.target.value;renderBudget();}});$('#budgetCurrentMonth')?.addEventListener('click',()=>{budgetMonth=CM;renderBudget();});$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#wealthAnalysis').onclick=()=>openSheet('Analyse du patrimoine','<div class="empty-note">Analyse patrimoine en préparation.</div>');$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{$('#importResult').innerHTML=`<article class="card"><b>${esc(e.target.files?.[0]?.name||'Fichier')}</b><div class="empty-note" style="margin-top:10px">Fichier reconnu. L’extraction automatique sera branchée dans l’étape suivante.</div></article>`;};$$('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée. Réessaie dans quelques secondes.');session=data.session;await loadWorkspace();$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=err?.message||'Connexion impossible. Réessaie.';}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{data:{display_name:$('#cloudSignupName').value.trim()}}});$('#cloudAuthMessage').textContent=error?error.message:'Compte créé.';};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
+function bootTrace(){
+  window.__TRACE_BOOTED__=true;
+  try{
+    bind();
+    init();
+  }catch(err){
+    console.error('Trace startup error',err);
+    try{
+      const retryKey='trace:startup-retry:v1';
+      if(!sessionStorage.getItem(retryKey)){
+        sessionStorage.setItem(retryKey,'1');
+        const u=new URL(location.href);
+        u.searchParams.set('trace_refresh',Date.now().toString());
+        location.replace(u.toString());
+        return;
+      }
+    }catch(_){}
+    showGate('cloudAuthPanel');
+    const msg=$('#cloudAuthMessage');
+    if(msg)msg.textContent='Trace 5.1.5 a rencontré une erreur au démarrage. Ferme complètement l’app puis rouvre-la.';
+  }
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',bootTrace,{once:true});
+}else{
+  bootTrace();
+}
+})();
+</script>
+<script type="text/plain" id="trace-guide-source">(() => {
+'use strict';
+
+const VERSION='v3';
+let index=0;
+let active=false;
+let currentKey='';
+let resizeTimer=null;
+
+const icons={
+  guide:'<path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v12H7.5A2.5 2.5 0 0 1 5 16.5v-12Z"/><path d="M7.5 19A2.5 2.5 0 0 1 5 16.5 2.5 2.5 0 0 1 7.5 14H18"/><path d="M9 8h5M9 11h4"/>',
+  home:'<path d="M3.5 10.5 12 3.75l8.5 6.75"/><path d="M5.5 9.4V20h13V9.4"/><path d="M9.5 20v-6h5v6"/>',
+  budget:'<path d="M4 7.5h16"/><path d="M6 4.5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z"/><path d="M15.5 13h4.5"/>',
+  activity:'<path d="M7 4v16M4.5 6.5 7 4l2.5 2.5"/><path d="M17 20V4M14.5 17.5 17 20l2.5-2.5"/>',
+  heart:'<path d="M20 8.5c0 5-8 10.5-8 10.5S4 13.5 4 8.5C4 5.8 5.9 4 8.3 4c1.6 0 3 .8 3.7 2 .7-1.2 2.1-2 3.7-2C18.1 4 20 5.8 20 8.5Z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  wealth:'<path d="M4 18.5V13l4-3 4 2 4-6 4 2.5"/><path d="M4 20h16"/>',
+  user:'<circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6"/>'
+};
+
+const steps=[
+  {
+    page:'home', target:'.brand', icon:'guide', kicker:'Guide complet · environ 3 min',
+    title:'Bienvenue sur Trace',
+    body:'Trace sert à prévoir le mois, enregistrer ce qui s’est vraiment passé, puis comprendre votre situation sans multiplier les saisies.',
+    points:[
+      'Une opération doit exister une seule fois dans Trace : elle alimente ensuite budget, activité, partage et analyses.',
+      'Moi affiche tes chiffres ; Couple affiche les données communes ou combinées.',
+      'Le cycle à retenir : Prévoir → importer ou saisir → valider → comprendre.'
+    ]
+  },
+  {
+    page:'home', target:'[data-page="home"] .hero-card', icon:'home', kicker:'Accueil · Synthèse',
+    title:'Commence toujours par l’Accueil',
+    body:'L’Accueil te donne l’état du mois sans avoir à parcourir toute l’app.',
+    points:[
+      'Disponible sur le budget = budget de dépenses prévu moins dépenses déjà validées.',
+      'Solde estimé = comptes bancaires suivis moins dette de carte, à partir des soldes de référence et des opérations enregistrées.',
+      'Le statut de rapprochement indique si Trace a récemment été comparé au vrai solde bancaire.',
+      'Le bouton Moi / Couple change uniquement le périmètre de lecture.'
+    ]
+  },
+  {
+    page:'home', target:'.grid.grid-3', icon:'wealth', kicker:'Accueil · Indicateurs & analyses',
+    title:'Les chiffres importants sont interactifs',
+    body:'Revenus, Dépenses et Épargne sont des portes d’entrée vers le détail du mois.',
+    points:[
+      'Revenus ouvre les entrées d’argent du mois.',
+      'Dépenses ouvre les sorties classées dans Trace.',
+      'Épargne correspond au flux net du mois : revenus moins dépenses.',
+      'Évolution et Analyses servent à comparer plusieurs mois et peuvent être consultées en Moi ou Couple.'
+    ]
+  },
+  {
+    page:'budget', target:'#budgetPeriodControl', icon:'budget', kicker:'Budget · Prévision',
+    title:'Le Budget définit le cadre du mois',
+    body:'Cette section sépare clairement ce que vous prévoyez de ce qui s’est réellement produit.',
+    points:[
+      'Choisis librement le mois avec les flèches ou le sélecteur de date.',
+      'Copier le mois précédent reprend les montants du même périmètre sans toucher aux transactions réelles.',
+      'Revenus, dépenses fixes et dépenses variables sont présentés séparément.',
+      'Le budget personnel et le budget Couple ont chacun leur vue ; la vue annuelle compare prévu et réel.'
+    ]
+  },
+  {
+    page:'activity', tab:'transactions', target:'#activityTransactions .activity-stats', icon:'activity', kicker:'Activité · Transactions',
+    title:'Activité est le journal financier',
+    body:'C’est ici que tu retrouves les opérations qui expliquent réellement les chiffres de Trace.',
+    points:[
+      'Transactions contient les opérations déjà confirmées.',
+      'Le haut de l’écran résume dépenses, revenus et flux net du mois.',
+      'Chaque opération conserve sa date, son montant, sa catégorie et à qui elle appartient.',
+      'Les transferts et remboursements doivent être distingués des revenus et dépenses pour éviter les doubles comptes.'
+    ]
+  },
+  {
+    page:'activity', tab:'review', target:'#activityTabs [data-tab="review"]', icon:'activity', kicker:'Activité · À valider',
+    title:'Valide avant de laisser une opération compter',
+    body:'Les opérations importées ou incertaines passent par À valider avant d’alimenter le budget et les analyses.',
+    points:[
+      'Vérifie la catégorie : épicerie, restaurant, logement, transport, etc.',
+      'Vérifie Pour qui ? : toi, ton partenaire ou vous deux.',
+      'Pour une dépense commune, contrôle la répartition 50/50 ou personnalisée.',
+      'Le but est simple : une donnée propre une fois, puis réutilisée partout.'
+    ]
+  },
+  {
+    page:'activity', tab:'import', target:'#activityImport .drop', icon:'plus', kicker:'Activité · Import & ajout',
+    title:'Ajoute les opérations de la façon la plus simple',
+    body:'Trace est pensé pour limiter la saisie manuelle et rapprocher facilement l’app de la banque.',
+    points:[
+      'Importer accepte les fichiers prévus pour le suivi bancaire : CSV, capture ou PDF selon le flux activé.',
+      'Les doublons doivent être écartés avant validation pour ne jamais compter deux fois la même opération.',
+      'Le bouton + sert à l’ajout manuel : cash, remboursement ou opération manquante.',
+      'L’extraction intelligente image/PDF et certains formulaires sont encore activés progressivement dans cette V5.'
+    ]
+  },
+  {
+    page:'home', target:'#shareCard', icon:'heart', kicker:'Partage · Couple',
+    title:'Le Partage suit qui a avancé quoi',
+    body:'Une dépense commune peut servir au budget tout en mettant à jour automatiquement le solde entre vous deux.',
+    points:[
+      'Indique qui a payé et pour qui était la dépense.',
+      'Une dépense commune peut être répartie 50/50 ou selon votre répartition préférée.',
+      'Le solde de Partage est continu : il ne repart pas à zéro chaque mois.',
+      'Un remboursement entre vous règle le solde sans créer un faux revenu ou une fausse dépense.'
+    ]
+  },
+  {
+    page:'home', action:'analysis', target:'#analysisScope', icon:'wealth', kicker:'Analyses · Comprendre',
+    title:'Passe du chiffre à l’explication',
+    body:'Les analyses servent à voir les tendances plutôt qu’une simple liste de transactions.',
+    points:[
+      'Compare dépenses, budget et épargne sur plusieurs mois.',
+      'Repère les catégories qui consomment le plus de budget.',
+      'Le sélecteur Moi / Couple recalcule les indicateurs selon le périmètre choisi.',
+      'L’objectif est d’aider à décider, pas d’ajouter des tableaux inutiles.'
+    ]
+  },
+  {
+    page:'wealth', target:'[data-page="wealth"] .hero-card', icon:'wealth', kicker:'Patrimoine · Long terme',
+    title:'Patrimoine regroupe ce que vous possédez',
+    body:'Cette vue complète le budget mensuel avec une lecture plus long terme.',
+    points:[
+      'Liquidités, épargne et comptes d’investissement sont regroupés au même endroit.',
+      'Moi / Couple permet de suivre ton patrimoine personnel ou l’ensemble suivi.',
+      'Les comptes d’investissement sont prévus pour conserver positions et opérations datées : achats, ventes, dividendes, frais et versements.',
+      'Les analyses distingueront contributions et performance pour éviter de confondre argent versé et rendement.'
+    ]
+  },
+  {
+    page:'home', action:'profile', target:'#sheetBody .profile-menu', icon:'user', kicker:'Profil & paramètres',
+    title:'Configure Trace une fois, puis garde-le fiable',
+    body:'Le Profil contient les réglages qui structurent tous les calculs de l’app.',
+    points:[
+      'Mon profil : identité et devise principale.',
+      'Mon couple : partenaire et répartition par défaut.',
+      'Mes comptes : soldes et dates de référence ; Rapprochement : comparaison avec la banque.',
+      'Notifications : validations, import et rapprochement ; Données & confidentialité : date de référence, solde Partage d’ouverture et sauvegarde.',
+      'Guide express permet de relancer cette formation à tout moment.'
+    ]
+  },
+  {
+    page:'home', target:'.brand', icon:'guide', kicker:'Routine recommandée',
+    title:'La bonne routine tient en quelques minutes',
+    body:'Trace reste simple si tu le mets à jour régulièrement au lieu de tout corriger en fin de mois.',
+    points:[
+      'Début de mois : vérifie ou prépare le budget.',
+      'Tous les 3 à 7 jours : importe les nouvelles opérations et valide ce qui demande ton avis.',
+      'Une fois par semaine : rapproche Trace du vrai solde bancaire.',
+      'Fin de mois : regarde l’épargne, les écarts de budget, le Partage et l’évolution du patrimoine.'
+    ]
+  }
+]
+
+function $(s){return document.querySelector(s)}
+function $$(s){return [...document.querySelectorAll(s)]}
+function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(icons[name]||icons.guide)+'</svg>'}
+function key(){
+  const who=document.documentElement.dataset.traceUserId||($('#profileBtn')?.textContent||'user').trim().toLowerCase().replace(/\s+/g,'-');
+  return 'trace:onboarding:'+VERSION+':'+who;
+}
+function seen(){
+  try{return localStorage.getItem(key())==='done'}catch{return false}
+}
+function markSeen(){
+  try{localStorage.setItem(currentKey||key(),'done')}catch{}
+}
+function ensureMarkup(){
+  if($('#traceGuide'))return;
+  const el=document.createElement('div');
+  el.id='traceGuide';
+  el.className='trace-guide hidden';
+  el.innerHTML=
+    '<div class="trace-guide-spot" id="traceGuideSpot"></div>'+
+    '<section class="trace-guide-card" id="traceGuideCard" role="dialog" aria-modal="true" aria-labelledby="traceGuideTitle">'+
+      '<div class="trace-guide-top"><span id="traceGuideStep"></span><button id="traceGuideSkip" type="button">Passer</button></div>'+
+      '<div class="trace-guide-progress"><i id="traceGuideProgress"></i></div>'+
+      '<div class="trace-guide-icon" id="traceGuideIcon"></div>'+
+      '<div class="trace-guide-kicker" id="traceGuideKicker"></div>'+
+      '<h2 id="traceGuideTitle"></h2>'+
+      '<p id="traceGuideBody"></p>'+
+      '<details class="trace-guide-details" id="traceGuideDetails"><summary>Voir les explications détaillées</summary><ul id="traceGuidePoints"></ul></details>'+
+      '<div class="trace-guide-actions"><button class="secondary" id="traceGuideBack" type="button">Retour</button><button class="primary" id="traceGuideNext" type="button">Suivant</button></div>'+
+    '</section>';
+  document.body.appendChild(el);
+  $('#traceGuideSkip').onclick=()=>finish(true);
+  $('#traceGuideBack').onclick=()=>{if(index>0){index--;render()}};
+  $('#traceGuideNext').onclick=()=>index===steps.length-1?finish(false):(index++,render());
+}
+function go(page,step){
+  document.querySelector('#closeSheet')?.click();
+  const nav=document.querySelector('[data-nav="'+page+'"]');
+  if(nav)nav.click();
+  if(page==='activity'){
+    const tabName=step?.tab||'transactions';
+    document.querySelector('[data-tab="'+tabName+'"]')?.click();
+  }
+  if(step?.action==='analysis'){
+    setTimeout(()=>document.querySelector('#analysisBtn')?.click(),40);
+  }
+  if(step?.action==='profile'){
+    setTimeout(()=>document.querySelector('#profileBtn')?.click(),40);
+  }
+}
+function start(replay=false){
+  if(!replay&&seen())return;
+  ensureMarkup();
+  currentKey=key();
+  index=0;
+  active=true;
+  document.body.classList.add('trace-guide-open');
+  $('#traceGuide').classList.remove('hidden');
+  render();
+}
+function finish(skipped){
+  if(!active)return;
+  active=false;
+  markSeen();
+  $('#traceGuide')?.classList.add('hidden');
+  document.body.classList.remove('trace-guide-open');
+  go('home',null);
+  if(!skipped)setTimeout(()=>$('#profileBtn')?.click(),180);
+}
+function render(){
+  const s=steps[index];
+  go(s.page,s);
+  $('#traceGuideStep').textContent='Étape '+(index+1)+' sur '+steps.length;
+  $('#traceGuideProgress').style.width=((index+1)/steps.length*100)+'%';
+  $('#traceGuideIcon').innerHTML=svg(s.icon);
+  $('#traceGuideKicker').textContent=s.kicker;
+  $('#traceGuideTitle').textContent=s.title;
+  $('#traceGuideBody').textContent=s.body;
+  $('#traceGuidePoints').innerHTML=s.points.map(p=>'<li>'+escapeHtml(p)+'</li>').join('');
+  $('#traceGuideDetails').open=false;
+  $('#traceGuideBack').disabled=index===0;
+  $('#traceGuideNext').textContent=index===steps.length-1?'Terminer':'Suivant';
+  setTimeout(()=>focusTarget(s.target),80);
+}
+function escapeHtml(v){
+  return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+function focusTarget(selector){
+  const target=$(selector);
+  const spot=$('#traceGuideSpot');
+  if(!target||!spot){spot?.classList.add('hidden');return}
+  spot.classList.remove('hidden');
+  const fixed=selector==='#quickAdd'||selector==='#profileBtn';
+  if(!fixed){
+    const r=target.getBoundingClientRect();
+    const margin=window.innerWidth<=760?150:100;
+    if(r.top<margin||r.bottom>window.innerHeight-margin){
+      target.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
+    }
+  }
+  setTimeout(updateSpot,fixed?20:260);
+}
+function updateSpot(){
+  if(!active)return;
+  const target=$(steps[index]?.target);
+  const spot=$('#traceGuideSpot');
+  const card=$('#traceGuideCard');
+  if(!target||!spot||!card)return;
+  const r=target.getBoundingClientRect(),pad=7;
+  spot.style.left=Math.max(6,r.left-pad)+'px';
+  spot.style.top=Math.max(6,r.top-pad)+'px';
+  spot.style.width=Math.min(window.innerWidth-12,r.width+pad*2)+'px';
+  spot.style.height=Math.min(window.innerHeight-12,r.height+pad*2)+'px';
+  spot.style.borderRadius=getComputedStyle(target).borderRadius||'16px';
+
+  card.style.left='';card.style.right='';card.style.top='';card.style.bottom='';card.style.transform='';
+  card.dataset.placement='';
+  const vw=window.innerWidth,vh=window.innerHeight,gap=12;
+  const cr=card.getBoundingClientRect();
+  const cw=cr.width||280,ch=Math.min(cr.height||220,Math.max(180,vh*.34));
+
+  if(vw<=760){
+    card.style.left='50%';
+    card.style.transform='translateX(-50%)';
+    const safeTop=Math.max(58,Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-top'))||58);
+    const safeBottom=82;
+    const above=r.top-safeTop;
+    const below=vh-safeBottom-r.bottom;
+    if(below>=ch+gap){
+      card.style.top=Math.min(vh-safeBottom-ch,r.bottom+gap)+'px';
+      card.dataset.placement='below';
+    }else if(above>=ch+gap){
+      card.style.top=Math.max(safeTop,r.top-ch-gap)+'px';
+      card.dataset.placement='above';
+    }else if((r.top+r.bottom)/2<vh/2){
+      card.style.bottom=(safeBottom-8)+'px';
+      card.dataset.placement='below';
+    }else{
+      card.style.top=safeTop+'px';
+      card.dataset.placement='above';
+    }
+  }else{
+    const safe=24;
+    const rightSpace=vw-r.right-safe;
+    const leftSpace=r.left-safe;
+    if(rightSpace>=cw+gap){
+      card.style.left=(r.right+gap)+'px';
+      card.style.top=Math.max(safe,Math.min(vh-ch-safe,r.top))+'px';
+      card.dataset.placement='right';
+    }else if(leftSpace>=cw+gap){
+      card.style.left=Math.max(safe,r.left-cw-gap)+'px';
+      card.style.top=Math.max(safe,Math.min(vh-ch-safe,r.top))+'px';
+      card.dataset.placement='left';
+    }else if(r.top>ch+gap+safe){
+      card.style.left=Math.max(safe,Math.min(vw-cw-safe,r.left))+'px';
+      card.style.top=Math.max(safe,r.top-ch-gap)+'px';
+      card.dataset.placement='above';
+    }else{
+      card.style.left=Math.max(safe,Math.min(vw-cw-safe,r.left))+'px';
+      card.style.top=Math.min(vh-ch-safe,r.bottom+gap)+'px';
+      card.dataset.placement='below';
+    }
+  }
+}
+function injectReplayButton(){
+  if($('#traceGuideReplay'))return;
+  const body=$('#sheetBody');
+  if(!body||!body.querySelector('.profile-menu'))return;
+  const groups=[...body.querySelectorAll('.settings-group')];
+  const prefs=groups.find(g=>g.querySelector('.settings-group-title')?.textContent.trim()==='Préférences')||groups.at(-1);
+  if(!prefs)return;
+  const btn=document.createElement('button');
+  btn.id='traceGuideReplay';
+  btn.className='profile-action settings-row';
+  btn.innerHTML='<span class="pico">'+svg('guide')+'</span><span class="pmain"><b>Guide express</b><small>Revoir les 12 étapes de prise en main</small></span><span class="profile-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>';
+  btn.onclick=()=>{document.querySelector('#closeSheet')?.click();setTimeout(()=>start(true),100)};
+  prefs.insertBefore(btn,prefs.children[1]||null);
+}
+function watchProfile(){
+  const body=$('#sheetBody');
+  if(!body)return;
+  const observer=new MutationObserver(()=>injectReplayButton());
+  observer.observe(body,{childList:true,subtree:true});
+}
+function autoStartWhenReady(){
+  const started=Date.now();
+  const timer=setInterval(()=>{
+    const app=$('#app');
+    if(app&&!app.classList.contains('cloud-locked')&&$('#profileBtn')){
+      clearInterval(timer);
+      setTimeout(()=>{if(!seen())start(false)},700);
+    }else if(Date.now()-started>15000)clearInterval(timer);
+  },250);
+}
+window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(updateSpot,80)},{passive:true});
+window.addEventListener('scroll',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(updateSpot,50)},{passive:true,capture:true});
+window.TraceGuide={start};
+function bootTraceGuide(){
+  ensureMarkup();
+  watchProfile();
+  $('#helpBtn')?.addEventListener('click',()=>start(true));
+  autoStartWhenReady();
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',bootTraceGuide,{once:true});
+}else{
+  bootTraceGuide();
+}
+})();</script>
+<script>
+(function(){
+  window.__TRACE_EMBEDDED_BUILD__='5.1.5';
+  var loading=document.getElementById('cloudLoadingText');
+  var authPanel=document.getElementById('cloudAuthPanel');
+  var loadingPanel=document.getElementById('cloudLoadingPanel');
+  var authMessage=document.getElementById('cloudAuthMessage');
+
+  function stage(text){ if(loading) loading.textContent=text; }
+  function showError(text){
+    if(loadingPanel) loadingPanel.classList.add('hidden');
+    if(authPanel) authPanel.classList.remove('hidden');
+    if(authMessage) authMessage.textContent=text;
+  }
+  function loadScript(src,timeout){
+    return new Promise(function(resolve,reject){
+      var script=document.createElement('script');
+      var done=false;
+      var timer=setTimeout(function(){
+        if(done)return;
+        done=true;
+        script.remove();
+        reject(new Error('timeout'));
+      },timeout||5000);
+      script.src=src;
+      script.async=true;
+      script.onload=function(){if(done)return;done=true;clearTimeout(timer);resolve();};
+      script.onerror=function(){if(done)return;done=true;clearTimeout(timer);reject(new Error('load'));};
+      document.head.appendChild(script);
+    });
+  }
+  function runEmbedded(id){
+    var node=document.getElementById(id);
+    if(!node)throw new Error('missing '+id);
+    (new Function(node.textContent))();
+  }
+  async function boot(){
+    try{
+      stage('Chargement du service sécurisé…');
+      try{
+        await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',4500);
+      }catch(_){
+        stage('Deuxième tentative de connexion…');
+        await loadScript('https://unpkg.com/@supabase/supabase-js@2',4500);
+      }
+      if(!window.supabase || !window.supabase.createClient)throw new Error('Supabase indisponible');
+      stage('Initialisation de Trace…');
+      runEmbedded('trace-app-source');
+      setTimeout(function(){
+        try{runEmbedded('trace-guide-source');}catch(err){console.error('Trace guide error',err);}
+      },0);
+    }catch(err){
+      console.error('Trace boot error',err);
+      showError('Trace n’a pas pu démarrer correctement. Ferme complètement l’app puis rouvre-la.');
+    }
+  }
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations()
+      .then(function(regs){regs.forEach(function(reg){reg.unregister().catch(function(){});});})
+      .catch(function(){});
+  }
+
+  setTimeout(function(){
+    if(window.__TRACE_BOOTED__)return;
+    if(loadingPanel && !loadingPanel.classList.contains('hidden')){
+      showError('Trace n’a pas terminé son démarrage. Ferme complètement l’app puis rouvre-la.');
+    }
+  },12000);
+
+  boot();
+})();
+</script>
+</body>
+</html>
