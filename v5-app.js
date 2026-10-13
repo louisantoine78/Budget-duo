@@ -9,7 +9,7 @@ const budgetDocId=()=>`b_${Date.now().toString(36)}_${Math.random().toString(36)
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 const initialBudgetMonth=new URLSearchParams(location.search).get('month');
-let client,session,household,me='la',partner='partner',homeScope='mine',budgetScope='mine',budgetMonth=/^\d{4}-\d{2}$/.test(initialBudgetMonth||'')?initialBudgetMonth:CM,wealthScope='mine',analysisScope='mine',tab='transactions';
+let client,session,household,workspaceLoadPromise=null,me='la',partner='partner',homeScope='mine',budgetScope='mine',budgetMonth=/^\d{4}-\d{2}$/.test(initialBudgetMonth||'')?initialBudgetMonth:CM,wealthScope='mine',analysisScope='mine',tab='transactions';
 let state={household:{},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[]};
 function withTimeout(promise,ms,label){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label||'Délai dépassé')),ms))]);}
 function loadingStage(text){const el=$('#cloudLoadingText');if(el)el.textContent=text;}
@@ -217,7 +217,7 @@ function profile(){
       '<div class="big-avatar">'+esc(meObj.initials||initials(meObj.name))+'</div>'+
       '<b>'+esc(meObj.name)+'</b>'+
       '<div class="review-date">'+esc(session?.user?.email||'')+'</div>'+
-      '<div class="profile-connection"><span class="status-dot"></span> Connecté avec '+esc(partnerObj.name)+'</div>'+
+      '<div class="profile-connection"><span class="status-dot"></span> '+((state.household.workspaceMembers||[]).length>1?'Connecté avec '+esc(partnerObj.name):'Espace personnel')+'</div>'+
     '</div>'+
     '<div class="settings-group"><div class="settings-group-title">Compte</div>'+
       profileMenuItem('settingsProfile','user','Mon profil','Nom, courriel et devise')+
@@ -269,8 +269,19 @@ function openProfileSettings(){
 }
 function openCoupleSettings(){
   const d=state.household.defaultSplit||{la:50,partner:50};
+  const ws=Array.isArray(state.household.workspaceMembers)?state.household.workspaceMembers:[];
+  const inviteCode=String(state.household.inviteCode||'');
+  const full=ws.length>=2;
+  const membersHtml=ws.length?ws.map(x=>'<div class="member-row"><span class="member-avatar">'+esc(initials(x.name||''))+'</span><span class="member-main"><b>'+esc(x.name||'Membre')+'</b><small>'+(x.role==='owner'?'Propriétaire du budget':'Membre du budget')+'</small></span><span class="member-status">Connecté</span></div>').join(''):'<div class="empty-note">Aucun membre chargé.</div>';
+  const inviteHtml=full
+    ? '<div class="workspace-full-note"><b>2/2 membres connectés</b><small>Ce budget est privé et partagé uniquement entre ces deux comptes.</small></div>'
+    : '<div class="invite-card"><div><b>Inviter ton partenaire</b><small>La personne crée son compte Trace puis choisit « Rejoindre » avec ce code.</small></div><div class="invite-code-row"><code id="inviteCodeValue">••••••••••</code><button class="secondary" id="revealInviteCode" type="button">Afficher</button><button class="secondary hidden" id="copyInviteCode" type="button">Copier</button></div></div>';
+
   openSheet('Mon couple',
-    '<div class="settings-hero"><span class="pico large">'+uiIcon('heart')+'</span><div><b>'+esc(member(partner).name)+'</b><small>Espace partagé actif</small></div></div>'+
+    '<div class="settings-hero"><span class="pico large">'+uiIcon('heart')+'</span><div><b>'+esc(member(partner).name)+'</b><small>Espace partagé privé</small></div></div>'+
+    '<div class="section-head"><h2>Membres du budget</h2></div>'+
+    '<div class="members-card">'+membersHtml+'</div>'+
+    inviteHtml+
     '<div class="setting-summary"><span>Budget partagé</span><b>Actif</b></div>'+
     '<div class="setting-summary"><span>Solde Partage</span><b>'+money(Math.abs(coupleBalance()))+'</b></div>'+
     '<div class="section-head"><h2>Répartition par défaut</h2></div>'+
@@ -278,6 +289,16 @@ function openCoupleSettings(){
     '<div><label class="label2">'+esc(member('partner').name)+' %</label><input id="splitPartnerSetting" class="input" type="number" min="0" max="100" value="'+Number(d.partner??50)+'"></div></div>'+
     '<button class="primary full" id="saveCoupleSettings" style="margin-top:16px">Enregistrer la répartition</button>'+settingsBack()
   );
+
+  $('#revealInviteCode')?.addEventListener('click',()=>{
+    $('#inviteCodeValue').textContent=inviteCode||'Code indisponible';
+    $('#revealInviteCode').classList.add('hidden');
+    $('#copyInviteCode')?.classList.remove('hidden');
+  });
+  $('#copyInviteCode')?.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(inviteCode);$('#copyInviteCode').textContent='Copié';}
+    catch(_){$('#inviteCodeValue').textContent=inviteCode;}
+  });
   $('#splitLaSetting').oninput=()=>{$('#splitPartnerSetting').value=Math.max(0,100-Number($('#splitLaSetting').value||0));};
   $('#saveCoupleSettings').onclick=async()=>{
     const la=Number($('#splitLaSetting').value||0),pa=Number($('#splitPartnerSetting').value||0);
@@ -369,7 +390,23 @@ function openDataSettings(){
   };
   bindSettingsBack();
 }
-async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Chargement de votre espace…');const{data:m,error:e}=await withTimeout(client.from('household_members').select('household_id,user_id,slot,display_name').eq('user_id',session.user.id).maybeSingle(),7000,'Chargement du profil trop long.');if(e)throw e;if(!m){showGate('cloudWorkspacePanel');return;}document.documentElement.dataset.traceUserId=session.user.id;me=m.slot;partner=me==='la'?'partner':'la';loadingStage('Synchronisation de vos données…');const[{data:h,error:he},{data:docs,error:de},{data:members,error:mee}]=await withTimeout(Promise.all([client.from('households').select('id,name,settings,schema_version').eq('id',m.household_id).single(),client.from('documents').select('collection,item_id,data').eq('household_id',m.household_id),client.from('household_members').select('slot,display_name').eq('household_id',m.household_id)]),9000,'Synchronisation trop longue.');if(he||de||mee)throw he||de||mee;household=h;state={household:{...(h.settings||{}),name:h.name},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[]};if(!Array.isArray(state.household.members)||!state.household.members.length)state.household.members=members.map(x=>({id:x.slot,name:x.display_name,initials:initials(x.display_name)}));members.forEach(x=>{const mm=state.household.members.find(y=>y.id===x.slot);if(mm){mm.name=x.display_name||mm.name;mm.initials=initials(mm.name);}});const map={categories:'categories',accounts:'accounts',budgets:'budgets',transactions:'transactions',investmentAccounts:'investment_accounts',investmentOperations:'investment_operations',reconciliations:'reconciliations'};Object.entries(map).forEach(([k,c])=>state[k]=docs.filter(d=>d.collection===c).map(d=>d.data).filter(Boolean));state.household.referenceDate||='2026-11-01';$('#profileBtn').textContent=member(me).initials||initials(member(me).name);hideGate();sync('synced');renderAll();navigate((location.hash||'#').slice(1)||'home');}
+async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Chargement de votre espace…');const{data:m,error:e}=await withTimeout(client.from('household_members').select('household_id,user_id,slot,display_name').eq('user_id',session.user.id).maybeSingle(),7000,'Chargement du profil trop long.');if(e)throw e;if(!m){showGate('cloudWorkspacePanel');return;}document.documentElement.dataset.traceUserId=session.user.id;me=m.slot;partner=me==='la'?'partner':'la';loadingStage('Synchronisation de vos données…');const[{data:h,error:he},{data:docs,error:de},{data:members,error:mee}]=await withTimeout(Promise.all([client.from('households').select('id,name,settings,schema_version,invite_code,created_by').eq('id',m.household_id).single(),client.from('documents').select('collection,item_id,data').eq('household_id',m.household_id),client.from('household_members').select('slot,display_name,role,user_id').eq('household_id',m.household_id)]),9000,'Synchronisation trop longue.');if(he||de||mee)throw he||de||mee;household=h;state={household:{...(h.settings||{}),name:h.name,inviteCode:h.invite_code||'',createdBy:h.created_by||'',workspaceMembers:members.map(x=>({slot:x.slot,name:x.display_name,role:x.role,userId:x.user_id}))},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[]};if(!Array.isArray(state.household.members)||!state.household.members.length)state.household.members=members.map(x=>({id:x.slot,name:x.display_name,initials:initials(x.display_name)}));members.forEach(x=>{const mm=state.household.members.find(y=>y.id===x.slot);if(mm){mm.name=x.display_name||mm.name;mm.initials=initials(mm.name);}});const map={categories:'categories',accounts:'accounts',budgets:'budgets',transactions:'transactions',investmentAccounts:'investment_accounts',investmentOperations:'investment_operations',reconciliations:'reconciliations'};Object.entries(map).forEach(([k,c])=>state[k]=docs.filter(d=>d.collection===c).map(d=>d.data).filter(Boolean));state.household.referenceDate||='2026-11-01';$('#profileBtn').textContent=member(me).initials||initials(member(me).name);renderAll();navigate((location.hash||'#').slice(1)||'home');hideGate();sync('synced');}
+async function ensureWorkspace(s){
+  if(!s)return;
+  session=s;
+  if(household)return;
+  if(workspaceLoadPromise)return workspaceLoadPromise;
+  workspaceLoadPromise=loadWorkspace().finally(()=>{workspaceLoadPromise=null;});
+  return workspaceLoadPromise;
+}
+function authErrorText(err){
+  const raw=String(err?.message||'').toLowerCase();
+  if(raw.includes('invalid login credentials'))return 'Courriel ou mot de passe incorrect.';
+  if(raw.includes('email not confirmed'))return 'Confirme ton adresse courriel avant de te connecter.';
+  if(raw.includes('too many requests')||raw.includes('rate limit'))return 'Trop de tentatives. Réessaie dans quelques minutes.';
+  if(raw.includes('network')||raw.includes('fetch'))return 'Connexion au serveur impossible. Vérifie ta connexion et réessaie.';
+  return 'Connexion impossible. Réessaie.';
+}
 async function init(){
   const cfg=window.BUDGET_DUO_CONFIG||{};
   if(!cfg.supabaseUrl||!cfg.supabasePublishableKey){showGate('cloudConfigPanel');return;}
@@ -380,18 +417,24 @@ async function init(){
   }
 
   client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{
-    auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+    auth:{
+      persistSession:true,
+      autoRefreshToken:true,
+      detectSessionInUrl:true,
+      storage:window.localStorage
+    }
   });
 
   client.auth.onAuthStateChange((event,s)=>{
     session=s||null;
     if(event==='SIGNED_OUT'){
       household=null;
+      workspaceLoadPromise=null;
       showGate('cloudAuthPanel');
       return;
     }
-    if((event==='SIGNED_IN'||event==='INITIAL_SESSION')&&s&&!household){
-      setTimeout(()=>loadWorkspace().catch(fatal),0);
+    if(s&&['SIGNED_IN','INITIAL_SESSION','TOKEN_REFRESHED','USER_UPDATED'].includes(event)&&!household){
+      setTimeout(()=>ensureWorkspace(s).catch(fatal),0);
     }
   });
 
@@ -399,10 +442,14 @@ async function init(){
     const {data,error}=await client.auth.getSession();
     if(error)throw error;
     session=data?.session||null;
-    if(session)await loadWorkspace();
+    if(session)await ensureWorkspace(session);
     else showGate('cloudAuthPanel');
   }catch(err){
-    fatal(err);
+    console.error(err);
+    session=null;
+    household=null;
+    showGate('cloudAuthPanel');
+    $('#cloudAuthMessage').textContent=authErrorText(err);
   }
 }
 function fatal(e){
@@ -410,15 +457,14 @@ function fatal(e){
   sync('error','Erreur');
   if(!session){
     showGate('cloudAuthPanel');
-    $('#cloudAuthMessage').textContent=e?.message||'Erreur de chargement';
+    $('#cloudAuthMessage').textContent='Trace n’a pas pu charger ton espace. Réessaie.';
     return;
   }
   hideGate();
-  const message=e?.message||'Une erreur est survenue.';
-  openSheet('Trace a rencontré un problème','<div class="empty-note">'+esc(message)+'</div><button class="primary full" id="traceReloadBtn" type="button" style="margin-top:14px">Recharger Trace</button>');
+  openSheet('Trace a rencontré un problème','<div class="empty-note">Une partie de Trace n’a pas pu se charger correctement.</div><button class="primary full" id="traceReloadBtn" type="button" style="margin-top:14px">Recharger Trace</button>');
   $('#traceReloadBtn').onclick=()=>location.reload();
 }
-function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=()=>{const page=$('.page.active')?.dataset.page;if(page==='budget')openBudgetAdd('variable');else openSheet('Ajouter','<div class="empty-note">L’ajout manuel de transaction sera activé dans la prochaine passe.</div>');};$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>openSheet('Partage',`<div class="money2">${esc($('#shareBalance').textContent)}</div><div class="empty-note" style="margin-top:12px">Le détail des mouvements sera activé dans la prochaine passe.</div>`);$('#shareOpen').onclick=$('#shareCard').onclick;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#wealthAnalysis').onclick=()=>openSheet('Analyse du patrimoine','<div class="empty-note">Analyse patrimoine en préparation.</div>');$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{$('#importResult').innerHTML=`<article class="card"><b>${esc(e.target.files?.[0]?.name||'Fichier')}</b><div class="empty-note" style="margin-top:10px">Fichier reconnu. L’extraction automatique sera branchée dans l’étape suivante.</div></article>`;};$$('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée. Réessaie dans quelques secondes.');session=data.session;await loadWorkspace();$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=err?.message||'Connexion impossible. Réessaie.';}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{data:{display_name:$('#cloudSignupName').value.trim()}}});$('#cloudAuthMessage').textContent=error?error.message:'Compte créé.';};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
+function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=()=>{const page=$('.page.active')?.dataset.page;if(page==='budget')openBudgetAdd('variable');else openSheet('Ajouter','<div class="empty-note">L’ajout manuel de transaction sera activé dans la prochaine passe.</div>');};$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>openSheet('Partage',`<div class="money2">${esc($('#shareBalance').textContent)}</div><div class="empty-note" style="margin-top:12px">Le détail des mouvements sera activé dans la prochaine passe.</div>`);$('#shareOpen').onclick=$('#shareCard').onclick;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#wealthAnalysis').onclick=()=>openSheet('Analyse du patrimoine','<div class="empty-note">Analyse patrimoine en préparation.</div>');$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{$('#importResult').innerHTML=`<article class="card"><b>${esc(e.target.files?.[0]?.name||'Fichier')}</b><div class="empty-note" style="margin-top:10px">Fichier reconnu. L’extraction automatique sera branchée dans l’étape suivante.</div></article>`;};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});$('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
 function bootTrace(){
   try{
     bind();
