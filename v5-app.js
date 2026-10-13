@@ -387,7 +387,7 @@ function bootTrace(){
     }catch(_){}
     showGate('cloudAuthPanel');
     const msg=$('#cloudAuthMessage');
-    if(msg)msg.textContent='Trace a détecté une ancienne version en cache. Ferme complètement l’app puis rouvre-la.';
+    if(msg)msg.textContent='Trace a rencontré une erreur au démarrage. Ferme complètement l’app puis rouvre-la.';
   }
 }
 if(document.readyState==='loading'){
