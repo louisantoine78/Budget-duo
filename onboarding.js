@@ -180,7 +180,7 @@ function ensureMarkup(){
       '<div class="trace-guide-kicker" id="traceGuideKicker"></div>'+
       '<h2 id="traceGuideTitle"></h2>'+
       '<p id="traceGuideBody"></p>'+
-      '<ul id="traceGuidePoints"></ul>'+
+      '<details class="trace-guide-details" id="traceGuideDetails"><summary>Voir les explications détaillées</summary><ul id="traceGuidePoints"></ul></details>'+
       '<div class="trace-guide-actions"><button class="secondary" id="traceGuideBack" type="button">Retour</button><button class="primary" id="traceGuideNext" type="button">Suivant</button></div>'+
     '</section>';
   document.body.appendChild(el);
@@ -232,6 +232,7 @@ function render(){
   $('#traceGuideTitle').textContent=s.title;
   $('#traceGuideBody').textContent=s.body;
   $('#traceGuidePoints').innerHTML=s.points.map(p=>'<li>'+escapeHtml(p)+'</li>').join('');
+  $('#traceGuideDetails').open=false;
   $('#traceGuideBack').disabled=index===0;
   $('#traceGuideNext').textContent=index===steps.length-1?'Terminer':'Suivant';
   setTimeout(()=>focusTarget(s.target),80);
