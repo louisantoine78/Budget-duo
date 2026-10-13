@@ -40,7 +40,7 @@ function renderBudget(){
   const monthPicker=$('#budgetMonthPicker');if(monthPicker)monthPicker.value=month;
   const currentBtn=$('#budgetCurrentMonth');if(currentBtn)currentBtn.classList.toggle('hidden',month===CM);
   const prev=monthOffset(month,-1);
-  const copyLabel=$('#budgetCopyPrevious span');if(copyLabel)copyLabel.textContent='Reprendre '+monthLabel(prev);
+  const copyLabel=$('#budgetCopyPrevious span');if(copyLabel)copyLabel.textContent='Reprendre '+shortMonth(prev);
   $('#budgetHeroTotal').textContent=money(s.eb);
   $('#budgetHeroSub').textContent=money(Math.max(0,s.ib-s.eb))+' de marge prévue · '+money(s.ib)+' de revenus';
   const rows=state.budgets.filter(b=>b.month===month&&budgetAmt(b,sId)>0);
