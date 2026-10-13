@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.2.4">
+<meta name="trace-build" content="5.2.5">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
@@ -149,7 +149,7 @@
 
     <section class="page" data-page="budget">
       <div class="hero-row">
-        <div><div class="eyebrow" id="budgetMonthLabel">Mois</div><h1 class="title">Budget</h1></div>
+        <div><div class="eyebrow">Planification</div><h1 class="title">Budget</h1></div>
         <div class="segment" id="budgetScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
       </div>
       <div class="budget-context-row" id="budgetPeriodControl">
@@ -158,7 +158,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <label class="budget-month-picker">
-            <span id="budgetMonthLabel">octobre 2026</span>
+            <span id="budgetMonthDisplay">octobre 2026</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg>
             <input type="month" id="budgetMonthPicker" aria-label="Choisir le mois du budget">
           </label>
@@ -258,7 +258,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app.js?v=5.2.4"></script>
+<script src="v5-app.js?v=5.2.5"></script>
 <script src="onboarding.js?v=1.7.4"></script>
 <script>
 if('serviceWorker' in navigator){
