@@ -63,7 +63,7 @@ const steps=[
     ]
   },
   {
-    page:'activity', tab:'transactions', target:'#activityTransactions', icon:'activity', kicker:'Activité · Transactions',
+    page:'activity', tab:'transactions', target:'#activityTransactions .activity-stats', icon:'activity', kicker:'Activité · Transactions',
     title:'Activité est le journal financier',
     body:'C’est ici que tu retrouves les opérations qui expliquent réellement les chiffres de Trace.',
     points:[
@@ -74,7 +74,7 @@ const steps=[
     ]
   },
   {
-    page:'activity', tab:'review', target:'#activityReview', icon:'activity', kicker:'Activité · À valider',
+    page:'activity', tab:'review', target:'#activityTabs [data-tab="review"]', icon:'activity', kicker:'Activité · À valider',
     title:'Valide avant de laisser une opération compter',
     body:'Les opérations importées ou incertaines passent par À valider avant d’alimenter le budget et les analyses.',
     points:[
@@ -85,7 +85,7 @@ const steps=[
     ]
   },
   {
-    page:'activity', tab:'import', target:'#activityImport', icon:'plus', kicker:'Activité · Import & ajout',
+    page:'activity', tab:'import', target:'#activityImport .drop', icon:'plus', kicker:'Activité · Import & ajout',
     title:'Ajoute les opérations de la façon la plus simple',
     body:'Trace est pensé pour limiter la saisie manuelle et rapprocher facilement l’app de la banque.',
     points:[
@@ -129,7 +129,7 @@ const steps=[
     ]
   },
   {
-    page:'home', action:'profile', target:'#sheetBody', icon:'user', kicker:'Profil & paramètres',
+    page:'home', action:'profile', target:'#sheetBody .profile-menu', icon:'user', kicker:'Profil & paramètres',
     title:'Configure Trace une fois, puis garde-le fiable',
     body:'Le Profil contient les réglages qui structurent tous les calculs de l’app.',
     points:[
@@ -244,27 +244,77 @@ function focusTarget(selector){
   const spot=$('#traceGuideSpot');
   if(!target||!spot){spot?.classList.add('hidden');return}
   spot.classList.remove('hidden');
-  const r=target.getBoundingClientRect();
-  if(r.top<65||r.bottom>window.innerHeight-170){
-    if(selector!=='#quickAdd'&&selector!=='#profileBtn'){
+  const fixed=selector==='#quickAdd'||selector==='#profileBtn';
+  if(!fixed){
+    const r=target.getBoundingClientRect();
+    const margin=window.innerWidth<=760?150:100;
+    if(r.top<margin||r.bottom>window.innerHeight-margin){
       target.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
     }
   }
-  setTimeout(updateSpot,selector!=='#quickAdd'&&selector!=='#profileBtn'?250:0);
+  setTimeout(updateSpot,fixed?20:260);
 }
 function updateSpot(){
   if(!active)return;
   const target=$(steps[index]?.target);
   const spot=$('#traceGuideSpot');
   const card=$('#traceGuideCard');
-  if(!target||!spot)return;
-  const r=target.getBoundingClientRect(),pad=8;
+  if(!target||!spot||!card)return;
+  const r=target.getBoundingClientRect(),pad=7;
   spot.style.left=Math.max(6,r.left-pad)+'px';
   spot.style.top=Math.max(6,r.top-pad)+'px';
   spot.style.width=Math.min(window.innerWidth-12,r.width+pad*2)+'px';
   spot.style.height=Math.min(window.innerHeight-12,r.height+pad*2)+'px';
-  spot.style.borderRadius=getComputedStyle(target).borderRadius||'18px';
-  card.classList.toggle('top',r.top+r.height/2>window.innerHeight*.58);
+  spot.style.borderRadius=getComputedStyle(target).borderRadius||'16px';
+
+  card.style.left='';card.style.right='';card.style.top='';card.style.bottom='';card.style.transform='';
+  card.dataset.placement='';
+  const vw=window.innerWidth,vh=window.innerHeight,gap=12;
+  const cr=card.getBoundingClientRect();
+  const cw=cr.width||280,ch=Math.min(cr.height||220,Math.max(180,vh*.34));
+
+  if(vw<=760){
+    card.style.left='50%';
+    card.style.transform='translateX(-50%)';
+    const safeTop=Math.max(58,Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-top'))||58);
+    const safeBottom=82;
+    const above=r.top-safeTop;
+    const below=vh-safeBottom-r.bottom;
+    if(below>=ch+gap){
+      card.style.top=Math.min(vh-safeBottom-ch,r.bottom+gap)+'px';
+      card.dataset.placement='below';
+    }else if(above>=ch+gap){
+      card.style.top=Math.max(safeTop,r.top-ch-gap)+'px';
+      card.dataset.placement='above';
+    }else if((r.top+r.bottom)/2<vh/2){
+      card.style.bottom=(safeBottom-8)+'px';
+      card.dataset.placement='below';
+    }else{
+      card.style.top=safeTop+'px';
+      card.dataset.placement='above';
+    }
+  }else{
+    const safe=24;
+    const rightSpace=vw-r.right-safe;
+    const leftSpace=r.left-safe;
+    if(rightSpace>=cw+gap){
+      card.style.left=(r.right+gap)+'px';
+      card.style.top=Math.max(safe,Math.min(vh-ch-safe,r.top))+'px';
+      card.dataset.placement='right';
+    }else if(leftSpace>=cw+gap){
+      card.style.left=Math.max(safe,r.left-cw-gap)+'px';
+      card.style.top=Math.max(safe,Math.min(vh-ch-safe,r.top))+'px';
+      card.dataset.placement='left';
+    }else if(r.top>ch+gap+safe){
+      card.style.left=Math.max(safe,Math.min(vw-cw-safe,r.left))+'px';
+      card.style.top=Math.max(safe,r.top-ch-gap)+'px';
+      card.dataset.placement='above';
+    }else{
+      card.style.left=Math.max(safe,Math.min(vw-cw-safe,r.left))+'px';
+      card.style.top=Math.min(vh-ch-safe,r.bottom+gap)+'px';
+      card.dataset.placement='below';
+    }
+  }
 }
 function injectReplayButton(){
   if($('#traceGuideReplay'))return;
