@@ -67,3 +67,56 @@ body.trace-guide-open{overflow:hidden}
 @media(prefers-reduced-motion:reduce){
   .trace-guide-spot,.trace-guide-progress i{transition:none}
 }
+
+/* compact coachmark v2 */
+.trace-guide-card{
+  width:min(326px,calc(100vw - 28px));
+  max-height:min(300px,40dvh);
+  right:20px;
+  bottom:20px;
+  padding:14px 15px;
+  border-radius:20px;
+  box-shadow:0 20px 58px rgba(8,26,31,.24);
+}
+.trace-guide-card.top{top:20px;bottom:auto}
+.trace-guide-top>span{font-size:9px}
+.trace-guide-top button{font-size:10px;min-height:30px}
+.trace-guide-progress{height:3px;margin:5px 0 10px}
+.trace-guide-icon{width:34px;height:34px;border-radius:11px;margin-bottom:8px}
+.trace-guide-icon svg{width:18px;height:18px}
+.trace-guide-kicker{font-size:9px}
+.trace-guide-card h2{font-size:18px;line-height:1.1;margin:4px 0 6px}
+.trace-guide-card p{font-size:11.2px;line-height:1.36}
+.trace-guide-card ul{margin-top:9px;gap:5px}
+.trace-guide-card li{padding-left:14px;font-size:10.5px;line-height:1.3}
+.trace-guide-card li:before{width:5px;height:5px;box-shadow:0 0 0 3px rgba(43,130,117,.10)}
+.trace-guide-actions{gap:7px;margin-top:11px}
+.trace-guide-actions .secondary,.trace-guide-actions .primary{height:39px;font-size:11.5px}
+@media(max-width:760px){
+  .trace-guide-card{
+    left:50%;
+    right:auto;
+    transform:translateX(-50%);
+    width:min(306px,calc(100vw - 22px));
+    max-height:min(270px,35dvh);
+    bottom:max(10px,env(safe-area-inset-bottom));
+    padding:13px 14px;
+    border-radius:19px;
+  }
+  .trace-guide-card.top{
+    top:max(10px,env(safe-area-inset-top));
+    bottom:auto;
+  }
+  .trace-guide-card h2{font-size:17px}
+  .trace-guide-card p{font-size:10.8px}
+  .trace-guide-card li{font-size:10.2px}
+}
+@media(max-width:360px){
+  .trace-guide-card{
+    width:min(292px,calc(100vw - 16px));
+    max-height:min(250px,33dvh);
+    padding:12px;
+  }
+  .trace-guide-card h2{font-size:16.5px}
+  .trace-guide-card li{font-size:10px}
+}
