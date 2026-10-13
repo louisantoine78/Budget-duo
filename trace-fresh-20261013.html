@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.2.6">
+<meta name="trace-build" content="5.2.7">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
@@ -154,17 +154,17 @@
       </div>
       <div class="budget-context-row" id="budgetPeriodControl">
         <div class="budget-month-nav">
-          <button class="period-arrow" id="budgetPrevMonth" type="button" aria-label="Mois précédent" onclick="window.TraceBudgetShift&&window.TraceBudgetShift(-1)">
+          <a class="period-arrow" id="budgetPrevMonth" href="?month=2026-09#budget" aria-label="Mois précédent">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-          </button>
+          </a>
           <label class="budget-month-picker">
             <span id="budgetMonthDisplay" aria-live="polite">octobre 2026</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg>
             <input type="month" id="budgetMonthPicker" aria-label="Choisir le mois du budget">
           </label>
-          <button class="period-arrow" id="budgetNextMonth" type="button" aria-label="Mois suivant" onclick="window.TraceBudgetShift&&window.TraceBudgetShift(1)">
+          <a class="period-arrow" id="budgetNextMonth" href="?month=2026-11#budget" aria-label="Mois suivant">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-          </button>
+          </a>
         </div>
         <button class="budget-current-link hidden" id="budgetCurrentMonth" type="button">Ce mois</button>
       </div>
@@ -258,7 +258,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app.js?v=5.2.6"></script>
+<script src="v5-app.js?v=5.2.7"></script>
 <script src="onboarding.js?v=1.7.4"></script>
 <script>
 if('serviceWorker' in navigator){
