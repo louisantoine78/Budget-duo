@@ -389,40 +389,61 @@ input,select,textarea,.input,.cloud-form input{font-size:16px!important}
 .help-btn:active{transform:scale(.96)}
 @media(max-width:430px){.help-btn{width:36px;height:36px;min-width:36px;min-height:36px;border-radius:12px}.top-actions{gap:6px}}
 
-/* Budget period controls */
+/* Budget period controls — premium compact */
 .budget-period{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  margin:2px 0 14px;padding:9px 10px;border:1px solid var(--line);
-  border-radius:16px;background:rgba(255,253,250,.78)
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  margin:0 0 18px;padding:0;background:transparent;border:0
 }
-.budget-month-nav{display:flex;align-items:center;gap:7px;min-width:0}
+.budget-month-nav{
+  display:inline-flex;align-items:center;gap:6px;padding:4px;
+  border:1px solid rgba(18,63,56,.10);border-radius:15px;
+  background:rgba(255,253,250,.82);box-shadow:0 5px 18px rgba(18,63,56,.045);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)
+}
 .period-arrow{
-  width:40px;height:40px;min-width:40px;border:1px solid var(--line);border-radius:12px;
-  background:#fff;color:var(--navy);font-size:25px;line-height:1;display:grid;place-items:center
+  width:36px;height:36px;min-width:36px;border:0;border-radius:11px;
+  background:transparent;color:var(--forest);display:grid;place-items:center;
+  transition:background .16s ease,transform .16s ease
 }
+.period-arrow svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.period-arrow:active{background:rgba(18,63,56,.07);transform:scale(.96)}
 .budget-month-picker{
-  min-width:0;height:40px;padding:5px 10px;border:1px solid var(--line);border-radius:12px;
-  background:#fff;display:flex;flex-direction:column;justify-content:center
+  position:relative;display:flex;align-items:center;gap:8px;height:36px;
+  padding:0 10px;border-radius:10px;background:#fff;color:var(--navy);
+  box-shadow:inset 0 0 0 1px rgba(18,63,56,.07)
 }
-.budget-month-picker span{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850}
+.budget-month-picker>svg{
+  width:15px;height:15px;flex:0 0 auto;fill:none;stroke:var(--teal);
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round
+}
 .budget-month-picker input{
-  width:148px;max-width:100%;border:0;background:transparent;color:var(--navy);
-  font:800 12px/1.1 inherit;padding:0;min-height:18px
+  width:128px;max-width:100%;border:0;background:transparent;color:var(--navy);
+  font:800 12px/1.1 inherit;padding:0;min-height:20px;text-align:center
 }
-.budget-period-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
-.budget-copy-btn{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
-.budget-copy-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.budget-period-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}
+.budget-copy-btn,.budget-current-link{
+  border:0;background:transparent;color:var(--teal);font:800 11px/1 inherit;
+  min-height:34px;padding:0 4px;display:inline-flex;align-items:center;gap:7px
+}
+.budget-copy-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.budget-copy-btn:active,.budget-current-link:active{opacity:.62}
+.budget-current-link{color:var(--muted);padding-left:10px;border-left:1px solid var(--line)}
 .monthbar.selected em{color:var(--forest);font-weight:900}
 .monthbar.selected{background:rgba(18,63,56,.035);border-radius:8px}
 @media(max-width:760px){
-  .budget-period{align-items:stretch;flex-direction:column;padding:8px}
-  .budget-month-nav{display:grid;grid-template-columns:40px minmax(0,1fr) 40px}
-  .budget-month-picker{width:100%}
-  .budget-month-picker input{width:100%}
-  .budget-period-actions{justify-content:space-between}
-  .budget-copy-btn{flex:1;min-width:0;font-size:11px}
-  #budgetCurrentMonth{font-size:10px}
+  .budget-period{
+    align-items:center;justify-content:center;flex-direction:column;
+    gap:7px;margin-top:-2px;margin-bottom:16px
+  }
+  .budget-month-nav{width:auto;max-width:100%;padding:4px}
+  .budget-month-picker{min-width:190px;justify-content:center}
+  .budget-month-picker input{width:142px}
+  .budget-period-actions{min-height:28px;justify-content:center;gap:9px}
+  .budget-copy-btn,.budget-current-link{min-height:28px;font-size:10.5px}
 }
 @media(max-width:360px){
-  .budget-copy-btn{font-size:10px;padding-left:8px;padding-right:8px}
+  .budget-month-picker{min-width:172px;padding:0 8px}
+  .budget-month-picker input{width:126px}
+  .period-arrow{width:34px;height:34px;min-width:34px}
+  .budget-copy-btn,.budget-current-link{font-size:10px}
 }
