@@ -88,3 +88,15 @@ body.trace-guide-open{overflow:hidden}
 @media(prefers-reduced-motion:reduce){
   .trace-guide-spot,.trace-guide-progress i{transition:none}
 }
+
+/* Guide mobile: compact by default, expandable for detailed explanations */
+.trace-guide-card{max-height:min(265px,36dvh);overflow:auto}
+.trace-guide-icon{display:none}
+.trace-guide-card h2{font-size:17px;line-height:1.15}
+.trace-guide-card p{font-size:11px;line-height:1.35}
+.trace-guide-details{margin-top:8px}
+.trace-guide-details summary{color:var(--teal);font-weight:800;font-size:11px;cursor:pointer;padding:5px 0}
+.trace-guide-details:not([open]) ul{display:none}
+.trace-guide-details[open] ul{margin-top:5px}
+.trace-guide-actions{margin-top:8px}
+@media(max-width:760px){.trace-guide-card{max-height:min(235px,31dvh);width:min(290px,calc(100vw - 24px));padding:11px 13px}.trace-guide-card h2{font-size:16px}.trace-guide-card p{font-size:10.5px}.trace-guide-actions .secondary,.trace-guide-actions .primary{height:35px}}
