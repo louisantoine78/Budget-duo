@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v3';
+const VERSION='v4';
 let index=0;
 let active=false;
 let currentKey='';
@@ -20,136 +20,52 @@ const icons={
 
 const steps=[
   {
-    page:'home', target:'.brand', icon:'guide', kicker:'Guide complet · environ 3 min',
+    page:'home',target:'.brand',icon:'guide',kicker:'Guide express · environ 90 s',
     title:'Bienvenue sur Trace',
-    body:'Trace sert à prévoir le mois, enregistrer ce qui s’est vraiment passé, puis comprendre votre situation sans multiplier les saisies.',
-    points:[
-      'Une opération doit exister une seule fois dans Trace : elle alimente ensuite budget, activité, partage et analyses.',
-      'Moi affiche tes chiffres ; Couple affiche les données communes ou combinées.',
-      'Le cycle à retenir : Prévoir → importer ou saisir → valider → comprendre.'
-    ]
+    body:'Prévois ton mois, ajoute tes opérations, puis suis ce qui compte.',
+    points:['Moi = tes chiffres. Couple = la vision partagée.']
   },
   {
-    page:'home', target:'[data-page="home"] .hero-card', icon:'home', kicker:'Accueil · Synthèse',
-    title:'Commence toujours par l’Accueil',
-    body:'L’Accueil te donne l’état du mois sans avoir à parcourir toute l’app.',
-    points:[
-      'Disponible sur le budget = budget de dépenses prévu moins dépenses déjà validées.',
-      'Solde estimé = comptes bancaires suivis moins dette de carte, à partir des soldes de référence et des opérations enregistrées.',
-      'Le statut de rapprochement indique si Trace a récemment été comparé au vrai solde bancaire.',
-      'Le bouton Moi / Couple change uniquement le périmètre de lecture.'
-    ]
+    page:'home',target:'[data-page="home"] .hero-card',icon:'home',kicker:'Accueil',
+    title:'Ton mois en un coup d’œil',
+    body:'Budget disponible, revenus, dépenses, épargne et solde estimé sont réunis ici.',
+    points:['Les cartes ouvrent le détail quand tu veux aller plus loin.']
   },
   {
-    page:'home', target:'.grid.grid-3', icon:'wealth', kicker:'Accueil · Indicateurs & analyses',
-    title:'Les chiffres importants sont interactifs',
-    body:'Revenus, Dépenses et Épargne sont des portes d’entrée vers le détail du mois.',
-    points:[
-      'Revenus ouvre les entrées d’argent du mois.',
-      'Dépenses ouvre les sorties classées dans Trace.',
-      'Épargne correspond au flux net du mois : revenus moins dépenses.',
-      'Évolution et Analyses servent à comparer plusieurs mois et peuvent être consultées en Moi ou Couple.'
-    ]
+    page:'budget',target:'#budgetPeriodControl',icon:'budget',kicker:'Budget',
+    title:'Prépare le mois',
+    body:'Choisis le mois, ajoute tes revenus et dépenses prévues, ou reprends le mois précédent.',
+    points:['Le budget et les dépenses réelles restent séparés.']
   },
   {
-    page:'budget', target:'#budgetPeriodControl', icon:'budget', kicker:'Budget · Prévision',
-    title:'Le Budget définit le cadre du mois',
-    body:'Cette section sépare clairement ce que vous prévoyez de ce qui s’est réellement produit.',
-    points:[
-      'Choisis librement le mois avec les flèches ou le sélecteur de date.',
-      'Copier le mois précédent reprend les montants du même périmètre sans toucher aux transactions réelles.',
-      'Revenus, dépenses fixes et dépenses variables sont présentés séparément.',
-      'Le budget personnel et le budget Couple ont chacun leur vue ; la vue annuelle compare prévu et réel.'
-    ]
+    page:'activity',tab:'transactions',target:'#activityTransactions',icon:'activity',kicker:'Activité',
+    title:'Toutes les opérations au même endroit',
+    body:'Le bouton + ajoute manuellement une opération ; Activité conserve ensuite l’historique.',
+    points:['Les imports à vérifier passent par « À valider ».']
   },
   {
-    page:'activity', tab:'transactions', target:'#activityTransactions .activity-stats', icon:'activity', kicker:'Activité · Transactions',
-    title:'Activité est le journal financier',
-    body:'C’est ici que tu retrouves les opérations qui expliquent réellement les chiffres de Trace.',
-    points:[
-      'Transactions contient les opérations déjà confirmées.',
-      'Le haut de l’écran résume dépenses, revenus et flux net du mois.',
-      'Chaque opération conserve sa date, son montant, sa catégorie et à qui elle appartient.',
-      'Les transferts et remboursements doivent être distingués des revenus et dépenses pour éviter les doubles comptes.'
-    ]
+    page:'home',target:'#shareCard',icon:'heart',kicker:'Couple',
+    title:'Trace suit aussi les dépenses communes',
+    body:'Indique « Nous deux » sur une dépense pour appliquer votre répartition et suivre qui a avancé quoi.',
+    points:['Chaque personne garde son propre compte Trace dans le même budget privé.']
   },
   {
-    page:'activity', tab:'review', target:'#activityTabs [data-tab="review"]', icon:'activity', kicker:'Activité · À valider',
-    title:'Valide avant de laisser une opération compter',
-    body:'Les opérations importées ou incertaines passent par À valider avant d’alimenter le budget et les analyses.',
-    points:[
-      'Vérifie la catégorie : épicerie, restaurant, logement, transport, etc.',
-      'Vérifie Pour qui ? : toi, ton partenaire ou vous deux.',
-      'Pour une dépense commune, contrôle la répartition 50/50 ou personnalisée.',
-      'Le but est simple : une donnée propre une fois, puis réutilisée partout.'
-    ]
+    page:'home',action:'analysis',target:'#analysisScope',icon:'wealth',kicker:'Analyses',
+    title:'Comprends la tendance',
+    body:'Compare simplement dépenses, épargne et évolution en Moi ou Couple.',
+    points:['Le but est de décider vite, pas de multiplier les tableaux.']
   },
   {
-    page:'activity', tab:'import', target:'#activityImport .drop', icon:'plus', kicker:'Activité · Import & ajout',
-    title:'Ajoute les opérations de la façon la plus simple',
-    body:'Trace est pensé pour limiter la saisie manuelle et rapprocher facilement l’app de la banque.',
-    points:[
-      'Importer accepte les fichiers prévus pour le suivi bancaire : CSV, capture ou PDF selon le flux activé.',
-      'Les doublons doivent être écartés avant validation pour ne jamais compter deux fois la même opération.',
-      'Le bouton + sert à l’ajout manuel : cash, remboursement ou opération manquante.',
-      'L’extraction intelligente image/PDF et certains formulaires sont encore activés progressivement dans cette V5.'
-    ]
+    page:'wealth',target:'[data-page="wealth"] .hero-card',icon:'wealth',kicker:'Patrimoine',
+    title:'Suis tes actifs à long terme',
+    body:'Ajoute tes comptes de patrimoine puis suis leur évolution séparément du budget mensuel.',
+    points:['PEA, CELI, REER, épargne et courtage peuvent être regroupés ici.']
   },
   {
-    page:'home', target:'#shareCard', icon:'heart', kicker:'Partage · Couple',
-    title:'Le Partage suit qui a avancé quoi',
-    body:'Une dépense commune peut servir au budget tout en mettant à jour automatiquement le solde entre vous deux.',
-    points:[
-      'Indique qui a payé et pour qui était la dépense.',
-      'Une dépense commune peut être répartie 50/50 ou selon votre répartition préférée.',
-      'Le solde de Partage est continu : il ne repart pas à zéro chaque mois.',
-      'Un remboursement entre vous règle le solde sans créer un faux revenu ou une fausse dépense.'
-    ]
-  },
-  {
-    page:'home', action:'analysis', target:'#analysisScope', icon:'wealth', kicker:'Analyses · Comprendre',
-    title:'Passe du chiffre à l’explication',
-    body:'Les analyses servent à voir les tendances plutôt qu’une simple liste de transactions.',
-    points:[
-      'Compare dépenses, budget et épargne sur plusieurs mois.',
-      'Repère les catégories qui consomment le plus de budget.',
-      'Le sélecteur Moi / Couple recalcule les indicateurs selon le périmètre choisi.',
-      'L’objectif est d’aider à décider, pas d’ajouter des tableaux inutiles.'
-    ]
-  },
-  {
-    page:'wealth', target:'[data-page="wealth"] .hero-card', icon:'wealth', kicker:'Patrimoine · Long terme',
-    title:'Patrimoine regroupe ce que vous possédez',
-    body:'Cette vue complète le budget mensuel avec une lecture plus long terme.',
-    points:[
-      'Liquidités, épargne et comptes d’investissement sont regroupés au même endroit.',
-      'Moi / Couple permet de suivre ton patrimoine personnel ou l’ensemble suivi.',
-      'Les comptes d’investissement sont prévus pour conserver positions et opérations datées : achats, ventes, dividendes, frais et versements.',
-      'Les analyses distingueront contributions et performance pour éviter de confondre argent versé et rendement.'
-    ]
-  },
-  {
-    page:'home', action:'profile', target:'#sheetBody .profile-menu', icon:'user', kicker:'Profil & paramètres',
-    title:'Configure Trace une fois, puis garde-le fiable',
-    body:'Le Profil contient les réglages qui structurent tous les calculs de l’app.',
-    points:[
-      'Mon profil : identité et devise principale.',
-      'Mon couple : partenaire et répartition par défaut.',
-      'Mes comptes : soldes et dates de référence ; Rapprochement : comparaison avec la banque.',
-      'Notifications : validations, import et rapprochement ; Données & confidentialité : date de référence, solde Partage d’ouverture et sauvegarde.',
-      'Guide express permet de relancer cette formation à tout moment.'
-    ]
-  },
-  {
-    page:'home', target:'.brand', icon:'guide', kicker:'Routine recommandée',
-    title:'La bonne routine tient en quelques minutes',
-    body:'Trace reste simple si tu le mets à jour régulièrement au lieu de tout corriger en fin de mois.',
-    points:[
-      'Début de mois : vérifie ou prépare le budget.',
-      'Tous les 3 à 7 jours : importe les nouvelles opérations et valide ce qui demande ton avis.',
-      'Une fois par semaine : rapproche Trace du vrai solde bancaire.',
-      'Fin de mois : regarde l’épargne, les écarts de budget, le Partage et l’évolution du patrimoine.'
-    ]
+    page:'home',action:'profile',target:'#sheetBody .settings-group',icon:'user',kicker:'Profil & réglages',
+    title:'Quelques réglages suffisent',
+    body:'Compte, couple, rapprochement, notifications et guide restent accessibles depuis le profil.',
+    points:['Une petite mise à jour régulière suffit ensuite pour garder Trace fiable.']
   }
 ]
 
@@ -220,7 +136,7 @@ function finish(skipped){
   $('#traceGuide')?.classList.add('hidden');
   document.body.classList.remove('trace-guide-open');
   go('home',null);
-  if(!skipped)setTimeout(()=>$('#profileBtn')?.click(),180);
+  
 }
 function render(){
   const s=steps[index];
@@ -320,14 +236,14 @@ function updateSpot(){
 function injectReplayButton(){
   if($('#traceGuideReplay'))return;
   const body=$('#sheetBody');
-  if(!body||!body.querySelector('.profile-menu'))return;
+  if(!body||!body.querySelector('.settings-group'))return;
   const groups=[...body.querySelectorAll('.settings-group')];
   const prefs=groups.find(g=>g.querySelector('.settings-group-title')?.textContent.trim()==='Préférences')||groups.at(-1);
   if(!prefs)return;
   const btn=document.createElement('button');
   btn.id='traceGuideReplay';
   btn.className='profile-action settings-row';
-  btn.innerHTML='<span class="pico">'+svg('guide')+'</span><span class="pmain"><b>Guide express</b><small>Revoir les 12 étapes de prise en main</small></span><span class="profile-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>';
+  btn.innerHTML='<span class="pico">'+svg('guide')+'</span><span class="pmain"><b>Guide express</b><small>Revoir les 8 étapes de prise en main</small></span><span class="profile-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>';
   btn.onclick=()=>{document.querySelector('#closeSheet')?.click();setTimeout(()=>start(true),100)};
   prefs.insertBefore(btn,prefs.children[1]||null);
 }
