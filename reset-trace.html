@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123F38">
+<title>Réinitialiser Trace</title>
+<style>
+  :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#10263c;background:#f7f5ef}
+  body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px;box-sizing:border-box}
+  main{width:min(430px,100%);background:#fffdfa;border:1px solid rgba(18,63,56,.1);border-radius:28px;padding:28px;box-sizing:border-box;box-shadow:0 24px 70px rgba(15,35,41,.12)}
+  h1{font-size:28px;line-height:1.05;margin:0 0 10px}p{color:#65706b;line-height:1.5}
+  .status{margin:22px 0;padding:14px 16px;border-radius:16px;background:#edf5f1;color:#123f38;font-weight:700}
+  button{width:100%;height:50px;border:0;border-radius:15px;background:#123f38;color:white;font:700 16px inherit}
+</style>
+</head>
+<body>
+<main>
+  <h1>Réinitialisation de Trace</h1>
+  <p>Cette page supprime uniquement les anciens fichiers hors ligne de Trace sur cet appareil. Vos données financières restent dans votre compte.</p>
+  <div class="status" id="status">Nettoyage de l’ancienne version…</div>
+  <button id="continue" type="button">Ouvrir Trace</button>
+</main>
+<script>
+(async function(){
+  const status=document.getElementById('status');
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister().catch(()=>false)));
+    }
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k).catch(()=>false)));
+    }
+    status.textContent='Nettoyage terminé. Trace va se rouvrir avec la version actuelle.';
+  }catch(e){
+    status.textContent='Nettoyage partiel terminé. Tu peux maintenant rouvrir Trace.';
+  }
+  const go=()=>location.replace('./?fresh=20261013-0031');
+  document.getElementById('continue').onclick=go;
+  setTimeout(go,1200);
+})();
+</script>
+</body>
+</html>
