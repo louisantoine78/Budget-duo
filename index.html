@@ -10,12 +10,12 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.10.0">
+<meta name="trace-build" content="5.10.1">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="v5-5.10.0.css">
+<link rel="stylesheet" href="v5-5.10.1.css">
 <link rel="stylesheet" href="onboarding.css?v=1.2.0">
 </head>
 <body>
@@ -186,7 +186,22 @@
 
     <section class="page" data-page="activity">
       <div class="hero-row"><div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title">Activité</h1></div></div>
-      <div class="activity-month-controls"><button type="button" id="activityPrevMonth" aria-label="Mois précédent" class="period-arrow">‹</button><label class="activity-month-label"><span id="activityMonthDisplay">octobre 2026</span><input id="activityMonthPicker" type="month" aria-label="Mois des activités"></label><button type="button" id="activityNextMonth" aria-label="Mois suivant" class="period-arrow">›</button><button type="button" id="activityCurrentMonth" class="linkbtn hidden">Mois en cours</button></div>
+      <div class="budget-context-row trace-activity-period" id="activityPeriodControl">
+        <div class="budget-month-nav">
+          <button type="button" id="activityPrevMonth" aria-label="Mois précédent" class="period-arrow">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <label class="budget-month-picker">
+            <span id="activityMonthDisplay" aria-live="polite">octobre 2026</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg>
+            <input id="activityMonthPicker" type="month" aria-label="Choisir le mois d’activité">
+          </label>
+          <button type="button" id="activityNextMonth" aria-label="Mois suivant" class="period-arrow">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+        <button type="button" id="activityCurrentMonth" class="budget-current-link hidden">Ce mois</button>
+      </div>
       <div class="tabs" id="activityTabs">
         <button class="tab active" data-tab="transactions">Transactions</button>
         <button class="tab" data-tab="review">À valider <span id="reviewTabCount"></span></button>
@@ -259,10 +274,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app-5.10.0.js"></script>
+<script src="v5-app-5.10.1.js"></script>
 <script src="trace-bank-doc-1.1.0.js"></script>
 <script src="trace-bank-ui-1.4.0.js"></script>
-<script src="trace-import-calendar-1.1.0.js"></script>
+<script src="trace-import-calendar-1.1.1.js"></script>
 <script src="onboarding-1.8.0.js"></script>
 <script>
 if('serviceWorker' in navigator){

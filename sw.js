@@ -1,5 +1,5 @@
 /* Trace 5.8.0 – app shell, network-first, self-updating home screen PWA */
-const SHELL='trace-shell-v5.10.0';
+const SHELL='trace-shell-v5.10.1';
 const SHELL_URLS=['./index.html','./trace-launch-v2.html','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png'];
 self.addEventListener('install',event=>{
  self.skipWaiting();
