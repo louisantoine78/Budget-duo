@@ -304,25 +304,70 @@ async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Charg
 async function init(){
   const cfg=window.BUDGET_DUO_CONFIG||{};
   if(!cfg.supabaseUrl||!cfg.supabasePublishableKey){showGate('cloudConfigPanel');return;}
-  if(!window.supabase?.createClient){showGate('cloudAuthPanel');$('#cloudAuthMessage').textContent='Le service de connexion n’a pas chargé. Ferme puis rouvre Trace.';return;}
-  loadingStage('Initialisation sécurisée…');
-  client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,lock:async(_name,_timeout,fn)=>await fn()}});
-  client.auth.onAuthStateChange((ev,s)=>{session=s;if(ev==='SIGNED_OUT'){household=null;showGate('cloudAuthPanel');}else if(ev==='TOKEN_REFRESHED'){sync('synced');}});
-  try{
-    loadingStage('Vérification de votre session…');
-    const result=await withTimeout(client.auth.getSession(),6000,'La session locale ne répond pas.');
-    session=result?.data?.session||null;
-    if(!session){showGate('cloudAuthPanel');return;}
-    await loadWorkspace();
-  }catch(err){
-    console.error(err);
+  if(!window.supabase?.createClient){
     showGate('cloudAuthPanel');
-    $('#cloudAuthMessage').textContent='La session précédente semble bloquée. Reconnecte-toi pour la réinitialiser.';
+    $('#cloudAuthMessage').textContent='Le service de connexion n’a pas chargé. Ferme puis rouvre Trace.';
+    return;
   }
+
+  loadingStage('Vérification de votre session…');
+  client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{
+    auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+  });
+
+  let startupResolved=false;
+  const startupTimeout=setTimeout(()=>{
+    if(startupResolved)return;
+    startupResolved=true;
+    showGate('cloudAuthPanel');
+    $('#cloudAuthMessage').textContent='La session a mis trop de temps à démarrer. Reconnecte-toi pour la relancer.';
+  },8000);
+
+  const openWorkspace=(s)=>{
+    if(!s||startupResolved)return;
+    startupResolved=true;
+    clearTimeout(startupTimeout);
+    session=s;
+    loadingStage('Synchronisation de vos données…');
+    setTimeout(()=>loadWorkspace().catch(fatal),0);
+  };
+
+  client.auth.onAuthStateChange((ev,s)=>{
+    session=s;
+    if(ev==='INITIAL_SESSION'){
+      if(s)openWorkspace(s);
+      else if(!startupResolved){
+        startupResolved=true;
+        clearTimeout(startupTimeout);
+        showGate('cloudAuthPanel');
+      }
+      return;
+    }
+    if(ev==='SIGNED_IN'){
+      if(s&&!household){
+        startupResolved=false;
+        openWorkspace(s);
+      }
+      return;
+    }
+    if(ev==='TOKEN_REFRESHED'){
+      sync('synced');
+      if(s&&!household){
+        startupResolved=false;
+        openWorkspace(s);
+      }
+      return;
+    }
+    if(ev==='SIGNED_OUT'){
+      startupResolved=true;
+      clearTimeout(startupTimeout);
+      household=null;
+      showGate('cloudAuthPanel');
+    }
+  });
 }
 function fatal(e){console.error(e);showGate('cloudAuthPanel');$('#cloudAuthMessage').textContent=e?.message||'Erreur de chargement';}
 function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=()=>openSheet('Ajouter','<div class="empty-note">Le formulaire connecté arrive dans la prochaine passe. Pour l’instant aucune donnée n’est modifiée depuis ce bouton.</div>');$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>openSheet('Partage',`<div class="money2">${esc($('#shareBalance').textContent)}</div><div class="empty-note" style="margin-top:12px">Le détail des mouvements sera activé dans la prochaine passe.</div>`);$('#shareOpen').onclick=$('#shareCard').onclick;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});$('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetPrevMonth').onclick=()=>{budgetMonth=monthOffset(budgetMonth,-1);renderBudget();};$('#budgetNextMonth').onclick=()=>{budgetMonth=monthOffset(budgetMonth,1);renderBudget();};$('#budgetMonthPicker').onchange=e=>{if(/^\d{4}-\d{2}$/.test(e.target.value)){budgetMonth=e.target.value;renderBudget();}};$('#budgetCurrentMonth').onclick=()=>{budgetMonth=CM;renderBudget();};$('#budgetCopyPrevious').onclick=copyPreviousBudget;$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#wealthAnalysis').onclick=()=>openSheet('Analyse du patrimoine','<div class="empty-note">Analyse patrimoine en préparation.</div>');$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{$('#importResult').innerHTML=`<article class="card"><b>${esc(e.target.files?.[0]?.name||'Fichier')}</b><div class="empty-note" style="margin-top:10px">Fichier reconnu. L’extraction automatique sera branchée dans l’étape suivante.</div></article>`;};$$('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée. Réessaie dans quelques secondes.');session=data.session;await loadWorkspace();$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=err?.message||'Connexion impossible. Réessaie.';}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{data:{display_name:$('#cloudSignupName').value.trim()}}});$('#cloudAuthMessage').textContent=error?error.message:'Compte créé.';};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
 function bootTrace(){
   window.__TRACE_BOOTED__=true;
   bind();
