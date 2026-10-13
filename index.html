@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="v5.css?v=5.0.5">
+<link rel="stylesheet" href="v5.css?v=5.0.6">
 <link rel="stylesheet" href="onboarding.css?v=1.2.0">
 </head>
 <body>
@@ -150,6 +150,23 @@
       <div class="hero-row">
         <div><div class="eyebrow" id="budgetMonthLabel">Mois</div><h1 class="title">Budget</h1></div>
         <div class="segment" id="budgetScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <div class="budget-period" id="budgetPeriodControl">
+        <div class="budget-month-nav">
+          <button class="period-arrow" id="budgetPrevMonth" type="button" aria-label="Mois précédent">‹</button>
+          <label class="budget-month-picker">
+            <span>Mois affiché</span>
+            <input type="month" id="budgetMonthPicker" aria-label="Choisir le mois du budget">
+          </label>
+          <button class="period-arrow" id="budgetNextMonth" type="button" aria-label="Mois suivant">›</button>
+        </div>
+        <div class="budget-period-actions">
+          <button class="linkbtn hidden" id="budgetCurrentMonth" type="button">Revenir à ce mois</button>
+          <button class="secondary budget-copy-btn" id="budgetCopyPrevious" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8Z"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+            <span>Copier le mois précédent</span>
+          </button>
+        </div>
       </div>
       <article class="card hero-card" style="min-height:150px">
         <div class="label" id="budgetHeroLabel">Budget mensuel</div><div class="big" id="budgetHeroTotal">—</div><div class="sub" id="budgetHeroSub">—</div>
