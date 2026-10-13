@@ -100,7 +100,8 @@ function profile(){
       profileMenuItem('settingsInvest','chart','Investissements','PEA, CELI, REER et autres')+
     '</div>'+
     '<div class="settings-group"><div class="settings-group-title">Préférences</div>'+
-      profileMenuItem('settingsGuide','guide','Guide Trace','Revoir la formation complète à tout moment')+\n      profileMenuItem('settingsNotifications','bell','Notifications','Validation, import et rapprochement')+
+      profileMenuItem('settingsGuide','guide','Guide Trace','Revoir la formation complète à tout moment')+
+      profileMenuItem('settingsNotifications','bell','Notifications','Validation, import et rapprochement')+
       profileMenuItem('settingsData','shield','Données & confidentialité','Date de référence et données partagées')+
     '</div>'+
     '<button class="profile-action settings-row danger-row" id="logout"><span class="pico">'+uiIcon('logout')+'</span><span class="pmain"><b>Se déconnecter</b><small>Fermer la session sur cet appareil</small></span></button>'
@@ -110,7 +111,8 @@ function profile(){
   $('#settingsAccounts').onclick=openAccountSettings;
   $('#settingsReconcile').onclick=openReconcileSettings;
   $('#settingsInvest').onclick=()=>{closeSheet();wealthScope='mine';renderWealth();navigate('wealth');};
-  $('#settingsGuide').onclick=()=>{closeSheet();setTimeout(()=>window.TraceGuide?.start(true),80);};\n  $('#settingsNotifications').onclick=openNotificationSettings;
+  $('#settingsGuide').onclick=()=>{closeSheet();setTimeout(()=>window.TraceGuide?.start(true),80);};
+  $('#settingsNotifications').onclick=openNotificationSettings;
   $('#settingsData').onclick=openDataSettings;
   $('#logout').onclick=async()=>{await client.auth.signOut();location.reload();};
 }
