@@ -479,3 +479,48 @@ input,select,textarea,.input,.cloud-form input{font-size:16px!important}
 .invite-code-row{display:flex;align-items:center;gap:7px;margin-top:10px}
 .invite-code-row code{flex:1;padding:9px 10px;border-radius:10px;background:#fff;color:var(--navy);font-weight:850;letter-spacing:.08em}
 .invite-code-row .secondary{min-height:38px;padding:0 10px;font-size:10px}
+
+/* Trace 5.5 interaction and responsive polish */
+body.sheet-open{overflow:hidden}
+#sheetBody{min-width:0}
+.analysis-scope{
+  width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  max-width:330px;margin:0 auto
+}
+.analysis-scope .seg{width:100%;text-align:center;justify-content:center}
+.manual-transaction-intro{padding:0 0 12px;border-bottom:1px solid var(--line)}
+.manual-transaction-intro b{display:block;font-size:14px}
+.manual-transaction-intro small{display:block;margin-top:3px;color:var(--muted);font-size:10.5px}
+.manual-type-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px}
+.manual-type-grid .choice{padding:0 8px}
+.manual-transaction-note{margin-top:12px;padding:10px 12px;border-radius:12px;background:#f4f6f2;color:var(--muted);font-size:10px;line-height:1.4}
+.asset-card-add{border-style:dashed;background:rgba(255,253,250,.64)}
+.asset-card-add .a-icon{background:#edf3ef;color:var(--forest)}
+.asset-card-add b{font-size:15px}
+.sheet input,.sheet select,.sheet textarea{font-size:16px!important}
+.sheet input[type="number"]{font-variant-numeric:tabular-nums}
+@media(max-width:760px){
+  .sheet-backdrop.open{display:flex;align-items:flex-end;padding:0 6px}
+  .sheet{
+    position:relative;left:auto;bottom:auto;transform:none;
+    width:100%;max-height:min(82dvh,720px);
+    border-radius:28px 28px 0 0;
+    padding:12px max(18px,env(safe-area-inset-right)) max(22px,calc(18px + env(safe-area-inset-bottom))) max(18px,env(safe-area-inset-left));
+  }
+  .sheet-head{position:sticky;top:0;z-index:2;background:var(--paper);padding-top:2px}
+  .manual-money-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+@media(max-width:390px){
+  .manual-type-grid{gap:5px}
+  .manual-type-grid .choice{font-size:11px}
+  .manual-money-row{grid-template-columns:minmax(0,1fr)}
+}
+@media(min-width:761px) and (max-width:899px){
+  .sheet-backdrop.open{display:grid;place-items:center;padding:24px}
+  .sheet{position:relative;left:auto;bottom:auto;transform:none;width:min(620px,100%);border-radius:28px;max-height:84dvh}
+}
+@media(min-width:900px){
+  .analysis-scope{max-width:360px}
+  .sheet{width:min(680px,100%)}
+  .manual-type-grid{max-width:420px}
+}
