@@ -59,8 +59,8 @@ function renderBudget(){
     ['Dépenses variables','variable',b=>cat(b.categoryId).type==='expense'&&!['rent','subscriptions','phone','taxes'].includes(b.categoryId)]
   ];
   $('#budgetSections').innerHTML=sectionDefs.map(([t,kind,f])=>'<div class="section-head"><h2>'+t+'</h2><button class="linkbtn budget-add-link" type="button" data-budget-add="'+kind+'">+ Ajouter</button></div><article class="card budget-section">'+(rows.filter(f).length?rows.filter(f).map(b=>'<button class="budget-card budget-edit-row" type="button" data-budget-edit="'+esc(b.id)+'"><span class="bicon">'+esc(cat(b.categoryId).icon||'•')+'</span><span class="bmain"><strong>'+esc(cat(b.categoryId).name)+'</strong><small>'+(b.scope==='couple'?'Budget commun':'Personnel')+'</small></span><span class="bvalue"><strong>'+money(budgetAmt(b,sId))+'</strong></span></button>').join(''):'<div class="empty-note">Aucun poste.</div>')+'</article>').join('');
-  $('[data-budget-add]').forEach(btn=>btn.onclick=()=>openBudgetAdd(btn.dataset.budgetAdd));
-  $('[data-budget-edit]').forEach(btn=>btn.onclick=()=>openBudgetEdit(btn.dataset.budgetEdit));
+  document.querySelectorAll('[data-budget-add]').forEach(btn=>btn.onclick=()=>openBudgetAdd(btn.dataset.budgetAdd));
+  document.querySelectorAll('[data-budget-edit]').forEach(btn=>btn.onclick=()=>openBudgetEdit(btn.dataset.budgetEdit));
   const year=month.slice(0,4),ms=Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0')),vs=ms.map(m=>summary(m,sId)),max=Math.max(1,...vs.flatMap(v=>[v.eb,v.expense]));
   $('#annualBudgetChart').innerHTML=ms.map((m,i)=>'<div class="monthbar '+(m===month?'selected':'')+'"><i style="height:'+Math.max(2,vs[i].eb/max*100)+'%"></i><b style="height:'+Math.max(2,vs[i].expense/max*100)+'%"></b><em>'+shortMonth(m)+'</em></div>').join('');
   updateSegments();
