@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="fr">
+<head><base href="../">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123f38">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Trace">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
+<meta name="trace-build" content="5.10.2">
+<title>Trace 5</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="stylesheet" href="v5-5.10.2.css">
+<link rel="stylesheet" href="onboarding.css?v=1.2.0">
+</head>
+<body>
+<div id="cloudGate" class="cloud-gate">
+  <section class="cloud-card">
+    <div class="cloud-brand">
+      <img src="assets/icon-192.png" alt="">
+      <div><strong>Trace</strong><small>Votre budget suit son chemin.</small></div>
+    </div>
+    <div id="cloudLoadingPanel" class="cloud-panel">
+      <div class="cloud-loader"></div>
+      <h1>Connexion à Trace</h1>
+      <p id="cloudLoadingText">Vérification de la session et chargement de vos données…</p>
+    </div>
+    <div id="cloudConfigPanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Configuration</span>
+      <h1>Supabase non configuré</h1>
+      <p>Le fichier <code>config.js</code> doit contenir l’URL du projet et la clé publique.</p>
+    </div>
+    <div id="cloudAuthPanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Espace sécurisé</span>
+      <h1 id="cloudAuthTitle">Se connecter</h1>
+      <p>Utilise le même compte que sur Trace aujourd’hui.</p>
+      <div class="cloud-tabs">
+        <button class="cloud-tab active" data-auth-tab="login">Connexion</button>
+        <button class="cloud-tab" data-auth-tab="signup">Créer un compte</button>
+      </div>
+      <form id="cloudLoginForm" class="cloud-form">
+        <label>Adresse courriel<input id="cloudLoginEmail" type="email" autocomplete="email" required></label>
+        <label>Mot de passe<span class="password-field"><input id="cloudLoginPassword" type="password" autocomplete="current-password" minlength="6" required><button class="password-toggle" type="button" data-password-target="cloudLoginPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></span></label>
+        <button class="primary full" type="submit">Se connecter</button><div class="auth-persist-note"><span class="status-dot"></span> Session conservée sur cet appareil</div>
+      </form>
+      <form id="cloudSignupForm" class="cloud-form hidden">
+        <label>Prénom<input id="cloudSignupName" type="text" autocomplete="name" required></label>
+        <label>Adresse courriel<input id="cloudSignupEmail" type="email" autocomplete="email" required></label>
+        <label>Mot de passe<span class="password-field"><input id="cloudSignupPassword" type="password" autocomplete="new-password" minlength="8" required><button class="password-toggle" type="button" data-password-target="cloudSignupPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></span></label>
+        <button class="primary full" type="submit">Créer mon compte</button>
+      </form>
+      <p id="cloudAuthMessage" class="cloud-message"></p>
+    </div>
+    <div id="cloudWorkspacePanel" class="cloud-panel hidden">
+      <span class="cloud-kicker">Première connexion</span>
+      <h1>Choisir votre espace</h1>
+      <p>Crée ton budget ou rejoins celui de ton partenaire avec son code d’invitation.</p>
+      <div class="cloud-tabs">
+        <button class="cloud-tab active" data-workspace-tab="create">Créer</button>
+        <button class="cloud-tab" data-workspace-tab="join">Rejoindre</button>
+      </div>
+      <form id="cloudCreateHouseholdForm" class="cloud-form">
+        <label>Nom de l’espace<input id="cloudHouseholdName" value="Notre budget" required></label>
+        <label>Ton prénom<input id="cloudCreatorName" required></label>
+        
+        <button class="primary full" type="submit">Créer l’espace</button>
+      </form>
+      <form id="cloudJoinHouseholdForm" class="cloud-form hidden">
+        <label>Ton prénom<input id="cloudJoinName" required></label>
+        <label>Code d’invitation<input id="cloudInviteCode" maxlength="12" required></label>
+        <button class="primary full" type="submit">Rejoindre</button>
+      </form>
+      <p id="cloudWorkspaceMessage" class="cloud-message"></p>
+    </div>
+  </section>
+</div>
+
+<div id="app" class="app cloud-locked">
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/icon-192.png" alt="">
+      <div><strong>Trace</strong><small id="brandSubtitle">Simple. Clair. À jour.</small></div>
+    </div>
+    <div class="top-actions">
+      <div class="sync-pill" id="syncPill" data-status="loading"><span class="status-dot"></span><span id="syncLabel">Connexion…</span></div>
+      <button id="helpBtn" class="help-btn" aria-label="Ouvrir le guide Trace" title="Guide Trace"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.4a2.4 2.4 0 0 1 2.4-2.1c1.5 0 2.7.9 2.7 2.3 0 1.7-1.3 2.2-2.2 2.9-.6.5-.7.9-.7 1.6"/><circle cx="12" cy="17.2" r=".7" fill="currentColor" stroke="none"/></svg></button>
+      <button id="profileBtn" class="avatar" aria-label="Profil">LA</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="page active" data-page="home">
+      <div class="hero-row">
+        <div><div class="eyebrow" id="homeMonthLabel">Novembre 2026</div><h1 class="title" id="homeGreeting">Bonjour</h1></div>
+        <div class="segment" id="homeScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <div class="grid grid-2">
+        <article class="card hero-card">
+          <div class="label">Disponible sur le budget</div>
+          <div class="big" id="homeBudgetAvailable">—</div>
+          <div class="sub" id="homeBudgetSub">Chargement…</div>
+          <div class="progress"><i id="homeBudgetProgress" style="width:0%"></i></div>
+          <div class="progress-row"><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
+        </article>
+        <article class="card liquid clickable" id="balanceCard">
+          <div class="eyebrow">Solde estimé</div>
+          <div class="money" id="homeBalance">—</div>
+          <span class="badge" id="reconcileBadge">À rapprocher</span>
+          <div class="mini-account"><span>Compte courant</span><span id="homeChecking">—</span></div>
+          <div class="mini-account"><span>Carte de crédit</span><span id="homeCard">—</span></div>
+          <div class="scope-label">Compte courant − solde carte</div>
+        </article>
+      </div>
+
+      <div class="grid grid-3" style="margin-top:14px">
+        <button class="card kpi clickable" data-kpi="income"><div class="k-label">Revenus</div><div class="k-value" id="homeIncome">—</div><div class="k-note" id="homeIncomeNote">Voir le détail</div></button>
+        <button class="card kpi clickable" data-kpi="spending"><div class="k-label">Dépenses</div><div class="k-value" id="homeSpending">—</div><div class="k-note" id="homeSpendingNote">Voir le détail</div></button>
+        <button class="card kpi clickable" data-kpi="saving"><div class="k-label">Épargne</div><div class="k-value" id="homeSaving">—</div><div class="k-note" id="homeSavingNote">Voir le détail</div></button>
+      </div>
+
+      <div class="section-head"><h2>À faire</h2><button class="linkbtn" data-go="activity">Voir l’activité</button></div>
+      <button class="alert-card" style="width:100%;text-align:left" data-go="review">
+        <span class="alert-icon" id="pendingCountBadge">0</span>
+        <span class="alert-text"><strong>Transactions à valider</strong><div id="pendingText">Tout est à jour</div></span><span class="chev">›</span>
+      </button>
+
+      <div class="section-head"><h2>Budget en direct</h2><button class="linkbtn" data-go="budget">Voir le budget</button></div>
+      <article class="card" id="homeBudgetCategories"></article>
+
+      <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="analysisBtn">Analyses</button></div>
+      <article class="card clickable" id="homeTrendCard">
+        <div class="eyebrow">Épargne mensuelle · 6 mois</div>
+        <div class="chart" id="homeTrend"></div>
+        <div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div>
+      </article>
+
+      <div class="section-head"><h2>Partage</h2><button class="linkbtn" id="shareOpen">Ouvrir</button></div>
+      <button class="card share-card" id="shareCard" style="width:100%;text-align:left;border:1px solid rgba(18,63,56,.06)">
+        <span class="share-avatar" id="partnerAvatar">É</span>
+        <span class="share-main"><b id="shareLabel">Solde avec votre partenaire</b><strong id="shareBalance">—</strong><small id="shareSmall">Solde continu</small></span>
+        <span class="chev">›</span>
+      </button>
+    </section>
+
+    <section class="page" data-page="budget">
+      <div class="hero-row">
+        <div><div class="eyebrow">Planification</div><h1 class="title">Budget</h1></div>
+        <div class="segment" id="budgetScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <div class="budget-context-row" id="budgetPeriodControl">
+        <div class="budget-month-nav">
+          <a class="period-arrow" id="budgetPrevMonth" href="?month=2026-09#budget" aria-label="Mois précédent">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </a>
+          <label class="budget-month-picker">
+            <span id="budgetMonthDisplay" aria-live="polite">octobre 2026</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg>
+            <input type="month" id="budgetMonthPicker" aria-label="Choisir le mois du budget">
+          </label>
+          <a class="period-arrow" id="budgetNextMonth" href="?month=2026-11#budget" aria-label="Mois suivant">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </a>
+        </div>
+        <button class="budget-current-link hidden" id="budgetCurrentMonth" type="button">Ce mois</button>
+      </div>
+      <article class="card hero-card budget-hero-card" style="min-height:150px">
+        <div class="budget-hero-top">
+          <div class="label" id="budgetHeroLabel">Budget mensuel</div>
+          <button class="budget-copy-chip" id="budgetCopyPrevious" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+            <span>Reprendre septembre</span>
+          </button>
+        </div>
+        <div class="big" id="budgetHeroTotal">—</div>
+        <div class="sub" id="budgetHeroSub">—</div>
+      </article>
+      <div id="budgetSections"></div>
+      <div class="section-head"><h2>Vue annuelle</h2><button class="linkbtn" id="annualBudgetDetails">Détails</button></div>
+      <article class="card clickable" id="annualBudgetCard"><div class="chart" id="annualBudgetChart"></div><div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div></article>
+    </section>
+
+    <section class="page" data-page="activity">
+      <div class="hero-row"><div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title">Activité</h1></div></div>
+      <div class="budget-context-row trace-activity-period" id="activityPeriodControl">
+        <div class="budget-month-nav">
+          <button type="button" id="activityPrevMonth" aria-label="Mois précédent" class="period-arrow">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <label class="budget-month-picker">
+            <span id="activityMonthDisplay" aria-live="polite">octobre 2026</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg>
+            <input id="activityMonthPicker" type="month" aria-label="Choisir le mois d’activité">
+          </label>
+          <button type="button" id="activityNextMonth" aria-label="Mois suivant" class="period-arrow">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+        <button type="button" id="activityCurrentMonth" class="budget-current-link hidden">Ce mois</button>
+      </div>
+      <div class="tabs" id="activityTabs">
+        <button class="tab active" data-tab="transactions">Transactions</button>
+        <button class="tab" data-tab="review">À valider <span id="reviewTabCount"></span></button>
+        <button class="tab" data-tab="import">Importer</button>
+      </div>
+      <div id="activityTransactions">
+        <div class="activity-stats">
+          <div class="statbox"><span>Dépenses</span><b id="activityExpenses">—</b></div>
+          <div class="statbox"><span>Revenus</span><b id="activityIncome">—</b></div>
+          <div class="statbox"><span>Flux net</span><b id="activityNet">—</b></div>
+        </div>
+        <article class="card" id="transactionList"></article>
+      </div>
+      <div id="activityReview" class="hidden">
+        <div class="section-head"><h2 id="reviewHeading">À valider</h2><button class="linkbtn" id="validateComplete">Valider les complètes</button></div>
+        <div id="reviewList"></div>
+      </div>
+      <div id="activityImport" class="hidden">
+        <div id="importCalendar" aria-label="Suivi des journées et imports"></div><div class="section-head"><h2>Importer un relevé ou des opérations</h2></div>
+        <article class="drop" id="importDrop">
+          <div class="up">⇧</div><b>Importer un CSV, PDF ou une photo</b>
+          <small>Ajoute une ou plusieurs captures à la fois pour chaque journée. Les relevés PDF servent au contrôle mensuel et au repérage des oublis.</small>
+          <input type="file" id="importFile" accept=".csv,.pdf,image/*,text/csv,application/pdf" multiple hidden>
+          <button class="primary" id="chooseImport" style="margin-top:14px">Choisir des fichiers</button>
+        </article>
+        <div id="importResult" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="wealth">
+      <div class="hero-row">
+        <div><div class="eyebrow">Patrimoine</div><h1 class="title">Mes actifs</h1></div>
+        <div class="segment" id="wealthScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
+      </div>
+      <article class="card hero-card" style="min-height:160px"><div class="label">Patrimoine suivi</div><div class="big" id="wealthTotal">—</div><div class="sub" id="wealthSub">Liquidités, épargne et investissements</div></article>
+      <div class="section-head"><h2>Comptes</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
+      <div class="portfolio-grid" id="assetGrid"></div>
+      <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="wealthAnalysis">Analyses</button></div>
+      <article class="card clickable" id="wealthChart"><div class="chart" id="wealthTrend"></div><div class="legend"><span><i class="dot dark"></i>Patrimoine</span></div></article>
+    </section>
+  </main>
+
+  <nav class="nav" aria-label="Navigation principale">
+    <button class="navbtn active" data-nav="home" aria-label="Accueil">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.75l8.5 6.75"/><path d="M5.5 9.4V20h13V9.4"/><path d="M9.5 20v-6h5v6"/></svg></span><span>Accueil</span>
+    </button>
+    <button class="navbtn" data-nav="budget" aria-label="Budget">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5h16"/><path d="M6 4.5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2Z"/><path d="M15.5 13h4.5"/><circle cx="16.5" cy="13" r=".7" fill="currentColor" stroke="none"/></svg></span><span>Budget</span>
+    </button>
+    <button class="navbtn plus" id="quickAdd" aria-label="Ajouter une opération">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span><span>Ajouter</span>
+    </button>
+    <button class="navbtn" data-nav="activity" aria-label="Activité">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4v16M4.5 6.5 7 4l2.5 2.5"/><path d="M17 20V4M14.5 17.5 17 20l2.5-2.5"/></svg></span><span>Activité</span>
+    </button>
+    <button class="navbtn" data-nav="wealth" aria-label="Patrimoine">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18.5V13l4-3 4 2 4-6 4 2.5"/><path d="M4 20h16"/></svg></span><span>Patrimoine</span>
+    </button>
+  </nav>
+</div>
+
+<div id="sheetBackdrop" class="sheet-backdrop">
+  <section class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><h2 id="sheetTitle">Détail</h2><button class="closebtn" id="closeSheet">×</button></div>
+    <div id="sheetBody"></div>
+  </section>
+</div>
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=5.2.2"></script>
+<script src="v5-app-5.10.2.js"></script>
+<script src="trace-bank-doc-1.1.0.js"></script>
+<script src="trace-bank-ui-1.5.0.js"></script>
+<script src="trace-import-calendar-1.1.1.js"></script>
+<script src="onboarding-1.8.0.js"></script>
+<script>
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{
+  reg.update().catch(()=>{});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{});});
+ }).catch(error=>console.info('Mise à jour hors ligne indisponible',error));
+}
+</script>
+</body>
+</html>
