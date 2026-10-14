@@ -10,12 +10,12 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.13.0">
+<meta name="trace-build" content="5.14.0">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="v5-5.13.0.css">
+<link rel="stylesheet" href="v5-5.14.0.css">
 <link rel="stylesheet" href="onboarding.css?v=1.2.0">
 </head>
 <body>
@@ -221,13 +221,16 @@
         <div id="reviewList"></div>
       </div>
       <div id="activityImport" class="hidden">
-        <div id="importCalendar" aria-label="Suivi des journées et imports"></div><div class="section-head"><h2>Importer un relevé ou des opérations</h2></div>
-        <article class="drop" id="importDrop">
-          <div class="up">⇧</div><b>Importer un CSV, PDF ou une photo</b>
-          <small>Ajoute une ou plusieurs captures à la fois pour chaque journée. Les relevés PDF servent au contrôle mensuel et au repérage des oublis.</small>
-          <input type="file" id="importFile" accept=".csv,.pdf,image/*,text/csv,application/pdf" multiple hidden>
-          <button class="primary" id="chooseImport" style="margin-top:14px">Choisir des fichiers</button>
-        </article>
+        <input type="file" id="importFile" accept=".csv,.pdf,image/*,text/csv,application/pdf" multiple hidden>
+        <div id="importCalendar" aria-label="Suivi des journées et imports"></div>
+        <details class="trace-import-secondary" id="importDrop">
+          <summary><span class="trace-import-secondary-icon">▤</span><span><strong>Contrôle mensuel ou import CSV</strong><small>Relevé PDF, CSV ou import sans journée prédéfinie</small></span><span class="trace-import-secondary-chevron">⌄</span></summary>
+          <div class="trace-import-secondary-content">
+            <p>À la fin du mois, importe ton relevé bancaire pour repérer les opérations éventuellement manquantes. Les captures quotidiennes se font depuis le calendrier ci-dessus.</p>
+            
+            <button class="secondary full" type="button" id="chooseImport">Choisir un document</button>
+          </div>
+        </details>
         <div id="importResult" style="margin-top:14px"></div>
       </div>
     </section>
@@ -275,10 +278,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app-5.13.0.js"></script>
+<script src="v5-app-5.14.0.js"></script>
 <script src="trace-bank-doc-1.7.0.js"></script>
-<script src="trace-bank-ui-2.1.0.js"></script>
-<script src="trace-import-calendar-1.1.1.js"></script>
+<script src="trace-bank-ui-2.2.0.js"></script>
+<script src="trace-import-calendar-1.2.0.js"></script>
 <script src="onboarding-1.8.0.js"></script>
 <script>
 if('serviceWorker' in navigator){
