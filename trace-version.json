@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.24.0",
-  "release": "budget-split-per-line"
+  "build": "5.25.0",
+  "release": "separate-bank-review-savings-ocr"
 }
