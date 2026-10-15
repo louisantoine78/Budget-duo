@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.23.0",
-  "release": "safe-day-reset-category-suggestions"
+  "build": "5.24.0",
+  "release": "budget-split-per-line"
 }
