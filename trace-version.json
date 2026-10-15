@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.25.0",
-  "release": "separate-bank-review-savings-ocr"
+  "build": "5.26.0",
+  "release": "restore-legacy-mastercard-payment-review"
 }
