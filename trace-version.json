@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.27.0",
-  "release": "connected-celi-portfolio-and-card-ocr"
+  "build": "5.28.0",
+  "release": "account-separated-import-review-and-card-repayments"
 }
