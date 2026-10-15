@@ -1,4 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.23.0"
+  "build": "5.23.0",
+  "release": "safe-day-reset-category-suggestions"
 }
