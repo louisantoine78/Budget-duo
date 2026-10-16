@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.4",
-  "release": "guide-transitions-stable"
+  "build": "5.31.5",
+  "release": "two-account-onboarding-rename-and-couple-bank-view"
 }
