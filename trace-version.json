@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.15",
-  "release": "safe-swipe-import-reminders-solo-trace-data-deletion"
+  "build": "5.31.16",
+  "release": "improved-touch-swipes-and-restored-notification-preferences"
 }
