@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.3",
-  "release": "readable-contextual-guide-express"
+  "build": "5.31.4",
+  "release": "guide-transitions-stable"
 }
