@@ -1,0 +1,30 @@
+/* TRACE — first-run install guidance (iPhone / Android / browser), no forced install */
+.trace-install-intro.hidden,.trace-install-dialog.hidden{display:none!important}
+.trace-install-intro{margin:12px 0 5px;display:grid;gap:12px}
+.trace-install-hero{display:flex;align-items:flex-start;gap:13px;margin:4px 0 1px}
+.trace-install-hero img{flex:none;width:64px;height:64px;border-radius:17px;box-shadow:0 8px 19px rgba(12,48,34,.12)}
+.trace-install-hero>div{min-width:0;display:grid;gap:5px}
+.trace-install-kicker{color:#3a7559;letter-spacing:.065em;font-weight:850;font-size:10px}
+.trace-install-hero h2{font-size:19px;line-height:1.23;color:#194a38;letter-spacing:-.4px;margin:0}
+.trace-install-hero p{font-size:12.5px;color:#60766a;line-height:1.5;margin:0}
+.trace-install-instructions{padding:13px 15px;border:1px solid #dbe8df;border-radius:15px;background:#f5f9f4;display:grid;gap:8px}
+.trace-install-instructions>strong{font-size:12px;color:#2c6046}
+.trace-install-instructions ol{counter-reset:step;list-style:none;margin:0;padding:0;display:grid;gap:11px}
+.trace-install-instructions li{display:flex;align-items:flex-start;gap:9px;color:#284d3c;font-size:12.5px;line-height:1.45}
+.trace-install-instructions li::before{counter-increment:step;content:counter(step);width:23px;height:23px;display:grid;place-items:center;background:#e1eee4;color:#286c46;border-radius:8px;font-weight:850;font-size:11px;flex:none}
+.trace-install-instructions>p{font-size:11px;line-height:1.5;color:#667d6d;margin:2px 0 0}
+.trace-install-actions{display:grid;gap:8px}
+.trace-install-actions .primary,.trace-install-actions .secondary{min-height:45px;border-radius:12px;font-size:13px}
+.trace-install-intro>.trace-install-footnote{font-size:10.5px;color:#718675;line-height:1.5;text-align:center;margin:0}
+.trace-install-dialog{position:fixed;inset:0;z-index:280;display:grid;place-items:center;padding:18px;box-sizing:border-box;background:rgba(15,34,27,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.trace-install-dialog-card{width:min(450px,100%);max-height:calc(100dvh - 42px);overflow-y:auto;background:#fffefa;padding:18px;border-radius:22px;box-shadow:0 20px 70px rgba(0,0,0,.18)}
+.trace-install-dialog-card header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+.trace-install-dialog-card header strong{font-size:12px;color:#3e6a55}
+.trace-install-dialog-card header button{border:0;background:#f0f5f0;border-radius:11px;min-width:38px;min-height:38px;font-size:22px;color:#35674f}
+.trace-install-dialog-card .trace-install-actions{margin-top:12px}
+body.trace-install-dialog-open{overflow:hidden}
+#traceInstallStatus{font-size:11px;color:#2c6b4b;line-height:1.5;margin:0}
+@media(max-width:390px){.trace-install-hero{gap:10px}.trace-install-hero img{width:54px;height:54px;border-radius:14px}.trace-install-hero h2{font-size:17.5px}.trace-install-instructions{padding:12px}.trace-install-instructions li{font-size:12px}}
+
+.trace-install-later{background:none;border:0;color:#64816f;font-size:12px;font-weight:730;min-height:38px;padding:6px 10px;text-decoration:underline;text-decoration-color:#bdd2c2;text-underline-offset:4px}
+.trace-install-later:focus-visible{outline:2px solid #3a805e;outline-offset:3px;border-radius:8px}

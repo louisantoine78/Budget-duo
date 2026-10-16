@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.8",
-  "release": "pwa-install-guide-before-signup"
+  "build": "5.31.9",
+  "release": "polish-optional-pwa-install-onboarding"
 }
