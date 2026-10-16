@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.30.3">
+<meta name="trace-build" content="5.31.0">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon-192.png">
@@ -54,7 +54,7 @@
         <label>Mot de passe<span class="password-field"><input id="cloudSignupPassword" type="password" autocomplete="new-password" minlength="8" required><button class="password-toggle" type="button" data-password-target="cloudSignupPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></span></label>
         <button class="primary full" type="submit">Créer mon compte</button>
       </form>
-      <p id="cloudAuthMessage" class="cloud-message"></p>
+      <p class="trace-auth-privacy">TRACE n’a pas besoin de tes identifiants bancaires. Ne saisis jamais ton mot de passe bancaire, ton NIP ou ton numéro complet de carte.</p><p id="cloudAuthMessage" class="cloud-message"></p>
     </div>
     <div id="cloudWorkspacePanel" class="cloud-panel hidden">
       <span class="cloud-kicker">Première connexion</span>
@@ -278,7 +278,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app-5.30.3.js"></script>
+<script src="v5-app-5.31.0.js"></script>
 <script src="trace-bank-doc-1.11.0.js"></script>
 <script src="trace-bank-ui-2.7.0.js"></script>
 <script src="trace-import-calendar-2.1.0.js"></script>
