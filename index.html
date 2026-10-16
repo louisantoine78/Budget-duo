@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.31.11">
+<meta name="trace-build" content="5.31.12">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest?v=5.31.2">
 <link rel="icon" type="image/svg+xml" href="assets/trace-wallet-v1.svg">
@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="v5-5.31.5.css">
 <link rel="stylesheet" href="onboarding-2.0.0.css">
 <link rel="stylesheet" href="trace-install-1.1.0.css">
+<link rel="stylesheet" href="trace-email-confirmation-1.0.0.css">
 </head>
 <body>
 <div id="cloudGate" class="cloud-gate">
@@ -276,6 +277,18 @@
     <div id="sheetBody"></div>
   </section>
 </div>
+<div id="traceEmailVerified" class="trace-email-verified hidden">
+  <section class="trace-email-verified-card" role="dialog" aria-modal="true" aria-labelledby="traceEmailVerifiedTitle">
+    <div class="trace-email-verified-icon" aria-hidden="true">✓</div>
+    <h2 id="traceEmailVerifiedTitle">Adresse courriel confirmée !</h2>
+    <p>Ton adresse est validée. Ton compte TRACE est prêt à être utilisé.</p>
+    <div class="trace-email-verified-note">
+      <strong>Tu as installé TRACE sur ton écran d’accueil ?</strong>
+      <p>Ouvre l’application depuis son icône. Si elle te demande de te connecter, utilise le courriel et le mot de passe choisis lors de ton inscription.</p>
+    </div>
+    <button type="button" class="primary full" id="traceEmailVerifiedContinue">Continuer dans ce navigateur</button>
+  </section>
+</div>
 <div id="traceInstallDialog" class="trace-install-dialog hidden">
   <section class="trace-install-dialog-card" role="dialog" aria-modal="true" aria-label="Installer TRACE">
     <header><strong>Installer TRACE</strong><button type="button" data-trace-install-close aria-label="Fermer">×</button></header>
@@ -296,7 +309,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app-5.31.11.js"></script>
+<script src="trace-email-confirmation-1.0.0.js"></script>
+<script src="v5-app-5.31.12.js"></script>
 <script src="trace-bank-doc-1.11.0.js"></script>
 <script src="trace-bank-ui-2.7.0.js"></script>
 <script src="trace-import-calendar-2.1.1.js"></script>
