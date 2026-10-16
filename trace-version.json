@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.9",
-  "release": "polish-optional-pwa-install-onboarding"
+  "build": "5.31.10",
+  "release": "fix-login-signup-tab-bug"
 }
