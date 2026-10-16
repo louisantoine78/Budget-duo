@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TRACE — portefeuille minimaliste">
+<rect width="512" height="512" fill="#10382A"/>
+<g fill="none" stroke="#F7F4ED" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+<path d="M157 225 L337 153 Q353 145 365 150 Q380 156 380 174 L380 210"/>
+<path d="M145 230 Q116 236 116 268 L116 377 Q116 410 150 410 L380 410 Q414 410 414 376 L414 277 Q414 241 379 241 L174 241"/>
+</g></svg>

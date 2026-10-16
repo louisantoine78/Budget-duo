@@ -1,6 +1,6 @@
 /* Trace 5.8.0 – app shell, network-first, self-updating home screen PWA */
-const SHELL='trace-shell-v5.31.1';
-const SHELL_URLS=['./index.html','./trace-launch-v2.html','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png'];
+const SHELL='trace-shell-v5.31.2';
+const SHELL_URLS=['./index.html','./trace-launch-v2.html','./manifest.webmanifest','./assets/trace-wallet-v1-192.png','./assets/trace-wallet-v1-512.png','./assets/trace-wallet-v1-180.png','./assets/trace-wallet-v1.svg'];
 self.addEventListener('install',event=>{
  self.skipWaiting();
  event.waitUntil(caches.open(SHELL).then(c=>c.addAll(SHELL_URLS)));
