@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.6",
-  "release": "legacy-banking-type-safe-rename"
+  "build": "5.31.7",
+  "release": "new-user-bank-onboarding-guide-sequence"
 }
