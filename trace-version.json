@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.29.2",
-  "release": "explicit-account-review-card-reward-guard"
+  "build": "5.29.3",
+  "release": "account-first-import-simple"
 }
