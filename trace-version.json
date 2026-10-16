@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.16",
-  "release": "improved-touch-swipes-and-restored-notification-preferences"
+  "build": "5.31.17",
+  "release": "two-party-personal-only-separation"
 }
