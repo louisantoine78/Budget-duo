@@ -10,14 +10,14 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Trace 5 — budget, activité, partage et patrimoine.">
-<meta name="trace-build" content="5.31.10">
+<meta name="trace-build" content="5.31.11">
 <title>Trace 5</title>
 <link rel="manifest" href="manifest.webmanifest?v=5.31.2">
 <link rel="icon" type="image/svg+xml" href="assets/trace-wallet-v1.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/trace-wallet-v1-180.png">
 <link rel="stylesheet" href="v5-5.31.5.css">
 <link rel="stylesheet" href="onboarding-2.0.0.css">
-<link rel="stylesheet" href="trace-install-1.0.2.css">
+<link rel="stylesheet" href="trace-install-1.1.0.css">
 </head>
 <body>
 <div id="cloudGate" class="cloud-gate">
@@ -39,26 +39,16 @@
     <div id="cloudAuthPanel" class="cloud-panel hidden">
       <span class="cloud-kicker">Espace sécurisé</span>
       <h1 id="cloudAuthTitle">Se connecter</h1>
-      <p>Utilise le même compte que sur Trace aujourd’hui.</p>
+      <p>Connecte-toi ou crée ton compte pour commencer.</p>
       <div id="traceInstallAuthBanner" class="trace-install-auth-banner" role="note">
         <img src="assets/trace-wallet-v1-192.png" alt="" width="40" height="40">
-        <div><strong>TRACE sur ton écran d’accueil</strong><small>Installe-la comme une application, sans App Store.</small></div>
+        <div><strong>TRACE sur ton écran d’accueil</strong><small>Sur iPhone, Android ou ordinateur.</small></div>
         <button id="traceInstallAuthHelp" type="button" aria-label="Découvrir comment installer TRACE">Comment&nbsp;?</button>
       </div>
       <div class="cloud-tabs">
         <button class="cloud-tab active" data-auth-tab="login">Connexion</button>
         <button class="cloud-tab" data-auth-tab="signup">Créer un compte</button>
       </div>
-      <section id="traceInstallIntro" class="trace-install-intro hidden" aria-label="Installer TRACE avant de créer son compte">
-        <div data-trace-install-content></div>
-        <div class="trace-install-actions">
-          <button type="button" class="primary full hidden" data-trace-install-native>Installer TRACE</button>
-          <button type="button" class="secondary full" id="traceInstallContinue">Continuer vers mon compte</button>
-          <button type="button" class="trace-install-later" id="traceInstallSkip">Continuer sans installer</button>
-        </div>
-        <p class="trace-install-footnote">L’installation est facultative. Ton compte et tes finances restent privés.</p>
-        <p id="traceInstallStatus" role="status"></p>
-      </section>
       <form id="cloudLoginForm" class="cloud-form">
         <label>Adresse courriel<input id="cloudLoginEmail" type="email" autocomplete="email" required></label>
         <label>Mot de passe<span class="password-field"><input id="cloudLoginPassword" type="password" autocomplete="current-password" minlength="6" required><button class="password-toggle" type="button" data-password-target="cloudLoginPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></span></label>
@@ -292,7 +282,9 @@
     <div data-trace-install-content></div>
     <div class="trace-install-actions">
       <button type="button" data-trace-install-native class="primary full hidden">Installer TRACE</button>
-      <button type="button" data-trace-install-close class="secondary full">J’ai compris</button>
+      <button type="button" class="secondary full" id="traceInstallCopy">Copier le lien de TRACE</button>
+      <button type="button" data-trace-install-close class="secondary full">Continuer</button>
+      <p id="traceInstallStatus" role="status" aria-live="polite"></p>
     </div>
   </section>
 </div>
@@ -304,13 +296,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
-<script src="v5-app-5.31.10.js"></script>
+<script src="v5-app-5.31.11.js"></script>
 <script src="trace-bank-doc-1.11.0.js"></script>
 <script src="trace-bank-ui-2.7.0.js"></script>
 <script src="trace-import-calendar-2.1.1.js"></script>
 <script src="trace-smart-inbox-2.3.0.js"></script>
 <script src="onboarding-2.0.2.js"></script>
-<script src="trace-install-1.0.1.js"></script>
+<script src="trace-install-1.1.0.js"></script>
 <script>
 if('serviceWorker' in navigator){
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{

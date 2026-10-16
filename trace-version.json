@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.10",
-  "release": "fix-login-signup-tab-bug"
+  "build": "5.31.11",
+  "release": "single-multi-platform-home-screen-install-guide"
 }
