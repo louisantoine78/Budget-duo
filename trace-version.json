@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.31.7",
-  "release": "new-user-bank-onboarding-guide-sequence"
+  "build": "5.31.8",
+  "release": "pwa-install-guide-before-signup"
 }
