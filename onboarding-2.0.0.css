@@ -1,0 +1,32 @@
+/* TRACE Guide 2.0 — larger text, smaller lessons, context-first positioning */
+body.trace-guide-open{overflow:hidden}
+.trace-guide{position:fixed;inset:0;z-index:170;pointer-events:none}
+.trace-guide.hidden,.trace-guide-spot.hidden{display:none!important}
+.trace-guide-spot{position:fixed;z-index:171;pointer-events:none;border:2px solid #fffefa;box-shadow:0 0 0 9999px rgba(12,27,26,.50),0 8px 20px rgba(0,0,0,.12);transition:left .18s ease,top .18s ease,width .18s ease,height .18s ease,border-radius .18s ease}
+.trace-guide-card{position:fixed;z-index:172;pointer-events:auto;box-sizing:border-box;width:min(346px,calc(100vw - 28px));max-height:min(342px,45dvh);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:#fffefa;border:1px solid #d9e6dc;border-radius:19px;padding:15px 17px 16px;box-shadow:0 14px 42px rgba(15,49,35,.17);scrollbar-width:thin}
+.trace-guide-top{display:flex;align-items:center;justify-content:space-between;gap:9px}
+.trace-guide-top>span{font-size:11px;font-weight:760;color:#668175;letter-spacing:.01em}
+.trace-guide-top button{border:0;background:transparent;color:#295f49;font-size:12px;font-weight:780;min-height:38px;padding:0 4px}
+.trace-guide-progress{height:4px;background:#e7eee8;border-radius:999px;overflow:hidden;margin:4px 0 11px}
+.trace-guide-progress i{display:block;height:100%;background:#265e47;border-radius:999px;transition:width .18s ease}
+.trace-guide-icon{display:none}
+.trace-guide-kicker{font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#39745b}
+.trace-guide-card h2{font-size:20px;line-height:1.2;letter-spacing:-.35px;margin:5px 0 8px;color:#153e31}
+.trace-guide-card p{font-size:13.5px;line-height:1.48;color:#506a5d;margin:0}
+.trace-guide-details{margin-top:9px;border-top:1px solid #e9eee9;padding-top:6px}
+.trace-guide-details summary{color:#326e51;font-weight:760;font-size:12px;cursor:pointer;padding:5px 0;line-height:1.4}
+.trace-guide-details summary:focus-visible{outline:2px solid #368b62;outline-offset:3px;border-radius:4px}
+.trace-guide-details:not([open]) ul{display:none}
+.trace-guide-card ul{list-style:none;margin:7px 0 2px;padding:0;display:grid;gap:7px}
+.trace-guide-card li{position:relative;padding-left:14px;font-size:12px;line-height:1.45;color:#365749}
+.trace-guide-card li:before{content:"";position:absolute;left:1px;top:.54em;width:5px;height:5px;border-radius:50%;background:#4e9973}
+.trace-guide-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;margin-top:12px}
+.trace-guide-actions .secondary,.trace-guide-actions .primary{height:44px;min-height:44px;border-radius:12px;font-size:13px;font-weight:770}
+.trace-guide-actions button:focus-visible,.trace-guide-top button:focus-visible{outline:2px solid #368b62;outline-offset:2px}
+.trace-guide-actions .secondary:disabled{opacity:.35}
+#traceGuideReplay .pico svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#traceGuideReplay .profile-chevron svg{width:18px;height:18px}
+@media(max-width:760px){.trace-guide-card{width:min(330px,calc(100vw - 26px));max-height:min(320px,44dvh);border-radius:17px;padding:13px 15px 14px}.trace-guide-card h2{font-size:18px;line-height:1.2}.trace-guide-card p{font-size:12.8px;line-height:1.48}.trace-guide-card li{font-size:11.8px}.trace-guide-details summary{font-size:11.8px}}
+@media(max-width:375px){.trace-guide-card{width:calc(100vw - 24px);max-height:min(300px,43dvh);padding:12px 13px}.trace-guide-card h2{font-size:17.5px}.trace-guide-card p{font-size:12.5px}}
+@media(max-height:640px){.trace-guide-card{max-height:42dvh}.trace-guide-card h2{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.trace-guide-spot,.trace-guide-progress i{transition:none}}
