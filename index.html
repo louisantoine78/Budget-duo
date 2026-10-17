@@ -10,12 +10,13 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="TRACE — ton budget, ton activité et ton patrimoine au même endroit.">
-<meta name="trace-build" content="5.31.21">
+<meta name="trace-build" content="5.31.22">
 <title>TRACE</title>
 <link rel="manifest" href="manifest.webmanifest?v=5.31.2">
 <link rel="icon" type="image/svg+xml" href="assets/trace-wallet-v1.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/trace-wallet-v1-180.png">
 <link rel="stylesheet" href="v5-5.31.17.css">
+<link rel="stylesheet" href="trace-home-review-1.0.0.css">
 <link rel="stylesheet" href="onboarding-2.0.0.css">
 <link rel="stylesheet" href="trace-install-1.1.0.css">
 <link rel="stylesheet" href="trace-email-confirmation-1.0.0.css">
@@ -134,8 +135,9 @@
       <div class="section-head"><h2>À faire</h2><button class="linkbtn" data-go="activity">Voir l’activité</button></div>
       <button class="alert-card" style="width:100%;text-align:left" data-go="review">
         <span class="alert-icon" id="pendingCountBadge">0</span>
-        <span class="alert-text"><strong>Transactions à valider</strong><div id="pendingText">Tout est à jour</div></span><span class="chev">›</span>
+        <span class="alert-text"><strong>Opérations à vérifier</strong><div id="pendingText">Chargement…</div></span><span class="chev">›</span>
       </button>
+      <div id="homeReviewAccounts" class="trace-home-review-accounts" aria-label="Opérations à vérifier par compte bancaire"></div>
 
       <div class="section-head"><h2>Budget en direct</h2><button class="linkbtn" data-go="budget">Voir le budget</button></div>
       <article class="card" id="homeBudgetCategories"></article>
@@ -310,10 +312,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
 <script src="trace-email-confirmation-1.0.0.js"></script>
-<script src="v5-app-5.31.21.js"></script>
+<script src="v5-app-5.31.22.js"></script>
 <script src="trace-bank-doc-1.11.0.js"></script>
 <script src="trace-bank-ui-2.7.0.js"></script>
-<script src="trace-import-calendar-2.1.1.js"></script>
+<script src="trace-import-calendar-2.1.2.js"></script>
 <script src="trace-smart-inbox-2.4.0.js"></script>
 <script src="onboarding-2.0.3.js"></script>
 <script src="trace-reminders-1.0.0.js"></script>
