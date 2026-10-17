@@ -1,0 +1,13 @@
+/* TRACE 5.32.0 — movement intent, progressive choices and live accounting previews */
+.trace-movement-families{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:15px 0}
+.trace-movement-family{border:1px solid #dce8de;background:#f7faf7;border-radius:14px;min-height:61px;padding:11px 9px;line-height:1.3;font-weight:750;color:#345e4a;font-size:12px;text-align:center;cursor:pointer}
+.trace-movement-family.selected{background:#e6f2e9;border-color:#4c9373;box-shadow:inset 0 0 0 1px #4c9373;color:#175740}
+.trace-movement-family:focus-visible{outline:3px solid #32856b;outline-offset:2px}
+.trace-movement-preview{background:#eef5ef;border:1px solid #d2e4d4;border-radius:15px;padding:13px 15px;color:#2b5944;line-height:1.6;font-size:12px;margin:14px 0;font-weight:650;overflow-wrap:anywhere}
+.trace-movement-error{color:#a73f34;font-size:12px;margin:10px 0}
+.trace-smart-link-wrap{margin-top:12px;padding:12px;border-radius:12px;background:#f7faf7;border:1px solid #dbe8dd}
+.trace-smart-link-wrap small,#manualFriendLink small{display:block;color:#6a8475;line-height:1.5;margin-top:7px}
+#manualFriendLink{margin-top:12px;padding:12px;background:#f8faf7;border-radius:12px;border:1px solid #dce8df}
+#txOtherMovement{margin-top:12px;text-align:center}
+.trace-smart-friend-note{margin-top:10px}
+@media(max-width:390px){.trace-movement-family{font-size:11px;padding:10px 7px;min-height:57px}.trace-movement-preview{padding:12px;font-size:11px}}
