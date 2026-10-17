@@ -1,0 +1,3 @@
+# TRACE 5.31.21 — Remboursements d'un proche
+
+Une opération de remboursement par un ami pour une dépense avancée est désormais distincte d’un remboursement commerçant : depuis l’import intelligent, la saisie manuelle et l’édition des mouvements existants. Elle est enregistrée comme `type:external_refund`, `transferPurpose:friend_reimbursement`. Elle crédite le compte courant si elle est confirmée et dans la période du solde de référence, sans revenu budgétaire ni réduction supplémentaire des dépenses. Le libellé apparaît dans Activité. Les dépenses initiales se partagent avec « Avec amis ». Les virements Interac restent à qualifier manuellement. Aucun enregistrement réel modifié. Vérification syntaxique JS et assertions statiques des branchements.
