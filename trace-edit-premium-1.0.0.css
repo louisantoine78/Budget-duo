@@ -1,0 +1,325 @@
+/* TRACE 5.32.3 — premium transaction editor. Scoped to this sheet only. */
+#sheetBackdrop.trace-premium-edit .sheet{
+  background:#f6f7f4;
+  border-radius:30px 30px 0 0;
+  padding:14px 17px calc(24px + env(safe-area-inset-bottom));
+}
+#sheetBackdrop.trace-premium-edit .sheet-head{
+  position:sticky;
+  top:-14px;
+  z-index:3;
+  background:rgba(246,247,244,.96);
+  border-bottom:1px solid #e8ede7;
+  margin:-1px -17px 0;
+  padding:9px 17px 14px;
+  gap:12px;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+#sheetBackdrop.trace-premium-edit #sheetTitle{
+  font-size:22px;
+  font-weight:850;
+  letter-spacing:-.65px;
+  line-height:1.14;
+  margin:0;
+  color:#182b39;
+}
+#sheetBackdrop.trace-premium-edit #sheetTitle:before{
+  content:"MOUVEMENT BUDGÉTAIRE";
+  display:block;
+  margin:0 0 6px;
+  color:#3d8070;
+  font-size:10px;
+  line-height:1.25;
+  font-weight:850;
+  letter-spacing:.13em;
+}
+#sheetBackdrop.trace-premium-edit #closeSheet{
+  display:grid;
+  place-items:center;
+  flex:0 0 42px;
+  height:42px;
+  width:42px;
+  border:1px solid #e8eee7;
+  border-radius:14px;
+  background:#e9eee9;
+  font-weight:450;
+  font-size:24px;
+  color:#4a6860;
+  box-shadow:none;
+}
+#sheetBackdrop.trace-premium-edit #closeSheet:focus-visible,
+#sheetBackdrop.trace-premium-edit .trace-edit-layout :is(button,input,select):focus-visible{
+  outline:2px solid #278574;
+  outline-offset:2px;
+}
+.trace-edit-layout{
+  display:grid;
+  gap:13px;
+  padding-top:14px;
+}
+.trace-edit-lead{
+  color:#718279;
+  font-size:12px;
+  line-height:1.58;
+  margin:0 3px 2px;
+  max-width:48ch;
+}
+.trace-edit-card{
+  border:1px solid #e6ece5;
+  background:#fffdfa;
+  border-radius:21px;
+  padding:17px 16px 18px;
+  box-shadow:0 4px 16px rgba(27,65,49,.035);
+  min-width:0;
+}
+.trace-edit-card-head{
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  margin:0 0 14px;
+}
+.trace-edit-card-index{
+  display:grid;
+  flex:0 0 32px;
+  place-items:center;
+  width:32px;
+  height:32px;
+  border:1px solid #dceadf;
+  border-radius:11px;
+  background:#eaf3ed;
+  color:#387763;
+  font-size:11px;
+  font-weight:850;
+  font-variant-numeric:tabular-nums;
+}
+.trace-edit-card-head h3{
+  margin:1px 0 4px;
+  color:#18362f;
+  font-size:15px;
+  font-weight:850;
+  letter-spacing:-.28px;
+  line-height:1.25;
+}
+.trace-edit-card-head p{
+  margin:0;
+  color:#87958d;
+  font-size:11px;
+  line-height:1.3;
+}
+.trace-edit-fields{min-width:0}
+.trace-edit-fields>.label2:first-child{margin-top:0}
+#sheetBackdrop.trace-premium-edit .trace-edit-card .label2{
+  display:block;
+  margin:11px 0 6px;
+  font-size:11px;
+  font-weight:760;
+  line-height:1.3;
+  color:#667870;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card .input{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  min-height:47px;
+  background:#fbfcfa;
+  border:1px solid #e0e8df;
+  color:#1b2d3c;
+  border-radius:13px;
+  font-weight:570;
+  font-size:16px!important;
+  line-height:1.3;
+  padding:11px 12px;
+  box-shadow:none;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card .input:focus{
+  border-color:#73a693;
+  box-shadow:0 0 0 3px rgba(43,130,117,.12);
+}
+#sheetBackdrop.trace-premium-edit #txName{
+  text-overflow:ellipsis;
+}
+.trace-edit-details-grid{
+  grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);
+  column-gap:10px;
+  align-items:end;
+}
+.trace-edit-details-grid>div{min-width:0}
+#sheetBackdrop.trace-premium-edit #txDate{
+  font-size:16px!important;
+  min-width:0;
+}
+.trace-edit-friends{
+  margin-top:15px;
+  padding:14px;
+  border-radius:15px;
+  border:1px solid #dfeae0;
+  background:#f3f8f4;
+}
+.trace-edit-friends>strong{display:block;font-size:12px;color:#235d4b;margin-bottom:6px}
+.trace-edit-friends-grid{gap:9px}
+.trace-edit-friends small{font-size:10px;color:#62796b;line-height:1.55;display:block;margin-top:9px}
+.trace-edit-impact{
+  padding:17px 16px 12px;
+  background:linear-gradient(150deg,#e8f3ea 0%,#f3f8f2 75%,#f8faf6 100%);
+  border:1px solid #cbe4d1;
+  border-radius:22px;
+  box-shadow:0 8px 20px rgba(31,84,60,.045);
+  min-width:0;
+}
+.trace-edit-impact-head{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  margin-bottom:13px;
+}
+.trace-edit-impact-symbol{
+  flex:0 0 37px;
+  display:grid;
+  place-items:center;
+  height:37px;
+  width:37px;
+  border-radius:12px;
+  background:#d6eade;
+  color:#27765a;
+  font-size:19px;
+  font-weight:850;
+}
+.trace-edit-impact-head h3{margin:0 0 4px;font-size:15px;font-weight:850;color:#174f3d;letter-spacing:-.2px}
+.trace-edit-impact-head p{margin:0;color:#688875;font-size:11px;line-height:1.45}
+.trace-edit-impact-rows{
+  padding:2px 13px;
+  border:1px solid rgba(76,130,93,.13);
+  border-radius:15px;
+  background:rgba(255,255,255,.65);
+}
+.trace-edit-impact-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+  padding:11px 0;
+  border-bottom:1px solid #e5ede3;
+  font-size:12px;
+  line-height:1.35;
+}
+.trace-edit-impact-row:last-child{border-bottom:0}
+.trace-edit-impact-row span{color:#6a7e73;min-width:0;flex:1}
+.trace-edit-impact-row strong{
+  flex-shrink:0;
+  color:#173b2f;
+  font-size:14px;
+  line-height:1.2;
+  font-weight:870;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.25px;
+  white-space:nowrap;
+}
+.trace-edit-impact-row.is-bank strong{color:#aa694c}
+.trace-edit-impact-row.is-total{padding:13px 0}
+.trace-edit-impact-row.is-total span{color:#235c46;font-weight:850}
+.trace-edit-impact-row.is-total strong{color:#195d45;font-size:17px}
+.trace-edit-impact-row.is-friends span{font-size:11px}
+.trace-edit-impact-message{
+  margin:11px 0 0;
+  padding:10px;
+  border-radius:10px;
+  background:#fff5e9;
+  color:#965a3b;
+  font-size:11px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-reclass{
+  display:flex;
+  width:100%;
+  align-items:center;
+  gap:10px;
+  min-height:46px;
+  padding:9px 11px;
+  border:1px solid #e4eae5;
+  border-radius:14px;
+  background:transparent;
+  text-align:left;
+  color:#2d6554;
+  font-size:12px;
+  font-weight:780;
+}
+.trace-edit-reclass>span:nth-child(2){flex:1}
+.trace-edit-reclass>span:last-child{font-size:20px;color:#649583}
+.trace-edit-reclass-icon{
+  display:grid;
+  place-items:center;
+  flex:0 0 30px;
+  width:30px;height:30px;
+  background:#e7f0e9;
+  color:#3c7964;
+  border-radius:9px;
+  font-size:19px;
+}
+.trace-edit-actions{
+  position:sticky;
+  bottom:calc(-24px - env(safe-area-inset-bottom));
+  z-index:2;
+  display:grid;
+  gap:9px;
+  margin:3px -17px -24px;
+  padding:14px 17px calc(20px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(246,247,244,.9),#f6f7f4 28%);
+  border-top:1px solid #e7ece6;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-save{
+  height:52px;
+  border-radius:16px;
+  font-size:14px;
+  letter-spacing:.01em;
+  box-shadow:0 6px 15px rgba(20,71,58,.14);
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-validate{
+  min-height:46px;
+  height:auto;
+  padding:12px;
+  border:1px solid #dbe8de;
+  border-radius:13px;
+  background:#e5f1e8;
+  color:#27634d;
+  font-size:13px;
+}
+.trace-edit-actions-secondary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:2px 3px 0;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-actions-secondary button{
+  width:auto;
+  min-height:37px;
+  border:0;
+  background:transparent;
+  font-weight:760;
+  font-size:12px;
+  color:#789087;
+  padding:6px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-actions-secondary .trace-edit-delete{
+  color:#b75e58;
+}
+#sheetBackdrop.trace-premium-edit #traceFeedback{
+  font-size:11px;
+  line-height:1.5;
+  color:#ad504b;
+}
+@media(max-width:440px){
+  #sheetBackdrop.trace-premium-edit .sheet{padding-left:14px;padding-right:14px}
+  #sheetBackdrop.trace-premium-edit .sheet-head{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+  .trace-edit-card{padding:15px 13px 16px}
+  .trace-edit-impact{padding:16px 13px 12px}
+  .trace-edit-actions{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+  .trace-edit-details-grid{grid-template-columns:minmax(0,1fr);gap:0}
+  .trace-edit-impact-row{padding:10px 0}
+}
+@media(min-width:761px){
+  #sheetBackdrop.trace-premium-edit .sheet{width:min(630px,100%);padding-left:22px;padding-right:22px}
+  #sheetBackdrop.trace-premium-edit .sheet-head{margin-left:-22px;margin-right:-22px;padding-left:22px;padding-right:22px}
+  .trace-edit-actions{margin-left:-22px;margin-right:-22px;padding-left:22px;padding-right:22px}
+  .trace-edit-details-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}
+}
