@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.32.1",
-  "release": "convert-existing-bank-outflow-to-vacation-expense-with-split"
+  "build": "5.32.2",
+  "release": "account-guided-import-and-card-payment-evidence"
 }
