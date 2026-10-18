@@ -1,0 +1,213 @@
+/* TRACE 5.32.5 — bank transaction editor: refined input system and reliable iPhone date */
+#sheetBackdrop.trace-premium-edit .sheet{
+ background:linear-gradient(180deg,#f7f9f6 0%,#f5f7f4 100%);
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-layout{gap:12px}
+#sheetBackdrop.trace-premium-edit .trace-edit-card{
+ position:relative;min-width:0;
+ background:linear-gradient(155deg,#fffefc 10%,#fbfdfa 100%);
+ border:1px solid #dee9df;
+ border-radius:21px;
+ padding:15px 15px 16px;
+ box-shadow:0 7px 20px rgba(17,65,44,.035),0 1px 1px rgba(17,65,44,.025);
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card-head{
+ align-items:center;gap:11px;margin-bottom:12px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card-index{
+ width:31px;height:31px;flex:0 0 31px;
+ border:1px solid #d2e8db;
+ background:#ebf5ee;
+ color:#347760;
+ font-size:10px;letter-spacing:.01em;
+ border-radius:11px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card-head h3{
+ font-size:15px;letter-spacing:-.28px;font-weight:850;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card-head p{
+ font-size:10px;color:#8b998e;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card .label2{
+ margin:12px 0 7px;
+ font-size:11px;letter-spacing:.005em;
+ font-weight:760;color:#718177;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card .label2:first-child{margin-top:0}
+#sheetBackdrop.trace-premium-edit .trace-edit-control{
+ position:relative;
+ display:flex;align-items:stretch;
+ width:100%;min-width:0;
+ min-height:48px;
+ background:linear-gradient(180deg,#f9fbf9 0%,#f3f7f4 100%);
+ border:1px solid #dbe8de;
+ border-radius:15px;
+ box-shadow:inset 0 1px 2px rgba(15,51,33,.018),0 1px 0 rgba(255,255,255,.9);
+ box-sizing:border-box;
+ transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-control:focus-within{
+ background:#fff;
+ border-color:#55a384;
+ box-shadow:0 0 0 3px rgba(51,143,103,.115),0 5px 13px rgba(24,84,54,.04);
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-control .input{
+ display:block;
+ flex:1 1 auto;
+ box-sizing:border-box!important;
+ width:100%!important;
+ min-width:0!important;
+ max-width:100%!important;
+ min-height:47px;
+ height:auto;
+ margin:0!important;
+ padding:11px 15px!important;
+ background:transparent!important;
+ border:0!important;
+ border-radius:14px!important;
+ box-shadow:none!important;
+ color:#1d3440!important;
+ font-size:16px!important;
+ font-weight:630!important;
+ line-height:1.3;
+ outline:none!important;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-control .input:focus{box-shadow:none!important}
+#sheetBackdrop.trace-premium-edit .trace-edit-control .input:disabled{
+ opacity:.58;cursor:not-allowed;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-select-control select.input{
+ -webkit-appearance:none!important;
+ appearance:none!important;
+ cursor:pointer;
+ text-overflow:ellipsis;
+ padding-right:39px!important;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-select-control::after{
+ content:"";
+ position:absolute;
+ pointer-events:none;
+ right:17px;top:50%;
+ width:7px;height:7px;
+ border-right:2px solid #618475;
+ border-bottom:2px solid #618475;
+ transform:translateY(-72%) rotate(45deg);
+ opacity:.9;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-text-control input{
+ text-overflow:ellipsis;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-text-control:focus-within input{
+ text-overflow:clip;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-money-control input{
+ font-size:19px!important;
+ font-weight:780!important;
+ letter-spacing:-.4px;
+ font-variant-numeric:tabular-nums;
+ padding-right:69px!important;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-currency{
+ position:absolute;right:12px;top:50%;
+ transform:translateY(-50%);
+ display:grid;place-items:center;
+ border:1px solid #dde9df;
+ border-radius:8px;
+ padding:4px 6px;
+ background:#edf3ee;
+ color:#537965;
+ font-size:10px;
+ font-weight:850;
+ line-height:1;
+ pointer-events:none;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-details-grid{
+ grid-template-columns:1fr;
+ gap:0;
+ min-width:0;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-details-grid>div{
+ min-width:0;
+ max-width:100%;
+ width:100%;
+ overflow:visible;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-date-control{
+ min-width:0;
+ width:100%;
+ overflow:hidden;
+ isolation:isolate;
+}
+#sheetBackdrop.trace-premium-edit #txDate{
+ display:block!important;
+ box-sizing:border-box!important;
+ width:100%!important;
+ min-width:0!important;
+ max-width:100%!important;
+ overflow:hidden!important;
+ -webkit-appearance:auto!important;
+ appearance:auto!important;
+ padding-inline:13px!important;
+ text-align:left!important;
+ font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop.trace-premium-edit #txDate::-webkit-date-and-time-value{
+ text-align:left;
+ min-width:0;
+}
+#sheetBackdrop.trace-premium-edit #txDate::-webkit-datetime-edit{
+ min-width:0;
+ padding:0;
+ text-align:left;
+}
+#sheetBackdrop.trace-premium-edit #txDate::-webkit-calendar-picker-indicator{
+ margin:0;
+ padding:0;
+ opacity:.72;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-card .trace-edit-type-note{
+ color:#447960;font-size:10px;font-weight:660;
+ padding:8px 11px;
+ border-radius:10px;background:#eef5ef;
+ border:1px solid #deecdf;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-friends{
+ background:#f2f8f3;border-color:#d8e8dc;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-reclass{
+ background:rgba(237,247,240,.65);
+ border-color:#dce9df;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-reclass:focus-visible{
+ outline:2px solid #35866a;outline-offset:2px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact{
+ background:linear-gradient(145deg,#ebf6ee,#f5faf4);
+ border-color:#c8e4d0;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-actions{
+ background:linear-gradient(180deg,rgba(247,249,246,.95),#f7f9f6 36%);
+}
+@media(min-width:720px){
+ #sheetBackdrop.trace-premium-edit .trace-edit-details-grid{
+  grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);
+  gap:12px;
+ }
+}
+@media(max-width:440px){
+ #sheetBackdrop.trace-premium-edit .trace-edit-card{padding:13px 13px 16px}
+ #sheetBackdrop.trace-premium-edit .trace-edit-details-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:0!important;
+ }
+ #sheetBackdrop.trace-premium-edit .trace-edit-date-control{
+  max-width:100%!important;
+ }
+ #sheetBackdrop.trace-premium-edit #txDate{
+  min-width:0!important;max-width:100%!important;width:100%!important;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #sheetBackdrop.trace-premium-edit .trace-edit-control{transition:none}
+}
