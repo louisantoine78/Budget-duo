@@ -1,0 +1,116 @@
+/* TRACE 5.32.4 — compact transaction editor polish, strictly scoped */
+#sheetBackdrop.trace-premium-edit .trace-edit-layout{gap:10px;padding-top:10px}
+#sheetBackdrop.trace-premium-edit .trace-edit-lead{margin:0 2px 0;font-size:11px;line-height:1.45;color:#78877c}
+#sheetBackdrop.trace-premium-edit .trace-edit-card{padding:13px 14px 14px;border-radius:19px}
+#sheetBackdrop.trace-premium-edit .trace-edit-card-head{margin-bottom:9px;gap:9px}
+#sheetBackdrop.trace-premium-edit .trace-edit-card-index{height:29px;width:29px;flex-basis:29px;border-radius:10px}
+#sheetBackdrop.trace-premium-edit .trace-edit-card-head h3{font-size:14px;margin:0 0 2px}
+#sheetBackdrop.trace-premium-edit .trace-edit-card-head p{font-size:10px}
+#sheetBackdrop.trace-premium-edit .trace-edit-card .label2{margin:8px 0 5px;font-size:11px}
+#sheetBackdrop.trace-premium-edit .trace-edit-card .input{min-height:43px;border-radius:12px;padding:8px 11px}
+#sheetBackdrop.trace-premium-edit .trace-edit-type-note{font-size:10px;color:#437763;line-height:1.4;margin:7px 1px 0}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact{
+ padding:13px 14px 12px;
+ border-radius:18px;
+ background:linear-gradient(135deg,#edf6ef,#f7faf5);
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-head{gap:9px;margin-bottom:9px}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-symbol{width:30px;height:30px;flex-basis:30px;border-radius:10px;font-size:16px}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-head h3{margin:0;font-size:13px}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-bank{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:10px;padding:8px 11px;
+ background:rgba(255,255,255,.78);
+ border:1px solid #dbe9df;border-radius:11px;
+ font-size:11px;line-height:1.35;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-bank span{color:#5b7568}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-bank strong{
+ font-size:15px;white-space:nowrap;color:#a76a4c;
+ font-weight:840;font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-mini-label{
+ font-size:9px;color:#6c8a7a;letter-spacing:.1em;font-weight:800;
+ margin:11px 1px 6px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-mini{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:6px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-stat{
+ min-width:0;padding:9px 7px 8px;
+ border-radius:11px;background:rgba(255,255,255,.76);
+ border:1px solid #e0ebe1;
+ text-align:center;display:flex;flex-direction:column;
+ align-items:center;justify-content:center;gap:4px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-stat span{
+ display:block;max-width:100%;
+ color:#688173;font-size:10px;line-height:1.25;
+ overflow-wrap:anywhere;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-stat strong{
+ display:block;color:#225542;font-size:14px;font-weight:850;
+ white-space:nowrap;font-variant-numeric:tabular-nums;
+ letter-spacing:-.35px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-stat.is-total{
+ background:#dfeee4;border-color:#cfe3d5;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-stat.is-total span,
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-stat.is-total strong{color:#145841}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-friends{
+ display:flex;align-items:center;justify-content:space-between;
+ font-size:10px;color:#718677;gap:8px;padding:9px 2px 0;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-impact-friends strong{
+ color:#255742;white-space:nowrap;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-actions-secondary{
+ margin:0;padding:2px 2px 0;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-actions-secondary button{min-height:40px}
+#sheetBackdrop.trace-premium-edit .trace-edit-actions{
+ gap:8px;
+ bottom:calc(-24px - env(safe-area-inset-bottom));
+ padding:10px 17px calc(12px + env(safe-area-inset-bottom));
+ margin:0 -17px -24px;
+ box-shadow:0 -7px 15px rgba(26,57,42,.04);
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-save{
+ height:47px;border-radius:14px;font-size:13px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-validate{min-height:43px}
+#sheetBackdrop.trace-premium-edit .trace-edit-reclass{
+ min-height:41px;font-size:11px;padding:7px 10px;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-reclass-icon{
+ width:27px;height:27px;flex-basis:27px;font-size:17px;
+}
+#sheetBackdrop.trace-premium-edit #txDate{
+ box-sizing:border-box!important;
+ display:block!important;width:100%!important;
+ max-width:100%!important;min-width:0!important;
+ overflow:hidden;padding-inline:9px;
+}
+@media(max-width:440px){
+ #sheetBackdrop.trace-premium-edit .sheet{padding-left:13px;padding-right:13px}
+ #sheetBackdrop.trace-premium-edit .sheet-head{
+   margin-left:-13px;margin-right:-13px;padding-left:13px;padding-right:13px;
+ }
+ #sheetBackdrop.trace-premium-edit .trace-edit-card{padding:13px 12px 14px}
+ #sheetBackdrop.trace-premium-edit .trace-edit-details-grid{
+   grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);
+   column-gap:9px;
+ }
+ #sheetBackdrop.trace-premium-edit .trace-edit-details-grid>div{min-width:0;overflow:hidden}
+ #sheetBackdrop.trace-premium-edit .trace-edit-actions{
+   margin-left:-13px;margin-right:-13px;
+   padding-left:13px;padding-right:13px;
+ }
+}
+@media(max-width:355px){
+ #sheetBackdrop.trace-premium-edit .trace-edit-details-grid{grid-template-columns:1fr}
+ #sheetBackdrop.trace-premium-edit .trace-edit-impact-stat{padding:8px 3px}
+ #sheetBackdrop.trace-premium-edit .trace-edit-impact-stat strong{font-size:12px}
+}
