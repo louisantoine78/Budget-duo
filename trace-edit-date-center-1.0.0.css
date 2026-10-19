@@ -1,0 +1,77 @@
+/* TRACE 5.32.6: center the date reliably in mobile Safari without replacing the native date picker. */
+#sheetBackdrop.trace-premium-edit .trace-edit-date-control{
+ position:relative;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ min-width:0;
+ width:100%;
+ overflow:hidden;
+ cursor:pointer;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-date-display{
+ position:absolute;
+ inset:0;
+ z-index:1;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ padding:0 42px;
+ box-sizing:border-box;
+ color:#1d3440;
+ font-size:16px;
+ line-height:1.3;
+ font-weight:630;
+ white-space:nowrap;
+ pointer-events:none;
+ text-align:center;
+ font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-date-icon{
+ position:absolute;
+ right:17px;
+ top:50%;
+ z-index:1;
+ width:17px;
+ height:16px;
+ box-sizing:border-box;
+ transform:translateY(-50%);
+ background:linear-gradient(to bottom,transparent 4px,#8ba59a 4px,#8ba59a 5.5px,transparent 5.5px);
+ border:1.6px solid #819c90;
+ border-radius:3px;
+ opacity:.9;
+ pointer-events:none;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-date-icon::before{
+ content:"";
+ position:absolute;
+ left:3px;top:-4px;
+ width:2px;height:6px;
+ background:#819c90;
+ border-radius:2px;
+ box-shadow:7px 0 0 #819c90;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-date-control #txDate{
+ position:absolute!important;
+ inset:0!important;
+ z-index:2!important;
+ display:block!important;
+ width:100%!important;
+ height:100%!important;
+ min-height:100%!important;
+ max-width:100%!important;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+ opacity:0!important;
+ cursor:pointer;
+ -webkit-appearance:auto!important;
+ appearance:auto!important;
+}
+#sheetBackdrop.trace-premium-edit .trace-edit-date-control:focus-within{
+ border-color:#55a384;
+ box-shadow:0 0 0 3px rgba(51,143,103,.115);
+}
+@media(prefers-reduced-motion:reduce){
+ #sheetBackdrop.trace-premium-edit .trace-edit-date-control{transition:none}
+}

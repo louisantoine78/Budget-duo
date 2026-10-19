@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.32.5",
-  "release": "premium-editor-fields-ios-date-layout"
+  "build": "5.32.6",
+  "release": "centered-ios-date-in-budget-transaction-editor"
 }
