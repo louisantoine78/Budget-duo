@@ -1,0 +1,55 @@
+/* TRACE 5.33.0 — contextual nature descriptions, account-first classification */
+.trace-movement-help{
+ margin:9px 0 16px;
+ padding:12px 13px;
+ border:1px solid #e0e9e2;
+ border-radius:13px;
+ background:#f7f9f6;
+ color:#577268;
+ font-size:12px;
+ line-height:1.55;
+ font-weight:520;
+}
+.trace-movement-families{margin:12px 0 15px}
+.trace-movement-family{transition:background .15s ease,border-color .15s ease}
+.trace-movement-family:disabled{
+ cursor:not-allowed;
+ opacity:.34;
+ background:#f4f5f3;
+ color:#748479;
+ border-color:#edf0eb;
+}
+.trace-smart-nature-explain{
+ margin:9px 0 13px;
+ padding:12px 13px;
+ border:1px solid #dfe8e2;
+ border-radius:13px;
+ background:#f8faf7;
+ color:#627b6e;
+ font-size:12px;
+ line-height:1.5;
+}
+.trace-smart-nature-explain strong{
+ display:block;
+ font-size:12px;
+ font-weight:830;
+ color:#2e6551;
+ margin-bottom:4px;
+}
+.trace-smart-nature-explain span{
+ display:block;
+ font-size:12px;
+ line-height:1.55;
+}
+.trace-smart-draft .trace-smart-field .smart-family,
+.trace-smart-draft .trace-smart-field .smart-type{
+ min-height:46px;
+ border-radius:13px;
+}
+@media(max-width:380px){
+ .trace-movement-help,.trace-smart-nature-explain{padding:10px 11px;font-size:11px}
+ .trace-smart-nature-explain span{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){
+ .trace-movement-family{transition:none}
+}
