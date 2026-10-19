@@ -90,12 +90,24 @@
   labelFor('txType',names.nature);
   labelFor('txDate',names.date);
   const type=doc.getElementById('txType'),current=type.value;
-  type.innerHTML=options(['expense','income','refund'].map(id=>root.TraceMovement.get(id)),current,{placeholder:false});
+  // The transaction editor refreshes this list after setting its bank account and original direction.
+  // Do not replace it here with the former three-item menu.
   type.value=current;
+  const typeControl=type.closest('.trace-edit-control');
+  if(typeControl&&!doc.getElementById('txNatureHelp')){
+   const tip=doc.createElement('p');
+   tip.id='txNatureHelp';tip.className='trace-movement-help trace-edit-context-note';
+   tip.setAttribute('aria-live','polite');
+   typeControl.after(tip);
+  }
   const link=doc.getElementById('txOtherMovement');
   if(link){
-   const spans=link.querySelectorAll('span');
-   if(spans[1])spans[1].textContent='Autre nature de mouvement : paiement, virement, épargne';
+   // The complete nature selector now includes transfers, payments and savings.
+   // Keep the legacy element for its existing event binding, but hide the duplicate route.
+   link.hidden=true;
+   link.setAttribute('aria-hidden','true');
+   link.tabIndex=-1;
+   link.style.display='none';
   }
  }
  function enhanceBankMovement(){
