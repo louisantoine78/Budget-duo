@@ -24,4 +24,6 @@ jobs:
           node --check trace-bank-ui-2.8.0.js
           node --check sw.js
       - name: Run isolated accounting regressions
-        run: node tests/trace-regression.test.cjs
+        run: |
+          node tests/trace-regression.test.cjs
+          node tests/trace-ledger-scenarios.test.cjs
