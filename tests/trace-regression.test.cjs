@@ -52,10 +52,38 @@ test('remboursement partiel encore 30',()=>assert.equal(M.linkable([original],[o
 test('refus dépassement remboursement',()=>assert.throws(()=>M.validateLink('e1',[original],[original,already],'la','2026-10-19',31)));
 test('répartition dépasse montant',()=>assert.throws(()=>M.amounts(100,'custom','la',{},80,30)));
 test('interac aucune nature automatique',()=>assert.equal(G.suggest('checking','transfer','Virement Interac envoyé'),''));
-const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.34.4.js'),'utf8');
+const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.0.js'),'utf8');
 test('validation par lot sécurisée',()=>assert.match(appSource,/selected\.some\(x=>!legacyImportNatureReady\(x\.t\)\)/));
 test('validation globale sécurisée',()=>assert.match(appSource,/return legacyImportNatureReady\(t\)/));
 test('validation rapide OCR sécurisée',()=>assert.match(appSource,/legacyImportNatureReady\(t\)&&\s*manualCategories/));
 test('requalification tracée',()=>assert.ok(appSource.includes("natureReviewed:t.status!=='confirmed'?true:t.natureReviewed")));
 test('carte rapprochée non transformable en retour marchand',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardPaymentLabel\(t\.name\)/));
+const importerSource=fs.readFileSync(path.join(__dirname,'..','trace-bank-ui-2.8.0.js'),'utf8');
+test('OCR nature unique',()=>assert.match(importerSource,/class="input docNature"/));
+test('OCR nature groups via shared UI',()=>assert.match(importerSource,/U\.options\(U\.kindsFor\(bankKind,dir\),nature\)/));
+test('OCR old Type removed',()=>assert.doesNotMatch(importerSource,/class="input docType"/));
+test('OCR bank direction available',()=>assert.match(importerSource,/class="input docDirection"/));
+test('OCR rejects missing nature',()=>assert.match(importerSource,/const missing=rows\.findIndex/));
+test('OCR card settlement protected',()=>assert.match(importerSource,/bankKind==='card'&&G\.cardPaymentLabel\(r\.name\)/));
+test('OCR explicit review tracked',()=>assert.match(importerSource,/natureReviewed:el\.dataset\.natureReviewed==='yes'/));
+test('OCR budget-only category',()=>assert.match(importerSource,/docCategoryWrap/));
+test('OCR budget-only sharing',()=>assert.match(importerSource,/docShareWrap/));
+test('OCR compact movement impact',()=>assert.match(importerSource,/trace-doc-impact/));
+test('import stores movement purpose',()=>assert.match(appSource,/transferPurpose:nature\.purpose\|\|null/));
+test('import validates banking direction',()=>assert.match(appSource,/nature\.direction!==\(direction==='in'\?1:-1\)/));
+test('import card evidence not double counted',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardPaymentLabel\(name\)/));
+test('import nonbudget no category',()=>assert.match(appSource,/const chosenCategory=nature\.budget==='none'\?'':/));
+test('movement editor validates pending operation',()=>assert.match(appSource,/const next=\{\.\.\.t,type,date,name,status:'confirmed'/));
+test('active 5.35.0',()=>assert.match(appSource,/__TRACE_BUILD__='5\.35\.0'/));
+[
+ ['expense',true,'expense'],['friend_payment_expense',true,'expense'],['refund',true,'refund'],
+ ['income',true,'income'],['card_payment',false,'none'],['transfer',false,'none'],
+ ['savings_transfer',false,'none'],['savings_withdrawal',false,'none'],
+ ['friend_reimbursement',false,'none'],['friend_advance',false,'none'],
+ ['friend_advance_return',false,'none']
+].forEach(([kind,budget,purpose])=>test('nature import '+kind,()=>{
+ const def=M.get(kind);assert.ok(def);
+ assert.equal(def.budget!=='none',budget);assert.equal(def.budget,purpose);
+}));
+
 console.log(checked+' assertions réussies');
