@@ -2333,10 +2333,13 @@ function renderWealth(){
  const ports=accounts.map(a=>({a,p:portfolioLedger(a)}));
  const missing=ports.filter(x=>!x.p.hasFx||x.a.savingsTracking==='linked'&&!x.p.configured);
  const investments=ports.reduce((sum,x)=>sum+(x.p.cad||0),0),total=(bk.net||0)+investments;
- $('#wealthTotal').textContent=money(total);
- $('#wealthSub').textContent=missing.length?'Total partiel · '+missing.length+' compte(s) à configurer ou sans conversion CAD':'Liquidités et placements suivis · les CELI restent estimatifs';
+ $('#wealthTotal').textContent=bk.needsCardReview?'À rapprocher':money(total);
+ $('#wealthSub').textContent=bk.needsCardReview?
+  'La carte présente un avoir non vérifié. Contrôle les achats et les paiements avant de te fier au patrimoine.':
+  missing.length?'Total partiel · '+missing.length+' compte(s) à configurer ou sans conversion CAD':
+  'Liquidités et placements suivis · les CELI restent estimatifs';
  $('#assetGrid').innerHTML=[
- '<button class="asset-card" type="button" id="wealthLiquidityCard"><span class="a-icon">$</span><span>Liquidités</span><b>'+(bk.net===null?'À configurer':money(bk.net))+'</b><small>Même solde que dans Accueil · Configurer ›</small></button>',
+ '<button class="asset-card" type="button" id="wealthLiquidityCard"><span class="a-icon">$</span><span>Liquidités</span><b>'+(bk.net===null?'À configurer':bk.needsCardReview?'À rapprocher':money(bk.net))+'</b><small>Même solde que dans Accueil · Configurer ›</small></button>',
  ...ports.map(({a,p})=>'<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'"><span class="a-icon">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+(a.savingsTracking==='linked'&&!p.configured?'À configurer':nativeMoney(p.value,a.currency))+'</b><small>'+
  (a.savingsTracking==='linked'?'Solde estimé depuis tes virements':p.hasFx?money(p.cad)+' CAD':'Conversion CAD à saisir')+' · Détails ›</small></button>'),
  '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon">＋</span><span>Ajouter un compte</span><b>Nouveau</b><small>PEA, CELI, REER…</small></button>'
@@ -2768,7 +2771,10 @@ function openAccountSettings(){
      '<label class="label2">Moment du solde</label><select class="input account-mode" data-id="'+esc(a.id)+'">'+
      '<option value="start"'+(modes[a.id]!=='end'?' selected':'')+'>Début de la journée (jour inclus)</option>'+
      '<option value="end"'+(modes[a.id]==='end'?' selected':'')+'>Fin de la journée (jour exclu)</option></select>':
-     '<div class="trace-bank-partner-balance"><span>Solde estimé</span><b>'+(estimate===null?'À configurer':bankMoney(estimate))+'</b></div>')+
+     '<div class="trace-bank-partner-balance"><span>Solde estimé</span><b>'+
+      (estimate===null?'À configurer':accountType(a)==='card'?
+        (estimate<=0?money(Math.abs(estimate))+' de dette':'Avoir estimé '+money(estimate)):bankMoney(estimate))+
+      '</b></div>')+
     '</div>';
   }).join(''):'<div class="empty-note">Aucun compte bancaire n’est encore configuré pour cette vue.</div>')+
   (mine.length?'<button class="primary full" id="saveAccountSettings" style="margin-top:16px">Enregistrer mes soldes</button>':'')+
@@ -2791,7 +2797,7 @@ function openAccountSettings(){
     const account=state.accounts.find(a=>a.id===input.dataset.id);
     const amount=Number(input.value);
     if(accountType(account)==='card'&&amount<0){
-     $('#traceFeedback').textContent='Pour une carte, saisis la dette en positif. TRACE la soustrait automatiquement.';
+     traceNotice(Error('Pour une carte, saisis la dette en positif. TRACE la soustrait automatiquement.'));
      return;
     }
     newBalances[input.dataset.id]=accountType(account)==='card'?-Math.abs(amount):amount;
