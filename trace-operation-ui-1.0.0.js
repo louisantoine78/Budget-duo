@@ -146,6 +146,7 @@
   const moneyRow=fields.querySelector('.manual-money-row');if(moneyRow)twoBody.appendChild(moneyRow);
   const named=[['manualCategoryWrap'],['manualWhoWrap'],['manualFriendsGroup'],['manualTargetWrap'],['manualSavingsWrap'],['manualFriendLink']];
   named.forEach(([id])=>{const el=doc.getElementById(id);if(el)threeBody.appendChild(el)});
+  const whoLabel=doc.querySelector('#manualWhoWrap label');if(whoLabel)whoLabel.textContent=names.allocation;
   const impact=doc.createElement('section');impact.className='trace-edit-impact trace-bank-impact';
   impact.innerHTML='<div class="trace-edit-impact-head"><span class="trace-edit-impact-symbol" aria-hidden="true">↗</span><div><h3>'+names.impact+'</h3></div></div>';
   const preview=doc.getElementById('manualMovementImpact');if(preview){preview.classList.add('trace-bank-impact-summary');impact.appendChild(preview)}
