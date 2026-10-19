@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 const ctx=vm.createContext({window:{}});
-for(const name of ['trace-movement-5.33.0.js','trace-import-guide-1.1.1.js','trace-operation-ui-1.0.0.js']){
+for(const name of ['trace-movement-5.33.0.js','trace-import-guide-1.1.2.js','trace-operation-ui-1.0.0.js']){
  vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),ctx,{filename:name});
 }
 const M=ctx.window.TraceMovement,G=ctx.window.TraceImportGuide,U=ctx.window.TraceOperationUI;
@@ -52,29 +52,29 @@ test('remboursement partiel encore 30',()=>assert.equal(M.linkable([original],[o
 test('refus dépassement remboursement',()=>assert.throws(()=>M.validateLink('e1',[original],[original,already],'la','2026-10-19',31)));
 test('répartition dépasse montant',()=>assert.throws(()=>M.amounts(100,'custom','la',{},80,30)));
 test('interac aucune nature automatique',()=>assert.equal(G.suggest('checking','transfer','Virement Interac envoyé'),''));
-const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.2.js'),'utf8');
+const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.3.js'),'utf8');
 test('validation par lot sécurisée',()=>assert.match(appSource,/selected\.some\(x=>!legacyImportNatureReady\(x\.t\)\)/));
 test('validation globale sécurisée',()=>assert.match(appSource,/return legacyImportNatureReady\(t\)/));
 test('validation rapide OCR sécurisée',()=>assert.match(appSource,/legacyImportNatureReady\(t\)&&\s*manualCategories/));
 test('requalification tracée',()=>assert.ok(appSource.includes("natureReviewed:t.status!=='confirmed'?true:t.natureReviewed")));
-test('carte rapprochée non transformable en retour marchand',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardPaymentLabel\(t\.name\)/));
-const importerSource=fs.readFileSync(path.join(__dirname,'..','trace-bank-ui-2.8.0.js'),'utf8');
+test('carte rapprochée non transformable en retour marchand',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardStatementSettlementLabel\(t\.name\)/));
+const importerSource=fs.readFileSync(path.join(__dirname,'..','trace-bank-ui-2.8.1.js'),'utf8');
 test('OCR nature unique',()=>assert.match(importerSource,/class="input docNature"/));
 test('OCR nature groups via shared UI',()=>assert.match(importerSource,/U\.options\(U\.kindsFor\(bankKind,dir\),nature\)/));
 test('OCR old Type removed',()=>assert.doesNotMatch(importerSource,/class="input docType"/));
 test('OCR bank direction available',()=>assert.match(importerSource,/class="input docDirection"/));
 test('OCR rejects missing nature',()=>assert.match(importerSource,/const missing=rows\.findIndex/));
-test('OCR card settlement protected',()=>assert.match(importerSource,/bankKind==='card'&&G\.cardPaymentLabel\(r\.name\)/));
+test('OCR card settlement protected',()=>assert.match(importerSource,/bankKind==='card'&&G\.cardStatementSettlementLabel\(r\.name\)/));
 test('OCR explicit review tracked',()=>assert.match(importerSource,/natureReviewed:el\.dataset\.natureReviewed==='yes'/));
 test('OCR budget-only category',()=>assert.match(importerSource,/docCategoryWrap/));
 test('OCR budget-only sharing',()=>assert.match(importerSource,/docShareWrap/));
 test('OCR compact movement impact',()=>assert.match(importerSource,/trace-doc-impact/));
 test('import stores movement purpose',()=>assert.match(appSource,/transferPurpose:nature\.purpose\|\|null/));
 test('import validates banking direction',()=>assert.match(appSource,/nature\.direction!==\(direction==='in'\?1:-1\)/));
-test('import card evidence not double counted',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardPaymentLabel\(name\)/));
+test('import card evidence not double counted',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardStatementSettlementLabel\(name\)/));
 test('import nonbudget no category',()=>assert.match(appSource,/const chosenCategory=nature\.budget==='none'\?'':/));
 test('movement editor validates pending operation',()=>assert.match(appSource,/const next=\{\.\.\.t,type,date,name,status:'confirmed'/));
-test('active 5.35.2',()=>assert.match(appSource,/__TRACE_BUILD__='5\.35\.2'/));
+test('active 5.35.3',()=>assert.match(appSource,/__TRACE_BUILD__='5\.35\.3'/));
 [
  ['expense',true,'expense'],['friend_payment_expense',true,'expense'],['refund',true,'refund'],
  ['income',true,'income'],['card_payment',false,'none'],['transfer',false,'none'],
@@ -93,5 +93,40 @@ test('ancien solde positif de carte interprété comme dette',()=>assert.match(a
 test('carte saisie comme dette positive et stockée avec signe',()=>assert.match(appSource,/accountType\(account\)==='card'\?-Math\.abs\(amount\):amount/));
 test('alerte pour crédit non rapproché',()=>assert.match(appSource,/cardWarning\.hidden=!b\.needsCardReview/));
 test('CELI uniquement en information sur accueil',()=>assert.match(appSource,/\$\('#homeCELITransfers'\)\.textContent=money\(savedToCeli\)/));
+
+const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.3.1.js'),'utf8');
+[
+ 'PAIEMENT CAISSE','PAIEMENT REÇU','Paiement reçue','PAYMENT RECEIVED',
+ 'PAYMENT THANK YOU','Paiement de ma Mastercard','Règlement carte Visa'
+].forEach(label=>test('card statement label '+label,()=>assert.equal(G.cardStatementSettlementLabel(label),true)));
+[
+ 'PAIEMENT FACTURE ÉLECTRICITÉ','paiement IGA','FACTURE LOYER',
+ 'RETOUR COMMERÇANT AMAZON','UBER CANADA','Paiement internet mobile'
+].forEach(label=>test('not a card settlement '+label,()=>assert.equal(G.cardStatementSettlementLabel(label),false)));
+test('checking paiement caisse is not automatically a credit-card transfer',()=>assert.notEqual(G.suggest('checking','transfer','PAIEMENT CAISSE'),'card_payment'));
+test('card paiement caisse is not automatically a merchant refund',()=>assert.equal(G.suggest('card','refund','PAIEMENT CAISSE'),''));
+test('card paiement caisse credit direction',()=>assert.equal(G.direction('refund','card','PAIEMENT CAISSE'),'in'));
+test('card caisse cannot be approved as merchant refund',()=>assert.equal(G.safeForQuickApproval('card','refund','PAIEMENT CAISSE'),false));
+test('inbox detects card-side evidence',()=>assert.match(inboxSource,/guided\.cardStatementSettlementLabel\(d\.name\)/));
+test('inbox offers reconciliation',()=>assert.match(inboxSource,/payment=guide\.cardStatementSettlementLabel\(name\)/));
+test('legacy OCR blocks double credit',()=>assert.match(importerSource,/G\.cardStatementSettlementLabel\(r\.name\)/));
+test('backend verifies statement evidence',()=>assert.match(appSource,/if\(!window\.TraceImportGuide\.cardStatementSettlementLabel\(name\)\)/));
+const accounts=[
+ {id:'checking',type:'checking',owner:'la'},
+ {id:'card',type:'card',owner:'la'},
+ {id:'partnercard',type:'card',owner:'partner'}
+];
+const transfer={id:'transfer500',type:'transfer',status:'confirmed',accountId:'checking',toAccountId:'card',date:'2026-10-07',amountCAD:500,name:'Paiement carte'};
+test('one eligible existing transfer for a card statement credit',()=>assert.equal(
+ G.eligibleCardPayments([transfer],[],'card','2026-10-08',500,accounts).length,1));
+test('matched transfer not eligible a second time',()=>assert.equal(
+ G.eligibleCardPayments([transfer],[{kind:'smart_draft',status:'matched_card_payment',linkedTransactionId:'transfer500'}],'card','2026-10-08',500,accounts).length,0));
+test('different amount must not be reconciled',()=>assert.equal(
+ G.eligibleCardPayments([transfer],[],'card','2026-10-08',501,accounts).length,0));
+test('more than five days mismatch is not auto-suggested',()=>assert.equal(
+ G.eligibleCardPayments([transfer],[],'card','2026-10-15',500,accounts).length,0));
+test('different destination card is not eligible',()=>assert.equal(
+ G.eligibleCardPayments([transfer],[],'partnercard','2026-10-08',500,accounts).length,0));
+test('card evidence has no second bank transaction',()=>assert.match(appSource,/additionalTransactions:0,budgetChange:0/));
 
 console.log(checked+' assertions réussies');
