@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.1.js'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.2.js'),'utf8');
 let count=0;
 function test(title,run){run();count++;console.log('PASS '+title);}
 function pick(name,next,dependencies={}){
@@ -92,5 +92,44 @@ test('CELI sans destination bloqué',()=>assert.equal(gate({...baseMove,name:'É
 test('CELI relié et daté autorisé',()=>assert.equal(gate({...baseMove,name:'Épargne',type:'external_transfer',transferPurpose:'savings',investmentAccountId:'celi1'}),true));
 test('CELI antidaté bloqué',()=>assert.equal(gate({...baseMove,name:'Épargne',type:'external_transfer',transferPurpose:'savings',investmentAccountId:'celi1',date:'2026-09-30'}),false));
 test('paiement carte reçu carte refusé hors rapprochement',()=>assert.equal(gate({...baseMove,name:'Paiement Mastercard',type:'refund',accountId:'card'}),false));
+
+
+const bank=pick('bank','sharingMovement',{state:bankState,accountEstimate,accountType:a=>a?.type});
+test('liquidité = courant - dette carte',()=>assert.ok(Math.abs(bank('la').net-908.88)<.001));
+test('dette carte affichée positive',()=>assert.equal(bank('la').cardDebt,140));
+test('pas de crédit anormal lorsque carte débitrice',()=>assert.equal(bank('la').needsCardReview,false));
+
+const initialSigned=bankState.household.accountOpeningBalances.card;
+bankState.household.accountOpeningBalances.card=200;
+test('ancienne saisie +200 interprétée comme dette -200',()=>assert.equal(accountEstimate(card),-140));
+test('ancienne saisie positive n’augmente pas la liquidité',()=>assert.ok(Math.abs(bank('la').net-908.88)<.001));
+bankState.household.accountOpeningBalances.card=595.90;
+const oldTx=bankState.transactions;
+bankState.transactions=[
+ {id:'payment1',accountId:'current',toAccountId:'card',type:'transfer',status:'confirmed',date:'2026-10-02',amountCAD:500},
+ {id:'payment2',accountId:'current',toAccountId:'card',type:'transfer',status:'confirmed',date:'2026-10-03',amountCAD:575},
+ {id:'payment3',accountId:'current',toAccountId:'card',type:'transfer',status:'confirmed',date:'2026-10-07',amountCAD:750}
+];
+test('paiements sans achats produisent avoir apparent (à vérifier)',()=>assert.ok(Math.abs(accountEstimate(card)-1229.10)<.001));
+test('avoir apparent déclenche alerte de rapprochement',()=>assert.equal(bank('la').needsCardReview,true));
+test('avoir apparent pas additionné à la liquidité',()=>assert.equal(bank('la').net, -825));
+test('avoir apparent reste visible comme alerte',()=>assert.ok(Math.abs(bank('la').cardCredit-1229.10)<.001));
+bankState.transactions=[
+ {id:'purchase',accountId:'card',date:'2026-10-01',type:'expense',status:'confirmed',amountCAD:751.94},
+ {id:'payment',accountId:'current',toAccountId:'card',date:'2026-10-07',type:'transfer',status:'confirmed',amountCAD:750},
+ {id:'refund',accountId:'card',date:'2026-10-06',type:'refund',status:'confirmed',amountCAD:22.87},
+ {id:'interest',accountId:'card',date:'2026-10-08',type:'expense',status:'confirmed',amountCAD:0.01}
+];
+test('relevé Mastercard 30 septembre -> 8 octobre',()=>assert.ok(Math.abs(accountEstimate(card)+574.98)<.001));
+test('carte rapprochée : dette 574,98',()=>assert.ok(Math.abs(bank('la').cardDebt-574.98)<.001));
+test('carte rapprochée : pas d’alerte de crédit',()=>assert.equal(bank('la').needsCardReview,false));
+bankState.reconciliations=[{accountId:'card',date:'2026-10-08',actualBalance:574.98}];
+test('ancien rapprochement positif signifie dette',()=>assert.ok(Math.abs(accountEstimate(card)+574.98)<.001));
+bankState.reconciliations=[{accountId:'card',date:'2026-10-08',actualBalance:50,cardBalanceKind:'credit'}];
+test('avoir réel explicite conservé positif',()=>assert.equal(accountEstimate(card),50));
+test('avoir réel de carte non additionné au solde courant',()=>assert.equal(bank('la').cardDebt,0));
+bankState.reconciliations=[];
+bankState.household.accountOpeningBalances.card=initialSigned;
+bankState.transactions=oldTx;
 
 console.log(count+' scenarios comptables réussis');

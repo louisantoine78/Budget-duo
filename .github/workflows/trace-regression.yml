@@ -16,7 +16,7 @@ jobs:
           node-version: '22'
       - name: Check active JavaScript syntax
         run: |
-          node --check v5-app-5.35.1.js
+          node --check v5-app-5.35.2.js
           node --check trace-movement-5.33.0.js
           node --check trace-import-guide-1.1.1.js
           node --check trace-operation-ui-1.0.0.js

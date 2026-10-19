@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.35.1",
-  "release": "protect-unlinked-transfers-and-savings-during-bulk-import-validation"
+  "build": "5.35.2",
+  "release": "card-debt-sign-opening-balance-and-unreconciled-credit-alert"
 }

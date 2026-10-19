@@ -1,0 +1,5 @@
+/* TRACE 5.35.2 : a card debt is not a current-account asset. */
+.trace-card-balance-warning{margin:10px 0 0;padding:10px 12px;font-size:12px;line-height:1.45;
+ border-radius:12px;background:#fff4dd;color:#624519;overflow-wrap:anywhere}
+.trace-card-balance-warning[hidden]{display:none!important}
+.trace-bank-account .trace-account-amount-info{display:block;font-size:12px;line-height:1.5;margin-top:5px}
