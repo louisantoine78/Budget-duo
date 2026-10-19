@@ -52,7 +52,7 @@ test('remboursement partiel encore 30',()=>assert.equal(M.linkable([original],[o
 test('refus dépassement remboursement',()=>assert.throws(()=>M.validateLink('e1',[original],[original,already],'la','2026-10-19',31)));
 test('répartition dépasse montant',()=>assert.throws(()=>M.amounts(100,'custom','la',{},80,30)));
 test('interac aucune nature automatique',()=>assert.equal(G.suggest('checking','transfer','Virement Interac envoyé'),''));
-const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.0.js'),'utf8');
+const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.1.js'),'utf8');
 test('validation par lot sécurisée',()=>assert.match(appSource,/selected\.some\(x=>!legacyImportNatureReady\(x\.t\)\)/));
 test('validation globale sécurisée',()=>assert.match(appSource,/return legacyImportNatureReady\(t\)/));
 test('validation rapide OCR sécurisée',()=>assert.match(appSource,/legacyImportNatureReady\(t\)&&\s*manualCategories/));
@@ -74,7 +74,7 @@ test('import validates banking direction',()=>assert.match(appSource,/nature\.di
 test('import card evidence not double counted',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardPaymentLabel\(name\)/));
 test('import nonbudget no category',()=>assert.match(appSource,/const chosenCategory=nature\.budget==='none'\?'':/));
 test('movement editor validates pending operation',()=>assert.match(appSource,/const next=\{\.\.\.t,type,date,name,status:'confirmed'/));
-test('active 5.35.0',()=>assert.match(appSource,/__TRACE_BUILD__='5\.35\.0'/));
+test('active 5.35.1',()=>assert.match(appSource,/__TRACE_BUILD__='5\.35\.1'/));
 [
  ['expense',true,'expense'],['friend_payment_expense',true,'expense'],['refund',true,'refund'],
  ['income',true,'income'],['card_payment',false,'none'],['transfer',false,'none'],

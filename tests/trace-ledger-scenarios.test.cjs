@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.0.js'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.1.js'),'utf8');
 let count=0;
 function test(title,run){run();count++;console.log('PASS '+title);}
 function pick(name,next,dependencies={}){
@@ -70,4 +70,27 @@ test('doublon exact même compte/date/montant',()=>assert.equal(sourceMatch(x,{.
 test('prix différent même commerçant : distinct',()=>assert.equal(sourceMatch(x,{...x,amountCAD:18.20}),null));
 test('même mouvement autre compte : distinct',()=>assert.equal(sourceMatch(x,{...x,accountId:'card'}),null));
 test('même prix autre marchand : distinct',()=>assert.equal(sourceMatch(x,{...x,name:'Restaurant Bellevue'}),null));
+const gateStart=app.indexOf('function legacyImportNatureReady(');
+const gateEnd=app.indexOf('\nasync function validatePendingAll()',gateStart);
+assert.ok(gateStart>=0&&gateEnd>gateStart);
+const root={};const vm=require('node:vm');
+const movement=fs.readFileSync(path.join(__dirname,'..','trace-movement-5.33.0.js'),'utf8');
+const guide=fs.readFileSync(path.join(__dirname,'..','trace-import-guide-1.1.1.js'),'utf8');
+vm.runInNewContext(movement,{window:root});
+vm.runInNewContext(guide,{window:root});
+const gateState={accounts:[account,card,{id:'extra',owner:'la',type:'checking'}],investmentAccounts:[savings]};
+const gate=new Function('state','window','accountType','isReadySavingsAccount',
+ 'return ('+app.slice(gateStart,gateEnd)+');')(gateState,root,a=>a?.type,ready);
+const baseMove={status:'pending',source:'pdf',date:'2026-10-16',name:'Paiement Mastercard',
+ amountCAD:100,accountId:'current',natureReviewed:true};
+test('paiement de carte sans destination bloqué',()=>assert.equal(gate({...baseMove,type:'transfer',transferPurpose:'card_repayment'}),false));
+test('paiement de carte cible correcte autorisée',()=>assert.equal(gate({...baseMove,type:'transfer',transferPurpose:'card_repayment',toAccountId:'card'}),true));
+test('virement sans destinataire bloqué',()=>assert.equal(gate({...baseMove,name:'Virement',type:'transfer'}),false));
+test('virement valide entre deux courants',()=>assert.equal(gate({...baseMove,name:'Virement',type:'transfer',toAccountId:'extra'}),true));
+test('virement non qualifié vers carte bloqué',()=>assert.equal(gate({...baseMove,name:'Virement',type:'transfer',toAccountId:'card'}),false));
+test('CELI sans destination bloqué',()=>assert.equal(gate({...baseMove,name:'Épargne',type:'external_transfer',transferPurpose:'savings'}),false));
+test('CELI relié et daté autorisé',()=>assert.equal(gate({...baseMove,name:'Épargne',type:'external_transfer',transferPurpose:'savings',investmentAccountId:'celi1'}),true));
+test('CELI antidaté bloqué',()=>assert.equal(gate({...baseMove,name:'Épargne',type:'external_transfer',transferPurpose:'savings',investmentAccountId:'celi1',date:'2026-09-30'}),false));
+test('paiement carte reçu carte refusé hors rapprochement',()=>assert.equal(gate({...baseMove,name:'Paiement Mastercard',type:'refund',accountId:'card'}),false));
+
 console.log(count+' scenarios comptables réussis');
