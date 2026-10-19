@@ -31,7 +31,7 @@ const bankState={
 const accountEstimate=pick('accountEstimate','bank',{
  state:bankState,
  openingBoundary:()=>({date:'2026-10-01',mode:'start'}),
- afterBoundary:(date,b)=>date>=b.date,
+ afterBoundary:(date,b)=>b.mode==='end'?date>b.date:date>=b.date,
  accountType:a=>a?.type
 });
 test('carte : achat réduit solde, paiement réduit dette',()=>assert.equal(accountEstimate(card),-140));
