@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 const ctx=vm.createContext({window:{}});
-for(const name of ['trace-movement-5.33.0.js','trace-import-guide-1.1.2.js','trace-operation-ui-1.0.0.js']){
+for(const name of ['trace-movement-5.36.0.js','trace-import-guide-1.2.0.js','trace-operation-ui-1.0.0.js']){
  vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),ctx,{filename:name});
 }
 const M=ctx.window.TraceMovement,G=ctx.window.TraceImportGuide,U=ctx.window.TraceOperationUI;
@@ -45,14 +45,14 @@ test('parts amis centimes',()=>same(M.amounts(100,'custom','la',{la:50,partner:5
 test('stockage paiement carte',()=>assert.equal(M.fromStored({type:'transfer',transferPurpose:'card_repayment'}),'card_payment'));
 test('stockage CELI',()=>assert.equal(M.fromStored({type:'external_transfer',transferPurpose:'savings'}),'savings_transfer'));
 test('menu compte courant',()=>assert.equal(U.kindsFor('checking','out').length,7));
-test('menu crédit carte',()=>same(U.kindsFor('card','in').map(x=>x.id),['refund']));
+test('menu crédit carte',()=>same(U.kindsFor('card','in').map(x=>x.id),['refund','card_payment_received']));
 const original={id:'e1',type:'expense',status:'confirmed',payerId:'la',beneficiary:'custom',date:'2026-10-01',name:'Hôtel',splitAmounts:{la:30,partner:20,friends:50},amountCAD:100};
 const already={id:'r1',type:'external_refund',status:'confirmed',transferPurpose:'friend_reimbursement',relatedExpenseId:'e1',amountCAD:20};
 test('remboursement partiel encore 30',()=>assert.equal(M.linkable([original],[original,already],'la','2026-10-19',30)[0].remaining,30));
 test('refus dépassement remboursement',()=>assert.throws(()=>M.validateLink('e1',[original],[original,already],'la','2026-10-19',31)));
 test('répartition dépasse montant',()=>assert.throws(()=>M.amounts(100,'custom','la',{},80,30)));
 test('interac aucune nature automatique',()=>assert.equal(G.suggest('checking','transfer','Virement Interac envoyé'),''));
-const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.3.js'),'utf8');
+const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.0.js'),'utf8');
 test('validation par lot sécurisée',()=>assert.match(appSource,/selected\.some\(x=>!legacyImportNatureReady\(x\.t\)\)/));
 test('validation globale sécurisée',()=>assert.match(appSource,/return legacyImportNatureReady\(t\)/));
 test('validation rapide OCR sécurisée',()=>assert.match(appSource,/legacyImportNatureReady\(t\)&&\s*manualCategories/));
@@ -74,7 +74,7 @@ test('import validates banking direction',()=>assert.match(appSource,/nature\.di
 test('import card evidence not double counted',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardStatementSettlementLabel\(name\)/));
 test('import nonbudget no category',()=>assert.match(appSource,/const chosenCategory=nature\.budget==='none'\?'':/));
 test('movement editor validates pending operation',()=>assert.match(appSource,/const next=\{\.\.\.t,type,date,name,status:'confirmed'/));
-test('active 5.35.3',()=>assert.match(appSource,/__TRACE_BUILD__='5\.35\.3'/));
+test('active 5.36.0',()=>assert.match(appSource,/__TRACE_BUILD__='5\.36\.0'/));
 [
  ['expense',true,'expense'],['friend_payment_expense',true,'expense'],['refund',true,'refund'],
  ['income',true,'income'],['card_payment',false,'none'],['transfer',false,'none'],
@@ -94,7 +94,7 @@ test('carte saisie comme dette positive et stockée avec signe',()=>assert.match
 test('alerte pour crédit non rapproché',()=>assert.match(appSource,/cardWarning\.hidden=!b\.needsCardReview/));
 test('CELI uniquement en information sur accueil',()=>assert.match(appSource,/\$\('#homeCELITransfers'\)\.textContent=money\(savedToCeli\)/));
 
-const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.3.1.js'),'utf8');
+const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.4.0.js'),'utf8');
 [
  'PAIEMENT CAISSE','PAIEMENT REÇU','Paiement reçue','PAYMENT RECEIVED',
  'PAYMENT THANK YOU','Paiement de ma Mastercard','Règlement carte Visa'
@@ -104,13 +104,13 @@ const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.
  'RETOUR COMMERÇANT AMAZON','UBER CANADA','Paiement internet mobile'
 ].forEach(label=>test('not a card settlement '+label,()=>assert.equal(G.cardStatementSettlementLabel(label),false)));
 test('checking paiement caisse is not automatically a credit-card transfer',()=>assert.notEqual(G.suggest('checking','transfer','PAIEMENT CAISSE'),'card_payment'));
-test('card paiement caisse is not automatically a merchant refund',()=>assert.equal(G.suggest('card','refund','PAIEMENT CAISSE'),''));
+test('card paiement caisse selects evidence type',()=>assert.equal(G.suggest('card','refund','PAIEMENT CAISSE'),'card_payment_received'));
 test('card paiement caisse credit direction',()=>assert.equal(G.direction('refund','card','PAIEMENT CAISSE'),'in'));
 test('card caisse cannot be approved as merchant refund',()=>assert.equal(G.safeForQuickApproval('card','refund','PAIEMENT CAISSE'),false));
 test('inbox detects card-side evidence',()=>assert.match(inboxSource,/guided\.cardStatementSettlementLabel\(d\.name\)/));
-test('inbox offers reconciliation',()=>assert.match(inboxSource,/payment=guide\.cardStatementSettlementLabel\(name\)/));
+test('inbox offers reconciliation for manual credit or bank label',()=>assert.ok(inboxSource.includes("payment=type==='card_payment_received'||guide.cardStatementSettlementLabel(name)")));
 test('legacy OCR blocks double credit',()=>assert.match(importerSource,/G\.cardStatementSettlementLabel\(r\.name\)/));
-test('backend verifies statement evidence',()=>assert.match(appSource,/if\(!window\.TraceImportGuide\.cardStatementSettlementLabel\(name\)\)/));
+test('backend checks manual evidence selection',()=>assert.ok(appSource.includes("values?.type!=='card_payment_received'")));
 const accounts=[
  {id:'checking',type:'checking',owner:'la'},
  {id:'card',type:'card',owner:'la'},
@@ -128,5 +128,46 @@ test('more than five days mismatch is not auto-suggested',()=>assert.equal(
 test('different destination card is not eligible',()=>assert.equal(
  G.eligibleCardPayments([transfer],[],'partnercard','2026-10-08',500,accounts).length,0));
 test('card evidence has no second bank transaction',()=>assert.match(appSource,/additionalTransactions:0,budgetChange:0/));
+
+const insightSource=fs.readFileSync(path.join(__dirname,'..','trace-insights-1.0.0.js'),'utf8');
+vm.runInContext(insightSource,ctx,{filename:'trace-insights-1.0.0.js'});
+const I=ctx.window.TraceInsights;
+test('card credit classification is in incoming menu',()=>assert.ok(U.kindsFor('card','in').some(k=>k.id==='card_payment_received')));
+test('card credit not available on checking',()=>assert.equal(G.allowed('card_payment_received','checking','in'),false));
+test('card received never quick confirms',()=>assert.equal(G.safeForQuickApproval('card','card_payment_received','PAIEMENT CAISSE'),false));
+test('card received never adds budget spending',()=>same(M.impact('card_payment_received',500,'la').budget,{la:0,partner:0,couple:0}));
+test('global validation excludes unmatched card receipt',()=>assert.ok(appSource.includes("nature.id==='card_payment_received')return false")));
+test('bank pending row converted only to linked evidence',()=>assert.ok(appSource.includes("type:'card_statement_evidence',transferPurpose:'card_payment_received'")));
+test('bank pending row linked without new financial transaction',()=>assert.ok(appSource.includes("status:'confirmed',linkedTransactionId:target,natureReviewed:true")));
+test('linked bank rows cannot match a second time',()=>assert.ok(appSource.includes("priorMatches=state.transactions.filter(t=>t.type==='card_statement_evidence'")));
+test('smart incoming card cannot be normally approved',()=>assert.ok(inboxSource.includes("type==='card_payment_received'||guide.cardStatementSettlementLabel(name)")));
+test('insights sorts category spending descending',()=>same(I.categoryRows([
+ {id:'a',name:'A',actual:50,budget:80},{id:'b',name:'B',actual:200,budget:250}],250).map(x=>x.name),['B','A']));
+test('insights reports unclassified spending',()=>assert.equal(I.categoryRows([{id:'a',actual:60,budget:100}],100).find(x=>x.id==='').actual,40));
+test('insights makes no-budget item understandable',()=>{
+ const node={innerHTML:'',querySelector:()=>null};
+ I.renderCategories(node,{rows:[{id:'r',name:'Restaurant',actual:100,budget:0}],totalExpense:100});
+ assert.ok(node.innerHTML.includes('Sans budget prévu'));
+});
+test('insights escapes unsafe labels',()=>{
+ const node={innerHTML:'',querySelector:()=>null};
+ I.renderCategories(node,{rows:[{id:'r',name:'<script>alert(1)</script>',actual:15,budget:25}],totalExpense:15});
+ assert.ok(!node.innerHTML.includes('<script>'));
+});
+test('annual view does not call unfilled month zero',()=>{
+ const node={innerHTML:''};
+ I.renderAnnual(node,{year:'2026',months:[{month:'2026-02',elapsed:true,hasBudget:false,hasTransactions:false,budget:0,expense:0}]});
+ assert.ok(node.innerHTML.includes('Non renseigné'));
+});
+test('wealth view avoids fictitious price series',()=>{
+ const node={innerHTML:''};
+ I.renderWealth(node,{checking:500,cardDebt:200,investments:[{name:'CELI',cad:250,ready:true,linked:true}],
+ flows:[{month:'2026-10',kind:'deposit',amount:50}]});
+ assert.ok(node.innerHTML.includes('Mouvements par mois'));
+ assert.ok(node.innerHTML.includes('pas une courbe de performance historique'));
+});
+test('wealth chart renders documented contributions',()=>assert.ok(appSource.includes("TraceInsights.renderWealth($('#wealthTrend')")));
+test('annual view renders 12 relevant months',()=>assert.ok(appSource.includes("TraceInsights.renderAnnual($('#annualBudgetChart')")));
+test('home categories expandable',()=>assert.ok(appSource.includes('limit:8,onCategory:')));
 
 console.log(checked+' assertions réussies');
