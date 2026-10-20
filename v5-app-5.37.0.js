@@ -448,6 +448,31 @@ function openAnnualBudgetAnalysis(){
   setBudgetMonth(b.dataset.insightMonth);closeSheet();navigate('budget');
  });
 }
+function internationalHome(){
+ const accounts=visibleBankAccounts(me).map(a=>({...a,type:accountType(a)}));
+ const estimates=Object.fromEntries(accounts.map(a=>[a.id,accountEstimate(a)]));
+ window.TraceInternationalUI?.render?.({
+  host:$('#traceIntlHome'),accounts,owner:me,
+  mainId:state.household.primaryBankAccountByOwner?.[me],estimates,rates:internationalQuotes,
+  balanceNode:$('#homeBalance'),checkingNode:$('#homeChecking'),cardNode:$('#homeCard'),
+  onSelect:async id=>{
+   if(!accounts.some(a=>a.id===id&&a.type==='checking'))return;
+   const before={...(state.household.primaryBankAccountByOwner||{})};
+   state.household.primaryBankAccountByOwner={...before,[me]:id};
+   try{await saveHouseholdSettings();renderHome();}
+   catch(e){state.household.primaryBankAccountByOwner=before;traceNotice(e);renderHome();}
+  },
+  requestRate:currencies=>{
+   if(internationalFxBusy||internationalQuoteAttempt===localDateISO())return;
+   internationalFxBusy=true;internationalQuoteAttempt=localDateISO();
+   Promise.allSettled(currencies.map(c=>window.TraceInternational.getRate(c,localDateISO()))).then(results=>{
+    results.forEach((r,i)=>{if(r.status==='fulfilled')internationalQuotes[currencies[i]]=r.value;});
+    internationalFxBusy=false;
+    if($('#traceIntlHome'))internationalHome();
+   });
+  }
+ });
+}
 function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.expense/s.eb*100:0,b=bank(sId);$('#homeMonthLabel').textContent=monthLabel(CM);$('#homeGreeting').textContent=homeScope==='mine'?`Bonjour ${member(me).name}`:'Votre situation';$('#homeBudgetAvailable').textContent=money(s.eb-s.expense);$('#homeBudgetSub').textContent=s.eb?`sur ${money(s.eb)} prévus ce mois`:'Budget du mois à compléter';$('#homeBudgetProgress').style.width=`${Math.min(100,Math.max(0,cons))}%`;$('#homeBudgetPercent').textContent=`${cons.toFixed(0)} % consommé`;$('#homeBudgetSpent').textContent=`${money(s.expense)} dépensés`;$('#homeBalance').textContent=b.net===null?'À configurer':b.needsCardReview?'À vérifier':money(b.net);
  $('#homeChecking').textContent=b.checking===null?'—':money(b.checking);
  $('#homeCard').textContent=b.card===null?'—':b.needsCardReview?
@@ -472,7 +497,7 @@ function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.e
  $('#shareBalance').textContent='À deux, quand tu le souhaites';
  $('#shareSmall').textContent='Ton historique est conservé';
 }
-updateSegments();}
+updateSegments();internationalHome();}
 function setBudgetMonth(next){
   if(!/^\d{4}-\d{2}$/.test(String(next||'')))return;
   budgetMonth=String(next);
