@@ -1216,12 +1216,16 @@ function editTransaction(id,validating=false){
    '<div><h3 id="traceEditDetailsTitle">Détails de l’opération</h3><p>Montant, date et catégorie</p></div></div>'+
   '<div class="trace-edit-fields">'+
    '<div class="formrow trace-edit-details-grid"><div><label class="label2" for="txAmount">Montant</label>'+
-    '<div class="trace-edit-control trace-edit-money-control"><input id="txAmount" type="number" inputmode="decimal" step="0.01" min="0.01" class="input" value="'+Number(t.amountCAD||0)+'"><span class="trace-edit-currency" aria-hidden="true">CAD</span></div></div>'+
+    '<div class="trace-edit-control trace-edit-money-control"><input id="txAmount" type="number" inputmode="decimal" step="0.01" min="0.01" class="input" value="'+Number(t.bankAmount??t.amountCAD??0)+'"><span class="trace-edit-currency" aria-hidden="true">'+window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId))+'</span></div></div>'+
    '<div><label class="label2" for="txDate">Date de l’opération</label>'+
     '<div class="trace-edit-control trace-edit-date-control">'+
      '<span class="trace-edit-date-display" id="txDateDisplay" aria-hidden="true">'+esc(displayEditDate(t.date||localDateISO()))+'</span>'+
      '<span class="trace-edit-date-icon" aria-hidden="true"></span>'+
      '<input id="txDate" type="date" class="input" value="'+esc(t.date||localDateISO())+'"></div></div></div>'+
+   '<div class="trace-intl-transaction"><div class="formrow"><div><label class="label2">Devise d’achat</label><select id="txOriginalCurrency" class="input">'+window.TraceInternational.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></div>'+
+    '<div><label class="label2">Prix original (facultatif)</label><input id="txOriginalAmount" class="input" type="number" step=".01" min=".01" value="'+Number(t.amountOriginal||t.bankAmount||t.amountCAD||0)+'"></div></div>'+
+    '<label class="label2">Taux bancaire → CAD (facultatif)</label><input id="txFxOverride" class="input" type="number" step="any" min=".000001" placeholder="Référence de la Banque du Canada">'+
+    '<p class="trace-intl-help">Solde bancaire dans sa devise ; budget converti en CAD avec un taux vérifié à la date choisie.</p></div>'+
    '<label class="label2" for="txCategory">Catégorie budgétaire</label>'+
    '<div class="trace-edit-control trace-edit-select-control"><select id="txCategory" class="input"></select></div></div>'+
  '</section>'+
@@ -1272,6 +1276,7 @@ function editTransaction(id,validating=false){
  $('#sheetBackdrop').classList.add('trace-premium-edit');
  window.TraceOperationUI.enhanceTransaction();
  $('#txAccount').value=t.accountId||'';$('#txWho').value=t.beneficiary||me;
+ $('#txOriginalCurrency').value=t.currency||window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId));
  const standardKinds=new Set(['expense','friend_payment_expense','income','refund']);
  const natureChoices=(preferred='')=>{
   const account=state.accounts.find(a=>a.id===$('#txAccount').value);
@@ -1315,7 +1320,8 @@ function editTransaction(id,validating=false){
    friend=Number($('#txFriendsAmount').value||0),
    partnerAmount=Number($('#txPartnerAmount').value||0);
   const account=state.accounts.find(a=>a.id===$('#txAccount').value);
-  const label=accountType(account)==='card'?'Sur la carte':'Sur le compte courant';
+  const label=(accountType(account)==='card'?'Sur la carte':'Sur le compte courant')+
+   ' · '+window.TraceInternational.currency(account);
   $('#txImpactBankLabel').textContent=label;
   const kind=def?.budget==='income'?'Revenus':def?.budget==='refund'?'Correction des dépenses':'Dépenses';
   $('#txImpactMineLabel').textContent='Moi';
@@ -1324,6 +1330,12 @@ function editTransaction(id,validating=false){
   const format=n=>(n<0?'−':'')+money(Math.abs(n));
   const message=$('#txImpactMessage');
   try{
+   if(window.TraceInternational.currency(account)!=='CAD'){
+    $('#txImpactBank').textContent=window.TraceInternational.money(amount,window.TraceInternational.currency(account));
+    ['#txImpactMine','#txImpactPartner','#txImpactCouple','#txImpactFriends'].forEach(k=>$(k).textContent='—');
+    message.textContent='Les montants budgétaires seront convertis au taux daté lors de la validation.';
+    message.classList.remove('hidden');return;
+   }
    const impact=movementImpact(selected,amount,who,friend,partnerAmount);
    const all=[impact.bank,impact.budget[me],impact.budget[partner],impact.budget.couple];
    if(!all.every(Number.isFinite))throw Error('Montant invalide.');
@@ -1364,16 +1376,28 @@ function editTransaction(id,validating=false){
    $('#traceFeedback').textContent='Choisis une nature compatible avec ce compte.';return;
   }
   if(!(amount>0)||!Number.isFinite(amount)||!date||!name||!categoryId||!accountId){$('#traceFeedback').textContent='Complète tous les champs obligatoires.';return;}
-  let sharing;
-  try{sharing=beneficiary==='custom'?traceCustomShares(amount,$('#txFriendsAmount').value,$('#txPartnerAmount').value):{beneficiary,...traceSplit(beneficiary,amount)};}
-  catch(e){$('#traceFeedback').textContent=e.message;return;}
+  let sharing,booking;
+  try{
+   const currency=window.TraceInternational.currency(account),
+    raw=$('#txFxOverride').value.trim(),fx=Number(raw);
+   if(raw&&(!Number.isFinite(fx)||fx<=0))throw Error('Taux de change invalide.');
+   const quote=currency==='CAD'?null:raw?
+    {currency,cadPerUnit:fx,date,source:'Taux saisi manuellement'}:
+    (date===t.date&&accountId===t.accountId&&t.bankRateCad>0?
+     {currency,cadPerUnit:Number(t.bankRateCad),date:t.fxRateDate||date,source:t.fxRateSource||'Taux historique enregistré'}:
+     await window.TraceInternational.getRate(currency,date));
+   booking=window.TraceInternational.resolveBooking({account,bankAmount:amount,date,quote,
+    originalCurrency:$('#txOriginalCurrency').value,originalAmount:$('#txOriginalAmount').value||null});
+   sharing=beneficiary==='custom'?traceCustomShares(booking.amountCAD,$('#txFriendsAmount').value,$('#txPartnerAmount').value):
+    {beneficiary,...traceSplit(beneficiary,booking.amountCAD)};
+  }catch(e){$('#traceFeedback').textContent=e.message;return;}
   const received=state.transactions.filter(x=>x.status==='confirmed'&&x.relatedExpenseId===t.id&&x.type==='external_refund'&&x.transferPurpose==='friend_reimbursement')
     .reduce((sum,x)=>sum+Math.round(Number(x.amountCAD)*100),0);
    if(received>0&&Math.round(Number(sharing.splitAmounts?.friends||0)*100)<received){
      $('#traceFeedback').textContent='Cette dépense possède déjà des remboursements liés. La part des amis ne peut pas devenir inférieure aux remboursements reçus.';return;
    }
-   const next={...t,amountCAD:amount,amountOriginal:amount,date,name,type,categoryId,accountId,...sharing,natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null};
-  if(next.importFingerprint&&(amount!==t.amountCAD||date!==t.date||name!==t.name))next.importFingerprint=null;
+   const next={...t,...booking,date,name,type,categoryId,accountId,...sharing,natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null};
+  if(next.importFingerprint&&(amount!==(t.bankAmount??t.amountCAD)||date!==t.date||name!==t.name))next.importFingerprint=null;
   const btn=$(confirm?'#txValidate':'#txSave');btn.disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();navigate('activity');showTab(confirm?'transactions':validating?'review':'transactions');}
   catch(e){btn.disabled=false;traceNotice(e);}
