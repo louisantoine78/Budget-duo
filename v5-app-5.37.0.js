@@ -135,7 +135,7 @@ function dateGapDays(a,b){
 }
 function sourceMatch(a,b){
  if(a.accountId&&b.accountId&&a.accountId!==b.accountId)return null;
- const aAmount=Number(a.amountCAD??a.amount),bAmount=Number(b.amountCAD??b.amount);
+ const aAmount=Number(a.bankAmount??a.amountCAD??a.amount),bAmount=Number(b.bankAmount??b.amountCAD??b.amount);
  if(!(aAmount>0)||!(bAmount>0)||!Number.isFinite(aAmount)||!Number.isFinite(bAmount)||Math.abs(aAmount-bAmount)>.009)return null;
  if(!([a.type,b.type].every(x=>x==='expense')||[a.type,b.type].every(x=>x==='refund')||[a.type,b.type].every(x=>x==='income')))return null;
  const days=dateGapDays(a.date,b.date);
@@ -1900,7 +1900,7 @@ function smartDuplicateMatches(id,values={}){
    source:'Capture bancaire en attente',
    exact:amt!==null&&Number(x.amount)>0&&Math.abs(Number(x.amount)-amt)<.009});});
  state.transactions.forEach(x=>{if(x.accountId===d.accountId&&x.date===day&&sameName(x.name)&&sameAmount(x.amountCAD,null))
-  out.push({id:x.id,name:x.name,date:x.date,amount:x.amountCAD,
+  out.push({id:x.id,name:x.name,date:x.date,amount:x.bankAmount??x.amountCAD,
    status:x.status==='confirmed'?'recorded':'unconfirmed',
    accountName:shortAccountLabel(state.accounts.find(a=>a.id===x.accountId)),
    categoryName:state.categories.find(c=>c.id===x.categoryId)?.name||'Non catégorisée',
@@ -2183,19 +2183,41 @@ async function smartApproveDraft(id,v){
  const overlaps=smartDuplicateMatches(id,{date,name,amount});
  if(overlaps.some(x=>x.exact&&x.status==='recorded'))throw Error('Opération déjà comptabilisée : rapproche les deux écritures avant de confirmer.');
  if(overlaps.length&&!v.allowPossibleDuplicate)throw Error('Opération ressemblante trouvée. Compare les deux achats et confirme seulement s’ils sont distincts.');
- const probe={date,name,type,amountCAD:amount,accountId};
+ const probe={date,name,type,bankAmount:amount,amountCAD:amount,accountId};
  const match=findSimilarTransaction(probe);
  if(match?.status==='exact')throw Error('Une opération identique existe déjà. Utilise « Écarter » pour ce doublon.');
  if(match?.status==='possible'&&!v.allowPossibleDuplicate)throw Error('Une opération ressemblante existe : coche la confirmation de doublon.');
  if(['transfer','external_transfer','external_refund'].includes(type)&&state.transactions.some(t=>t.accountId===accountId&&t.date===date&&t.type===type&&
   Math.abs(Number(t.amountCAD)-amount)<.009&&normalizedMerchant(t.name)===normalizedMerchant(name)))
   throw Error('Ce mouvement semble déjà enregistré.');
+ const bankAccount=state.accounts.find(a=>a.id===accountId);
+ const currency=window.TraceInternational.currency(bankAccount),rateValue=String(v.manualFxRate||'').trim();
+ const rate=Number(rateValue);
+ if(rateValue!==''&&(!Number.isFinite(rate)||rate<=0))throw Error('Taux de change invalide.');
+ const quote=currency==='CAD'?null:rateValue?
+  {currency,cadPerUnit:rate,date,source:'Taux saisi manuellement'}:
+  await window.TraceInternational.getRate(currency,date);
+ const booking=window.TraceInternational.resolveBooking({
+  account:bankAccount,bankAmount:amount,quote,date,originalCurrency:v.purchaseCurrency,
+  originalAmount:v.purchaseAmount||null});
+ let destinationBankAmount;
+ if(type==='transfer'){
+  const toAccount=state.accounts.find(a=>a.id===toAccountId);
+  const toCurrency=window.TraceInternational.currency(toAccount);
+  if(toCurrency!==currency){
+   destinationBankAmount=Number(v.destinationBankAmount);
+   if(v.destinationBankAmount===''||v.destinationBankAmount==null||!(destinationBankAmount>0)||!Number.isFinite(destinationBankAmount))
+    throw Error('Saisis le montant crédité sur le compte destinataire en '+toCurrency+'.');
+  }else destinationBankAmount=amount;
+ }
  const share=movement.budget==='none'||movement.budget==='income'?
-  {beneficiary:me,...traceSplit(me,amount)}:
-  traceImportSplit({beneficiary,friendsAmount:Number(v.friendsAmount||0),partnerAmount:Number(v.partnerAmount||0)},{amountCAD:amount});
- const related=validateFriendLink(requestedType,String(v.relatedExpenseId||''),date,amount);
- const tx={id:transactionId,date,name,type,amountCAD:amount,amountOriginal:amount,currency:'CAD',
-  rate:1,status:'confirmed',categoryId:isBudget?categoryId:'',accountId,payerId:me,
+  {beneficiary:me,...traceSplit(me,booking.amountCAD)}:
+  traceImportSplit({beneficiary,friendsAmount:Number(v.friendsAmount||0),partnerAmount:Number(v.partnerAmount||0)},
+   {amountCAD:booking.amountCAD});
+ const related=validateFriendLink(requestedType,String(v.relatedExpenseId||''),date,booking.amountCAD);
+ const tx={id:transactionId,date,name,type,...booking,
+  ...(type==='transfer'?{toBankAmount:destinationBankAmount}:{}),
+  status:'confirmed',categoryId:isBudget?categoryId:'',accountId,payerId:me,
   ...(toAccountId?{toAccountId}:{}),...(movement.purpose?{transferPurpose:movement.purpose}:{}),...(investmentAccountId?{investmentAccountId}:{}),...(related?{relatedExpenseId:related}:{}),...share,source:'image',importFileName:d.sourceFileName,
   recurring:false,excludedByOpening:!isFinancialPeriod(probe)};
  tx.importFingerprint=csvFingerprint(tx);
@@ -3526,7 +3548,7 @@ window.TraceBankBridge={
     throw new Error('Choisis une Nature du mouvement compatible avec ce compte et le sens bancaire.');
    if(accountType(bank)==='card'&&window.TraceImportGuide.cardStatementSettlementLabel(name))
     throw new Error('Ce paiement de carte doit être rapproché avec le compte courant, sans nouvelle transaction.');
-   const probe={date,name,type,amountCAD:amount,accountId};
+   const probe={date,name,type,bankAmount:amount,amountCAD:amount,accountId};
    if(method==='image')dates.add(date);
    const existing=findSimilarTransaction(probe);
    if(existing?.status==='exact'||csvImportedDuplicate(probe,state.transactions)){duplicates++;continue;}
