@@ -3595,6 +3595,12 @@ window.TraceBankBridge={
     throw new Error('Ce lot contient une opération en dehors du '+scopeDay+'. Réimporte-la depuis sa propre journée.');
   }
   let added=0,duplicates=0;const dates=new Set(),savedIds=[],savedRows=[];
+  const bankAccount=state.accounts.find(a=>a.id===accountId);
+  const nativeCurrency=window.TraceInternational.currency(bankAccount),quotes=new Map();
+  if(nativeCurrency!=='CAD'){
+   const toLookup=[...new Set(rows.map(r=>String(r.date||'')).filter(smartStrictDate))];
+   for(const day of toLookup)quotes.set(day,await window.TraceInternational.getRate(nativeCurrency,day));
+  }
   for(let rowIndex=0;rowIndex<rows.length;rowIndex++){
    const row=rows[rowIndex];
    const amount=Number(row.amount),date=String(row.date||''),name=String(row.name||'').trim().slice(0,80);
@@ -3612,13 +3618,17 @@ window.TraceBankBridge={
    const existing=findSimilarTransaction(probe);
    if(existing?.status==='exact'||csvImportedDuplicate(probe,state.transactions)){duplicates++;continue;}
    if(existing?.status==='possible'&&!row.allowPossibleDuplicate)throw new Error('Correspondance possible dans Trace : '+existing.t.name+' du '+existing.t.date+'. Vérifie-la explicitement avant ajout.');
+   const booking=window.TraceInternational.resolveBooking({
+    account:bank,bankAmount:amount,date,quote:nativeCurrency==='CAD'?null:quotes.get(date),
+    originalCurrency:row.purchaseCurrency||nativeCurrency,
+    originalAmount:row.purchaseAmount||null});
    const share=nature.budget==='none'||nature.budget==='income'?
-    {beneficiary:me,...traceSplit(me,amount)}:
-    traceImportSplit({...row,beneficiary:row.beneficiary||me},{amountCAD:amount});
+    {beneficiary:me,...traceSplit(me,booking.amountCAD)}:
+    traceImportSplit({...row,beneficiary:row.beneficiary||me},{amountCAD:booking.amountCAD});
    const chosenCategory=nature.budget==='none'?'':manualCategories(nature.budget==='income'?'income':'expense').some(c=>c.id===row.categoryId)?row.categoryId:'';
    const tx={id:txDocId(),date,name,type,transferPurpose:nature.purpose||null,
-    natureReviewed:row.natureReviewed===true,amountCAD:amount,amountOriginal:amount,currency:'CAD',
-    rate:1,status:'pending',categoryId:chosenCategory,accountId,payerId:me,...share,
+    natureReviewed:row.natureReviewed===true,...booking,
+    status:'pending',categoryId:chosenCategory,accountId,payerId:me,...share,
     source:method,importFileName:fileName,recurring:false,excludedByOpening:!isFinancialPeriod(probe)};
    tx.importFingerprint=csvFingerprint(tx);
    try{await saveDocument('transactions',tx);state.transactions.push(tx);savedIds.push(tx.id);savedRows.push({rowIndex,id:tx.id});added++;}
