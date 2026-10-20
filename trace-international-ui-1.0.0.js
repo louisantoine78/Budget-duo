@@ -3,6 +3,8 @@
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode,checkingNode,cardNode,onSelect,requestRate}={}){
  if(!host||!root.TraceInternational)return;
+ // The summary is inside a clickable balance card; changing the account must not open settings.
+ host.onclick=event=>event.stopPropagation();
  const I=root.TraceInternational,checking=accounts.filter(a=>a.owner===owner&&a.type==='checking'&&!a.archived);
  if(!checking.length){host.innerHTML='';return;}
  const snap=I.snapshot({accounts,owner,mainId,estimates,fxRates:rates}),cur=snap.currency,multi=snap.balances.length>1||cur!=='CAD';
@@ -18,7 +20,8 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
   '<p class="trace-intl-grand">'+(snap.complete?
    'Situation nette estimée · '+I.money(snap.globalCAD,'CAD'):
    'Situation globale à compléter · soldes ou taux manquants')+'</p>'+
-  '<p class="trace-intl-foot">Devises converties à partir de taux indicatifs datés de la Banque du Canada. Les comptes d’épargne et les placements restent dans Patrimoine.</p>'+
+  '<p class="trace-intl-foot">'+[...new Set(snap.balances.filter(a=>rates[a.nativeCurrency]).map(a=>rates[a.nativeCurrency].date))].map(esc).join(' · ')+
+   ' · Taux indicatifs de la Banque du Canada, non contractuels. L’épargne et les placements sont dans Patrimoine.</p>'+
  '</details>':'');
  if(snap.main){
   if(balanceNode)balanceNode.textContent=snap.net===null?'À configurer':I.money(snap.net,cur);
