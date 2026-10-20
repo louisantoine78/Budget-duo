@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.35.3.js'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.0.js'),'utf8');
 let count=0;
 function test(title,run){run();count++;console.log('PASS '+title);}
 function pick(name,next,dependencies={}){
@@ -74,8 +74,8 @@ const gateStart=app.indexOf('function legacyImportNatureReady(');
 const gateEnd=app.indexOf('\nasync function validatePendingAll()',gateStart);
 assert.ok(gateStart>=0&&gateEnd>gateStart);
 const root={};const vm=require('node:vm');
-const movement=fs.readFileSync(path.join(__dirname,'..','trace-movement-5.33.0.js'),'utf8');
-const guide=fs.readFileSync(path.join(__dirname,'..','trace-import-guide-1.1.2.js'),'utf8');
+const movement=fs.readFileSync(path.join(__dirname,'..','trace-movement-5.36.0.js'),'utf8');
+const guide=fs.readFileSync(path.join(__dirname,'..','trace-import-guide-1.2.0.js'),'utf8');
 vm.runInNewContext(movement,{window:root});
 vm.runInNewContext(guide,{window:root});
 const gateState={accounts:[account,card,{id:'extra',owner:'la',type:'checking'}],investmentAccounts:[savings]};
@@ -131,5 +131,28 @@ test('avoir réel de carte non additionné au solde courant',()=>assert.equal(ba
 bankState.reconciliations=[];
 bankState.household.accountOpeningBalances.card=initialSigned;
 bankState.transactions=oldTx;
+
+// The second side of a card payment is evidence, never another balance movement.
+const actual=bankState.transactions;
+bankState.transactions=[
+ {id:'debit',type:'transfer',transferPurpose:'card_repayment',status:'confirmed',
+  accountId:'current',toAccountId:'card',date:'2026-10-07',amountCAD:500},
+ {id:'credit',type:'card_statement_evidence',transferPurpose:'card_payment_received',
+  status:'confirmed',linkedTransactionId:'debit',accountId:'card',date:'2026-10-08',amountCAD:500}
+];
+test('one card settlement only decreases checking once',()=>assert.equal(accountEstimate(account),500));
+test('statement credit does not decrease debt a second time',()=>assert.equal(accountEstimate(card),300));
+test('linked evidence changes no personal budget',()=>assert.equal(summary('2026-10','la').income,300));
+bankState.transactions=actual;
+test('legacy review gate refuses card statement receipt',()=>assert.equal(gate({
+ source:'pdf',type:'card_statement_evidence',transferPurpose:'card_payment_received',
+ status:'pending',accountId:'card',name:'PAIEMENT CAISSE',date:'2026-10-08',amountCAD:500,
+ natureReviewed:true}),false));
+const G=root.TraceImportGuide;
+const linked=G.eligibleCardPayments([{id:'debit',type:'transfer',status:'confirmed',accountId:'current',
+ toAccountId:'card',date:'2026-10-07',amountCAD:500}],[
+ {kind:'smart_draft',status:'matched_card_payment',linkedTransactionId:'debit'}
+ ],'card','2026-10-08',500,[account,card]);
+test('linked payment cannot be matched again',()=>assert.equal(linked.length,0));
 
 console.log(count+' scenarios comptables réussis');
