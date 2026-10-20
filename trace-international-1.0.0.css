@@ -1,0 +1,20 @@
+/* TRACE 5.37 — international account and currency form controls */
+.trace-intl-top{display:grid;gap:5px;margin:13px 0 4px;padding:12px;border:1px solid #dfece4;border-radius:14px;background:#f5faf7}
+.trace-intl-top label{font-size:12px;font-weight:700;color:#41665c}
+.trace-intl-top .input{min-width:0;width:100%;border-radius:10px!important;background:#fff;color:#20483a;font-size:13px}
+.trace-intl-primary-explain,.trace-intl-help{font-size:12px;line-height:1.55;color:#7b8a82;margin:6px 0 10px;overflow-wrap:anywhere}
+.trace-intl-details{border-top:1px solid #e5eee7;padding:12px 2px 0;margin-top:9px}
+.trace-intl-details summary{cursor:pointer;font-size:13px;font-weight:700;color:#235c4d;min-height:29px}
+.trace-intl-accounts{display:grid;gap:0;margin-top:12px}
+.trace-intl-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 0;border-bottom:1px solid #e5eee7;font-size:13px}
+.trace-intl-row span{overflow-wrap:anywhere;min-width:0}
+.trace-intl-row small{color:#718479;font-size:11px;white-space:nowrap}
+.trace-intl-row b{font-weight:800;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.trace-intl-grand{font-size:13px;font-weight:800;color:#1d5548;padding:13px 3px 5px}
+.trace-intl-foot{font-size:11px;line-height:1.5;color:#788980;margin:4px 0}
+.trace-intl-transaction,.trace-intl-import{padding:12px;border-radius:13px;border:1px solid #e5eee8;background:#f8faf8;margin:10px 0;display:grid;gap:9px;min-width:0}
+.trace-intl-transaction .formrow,.trace-intl-import .trace-smart-grid{min-width:0}
+.trace-intl-transaction input,.trace-intl-transaction select,.trace-intl-import input,.trace-intl-import select{min-width:0;width:100%}
+.trace-intl-set-primary{background:#e9f4eb;color:#20644e;border:1px solid #d4e5d8;padding:9px 12px;border-radius:11px;font-size:12px;font-weight:700;margin:6px 0 10px}
+.trace-intl-import [hidden],.trace-intl-transaction [hidden],#manualDestAmountWrap[hidden]{display:none!important}
+@media(max-width:420px){.trace-intl-transaction,.trace-intl-import{padding:10px}.trace-intl-row{font-size:12px}.trace-intl-row b{font-size:12px}}
