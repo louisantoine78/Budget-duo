@@ -1560,7 +1560,7 @@ function parseCsv(raw,sep){
 }
 function inferCsvSep(line){const matches=[',',';','\t'].map(sep=>({sep,n:parseCsv(line,sep)[0]?.length||0}));return matches.sort((a,b)=>b.n-a.n)[0].sep;}
 function parseCsvMoney(raw){
- let s=String(raw??'').trim().replace(/\b(?:CAD|USD|EUR)\b/gi,'').replace(/[\u00a0\u202f\s$€£]/g,'');
+ let s=String(raw??'').trim().replace(/\b(?:CAD|USD|EUR|GBP|CHF)\b/gi,'').replace(/[\u00a0\u202f\s$€£]/g,'');
  if(!s)return NaN;
  const negative=/^\(.*\)$/.test(s)||s.includes('-');s=s.replace(/[()\-+]/g,'');
  if(s.includes(',')&&s.includes('.'))s=s.lastIndexOf(',')>s.lastIndexOf('.')?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');
@@ -1578,7 +1578,7 @@ function parseCsvDate(raw,format){
  const date=new Date(y,m-1,d);
  return date.getFullYear()===y&&date.getMonth()+1===m&&date.getDate()===d?String(y).padStart(4,'0')+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'):null;
 }
-function csvFingerprint(t){const norm=String(t.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();return[t.date,t.type,Number(t.amountCAD).toFixed(2),norm,t.accountId].join('|');}
+function csvFingerprint(t){const norm=String(t.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();return[t.date,t.type,Number(t.bankAmount??t.amountCAD).toFixed(2),norm,t.accountId].join('|');}
 function csvImportedDuplicate(t,rows){const key=csvFingerprint(t);return rows.some(x=>(x.importFingerprint||csvFingerprint(x))===key);}
 function importFile(file){
  if(!file)return;
@@ -1626,7 +1626,11 @@ function importFile(file){
      else{const debit=col('debit')>=0?parseCsvMoney(row[col('debit')]):NaN,credit=col('credit')>=0?parseCsvMoney(row[col('credit')]):NaN;const cr=Number.isFinite(credit)?Math.abs(credit):0,db=Number.isFinite(debit)?Math.abs(debit):0;n=cr>0?cr:db;type=cr>0?'income':'expense';}
      if(!date||!name||!(Math.abs(n)>0)||!Number.isFinite(n)){invalid.push(index+2);return;}
      const amount=Math.abs(n),accountId=$('#csvAccount').value;
-     const t={id:txDocId(),date,name,note:'',merchant:'',type,status:'pending',currency:'CAD',rate:1,amountCAD:amount,amountOriginal:amount,categoryId:'',accountId,payerId:me,beneficiary:me,...traceSplit(me,amount),recurring:false,source:'csv',importFileName:file.name};
+     const bankAccount=accts.find(a=>a.id===accountId),ccy=window.TraceInternational.currency(bankAccount);
+      const t={id:txDocId(),date,name,note:'',merchant:'',type,status:'pending',currency:ccy,bankCurrency:ccy,
+       bankAmount:amount,rate:ccy==='CAD'?1:null,amountCAD:ccy==='CAD'?amount:null,
+       amountOriginal:amount,categoryId:'',accountId,payerId:me,beneficiary:me,
+       ...traceSplit(me,ccy==='CAD'?amount:0),recurring:false,source:'csv',importFileName:file.name};
      t.importFingerprint=csvFingerprint(t);
      if(!csvImportedDuplicate(t,state.transactions)&&!csvImportedDuplicate(t,all))all.push(t);
     });
@@ -1636,13 +1640,25 @@ function importFile(file){
     try{
      const result=build(),preview=$('#csvPreviewResult');
      preview.innerHTML='<div class="empty-note" style="margin-top:14px"><b>'+result.all.length+' nouvelles opérations</b> · '+result.duplicates+' doublon(s) ignoré(s) · '+result.invalid.length+' ligne(s) invalide(s).</div>'+
-      result.all.slice(0,5).map(t=>'<div class="trace-list-btn"><span>'+esc(t.date)+' · '+esc(t.name)+'</span><b>'+money(t.amountCAD)+'</b></div>').join('')+
+      result.all.slice(0,5).map(t=>'<div class="trace-list-btn"><span>'+esc(t.date)+' · '+esc(t.name)+'</span><b>'+window.TraceInternational.money(t.bankAmount,window.TraceInternational.currency(accts.find(a=>a.id===t.accountId)))+'</b></div>').join('')+
       (result.all.length?'<button class="primary full" id="csvCommit" style="margin-top:14px">Importer '+result.all.length+' opération(s) à vérifier</button>':'');
      if(!result.all.length)return;
      $('#csvCommit').onclick=async()=>{
       const btn=$('#csvCommit');btn.disabled=true;let saved=0;
       try{
-       for(const t of result.all){if(csvImportedDuplicate(t,state.transactions))continue;await saveDocument('transactions',t);state.transactions.push(t);saved++;}
+       const newEntries=result.all.filter(t=>!csvImportedDuplicate(t,state.transactions));
+       const needed=[...new Map(newEntries.filter(t=>t.bankCurrency!=='CAD')
+        .map(t=>[t.bankCurrency+'|'+t.date,[t.bankCurrency,t.date]])).values()];
+       const quotes=new Map();
+       // Rates must be available for the entire batch before writing any entry.
+       for(const [cur,date] of needed)quotes.set(cur+'|'+date,await window.TraceInternational.getRate(cur,date));
+       for(const t of newEntries){
+        const account=accts.find(a=>a.id===t.accountId),quote=t.bankCurrency==='CAD'?null:quotes.get(t.bankCurrency+'|'+t.date);
+        const booking=window.TraceInternational.resolveBooking({account,bankAmount:t.bankAmount,date:t.date,quote});
+        const item={...t,...booking,...traceSplit(me,booking.amountCAD)};
+        if(csvImportedDuplicate(item,state.transactions))continue;
+        await saveDocument('transactions',item);state.transactions.push(item);saved++;
+       }
        renderAll();navigate('activity');showTab('review');
        $('#importResult').textContent=saved+' opération(s) placée(s) dans À vérifier.';
       }catch(e){console.error(e);renderAll();$('#importResult').textContent=saved+' ligne(s) importée(s). Import interrompu : vérifie la connexion puis recommence (les doublons sont reconnus).';}
