@@ -386,6 +386,66 @@ function renderHomeReview(){
 }
 window.TraceHomeReview={refresh:renderHomeReview};
 
+// Insights are derived from confirmed entries; no fabricated history is stored.
+function insightMonths(scopeValue){
+ return months6().map(m=>{
+  const val=summary(m,scopeValue),hasData=txs(m,scopeValue,true).length>0||
+   state.budgets.some(b=>b.month===m&&budgetAmt(b,scopeValue)>0);
+  return{month:m,...val,budget:val.eb,hasData,current:m===CM};
+ });
+}
+function insightYear(year,scopeValue,selected){
+ return Array.from({length:12},(_,i)=>{
+  const m=year+'-'+String(i+1).padStart(2,'0'),v=summary(m,scopeValue);
+  return{month:m,budget:v.eb,expense:v.expense,income:v.income,elapsed:m<=CM,
+   current:m===CM,selected:m===selected,
+   hasBudget:state.budgets.some(b=>b.month===m&&budgetAmt(b,scopeValue)>0),
+   hasTransactions:txs(m,scopeValue,true).length>0};
+ });
+}
+function insightCategoryDrilldown(month,scopeValue,categoryId){
+ const category=state.categories.find(c=>c.id===categoryId),
+  listed=txs(month,scopeValue,true).filter(t=>categoryId?t.categoryId===categoryId:
+   !state.categories.some(c=>c.type==='expense'&&!c.archived&&c.id===t.categoryId));
+ const expenses=listed.filter(t=>['expense','group_expense','person_payment','refund'].includes(t.type));
+ const amount=expenses.reduce((n,t)=>n+(t.type==='refund'?-alloc(t,scopeValue):alloc(t,scopeValue)),0);
+ openSheet('Dépenses · '+esc(category?.name||'Autres'),
+  '<div class="trace-insight-sheet-intro"><strong>'+money(Math.max(0,amount))+'</strong><small>'+esc(monthLabel(month))+' · ta part selon le filtre sélectionné</small></div>'+
+  (expenses.length?expenses.map(txRow).join(''):'<div class="empty-note">Aucune opération confirmée dans cette catégorie.</div>')+
+  '<div class="trace-insights-foot">Les virements et paiements de carte sont exclus des dépenses de consommation.</div>');
+ $('[data-tx-open]').forEach(el=>el.onclick=()=>editTransaction(el.dataset.txOpen));
+}
+function insightWealthData(scopeValue,bankResult,ports,missing){
+ const owners=scopeValue==='couple'?['la','partner']:[scopeValue],accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
+ const included=ports.map(({a,p})=>({name:a.name||a.type||'Compte',cad:p.cad,ready:p.hasFx&&
+  (a.savingsTracking!=='linked'||p.configured),linked:a.savingsTracking==='linked'}));
+ const flows=[];
+ accounts.forEach(a=>{
+  if(a.savingsTracking==='linked'){
+   linkedSavingsMovements(a).forEach(t=>{
+    const deposit=t.type==='external_transfer',amount=Number(t.amountCAD);
+    if(Number.isFinite(amount)&&amount>0)flows.push({month:String(t.date||'').slice(0,7),kind:deposit?'deposit':'withdrawal',amount});
+   });
+  }else{
+   const fx=a.currency==='CAD'?1:Number(a.fxCadPerUnit||0);
+   if(!(fx>0))return;
+   state.investmentOperations.filter(o=>o.accountId===a.id&&['deposit','withdrawal'].includes(o.type)).forEach(o=>{
+    const amount=Number(o.amount||0)*fx;
+    if(Number.isFinite(amount)&&amount>0)flows.push({month:String(o.date||'').slice(0,7),kind:o.type,amount});
+   });
+  }
+ });
+ return{checking:bankResult.checking,cardDebt:bankResult.cardDebt,investments:included,flows,
+  hasIncomplete:missing.length>0||bankResult.net===null||bankResult.needsCardReview};
+}
+function openAnnualBudgetAnalysis(){
+ const month=budgetMonth,sId=scope(budgetScope),year=month.slice(0,4);
+ openSheet('Mon année '+year,'<div id="traceAnnualDetail"></div>');
+ window.TraceInsights.renderAnnual($('#traceAnnualDetail'),{year,months:insightYear(year,sId,month)});
+ $('#traceAnnualDetail [data-insight-month]').forEach(b=>b.onclick=()=>{
+  setBudgetMonth(b.dataset.insightMonth);closeSheet();navigate('budget');
+ });
+}
 function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.expense/s.eb*100:0,b=bank(sId);$('#homeMonthLabel').textContent=monthLabel(CM);$('#homeGreeting').textContent=homeScope==='mine'?`Bonjour ${member(me).name}`:'Votre situation';$('#homeBudgetAvailable').textContent=money(s.eb-s.expense);$('#homeBudgetSub').textContent=s.eb?`sur ${money(s.eb)} prévus ce mois`:'Budget du mois à compléter';$('#homeBudgetProgress').style.width=`${Math.min(100,Math.max(0,cons))}%`;$('#homeBudgetPercent').textContent=`${cons.toFixed(0)} % consommé`;$('#homeBudgetSpent').textContent=`${money(s.expense)} dépensés`;$('#homeBalance').textContent=b.net===null?'À configurer':b.needsCardReview?'À vérifier':money(b.net);
  $('#homeChecking').textContent=b.checking===null?'—':money(b.checking);
  $('#homeCard').textContent=b.card===null?'—':b.needsCardReview?
@@ -401,7 +461,10 @@ function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.e
  t.transferPurpose==='savings'&&String(t.date||'').startsWith(CM)&&isFinancialPeriod(t)&&
  (sId==='couple'||state.accounts.find(a=>a.id===t.accountId)?.owner===sId))
  .reduce((sum,t)=>sum+Number(t.amountCAD||0),0);
- $('#homeCELITransfers').textContent=money(savedToCeli);renderHomeReview();const cs=breakdown(CM,sId).slice(0,4);$('#homeBudgetCategories').innerHTML=cs.length?cs.map(c=>`<div class="budget-row"><div class="name">${esc(c.name)}</div><div class="bar ${c.ratio>=.8?'warn':''}"><i style="width:${Math.min(100,c.ratio*100)}%"></i></div><div class="amount"><strong>${money(c.actual)}</strong> / ${money(c.budget)}</div></div>`).join(''):'<div class="empty-note">Ajoute ton budget pour voir les catégories importantes.</div>';chart($('#homeTrend'),sId);const cb=coupleBalance(),pa=member(partner),la=member('la');$('#partnerAvatar').textContent=pa.initials||initials(pa.name);$('#shareLabel').textContent=`Solde avec ${pa.name}`;$('#shareBalance').textContent=Math.abs(cb)<.01?'Vous êtes à l’équilibre':cb>0?`${shortMemberName('partner')} doit ${money(cb)} à ${shortMemberName('la')}`:`${shortMemberName('la')} doit ${money(Math.abs(cb))} à ${shortMemberName('partner')}`;if((state.household.workspaceMembers||[]).length<2){
+ $('#homeCELITransfers').textContent=money(savedToCeli);renderHomeReview();
+ window.TraceInsights.renderCategories($('#homeBudgetCategories'),{rows:breakdown(CM,sId),totalExpense:s.expense,
+  budgetTotal:s.eb,month:CM,limit:8,onCategory:id=>insightCategoryDrilldown(CM,sId,id)});
+ window.TraceInsights.renderTrend($('#homeTrend'),{months:insightMonths(sId),selected:CM});const cb=coupleBalance(),pa=member(partner),la=member('la');$('#partnerAvatar').textContent=pa.initials||initials(pa.name);$('#shareLabel').textContent=`Solde avec ${pa.name}`;$('#shareBalance').textContent=Math.abs(cb)<.01?'Vous êtes à l’équilibre':cb>0?`${shortMemberName('partner')} doit ${money(cb)} à ${shortMemberName('la')}`:`${shortMemberName('la')} doit ${money(Math.abs(cb))} à ${shortMemberName('partner')}`;if((state.household.workspaceMembers||[]).length<2){
  $('#partnerAvatar').textContent='+';
  $('#shareLabel').textContent='Inviter ton partenaire';
  $('#shareBalance').textContent='À deux, quand tu le souhaites';
@@ -435,8 +498,13 @@ function renderBudget(){
   $('#manageBudgetCategories').onclick=manageCategories;
   document.querySelectorAll('[data-budget-add]').forEach(btn=>btn.onclick=()=>openBudgetAdd(btn.dataset.budgetAdd));
   document.querySelectorAll('[data-budget-edit]').forEach(btn=>btn.onclick=()=>openBudgetEdit(btn.dataset.budgetEdit));
-  const year=month.slice(0,4),ms=Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0')),vs=ms.map(m=>summary(m,sId)),max=Math.max(1,...vs.flatMap(v=>[v.eb,v.expense]));
-  $('#annualBudgetChart').innerHTML=ms.map((m,i)=>'<div class="monthbar '+(m===month?'selected':'')+'"><i style="height:'+Math.max(2,vs[i].eb/max*100)+'%"></i><b style="height:'+Math.max(2,vs[i].expense/max*100)+'%"></b><em>'+shortMonth(m)+'</em></div>').join('');
+  const year=month.slice(0,4);
+  window.TraceInsights.renderCategories($('#budgetCategoryImpact'),{rows:breakdown(month,sId),totalExpense:s.expense,
+   budgetTotal:s.eb,month,onCategory:id=>insightCategoryDrilldown(month,sId,id)});
+  window.TraceInsights.renderAnnual($('#annualBudgetChart'),{year,months:insightYear(year,sId,month)});
+  $('#annualBudgetChart [data-insight-month]').forEach(btn=>btn.onclick=e=>{
+   e.stopPropagation();setBudgetMonth(btn.dataset.insightMonth);
+  });
   updateSegments();
 }
 
@@ -2397,13 +2465,28 @@ function renderWealth(){
  ].join('');
  $('#wealthAddCard').onclick=openInvestmentAccountAdd;$('#wealthLiquidityCard').onclick=openAccountSettings;
  $$('[data-inv-account]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.invAccount)));
- $('#wealthTrend').innerHTML='<div class="empty-note">Les évolutions seront présentées dès que suffisamment de valorisations datées auront été saisies. Aucun graphique fictif n’est affiché.</div>';
+ window.TraceInsights.renderWealth($('#wealthTrend'),insightWealthData(sId,bk,ports,missing));
  updateSegments();
 }
 function renderAll(){renderHome();renderBudget();renderActivity();renderWealth();if(session?.user?.id&&household)window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});}
 function navigate(p){$$('.page').forEach(x=>x.classList.toggle('active',x.dataset.page===p));$$('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===p));location.hash=p==='home'?'':p;window.scrollTo({top:0,behavior:document.body.classList.contains('trace-guide-open')?'auto':'smooth'});}
 function analysis(){analysisScope=homeScope;renderAnalysis();}
-function renderAnalysis(){const sId=scope(analysisScope),ms=months6(),vs=ms.map(m=>summary(m,sId)),inc=vs.reduce((x,v)=>x+v.income,0),exp=vs.reduce((x,v)=>x+v.expense,0),sav=inc-exp;openSheet('Analyses',`<div class="segment analysis-scope" id="analysisScope"><button class="seg ${analysisScope==='mine'?'active':''}" data-scope="mine">Moi</button><button class="seg ${analysisScope==='couple'?'active':''}" data-scope="couple">Couple</button></div><div class="metric-strip" style="margin-top:14px"><div class="metric-mini"><span>Dépenses · 6 mois</span><b>${money(exp)}</b></div><div class="metric-mini"><span>Moyenne</span><b>${money(exp/6)}</b></div><div class="metric-mini"><span>Épargne</span><b>${money(sav)}</b></div><div class="metric-mini"><span>Taux</span><b>${inc?(sav/inc*100).toFixed(1):0} %</b></div></div><div class="section-head"><h2>Évolution</h2></div><div class="chart" id="analysisChart"></div>`);chart($('#analysisChart'),sId,'expense');$$('#analysisScope .seg').forEach(b=>b.onclick=()=>{analysisScope=b.dataset.scope;renderAnalysis();});}
+function renderAnalysis(){
+ const sId=scope(analysisScope),month=CM,monthly=insightMonths(sId),known=monthly.filter(m=>m.hasData);
+ const exp=known.reduce((n,m)=>n+m.expense,0),inc=known.reduce((n,m)=>n+m.income,0);
+ openSheet('Comprendre mon budget',
+  '<div class="segment analysis-scope" id="analysisScope"><button class="seg '+(analysisScope==='mine'?'active':'')+'" data-scope="mine">Moi</button><button class="seg '+(analysisScope==='couple'?'active':'')+'" data-scope="couple">Couple</button></div>'+
+  '<p class="trace-insights-explain">Seulement '+known.length+' mois renseigné(s) sur les six derniers. Un mois sans données n’est pas un mois à 0 $.</p>'+
+  '<div class="trace-insight-statpair"><div><small>Dépenses des mois renseignés</small><b>'+money(exp)+'</b></div>'+
+  '<div><small>Revenus enregistrés</small><b>'+money(inc)+'</b></div></div>'+
+  '<div id="traceAnalysisTrend" class="trace-insight-modal"></div>'+
+  '<div id="traceAnalysisCategories" class="trace-insight-modal"></div>');
+ window.TraceInsights.renderTrend($('#traceAnalysisTrend'),{months:monthly,selected:month});
+ const s=summary(month,sId);
+ window.TraceInsights.renderCategories($('#traceAnalysisCategories'),{rows:breakdown(month,sId),totalExpense:s.expense,
+  budgetTotal:s.eb,month,onCategory:id=>insightCategoryDrilldown(month,sId,id)});
+ $('#analysisScope .seg').forEach(b=>b.onclick=()=>{analysisScope=b.dataset.scope;renderAnalysis();});
+}
 function detail(type){const sId=scope(homeScope),rows=txs(CM,sId,true).filter(t=>type==='income'?t.type==='income':type==='spending'?['expense','group_expense','person_payment','refund'].includes(t.type):false);if(type==='saving'){const s=summary(CM,sId);openSheet('Marge après dépenses',`<div class="money2">${money(s.saving)}</div><div class="micro">Revenus moins dépenses du mois. Les virements vers le CELI font baisser le solde courant sans modifier ce calcul.</div>`);return;}openSheet(type==='income'?'Revenus':'Dépenses',rows.length?rows.map(txRow).join(''):'<div class="empty-note">Aucune opération.</div>');}
 
 function uiIcon(name){
@@ -3166,7 +3249,7 @@ function fatal(e){
   openSheet('Trace a rencontré un problème','<div class="empty-note">Une partie de Trace n’a pas pu se charger correctement.</div><button class="primary full" id="traceReloadBtn" type="button" style="margin-top:14px">Recharger Trace</button>');
   $('#traceReloadBtn').onclick=()=>location.reload();
 }
-function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('import');}else navigate(b.dataset.go);});$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$('#shareOpen').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=analysis;$('#annualBudgetCard').onclick=analysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{emailRedirectTo:new URL('./index.html',window.location.href).href,data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{
+function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('import');}else navigate(b.dataset.go);});$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$('#shareOpen').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{emailRedirectTo:new URL('./index.html',window.location.href).href,data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{
  e.preventDefault();
  const button=e.currentTarget.querySelector('button[type="submit"]');
  if(button)button.disabled=true;
