@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.2.js'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.3.js'),'utf8');
 let count=0;
 function test(title,run){run();count++;console.log('PASS '+title);}
 function pick(name,next,dependencies={}){
@@ -75,7 +75,7 @@ const gateEnd=app.indexOf('\nasync function validatePendingAll()',gateStart);
 assert.ok(gateStart>=0&&gateEnd>gateStart);
 const root={};const vm=require('node:vm');
 const movement=fs.readFileSync(path.join(__dirname,'..','trace-movement-5.36.0.js'),'utf8');
-const guide=fs.readFileSync(path.join(__dirname,'..','trace-import-guide-1.2.0.js'),'utf8');
+const guide=fs.readFileSync(path.join(__dirname,'..','trace-import-guide-1.2.1.js'),'utf8');
 vm.runInNewContext(movement,{window:root});
 vm.runInNewContext(guide,{window:root});
 const gateState={accounts:[account,card,{id:'extra',owner:'la',type:'checking'}],investmentAccounts:[savings]};

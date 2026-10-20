@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.36.2",
-  "release": "repair-activity-render-selector-startup-crash"
+  "build": "5.36.3",
+  "release": "classify-generic-card-payment-credit-with-verification"
 }
