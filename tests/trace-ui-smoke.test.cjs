@@ -4,7 +4,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.3.js'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.4.js'),'utf8');
 let checks=0;
 function test(name,fn){fn();console.log('PASS '+name);checks++;}
 function extract(start,next){
