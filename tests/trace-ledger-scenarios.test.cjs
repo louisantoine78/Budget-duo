@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.4.js'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.5.js'),'utf8');
 let count=0;
 function test(title,run){run();count++;console.log('PASS '+title);}
 function pick(name,next,dependencies={}){

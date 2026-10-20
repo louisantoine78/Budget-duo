@@ -52,7 +52,7 @@ test('remboursement partiel encore 30',()=>assert.equal(M.linkable([original],[o
 test('refus dépassement remboursement',()=>assert.throws(()=>M.validateLink('e1',[original],[original,already],'la','2026-10-19',31)));
 test('répartition dépasse montant',()=>assert.throws(()=>M.amounts(100,'custom','la',{},80,30)));
 test('interac aucune nature automatique',()=>assert.equal(G.suggest('checking','transfer','Virement Interac envoyé'),''));
-const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.4.js'),'utf8');
+const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.5.js'),'utf8');
 test('validation par lot sécurisée',()=>assert.match(appSource,/selected\.some\(x=>!legacyImportNatureReady\(x\.t\)\)/));
 test('validation globale sécurisée',()=>assert.match(appSource,/return legacyImportNatureReady\(t\)/));
 test('validation rapide OCR sécurisée',()=>assert.match(appSource,/legacyImportNatureReady\(t\)&&\s*manualCategories/));
@@ -74,7 +74,7 @@ test('import validates banking direction',()=>assert.match(appSource,/nature\.di
 test('import card evidence not double counted',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardStatementSettlementLabel\(name\)/));
 test('import nonbudget no category',()=>assert.match(appSource,/const chosenCategory=nature\.budget==='none'\?'':/));
 test('movement editor validates pending operation',()=>assert.match(appSource,/const next=\{\.\.\.t,type,date,name,status:'confirmed'/));
-test('active 5.36.4',()=>assert.match(appSource,/__TRACE_BUILD__='5\.36\.4'/));
+test('active 5.36.5',()=>assert.match(appSource,/__TRACE_BUILD__='5\.36\.5'/));
 [
  ['expense',true,'expense'],['friend_payment_expense',true,'expense'],['refund',true,'refund'],
  ['income',true,'income'],['card_payment',false,'none'],['transfer',false,'none'],
@@ -94,7 +94,7 @@ test('carte saisie comme dette positive et stockée avec signe',()=>assert.match
 test('alerte pour crédit non rapproché',()=>assert.match(appSource,/cardWarning\.hidden=!b\.needsCardReview/));
 test('CELI uniquement en information sur accueil',()=>assert.match(appSource,/\$\('#homeCELITransfers'\)\.textContent=money\(savedToCeli\)/));
 
-const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.4.1.js'),'utf8');
+const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.4.2.js'),'utf8');
 [
  'PAIEMENT CAISSE','PAIEMENT REÇU','Paiement reçue','PAYMENT RECEIVED',
  'PAYMENT THANK YOU','Paiement de ma Mastercard','Règlement carte Visa'
@@ -215,5 +215,11 @@ test('real OCR layout retains visible -750 as debit',()=>{
 test('reconciled payment opens a read-only detail receipt',()=>assert.ok(appSource.includes('TraceCardPaymentDetail.render({')));
 test('unlink is behind an explicit confirmation',()=>assert.ok(appSource.includes("$('#traceUnlinkNow').onclick=async()=>")));
 test('card-side evidence opens the linked checking transfer',()=>assert.ok(appSource.includes("t.type==='card_statement_evidence'")));
+
+
+test('duplicate shows exact recorded transaction account and category',()=>assert.ok(appSource.includes("categoryName:state.categories.find(c=>c.id===x.categoryId)")));
+test('inspection supplies exact matching account date and amount',()=>assert.ok(appSource.includes("matchId:match?.id||''")));
+test('only confirmed duplicates are said to be accounted',()=>assert.ok(appSource.includes("status:x.status==='confirmed'?'recorded':'unconfirmed'")));
+test('smart inbox renders real existing transaction comparison',()=>assert.ok(inboxSource.includes('TraceDuplicateCompare.render({')));
 
 console.log(checked+' assertions réussies');
