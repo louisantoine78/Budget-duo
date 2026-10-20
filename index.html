@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="TRACE — ton budget, ton activité et ton patrimoine au même endroit.">
-<meta name="trace-build" content="5.35.3">
+<meta name="trace-build" content="5.36.0">
 <title>TRACE</title>
 <link rel="manifest" href="manifest.webmanifest?v=5.31.2">
 <link rel="icon" type="image/svg+xml" href="assets/trace-wallet-v1.svg">
@@ -28,6 +28,7 @@
 <link rel="stylesheet" href="trace-unified-operation-ui-1.0.0.css">
 <link rel="stylesheet" href="trace-import-unified-1.0.0.css">
 <link rel="stylesheet" href="trace-card-balance-1.0.0.css">
+<link rel="stylesheet" href="trace-insights-1.0.0.css">
 <link rel="stylesheet" href="onboarding-2.0.0.css">
 <link rel="stylesheet" href="trace-install-1.1.0.css">
 <link rel="stylesheet" href="trace-email-confirmation-1.0.0.css">
@@ -156,7 +157,7 @@
 
       <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="analysisBtn">Analyses</button></div>
       <article class="card clickable" id="homeTrendCard">
-        <div class="eyebrow">Épargne mensuelle · 6 mois</div>
+        <div class="eyebrow">Dépenses et marge · 6 mois</div>
         <div class="chart" id="homeTrend"></div>
         <div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div>
       </article>
@@ -202,7 +203,9 @@
         <div class="sub" id="budgetHeroSub">—</div>
       </article>
       <div id="budgetSections"></div>
-      <div class="section-head"><h2>Vue annuelle</h2><button class="linkbtn" id="annualBudgetDetails">Détails</button></div>
+      <div class="section-head"><h2>Mes dépenses réelles</h2><small>Voir où passe le budget</small></div>
+      <article class="card" id="budgetCategoryImpact"></article>
+      <div class="section-head"><h2>Mon année en clair</h2><button class="linkbtn" id="annualBudgetDetails">Détails</button></div>
       <article class="card clickable" id="annualBudgetCard"><div class="chart" id="annualBudgetChart"></div><div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div></article>
     </section>
 
@@ -260,7 +263,7 @@
       <article class="card hero-card" style="min-height:160px"><div class="label">Patrimoine suivi</div><div class="big" id="wealthTotal">—</div><div class="sub" id="wealthSub">Liquidités, épargne et investissements</div></article>
       <div class="section-head"><h2>Comptes</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
       <div class="portfolio-grid" id="assetGrid"></div>
-      <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="wealthAnalysis">Analyses</button></div>
+      <div class="section-head"><h2>Comprendre mon patrimoine</h2><button class="linkbtn" id="wealthAnalysis">Détails</button></div>
       <article class="card clickable" id="wealthChart"><div class="chart" id="wealthTrend"></div><div class="legend"><span><i class="dot dark"></i>Patrimoine</span></div></article>
     </section>
   </main>
@@ -324,14 +327,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=5.2.2"></script>
 <script src="trace-email-confirmation-1.0.0.js"></script>
-<script src="trace-movement-5.33.0.js"></script>
-<script src="trace-import-guide-1.1.2.js"></script>
+<script src="trace-movement-5.36.0.js"></script>
+<script src="trace-import-guide-1.2.0.js"></script>
 <script src="trace-operation-ui-1.0.0.js"></script>
-<script src="v5-app-5.35.3.js"></script>
+<script src="trace-insights-1.0.0.js"></script>
+ <script src="v5-app-5.36.0.js"></script>
 <script src="trace-bank-doc-1.11.0.js"></script>
 <script src="trace-bank-ui-2.8.1.js"></script>
 <script src="trace-import-calendar-2.1.2.js"></script>
-<script src="trace-smart-inbox-3.3.1.js"></script>
+<script src="trace-smart-inbox-3.4.0.js"></script>
 <script src="onboarding-2.0.3.js"></script>
 <script src="trace-reminders-1.0.0.js"></script>
 <script src="trace-swipe-1.1.0.js"></script>
