@@ -2840,6 +2840,9 @@ function openNewBankAccount(preset='',returnTo='settings'){
  openSheet('Ajouter un compte bancaire',
   '<p class="empty-note">Un compte courant pour les revenus et les virements, une carte pour les achats. Choisis un nom identifiable, sans renseigner d’informations bancaires confidentielles.</p>'+
   '<label class="label2">Type de compte</label><select class="input" id="traceNewBankType"><option value="checking">Compte courant</option><option value="card">Carte de crédit</option></select>'+
+  '<div class="formrow"><div><label class="label2">Pays du compte</label><select id="traceNewBankCountry" class="input"><option value="CA">Canada</option><option value="FR">France</option><option value="OTHER">Autre</option></select></div>'+
+  '<div><label class="label2">Devise du compte</label><select id="traceNewBankCurrency" class="input">'+window.TraceInternational.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></div></div>'+
+  '<label class="label2" id="traceNewBankPaymentLabel">Fonctionnement de la carte</label><select id="traceNewBankPayment" class="input"><option value="credit">Carte de crédit</option><option value="deferred">Carte à débit différé</option></select>'+
   '<label class="label2">Nom du compte (modifiable plus tard)</label><input class="input" id="traceNewBankName" maxlength="70" autocomplete="off">'+
   '<label class="label2" id="traceNewBankAmountLabel">Solde de référence ($)</label><input class="input" id="traceNewBankAmount" type="number" step=".01" inputmode="decimal" placeholder="À renseigner" autocomplete="off">'+
   '<p class="trace-account-amount-info" id="traceNewBankAmountInfo"></p>'+
@@ -2849,11 +2852,14 @@ function openNewBankAccount(preset='',returnTo='settings'){
   '<p id="traceBankSetupError" class="trace-bank-setup-error" role="alert"></p>'+
   '<button class="primary full" id="traceSaveNewBank" type="button">Créer ce compte</button>'+
   '<button class="secondary full" id="traceCancelNewBank" type="button" style="margin-top:8px">Annuler</button>');
- const type=$('#traceNewBankType'),name=$('#traceNewBankName'),info=$('#traceNewBankAmountInfo');
- const syncType=()=>{
+ const type=$('#traceNewBankType'),name=$('#traceNewBankName'),info=$('#traceNewBankAmountInfo'),country=$('#traceNewBankCountry'),currency=$('#traceNewBankCurrency'),payment=$('#traceNewBankPayment');
+ country.onchange=()=>{currency.value=country.value==='FR'?'EUR':'CAD';syncType(false);};
+ currency.onchange=()=>syncType(false);
+ const syncType=(resetName=true)=>{
   const card=type.value==='card';
-  name.value=card?'Carte de crédit':'Compte courant';
-  $('#traceNewBankAmountLabel').textContent=card?'Dette de carte à cette date ($)':'Solde de référence ($)';
+  if(resetName)name.value=card?'Carte de crédit':country.value==='FR'?'Compte bancaire français':'Compte courant';
+  payment.hidden=!card;$('#traceNewBankPaymentLabel').hidden=!card;
+  $('#traceNewBankAmountLabel').textContent=(card?'Dette de carte':'Solde de référence')+' à cette date ('+currency.value+')';
   $('#traceNewBankAmount').value='';
   $('#traceNewBankAmount').min=card?'0':'';
   info.textContent=card?'Entre le montant de dette positif. TRACE enregistre ce montant comme une dette (solde négatif).':
@@ -2866,8 +2872,10 @@ function openNewBankAccount(preset='',returnTo='settings'){
  $('#traceCancelNewBank').onclick=back;
  $('#traceSaveNewBank').onclick=async()=>{
   const label=name.value.trim(),accountKind=type.value,raw=$('#traceNewBankAmount').value.trim(),
-   n=raw===''?null:Number(raw),date=$('#traceNewBankDate').value,mode=$('#traceNewBankMode').value;
+   n=raw===''?null:Number(raw),date=$('#traceNewBankDate').value,mode=$('#traceNewBankMode').value,
+   currencyCode=currency.value,countryCode=country.value;
   if(!label||label.length>70||!['checking','card'].includes(accountKind)||
+   !window.TraceInternational.valid(currencyCode)||!['CA','FR','OTHER'].includes(countryCode)||
    !/^\d{4}-\d\d-\d\d$/.test(date)||(n!==null&&(!Number.isFinite(n)||Math.abs(n)>1e9))||
    (accountKind==='card'&&n!==null&&n<0)){
    $('#traceBankSetupError').textContent='Vérifie le nom, la date et le montant. La dette de carte doit être saisie en positif.';
@@ -2877,7 +2885,8 @@ function openNewBankAccount(preset='',returnTo='settings'){
    $('#traceBankSetupError').textContent='Tu as déjà un compte de ce nom.';
    return;
   }
-  const account={id:accountKind+'_'+txDocId(),owner:me,name:label,type:accountKind};
+  const account={id:accountKind+'_'+txDocId(),owner:me,name:label,type:accountKind,
+   currency:currencyCode,country:countryCode,paymentMode:accountKind==='card'?payment.value:'immediate'};
   const button=$('#traceSaveNewBank');button.disabled=true;button.textContent='Enregistrement…';
   let saved=false;
   try{
@@ -2952,7 +2961,8 @@ function openAccountSettings(){
  const balances=state.household.accountOpeningBalances||{};
  const dates=state.household.accountOpeningBalanceDates||{};
  const modes=state.household.accountOpeningBalanceModes||{};
- const accountLabel=a=>accountType(a)==='card'?'Carte de crédit':accountType(a)==='checking'?'Compte courant':'Compte bancaire';
+ const accountLabel=a=>accountType(a)==='card'?(a.paymentMode==='deferred'?'Carte à débit différé':'Carte de crédit'):
+  a.country==='FR'?'Compte à débit direct':'Compte courant';
  openSheet('Mes comptes',
   '<div class="trace-bank-scope" role="group" aria-label="Afficher les comptes de"><button type="button" data-bank-scope="mine" class="'+(bankSettingsScope==='mine'?'is-selected':'')+'" aria-pressed="'+(bankSettingsScope==='mine')+'">Moi</button><button type="button" data-bank-scope="couple" class="'+(bankSettingsScope==='couple'?'is-selected':'')+'" aria-pressed="'+(bankSettingsScope==='couple')+'">Couple</button></div>'+
   '<p class="trace-account-settings-help">'+(bankSettingsScope==='couple'?'Vue globale des comptes du foyer. Tu peux modifier tes propres comptes ; ceux du partenaire sont en lecture seule.':
@@ -2962,11 +2972,14 @@ function openAccountSettings(){
    const estimate=accountEstimate(a);
    return '<div class="account-setting-card trace-bank-account">'+
     '<div class="trace-bank-account-head"><div class="settings-hero compact"><span class="pico">'+uiIcon('bank')+'</span><div>'+
-    '<b>'+esc(shortAccountLabel(a))+'</b><small>'+esc(accountLabel(a))+' · '+esc(shortMemberName(a.owner))+'</small></div></div>'+
+    '<b>'+esc(shortAccountLabel(a))+'</b><small>'+esc(accountLabel(a))+' · '+esc(shortMemberName(a.owner))+' · '+window.TraceInternational.currency(a)+' · '+esc(a.country||'CA')+'</small></div></div>'+
     (editable?'<button type="button" class="trace-bank-rename" data-rename-bank="'+esc(a.id)+'">Renommer</button>':
      '<span class="trace-bank-readonly">Consultation</span>')+'</div>'+
     (editable?
-     '<label class="label2">'+(accountType(a)==='card'?'Dette de carte à cette date ($)':'Solde de référence ($)')+'</label>'+
+     (accountType(a)==='checking'?'<button type="button" class="trace-intl-set-primary" data-primary-bank="'+esc(a.id)+'">'+
+       (state.household.primaryBankAccountByOwner?.[me]===a.id?'✓ Compte principal':'Définir comme principal')+'</button>':'')+
+     '<label class="label2">'+(accountType(a)==='card'?'Dette de carte':'Solde de référence')+' à cette date ('+
+      window.TraceInternational.currency(a)+')</label>'+
      '<input class="input account-opening" data-id="'+esc(a.id)+'" type="number" '+(accountType(a)==='card'?'min="0" ':'')+'step="0.01" value="'+esc(accountType(a)==='card'&&balances[a.id]!=null?Math.abs(Number(balances[a.id])):(balances[a.id]??''))+'">'+
      (accountType(a)==='card'?'<small class="trace-account-amount-info">Entre la dette en positif (ex. 595,90). TRACE la soustrait du compte courant. Aucun paiement ni achat n’est créé.</small>':'')+
      '<label class="label2">Date de ce solde</label><input class="input account-date" data-id="'+esc(a.id)+'" type="date" value="'+esc(dates[a.id]||state.household.referenceDate||CM+'-01')+'">'+
@@ -2984,7 +2997,14 @@ function openAccountSettings(){
   '<p class="trace-bank-setup-footer">Compte courant : revenus et virements. Carte de crédit : achats du quotidien ; son paiement depuis le courant n’est pas une deuxième dépense.</p>'+
   settingsBack());
  $$('[data-bank-scope]').forEach(button=>button.onclick=()=>{bankSettingsScope=button.dataset.bankScope==='couple'?'couple':'mine';openAccountSettings();});
- $$('[data-rename-bank]').forEach(button=>button.onclick=()=>openRenameBankAccount(button.dataset.renameBank));
+ $('[data-rename-bank]').forEach(button=>button.onclick=()=>openRenameBankAccount(button.dataset.renameBank));
+ $('[data-primary-bank]').forEach(button=>button.onclick=async()=>{
+  const previous={...(state.household.primaryBankAccountByOwner||{})};
+  state.household.primaryBankAccountByOwner={...previous,[me]:button.dataset.primaryBank};
+  button.disabled=true;
+  try{await saveHouseholdSettings();renderAll();openAccountSettings();}
+  catch(e){state.household.primaryBankAccountByOwner=previous;button.disabled=false;traceNotice(e);}
+ });
  $('#traceAddBankAccount').onclick=()=>openNewBankAccount();
  if(mine.length)$('#saveAccountSettings').onclick=async()=>{
   const oldBalances={...(state.household.accountOpeningBalances||{})},
