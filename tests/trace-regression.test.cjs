@@ -108,7 +108,7 @@ test('card paiement caisse selects evidence type',()=>assert.equal(G.suggest('ca
 test('card paiement caisse credit direction',()=>assert.equal(G.direction('refund','card','PAIEMENT CAISSE'),'in'));
 test('card caisse cannot be approved as merchant refund',()=>assert.equal(G.safeForQuickApproval('card','refund','PAIEMENT CAISSE'),false));
 test('inbox detects card-side evidence',()=>assert.match(inboxSource,/guided\.cardStatementSettlementLabel\(d\.name\)/));
-test('inbox offers reconciliation',()=>assert.match(inboxSource,/payment=guide\.cardStatementSettlementLabel\(name\)/));
+test('inbox offers reconciliation for manual credit or bank label',()=>assert.ok(inboxSource.includes("payment=type==='card_payment_received'||guide.cardStatementSettlementLabel(name)")));
 test('legacy OCR blocks double credit',()=>assert.match(importerSource,/G\.cardStatementSettlementLabel\(r\.name\)/));
 test('backend checks manual evidence selection',()=>assert.ok(appSource.includes("values?.type!=='card_payment_received'")));
 const accounts=[
