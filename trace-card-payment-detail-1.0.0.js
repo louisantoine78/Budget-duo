@@ -53,7 +53,7 @@
       '<b>+'+amount(e.amountCAD??e.amount)+'</b></div>').join('')+
     (hasMismatch?'<p class="trace-card-payment-warning" role="status">Attention : le total des lignes rapprochées ne correspond pas exactement au montant du transfert. Vérifie les relevés.</p>':'')+
    '</section>'+
-   '<button type="button" class="primary full" id="keepCardEvidence">Terminer</button>'+
+   '<button type="button" class="primary full" id="keepCardEvidence">Fermer</button>'+
    '<details class="trace-card-payment-correction">'+
     '<summary>Corriger ce rapprochement</summary>'+
     '<p>Si la mauvaise ligne a été associée, tu peux retirer le lien. Le paiement de carte restera enregistré et les lignes du relevé redeviendront à vérifier, sans recalculer ton budget.</p>'+
