@@ -571,6 +571,12 @@ function openManualTransaction(){
   '<div class="trace-manual-fields"><label class="label2">Description</label><input class="input" id="manualTxName" maxlength="80" type="text" placeholder="Ex. Restaurant, remboursement Mathilde">'+
   '<div class="formrow manual-money-row"><div><label class="label2">Montant</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
   '<div><label class="label2">Date</label><input class="input" id="manualTxDate" type="date" value="'+localDateISO()+'"></div></div>'+
+  '<div class="trace-intl-transaction"><small id="manualBankCurrencyNote">Montant dans la devise du compte</small>'+
+  '<div class="formrow"><div><label class="label2">Devise d’achat</label><select class="input" id="manualPurchaseCurrency">'+window.TraceInternational.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></div>'+
+  '<div><label class="label2">Prix d’achat d’origine (facultatif)</label><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
+  '<label class="label2" id="manualFxRateLabel">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
+  '<p class="trace-intl-help">Le montant ci-dessus est celui réellement débité par la banque. En l’absence de taux de référence disponible, entre un taux vérifié.</p>'+
+  '<div id="manualDestAmountWrap" hidden><label class="label2" id="manualDestAmountLabel">Montant réellement reçu sur le compte destinataire</label><input class="input" id="manualDestAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
   '<div id="manualCategoryWrap"><label class="label2">Catégorie budgétaire</label><select class="input" id="manualTxCategory"></select><small id="manualCategorySuggestion"></small></div>'+
   ''+
   '<div id="manualWhoWrap"><label class="label2">Cette dépense concerne</label><select class="input" id="manualTxBeneficiary">'+who+'</select></div>'+
@@ -606,6 +612,11 @@ function openManualTransaction(){
  };
  function sync(){
   const def=M.get(kind);if(!def)return;
+  const from=bankAccounts.find(a=>a.id===$m('manualTxAccount').value),
+   fromCurrency=window.TraceInternational.currency(from);
+  $m('manualBankCurrencyNote').textContent='Montant réellement prélevé / crédité · '+fromCurrency;
+  $m('manualFxRateLabel').hidden=fromCurrency==='CAD';
+  $m('manualFxRate').hidden=fromCurrency==='CAD';
   const budget=def.budget!=='none',expense=def.budget==='expense'||def.budget==='refund';
   $m('manualCategoryWrap').classList.toggle('hidden',!budget);
   $m('manualExtraSection').classList.toggle('hidden',!budget&&!['transfer','card_payment','savings_transfer','savings_withdrawal','friend_reimbursement'].includes(kind));
@@ -619,6 +630,11 @@ function openManualTransaction(){
   $m('manualTarget').innerHTML=bankAccounts.filter(a=>a.id!==$m('manualTxAccount').value&&
    (kind!=='card_payment'||accountType(a)==='card')).map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
   if([...$m('manualTarget').options].some(o=>o.value===previousTarget))$m('manualTarget').value=previousTarget;
+  const destination=bankAccounts.find(a=>a.id===$m('manualTarget').value),
+   distinct=destination&&window.TraceInternational.currency(destination)!==fromCurrency;
+  $m('manualDestAmountWrap').hidden=!distinct||!['card_payment','transfer'].includes(kind);
+  if(distinct)$m('manualDestAmountLabel').textContent='Montant reçu dans le compte destinataire ('+
+   window.TraceInternational.currency(destination)+') · obligatoire';
   const eligible=trackedSavingsAccounts(me).filter(x=>isReadySavingsAccount(x));
   $m('manualSavings').innerHTML='<option value="">Choisir un compte d’épargne</option>'+
    eligible.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>').join('');
@@ -649,8 +665,13 @@ function openManualTransaction(){
  });
  $m('manualKind').onchange=()=>choose($m('manualKind').value,true);
  $m('manualTxBeneficiary').onchange=sync;
- $m('manualTxAccount').onchange=()=>choose(kind,true);
+ $m('manualTxAccount').onchange=()=>{
+  const a=bankAccounts.find(a=>a.id===$m('manualTxAccount').value);
+  $m('manualPurchaseCurrency').value=window.TraceInternational.currency(a);
+  choose(kind,true);
+ };
  $m('manualTxDate').onchange=sync;
+ $m('manualTarget').onchange=sync;
  $m('manualTxAmount').oninput=sync;
  $m('manualFriendsAmount').oninput=sync;
  $m('manualPartnerAmount').oninput=sync;
@@ -663,6 +684,8 @@ function openManualTransaction(){
  };
  $m('cancelManualTx').onclick=closeSheet;
  choose('expense');
+ $m('manualPurchaseCurrency').value=window.TraceInternational.currency(bankAccounts.find(a=>a.id===$m('manualTxAccount').value));
+ sync();
  $m('saveManualTx').onclick=async()=>{
   error.textContent='';
   const def=M.get(kind),amount=Math.round(Number($m('manualTxAmount').value)*100)/100,
