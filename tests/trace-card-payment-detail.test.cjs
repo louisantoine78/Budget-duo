@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
-const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.4.js'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.5.js'),'utf8');
 const moduleSource=fs.readFileSync(path.join(__dirname,'..','trace-card-payment-detail-1.0.0.js'),'utf8');
 const ctx=vm.createContext({window:{}});
 vm.runInContext(moduleSource,ctx,{filename:'trace-card-payment-detail-1.0.0.js'});

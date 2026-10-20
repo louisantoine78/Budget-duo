@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.36.4",
-  "release": "reconciled-card-payment-details-read-only"
+  "build": "5.36.5",
+  "release": "show-existing-transaction-details-during-duplicate-review"
 }
