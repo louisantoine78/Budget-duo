@@ -13,7 +13,7 @@
  };
  const round=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
  const currencies=()=>codes.slice();
- const country=a=>String(a?.country||'').toUpperCase()==='FR'?'FR':String(a?.country||'').toUpperCase()==='CA'?'CA':'OTHER';
+ const country=a=>String(a?.country||'CA').toUpperCase()==='FR'?'FR':String(a?.country||'CA').toUpperCase()==='CA'?'CA':'OTHER';
  const mode=a=>a?.type==='card'?(a?.paymentMode==='deferred'?'deferred':'credit'):'immediate';
  const amountOnAccount=(t,a,leg='source')=>{
   if(!a)return null;
@@ -39,7 +39,7 @@
  const snapshot=({accounts=[],owner,estimates={},mainId,fxRates={}}={})=>{
   const active=accounts.filter(a=>(!owner||a.owner===owner)&&!a.archived&&['checking','card'].includes(a.type));
   const main=primary(active,owner,mainId);
-  const included=active.filter(a=>currency(a)===currency(main));
+  const included=active.filter(a=>a.id===main?.id||(a.type==='card'&&main&&(a.settlementAccountId?a.settlementAccountId===main.id:currency(a)===currency(main)&&country(a)===country(main))));
   const check=included.filter(a=>a.type==='checking').reduce((v,a)=>v+Number(estimates[a.id]||0),0);
   const debt=included.filter(a=>a.type==='card').reduce((v,a)=>v+Math.min(0,Number(estimates[a.id]||0)),0);
   const missing=included.filter(a=>estimates[a.id]===null||estimates[a.id]===undefined);
