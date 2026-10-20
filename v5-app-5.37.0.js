@@ -3451,7 +3451,7 @@ async function checkCurrentBuild(){
 
 /* Bridge for client-side document recognition; financial writes always go via confirmed preview. */
 window.TraceBankBridge={
- accounts:()=>visibleBankAccounts(me).map(a=>({id:a.id,name:shortAccountLabel(a),type:accountType(a),opening:openingBoundary(a.id)})),
+ accounts:()=>visibleBankAccounts(me).map(a=>({id:a.id,name:shortAccountLabel(a),type:accountType(a),currency:window.TraceInternational.currency(a),country:a.country||'CA',opening:openingBoundary(a.id)})),
  movementPreview:movementImpactText,friendLinkCandidates:friendLinkOptions,currentOwner:()=>me,
  smartCardPaymentMatches,smartMatchCardPaymentDraft,
  smartDrafts,smartDuplicateMatches,smartStageRows,smartSaveDraft,smartIgnoreDraft,smartKeepSingleDraft,smartMoveDraftAccount,smartMoveDayDraftsAccount,smartApproveDraft,smartResetDay,smartCreateCategory,
