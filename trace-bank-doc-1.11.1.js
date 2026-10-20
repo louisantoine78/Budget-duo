@@ -529,5 +529,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.0'};
+window.TraceBankDocuments={extract,extractCandidates,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.1'};
 })();
