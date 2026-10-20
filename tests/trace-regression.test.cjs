@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 const ctx=vm.createContext({window:{}});
-for(const name of ['trace-movement-5.36.0.js','trace-import-guide-1.2.0.js','trace-operation-ui-1.0.0.js']){
+for(const name of ['trace-movement-5.36.0.js','trace-import-guide-1.2.1.js','trace-operation-ui-1.0.0.js']){
  vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),ctx,{filename:name});
 }
 const M=ctx.window.TraceMovement,G=ctx.window.TraceImportGuide,U=ctx.window.TraceOperationUI;
@@ -52,7 +52,7 @@ test('remboursement partiel encore 30',()=>assert.equal(M.linkable([original],[o
 test('refus dépassement remboursement',()=>assert.throws(()=>M.validateLink('e1',[original],[original,already],'la','2026-10-19',31)));
 test('répartition dépasse montant',()=>assert.throws(()=>M.amounts(100,'custom','la',{},80,30)));
 test('interac aucune nature automatique',()=>assert.equal(G.suggest('checking','transfer','Virement Interac envoyé'),''));
-const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.2.js'),'utf8');
+const appSource=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.3.js'),'utf8');
 test('validation par lot sécurisée',()=>assert.match(appSource,/selected\.some\(x=>!legacyImportNatureReady\(x\.t\)\)/));
 test('validation globale sécurisée',()=>assert.match(appSource,/return legacyImportNatureReady\(t\)/));
 test('validation rapide OCR sécurisée',()=>assert.match(appSource,/legacyImportNatureReady\(t\)&&\s*manualCategories/));
@@ -74,7 +74,7 @@ test('import validates banking direction',()=>assert.match(appSource,/nature\.di
 test('import card evidence not double counted',()=>assert.match(appSource,/accountType\(bank\)==='card'&&window\.TraceImportGuide\.cardStatementSettlementLabel\(name\)/));
 test('import nonbudget no category',()=>assert.match(appSource,/const chosenCategory=nature\.budget==='none'\?'':/));
 test('movement editor validates pending operation',()=>assert.match(appSource,/const next=\{\.\.\.t,type,date,name,status:'confirmed'/));
-test('active 5.36.2',()=>assert.match(appSource,/__TRACE_BUILD__='5\.36\.2'/));
+test('active 5.36.3',()=>assert.match(appSource,/__TRACE_BUILD__='5\.36\.3'/));
 [
  ['expense',true,'expense'],['friend_payment_expense',true,'expense'],['refund',true,'refund'],
  ['income',true,'income'],['card_payment',false,'none'],['transfer',false,'none'],
@@ -94,7 +94,7 @@ test('carte saisie comme dette positive et stockée avec signe',()=>assert.match
 test('alerte pour crédit non rapproché',()=>assert.match(appSource,/cardWarning\.hidden=!b\.needsCardReview/));
 test('CELI uniquement en information sur accueil',()=>assert.match(appSource,/\$\('#homeCELITransfers'\)\.textContent=money\(savedToCeli\)/));
 
-const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.4.0.js'),'utf8');
+const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.4.1.js'),'utf8');
 [
  'PAIEMENT CAISSE','PAIEMENT REÇU','Paiement reçue','PAYMENT RECEIVED',
  'PAYMENT THANK YOU','Paiement de ma Mastercard','Règlement carte Visa'
@@ -178,4 +178,37 @@ test('no querySelector(...).forEach remains',()=>assert.equal([...appSource.matc
 
 test('Activity list must use querySelectorAll helper',()=>assert.ok(appSource.includes("$$('[data-tx-open]').forEach")));
 test('Prevent undefined triple-dollar selector throughout app',()=>assert.doesNotMatch(appSource,/\${3,}\(/));
+const bankDocSource=fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8');
+const docScope={window:{}};vm.runInNewContext(bankDocSource,docScope,{filename:'trace-bank-doc-1.11.1.js'});
+const doc=docScope.window.TraceBankDocuments;
+test('simple card Paiement suggests received payment',()=>assert.equal(G.suggest('card','expense','Paiement'),'card_payment_received'));
+test('payment received direction is credit',()=>assert.equal(G.direction('card_payment_received','card','Paiement'),'in'));
+test('generic Paiement cannot be quick-approved as an expense',()=>assert.equal(G.safeForQuickApproval('card','expense','Paiement'),false));
+test('checking Paiement remains expense',()=>assert.equal(G.suggest('checking','expense','Paiement'),'expense'));
+test('merchant purchase is not a card payment',()=>assert.equal(G.suggest('card','expense','Supermarché Métro'),'expense'));
+test('plain card payment matching needs checked + sign when OCR has no evidence',()=>assert.ok(appSource.includes("d.bankDirection!=='in'&&!values?.creditChecked")));
+test('card receipt matching stays one existing transfer',()=>assert.ok(appSource.includes('additionalTransactions:0,budgetChange:0')));
+test('incoming sign is preserved from OCR to pending draft',()=>assert.ok(appSource.includes("bankDirection:['in','out'].includes(r.bankDirection)?r.bankDirection:''")));
+test('pending old OCR proof requires explicit positive-sign confirmation',()=>assert.ok(inboxSource.includes("el.dataset.bankDirection!=='in'")));
+test('OCR debit sign on payment never suggests a received transfer',()=>assert.ok(inboxSource.includes("row.bankDirection==='out'&&window.TraceImportGuide.genericCardPaymentLabel(name)")));
+test('check box exists for generic OCR payment',()=>assert.ok(inboxSource.includes('class="smart-credit-confirm"')));
+test('OCR bank source exports amount-side sign',()=>assert.ok(bankDocSource.includes("const bankDirection=prefix==='+'?'in'")));
+const ocrWord=(label,x,y)=>'5\t1\t1\t1\t1\t1\t'+x+'\t'+y+'\t'+(label.length*12)+'\t24\t96\t'+label;
+const creditTsv='level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n'+[
+ ocrWord('Paiement',150,300),ocrWord('+750,00',735,300),
+ ocrWord('7',105,425),ocrWord('OCT',145,425),
+ ocrWord('Texte',170,340)
+].join('\n');
+test('real OCR layout retains visible +750 as a card credit',()=>{
+ const rows=doc.screenshotLayoutCandidates(creditTsv,1000,1200,'2026-10-01');
+ assert.ok(rows.length>0,'No screenshot transaction row parsed');
+ assert.equal(rows[0].bankDirection,'in');
+});
+const debitTsv=creditTsv.replace('+750,00','-750,00');
+test('real OCR layout retains visible -750 as debit',()=>{
+ const rows=doc.screenshotLayoutCandidates(debitTsv,1000,1200,'2026-10-01');
+ assert.ok(rows.length>0,'No screenshot transaction row parsed');
+ assert.equal(rows[0].bankDirection,'out');
+});
+
 console.log(checked+' assertions réussies');
