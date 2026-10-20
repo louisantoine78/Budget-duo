@@ -709,13 +709,36 @@ function openManualTransaction(){
     (!investmentId||accountType(bankAccount)!=='checking'||!trackedSavingsAccounts(me).some(a=>a.id===investmentId&&isReadySavingsAccount(a)&&date>a.openingDate))){
     error.textContent='Configure ton CELI et son solde initial, puis choisis un mouvement à une date ultérieure.';return;
   }
-  let shares,related;
+  let shares,related,booking,destinationBankAmount;
   try{
-   shares=beneficiary==='custom'?traceCustomShares(amount,$m('manualFriendsAmount').value,$m('manualPartnerAmount').value):{beneficiary,...traceSplit(beneficiary,amount)};
-   related=validateFriendLink(kind,$m('manualRelatedExpense').value,date,amount);
+   const currency=window.TraceInternational.currency(bankAccount),
+    input=$m('manualFxRate').value.trim(),userRate=Number(input);
+   if(input!==''&&(!Number.isFinite(userRate)||!(userRate>0)))
+    throw Error('Le taux de change saisi doit être supérieur à zéro.');
+   const quote=currency==='CAD'?null:input!==''?
+    {currency,cadPerUnit:userRate,date,source:'Taux saisi manuellement'}:
+    await window.TraceInternational.getRate(currency,date);
+   booking=window.TraceInternational.resolveBooking({
+    account:bankAccount,bankAmount:amount,date,quote,
+    originalCurrency:$m('manualPurchaseCurrency').value,
+    originalAmount:$m('manualPurchaseAmount').value||null});
+   const destination=bankAccounts.find(a=>a.id===targetId);
+   if(['transfer','card_payment'].includes(kind)){
+    const targetCurrency=window.TraceInternational.currency(destination),v=$m('manualDestAmount').value.trim();
+    if(targetCurrency!==currency){
+     destinationBankAmount=Number(v);
+     if(v===''||!Number.isFinite(destinationBankAmount)||!(destinationBankAmount>0))
+      throw Error('Renseigne le montant effectivement reçu sur le compte destinataire.');
+    }else destinationBankAmount=amount;
+   }
+   shares=beneficiary==='custom'?
+    traceCustomShares(booking.amountCAD,$m('manualFriendsAmount').value,$m('manualPartnerAmount').value):
+    {beneficiary,...traceSplit(beneficiary,booking.amountCAD)};
+   related=validateFriendLink(kind,$m('manualRelatedExpense').value,date,booking.amountCAD);
   }catch(e){error.textContent=String(e.message||e);return;}
   const item={id:txDocId(),date,name,note:'',merchant:'',type:def.type,transferPurpose:def.purpose||null,
-   status:'confirmed',currency:'CAD',rate:1,amountCAD:amount,amountOriginal:amount,bankAmount:null,
+   status:'confirmed',...booking,
+   ...(['transfer','card_payment'].includes(kind)?{toBankAmount:destinationBankAmount}:{}),
    categoryId,accountId,payerId:me,...shares,
    ...(related?{relatedExpenseId:related}:{}),
    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{}),
