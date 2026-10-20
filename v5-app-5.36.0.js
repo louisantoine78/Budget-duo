@@ -1447,7 +1447,7 @@ async function copyPreviousBudget(){
   };
 }
 function txRow(t){const c=cat(t.categoryId),pos=['income','refund','external_refund'].includes(t.type),transfer=t.type==='transfer',outside=!isFinancialPeriod(t),label=t.type==='card_statement_evidence'?'Paiement de carte rapproché · sans nouveau mouvement':transfer?(t.toAccountId&&accountType(state.accounts.find(a=>a.id===t.accountId))==='checking'&&
- accountType(state.accounts.find(a=>a.id===t.toAccountId))==='card'?'Paiement de carte de crédit · hors budget':'Transfert entre comptes · hors budget'):t.type==='external_transfer'?(t.transferPurpose==='savings'?(t.investmentAccountId?'Versement vers CELI · '+esc(state.investmentAccounts.find(a=>a.id===t.investmentAccountId)?.name||'CELI')+' · compte courant':'Versement vers CELI · CELI à relier'):t.transferPurpose==='friend_payment_settlement'?'Règlement à un proche · déjà compté':'Virement hors budget'):t.type==='external_refund'?(t.transferPurpose==='friend_reimbursement'?'Remboursement d’un proche · hors budget':t.transferPurpose==='savings_withdrawal'?'Retrait de CELI · hors budget':'Entrée hors budget'):esc(c.name);return `<button type="button" class="tx trace-tx-link ${outside?'trace-outside-start':''}" data-tx-open="${esc(t.id)}"><span class="tx-icon">${esc(c.icon||'◇')}</span><span class="tx-main"><b>${esc(t.name||t.merchant||'Transaction')}</b><small>${label} · ${esc(t.date||'')}${outside?' · Hors solde de départ':''}</small></span><span class="tx-amt ${pos?'positive':''}">${transfer?(t.toAccountId?'↔ ':'−'):pos?'+':'−'}${money(t.amountCAD)}</span></button>`;}
+ accountType(state.accounts.find(a=>a.id===t.toAccountId))==='card'?'Paiement de carte de crédit · hors budget':'Transfert entre comptes · hors budget'):t.type==='external_transfer'?(t.transferPurpose==='savings'?(t.investmentAccountId?'Versement vers CELI · '+esc(state.investmentAccounts.find(a=>a.id===t.investmentAccountId)?.name||'CELI')+' · compte courant':'Versement vers CELI · CELI à relier'):t.transferPurpose==='friend_payment_settlement'?'Règlement à un proche · déjà compté':'Virement hors budget'):t.type==='external_refund'?(t.transferPurpose==='friend_reimbursement'?'Remboursement d’un proche · hors budget':t.transferPurpose==='savings_withdrawal'?'Retrait de CELI · hors budget':'Entrée hors budget'):esc(c.name);return `<button type="button" class="tx trace-tx-link ${outside?'trace-outside-start':''}" data-tx-open="${esc(t.id)}"><span class="tx-icon">${esc(c.icon||'◇')}</span><span class="tx-main"><b>${esc(t.name||t.merchant||'Transaction')}</b><small>${label} · ${esc(t.date||'')}${outside?' · Hors solde de départ':''}</small></span><span class="tx-amt ${pos?'positive':''}">${t.type==='card_statement_evidence'?'↔ ':transfer?(t.toAccountId?'↔ ':'−'):pos?'+':'−'}${money(t.amountCAD)}</span></button>`;}
 
 /* CSV import: cautious preview; pending until explicit validation */
 function normalizedCsvKey(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');}
@@ -2441,10 +2441,15 @@ function openInvestmentOperation(account,original=null){
 }
 function openPortfolioAnalysis(){
  const owners=wealthScope==='couple'?['la','partner']:[me];const accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner)).map(a=>({a,p:portfolioLedger(a)}));
- openSheet('Analyse du patrimoine','<div class="empty-note">La performance correspond à la valeur estimée des avoirs moins les versements nets. Elle n’est pas confondue avec l’argent apporté. Les conversions sont manuelles.</div>'+
- accounts.map(({a,p})=>'<button class="trace-list-btn" type="button" data-analysis-invest="'+esc(a.id)+'"><span><b>'+esc(shortAccountLabel(a))+'</b><small>Versements : '+nativeMoney(p.contributions,a.currency)+' · Performance : '+nativeMoney(p.performance,a.currency)+'</small></span><strong>'+nativeMoney(p.value,a.currency)+'</strong></button>').join('')+
+ openSheet('Comprendre mon patrimoine',
+ '<div class="trace-insight-modal" id="traceWealthDetail"></div>'+
+ '<div class="section-head"><h2>Comptes suivis</h2></div>'+
+ accounts.map(({a,p})=>'<button class="trace-list-btn" type="button" data-analysis-invest="'+esc(a.id)+'"><span><b>'+esc(shortAccountLabel(a))+'</b><small>Versements nets : '+nativeMoney(p.contributions,a.currency)+' · Performance : '+(a.savingsTracking==='linked'?'non mesurée':nativeMoney(p.performance,a.currency))+'</small></span><strong>'+nativeMoney(p.value,a.currency)+'</strong></button>').join('')+
  (!accounts.length?'<div class="empty-note">Ajoute un compte pour suivre ton patrimoine.</div>':''));
- $$('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
+ const scopeValue=scope(wealthScope),bk=bank(scopeValue);
+ const missing=accounts.filter(({a,p})=>!p.hasFx||(a.savingsTracking==='linked'&&!p.configured));
+ window.TraceInsights.renderWealth($('#traceWealthDetail'),insightWealthData(scopeValue,bk,accounts,missing));
+ $('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
 }
 
 function renderWealth(){
