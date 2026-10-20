@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.36.3",
-  "release": "classify-generic-card-payment-credit-with-verification"
+  "build": "5.36.4",
+  "release": "reconciled-card-payment-details-read-only"
 }
