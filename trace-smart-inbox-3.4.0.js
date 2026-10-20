@@ -288,7 +288,9 @@ function synchronizeRow(el){
   if(choices.some(c=>c.id===existing&&c.allowed))linkSelect.value=existing;
  }
  const preview=el.querySelector('.trace-movement-preview');
- if(preview)preview.textContent=def?bridge().movementPreview(type,Number(el.querySelector('.smart-amount').value),
+ if(preview)preview.textContent=type==='card_payment_received'?
+  'Crédit sur le relevé de carte · à rapprocher du paiement du compte courant. Après association : 0 $ de nouvelle dépense, 0 $ de nouveau revenu et aucune double écriture.':
+  def?bridge().movementPreview(type,Number(el.querySelector('.smart-amount').value),
   budget&&def.budget!=='income'?el.querySelector('.smart-who').value:bridge().currentOwner?.()||'la',
   Number(el.querySelector('.smart-friends').value||0),Number(el.querySelector('.smart-partner').value||0)):
   'Choisis la nature du mouvement pour voir son impact.';
