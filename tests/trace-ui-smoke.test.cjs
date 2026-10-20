@@ -4,7 +4,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.1.js'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.36.2.js'),'utf8');
 let checks=0;
 function test(name,fn){fn();console.log('PASS '+name);checks++;}
 function extract(start,next){
@@ -16,6 +16,7 @@ function compile(name,end,deps){const body=extract(name,end);
  return new Function(...Object.keys(deps),'return ('+body+');')(...Object.values(deps));}
 const bad=[...app.matchAll(/(?<!\$)\$\([^)]*\)\.forEach/g)];
 test('No querySelector(...).forEach startup crash',()=>assert.equal(bad.length,0));
+test('No undefined triple-dollar selector',()=>assert.doesNotMatch(app,/\${3,}\(/));
 test('querySelectorAll is used for budget render loop',()=>assert.ok(app.includes("$$('#annualBudgetChart [data-insight-month]').forEach")));
 test('querySelectorAll is used for category drilldown',()=>assert.ok(app.includes("$$('[data-tx-open]').forEach")));
 test('querySelectorAll is used for wealth and analysis buttons',()=>{
@@ -98,4 +99,34 @@ test('budget analysis scope selector responds',()=>{
  renderAnalysis();assert.equal(elem('#traceAnalysisTrend').innerHTML,'trend rendered');
  assert.equal(typeof clicks.get('#analysisScope .seg')[0].onclick,'function');
 });
+const activity=compile('renderActivity','\nfunction showTab(',{
+ ...ctx,activityMonth:activeMonth,tab:'transactions',
+ isFinancialPeriod:()=>true,visibleBankAccounts:()=>[{id:'checking'}],
+ shortAccountLabel:a=>a?.name||'Courant',
+ txRow:t=>'<button data-tx-open="'+t.id+'"></button>',
+ editTransaction(){},showTab(t){elem('#activityTabCurrent').textContent=t;},
+ window:{...ctx.window,TraceImportCalendar:{render(){elem('#calendarRendered').textContent='yes';}}}
+});
+test('Activity renders existing confirmed expense and income',()=>{
+ state.accounts=[{id:'checking',name:'Courant',owner:'la',type:'checking'}];
+ state.transactions=[
+  {id:'tx_expense',accountId:'checking',date:activeMonth+'-12',type:'expense',status:'confirmed',name:'Épicerie',amountCAD:40},
+  {id:'tx_salary',accountId:'checking',date:activeMonth+'-13',type:'income',status:'confirmed',name:'Salaire',amountCAD:100},
+  {id:'tx_pending',accountId:'checking',date:activeMonth+'-14',type:'expense',status:'pending',name:'À vérifier',amountCAD:19}
+ ];
+ activity();
+ assert.ok(elem('#transactionList').innerHTML.includes('tx_expense'));
+ assert.ok(elem('#transactionList').innerHTML.includes('tx_salary'));
+ assert.equal(elem('#activityExpenses').textContent,'40 $');
+ assert.equal(elem('#activityIncome').textContent,'100 $');
+ assert.equal(elem('#calendarRendered').textContent,'yes');
+ assert.equal(typeof clicks.get('[data-tx-open]')[0].onclick,'function');
+ assert.equal(elem('#activityTabCurrent').textContent,'transactions');
+});
+test('Activity renders without any transactions',()=>{
+ state.transactions=[];
+ activity();
+ assert.ok(elem('#transactionList').innerHTML.includes('Aucune opération confirmée'));
+});
+
 console.log(checks+' interface scenarios passed');
