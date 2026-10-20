@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.36.1",
-  "release": "fix-runtime-selector-crash-on-annual-budget-and-insights"
+  "build": "5.36.2",
+  "release": "repair-activity-render-selector-startup-crash"
 }
