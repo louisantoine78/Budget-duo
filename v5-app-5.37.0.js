@@ -2922,7 +2922,8 @@ const bankMoney=n=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD
 function offerInitialBankSetup(){
  if(initialBankSetupShown||!session||!household)return;
  const list=visibleBankAccounts(me);
- if(list.some(a=>accountType(a)==='checking')&&list.some(a=>accountType(a)==='card'))return;
+ if(list.some(a=>accountType(a)==='checking'&&a.country==='FR')||
+  list.some(a=>accountType(a)==='checking')&&list.some(a=>accountType(a)==='card'))return;
  initialBankSetupShown=true;
  openEssentialBankSetup();
 }
@@ -2936,8 +2937,9 @@ function openEssentialBankSetup(){
  const ready=essentials.filter(x=>mine.some(a=>accountType(a)===x.type)).length;
  openSheet('Configurer mes comptes',
   '<div class="trace-bank-welcome"><span class="trace-kicker">ÉTAPE DE DÉPART · '+ready+' / 2</span>'+
-  '<strong>Deux comptes pour bien commencer</strong>'+
-  '<p>Dans TRACE, le compte courant reçoit les revenus et paie la carte. La carte rassemble les achats quotidiens. Tu peux choisir leur nom et les soldes de référence.</p></div>'+
+  '<strong>Choisis ton fonctionnement bancaire</strong>'+
+  '<p>Canada : un compte et une carte de crédit. France : un compte avec carte à débit immédiat, ou une carte différée séparée si tu en utilises une.</p></div>'+
+  '<button type="button" class="secondary full" id="traceSetupFrenchDebit">J’utilise un compte avec débit direct · France / Europe</button>'+
   essentials.map(x=>{
    const registered=mine.filter(a=>accountType(a)===x.type);
    return '<div class="trace-bank-setup-option">'+
@@ -2952,11 +2954,12 @@ function openEssentialBankSetup(){
   (ready===2?'<button type="button" class="primary full" id="traceBankSetupDone">Mes deux comptes sont prêts</button>':
    '<button type="button" class="secondary full" id="traceBankSetupLater">Continuer plus tard</button>')+
   '<p class="trace-bank-setup-footer">Tu pourras renommer tes comptes et en ajouter d’autres dans Profil → Mes comptes.</p>');
- $$('[data-setup-bank]').forEach(button=>button.onclick=()=>openNewBankAccount(button.dataset.setupBank,'setup'));
+ $('[data-setup-bank]').forEach(button=>button.onclick=()=>openNewBankAccount(button.dataset.setupBank,'setup'));
+ $('#traceSetupFrenchDebit').onclick=()=>openNewBankAccount('checking','setup','FR');
  $('#traceBankSetupDone')?.addEventListener('click',closeSheet);
  $('#traceBankSetupLater')?.addEventListener('click',closeSheet);
 }
-function openNewBankAccount(preset='',returnTo='settings'){
+function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
  if(!session||!household)return;
  const kind=['checking','card'].includes(preset)?preset:'checking';
  openSheet('Ajouter un compte bancaire',
@@ -2987,6 +2990,7 @@ function openNewBankAccount(preset='',returnTo='settings'){
   info.textContent=card?'Entre le montant de dette positif. TRACE enregistre ce montant comme une dette (solde négatif).':
    'Tu peux laisser ce montant vide si tu ne connais pas ton solde. TRACE ne l’inventera pas.';
  };
+ country.value=presetCountry;currency.value=presetCountry==='FR'?'EUR':'CAD';
  type.value=kind;syncType();
  if(preset)type.disabled=true;
  else type.onchange=syncType;
@@ -3031,7 +3035,8 @@ function openNewBankAccount(preset='',returnTo='settings'){
     }
    }
    renderAll();
-   back();
+   if(returnTo==='setup'&&accountKind==='checking'&&countryCode==='FR')closeSheet();
+   else back();
   }catch(err){
    button.disabled=false;button.textContent='Créer ce compte';
    if(saved){renderAll();back();traceNotice(err);}
