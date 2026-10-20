@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.35.3",
-  "release": "desjardins-card-payment-evidence-matching"
+  "build": "5.36.0",
+  "release": "card-payment-received-and-budget-wealth-insights"
 }
