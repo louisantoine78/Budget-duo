@@ -1378,6 +1378,9 @@ function editTransaction(id,validating=false){
  window.TraceOperationUI.enhanceTransaction();
  $('#txAccount').value=t.accountId||'';$('#txWho').value=t.beneficiary||me;
  $('#txOriginalCurrency').value=t.currency||window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId));
+ if($('#txOriginalCurrency').value===window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId))&&
+    Math.abs(Number(t.amountOriginal??0)-Number(t.bankAmount??t.amountCAD??0))<.01)
+  $('#txOriginalAmount').value=''; // Blank means the purchase is in the account's native currency.
  const standardKinds=new Set(['expense','friend_payment_expense','income','refund']);
  const natureChoices=(preferred='')=>{
   const account=state.accounts.find(a=>a.id===$('#txAccount').value);
@@ -1416,37 +1419,53 @@ function editTransaction(id,validating=false){
  };
  cats();
  function refreshEditPreview(){
-  const selected=$('#txType').value,def=M.get(selected),type=def?.type||selected,amount=Number($('#txAmount').value),
+  const I=window.TraceInternational,
+   selected=$('#txType').value,def=M.get(selected),
+   amount=Number($('#txAmount').value),
    who=def?.budget==='income'?me:$('#txWho').value,
    friend=Number($('#txFriendsAmount').value||0),
-   partnerAmount=Number($('#txPartnerAmount').value||0);
-  const account=state.accounts.find(a=>a.id===$('#txAccount').value);
-  const label=(accountType(account)==='card'?'Sur la carte':'Sur le compte courant')+
-   ' · '+window.TraceInternational.currency(account);
-  $('#txImpactBankLabel').textContent=label;
-  const kind=def?.budget==='income'?'Revenus':def?.budget==='refund'?'Correction des dépenses':'Dépenses';
+   partnerAmount=Number($('#txPartnerAmount').value||0),
+   account=state.accounts.find(a=>a.id===$('#txAccount').value),
+   currency=I.currency(account),
+   sameSource=account?.id===t.accountId&&$('#txDate').value===t.date,
+   historicalDate=String(t.fxRateDate||t.date||''),
+   historical=sameSource&&Number(t.bankRateCad)>0&&
+    /^\d{4}-\d{2}-\d{2}$/.test(historicalDate)&&historicalDate<=$('#txDate').value,
+   manual=$('#txFxOverride').value.trim(),
+   manualRate=Number(manual),
+   quote=currency==='CAD'?null:manual!==''?
+    {currency,cadPerUnit:manualRate,date:$('#txDate').value}:historical?
+    {currency,cadPerUnit:Number(t.bankRateCad),date:historicalDate}:null;
+  $('#txImpactBankLabel').textContent=(accountType(account)==='card'?'Sur la carte':'Sur le compte courant')+' · '+currency;
   $('#txImpactMineLabel').textContent='Moi';
   $('#txImpactPartnerLabel').textContent=shortMemberName(partner);
   $('#txImpactCoupleLabel').textContent='Couple';
-  const format=n=>(n<0?'−':'')+money(Math.abs(n));
-  const message=$('#txImpactMessage');
+  const format=n=>(n<0?'−':'')+money(Math.abs(n)),message=$('#txImpactMessage');
   try{
-   if(window.TraceInternational.currency(account)!=='CAD'){
-    $('#txImpactBank').textContent=window.TraceInternational.money(amount,window.TraceInternational.currency(account));
+   if(!(amount>0)||!Number.isFinite(amount))throw Error('Saisis un montant bancaire positif.');
+   if(manual!==''&&(!Number.isFinite(manualRate)||manualRate<=0))
+    throw Error('Le taux de change doit être positif.');
+   const cad=I.fxValue(amount,currency,quote);
+   if(cad===null){
+    $('#txImpactBank').textContent=I.money(amount,currency);
     ['#txImpactMine','#txImpactPartner','#txImpactCouple','#txImpactFriends'].forEach(k=>$(k).textContent='—');
-    message.textContent='Les montants budgétaires seront convertis au taux daté lors de la validation.';
+    $('#txImpactFriendsRow').classList.add('hidden');
+    message.textContent='Aucun taux vérifié pour cette date : la répartition CAD sera calculée avant enregistrement. Aucun montant fictif.';
     message.classList.remove('hidden');return;
    }
-   const impact=movementImpact(selected,amount,who,friend,partnerAmount);
+   const impact=movementImpact(selected,cad,who,friend,partnerAmount);
    const all=[impact.bank,impact.budget[me],impact.budget[partner],impact.budget.couple];
-   if(!all.every(Number.isFinite))throw Error('Montant invalide.');
-   $('#txImpactBank').textContent=format(impact.bank);
+   if(!all.every(Number.isFinite))throw Error('Montant ou répartition invalide.');
+   $('#txImpactBank').textContent=(impact.bank<0?'−':'+')+I.money(amount,currency);
    $('#txImpactMine').textContent=format(impact.budget[me]);
    $('#txImpactPartner').textContent=format(impact.budget[partner]);
    $('#txImpactCouple').textContent=format(impact.budget.couple);
    $('#txImpactFriendsRow').classList.toggle('hidden',!(impact.friends>0));
    $('#txImpactFriends').textContent=money(impact.friends);
-   message.textContent='';message.classList.add('hidden');
+   message.textContent=currency==='CAD'?'Montants en CAD.':
+    'Répartition en CAD au '+(manual!==''?'taux manuel saisi':'taux historique du '+historicalDate)+
+    ' : '+I.money(cad,'CAD')+'.';
+   message.classList.toggle('hidden',currency==='CAD');
   }catch(error){
    ['#txImpactBank','#txImpactMine','#txImpactPartner','#txImpactCouple','#txImpactFriends'].forEach(key=>$(key).textContent='—');
    $('#txImpactFriendsRow').classList.add('hidden');
@@ -1454,12 +1473,13 @@ function editTransaction(id,validating=false){
    message.classList.remove('hidden');
   }
  }
- ['#txAmount','#txFriendsAmount','#txPartnerAmount'].forEach(selector=>$(selector).addEventListener('input',refreshEditPreview));
+ ['#txAmount','#txFriendsAmount','#txPartnerAmount','#txFxOverride','#txOriginalCurrency','#txOriginalAmount'].forEach(selector=>$(selector).addEventListener('input',refreshEditPreview));
  $('#txAccount').addEventListener('change',()=>{natureChoices();cats();updateNatureHelp();refreshEditPreview();});
  const dateInput=$('#txDate'),dateDisplay=$('#txDateDisplay');
  const updateDateDisplay=()=>{dateDisplay.textContent=displayEditDate(dateInput.value);};
  dateInput.addEventListener('input',updateDateDisplay);
  dateInput.addEventListener('change',updateDateDisplay);
+ dateInput.addEventListener('change',refreshEditPreview);
  updateDateDisplay();
  $('#txOtherMovement').onclick=()=>editSmartBankMovement(t);
  refreshEditPreview();
