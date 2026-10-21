@@ -24,7 +24,7 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
    ' · Taux indicatifs de la Banque du Canada, non contractuels. L’épargne et les placements sont dans Patrimoine.</p>'+
  '</details>':'');
  if(snap.main){
-  if(balanceNode)balanceNode.textContent=snap.net===null?(snap.cardsToReview.length||snap.ambiguousCards.length?'À vérifier':'À configurer'):I.money(snap.net,cur);
+  if(balanceNode)balanceNode.textContent=snap.net===null?(snap.cardsToReview.length||snap.ambiguousCards.length||snap.mixedLinkedCurrencies.length?'À vérifier':'À configurer'):I.money(snap.net,cur);
   if(checkingNode)checkingNode.textContent=snap.checking===null?'—':I.money(snap.checking,cur);
   if(cardNode)cardNode.textContent=snap.card===null?(snap.cardsToReview.length?'Avoir de carte à vérifier':'—'):snap.card<0?
    I.money(Math.abs(snap.card),cur)+' de dette':snap.card>0?'Avoir estimé '+I.money(snap.card,cur):I.money(0,cur);
