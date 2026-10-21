@@ -13,7 +13,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 const initialBudgetMonth=new URLSearchParams(location.search).get('month');
 let client,session,household,workspaceLoadPromise=null,me='la',partner='partner',homeScope='mine',budgetScope='mine',budgetMonth=/^\d{4}-\d{2}$/.test(initialBudgetMonth||'')?initialBudgetMonth:CM,wealthScope='mine',analysisScope='mine',tab='transactions',activityMonth=CM;
-let internationalQuotes={},internationalQuoteAttempt='',internationalFxBusy=false;
+let internationalQuotes={},internationalQuoteAttempt=new Set(),internationalFxBusy=false;
 let state={household:{},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[],importDays:[],smartImports:[]};
 function withTimeout(promise,ms,label){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label||'Délai dépassé')),ms))]);}
 function loadingStage(text){const el=$('#cloudLoadingText');if(el)el.textContent=text;}
@@ -450,6 +450,46 @@ function openAnnualBudgetAnalysis(){
  });
 }
 function internationalHome(){
+ const I=window.TraceInternational;
+ if(homeScope==='couple'){
+  const all=state.accounts.filter(a=>['la','partner'].includes(a.owner)&&!a.archived&&
+   ['checking','card'].includes(accountType(a))).map(a=>({...a,type:accountType(a)}));
+  const accounts=[...new Map(all.map(a=>[a.id,a])).values()];
+  if(accounts.some(a=>I.currency(a)!=='CAD')){
+   const estimates=Object.fromEntries(accounts.map(a=>[a.id,accountEstimate(a)]));
+   const snap=I.snapshot({accounts,estimates,fxRates:internationalQuotes});
+   const missingCurrency=[...new Set(accounts.filter(a=>I.currency(a)!=='CAD').map(a=>I.currency(a)))];
+   requestInternationalRates(missingCurrency);
+   const host=$('#traceIntlHome');
+   host.onclick=event=>event.stopPropagation();
+   const checking=snap.balances.filter(x=>accounts.find(a=>a.id===x.id)?.type==='checking');
+   const cards=snap.balances.filter(x=>accounts.find(a=>a.id===x.id)?.type==='card');
+   const checkComplete=checking.length>0&&checking.every(x=>x.cad!==null);
+   const cardsComplete=cards.every(x=>x.cad!==null)&&!snap.cardsToReview.length;
+   const checkingCAD=checkComplete?Math.round(checking.reduce((n,x)=>n+x.cad,0)*100)/100:null;
+   const cardDebt=cardsComplete?Math.round(cards.reduce((n,x)=>n+Math.max(0,-x.cad),0)*100)/100:null;
+   $('#homeBalance').textContent=snap.complete?I.money(snap.globalCAD,'CAD'):'Situation à vérifier';
+   $('#homeChecking').textContent=checkingCAD===null?'—':I.money(checkingCAD,'CAD');
+   $('#homeCard').textContent=cardDebt===null?'À vérifier':I.money(cardDebt,'CAD')+' de dette';
+   $('#reconcileBadge').textContent=snap.complete?'Couple · toutes devises':'Conversion / soldes à vérifier';
+   const warning=$('#homeCardWarning');
+   if(warning&&snap.cardsToReview.length){
+    warning.hidden=false;
+    warning.textContent='Un avoir de carte apparent doit être vérifié avant de calculer la trésorerie du couple.';
+   }
+   host.innerHTML='<details class="trace-intl-details"><summary>Voir les comptes du foyer · '+accounts.length+' compte(s)</summary>'+
+    '<div class="trace-intl-accounts">'+snap.balances.map(x=>
+    '<div class="trace-intl-row"><span>'+esc(x.name)+' <small>'+x.nativeCurrency+'</small></span><b>'+
+    (x.balance===null?'Solde inconnu':I.money(x.balance,x.nativeCurrency))+'</b></div>').join('')+'</div>'+
+    '<p class="trace-intl-grand">'+(snap.complete?'Situation nette · '+I.money(snap.globalCAD,'CAD'):
+     'Situation incomplète · solde, taux ou carte à contrôler')+'</p>'+
+    '<p class="trace-intl-foot">Conversion indicative en CAD · taux : '+
+    (missingCurrency.map(c=>internationalQuotes[c]?.date?c+' '+internationalQuotes[c].date:c+' manquant').join(' · '))+
+    ' · Épargne et placements dans Patrimoine.</p></details>';
+   return;
+  }
+ }
+
  const accounts=visibleBankAccounts(me).map(a=>({...a,type:accountType(a)}));
  const estimates=Object.fromEntries(accounts.map(a=>[a.id,accountEstimate(a)]));
  window.TraceInternationalUI?.render?.({
@@ -466,17 +506,24 @@ function internationalHome(){
    try{await saveHouseholdSettings();renderHome();}
    catch(e){state.household.primaryBankAccountByOwner=before;traceNotice(e);renderHome();}
   },
-  requestRate:currencies=>{
-   if(internationalFxBusy||internationalQuoteAttempt===localDateISO())return;
-   internationalFxBusy=true;internationalQuoteAttempt=localDateISO();
-   Promise.allSettled(currencies.map(c=>window.TraceInternational.getRate(c,localDateISO()))).then(results=>{
-    results.forEach((r,i)=>{if(r.status==='fulfilled')internationalQuotes[currencies[i]]=r.value;});
-    internationalFxBusy=false;
-    if($('#traceIntlHome'))internationalHome();
-   });
-  }
+  requestRate:requestInternationalRates });
+}
+
+function requestInternationalRates(currencies){
+ const date=localDateISO();
+ const wanted=[...new Set(currencies)].filter(c=>c!=='CAD'&&
+  (!internationalQuotes[c]||internationalQuotes[c].requestedDate!==date)&&
+  !internationalQuoteAttempt.has(date+'|'+c));
+ if(internationalFxBusy||!wanted.length)return;
+ internationalFxBusy=true;
+ wanted.forEach(c=>internationalQuoteAttempt.add(date+'|'+c));
+ Promise.allSettled(wanted.map(c=>window.TraceInternational.getRate(c,date))).then(results=>{
+  results.forEach((result,i)=>{if(result.status==='fulfilled')internationalQuotes[wanted[i]]=result.value;});
+  internationalFxBusy=false;
+  if($('#traceIntlHome'))renderHome();
  });
 }
+
 function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.expense/s.eb*100:0,b=bank(sId);$('#homeMonthLabel').textContent=monthLabel(CM);$('#homeGreeting').textContent=homeScope==='mine'?`Bonjour ${member(me).name}`:'Votre situation';$('#homeBudgetAvailable').textContent=money(s.eb-s.expense);$('#homeBudgetSub').textContent=s.eb?`sur ${money(s.eb)} prévus ce mois`:'Budget du mois à compléter';$('#homeBudgetProgress').style.width=`${Math.min(100,Math.max(0,cons))}%`;$('#homeBudgetPercent').textContent=`${cons.toFixed(0)} % consommé`;$('#homeBudgetSpent').textContent=`${money(s.expense)} dépensés`;$('#homeBalance').textContent=b.net===null?'À configurer':b.needsCardReview?'À vérifier':money(b.net);
  $('#homeChecking').textContent=b.checking===null?'—':money(b.checking);
  $('#homeCard').textContent=b.card===null?'—':b.needsCardReview?
