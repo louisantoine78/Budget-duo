@@ -95,3 +95,32 @@ La configuration \`.github/workflows/trace-regression.yml\` est mise à jour **s
 **Interdit :** fusionner ou modifier les références de \`index.html\`, \`sw.js\` ou les données financières avant la levée de ces blocages.
 
 **Garde-fou additionnel :** le solde principal est laissé à vérifier si une carte liée est libellée dans une devise différente de son compte courant (aucune addition EUR+CAD native). La valorisation globale conserve des conversions CAD séparées lorsque les taux sont disponibles.
+
+
+## Laboratoire 5.37.0 créé sur la branche (préproduction, non publié)
+
+**But :** vérifier le chargement de l'application 5.37.0 et les parcours iPhone sans authentification, sans base bancaire et sans service worker. Le laboratoire n'est **pas** relié à GitHub Pages en production.
+
+### Fichiers ajoutés et sécurité
+
+- \`trace-international-preview.html\` : copie contrôlée de la structure réelle de \`index.html\`, contenant la zone \`#traceIntlHome\` manquante dans la 5.36.5, les scripts 5.37.0, la feuille CSS internationale et une bannière de démonstration. La page n'importe **ni** \`config.js\` **ni** le SDK Supabase et ne déclare pas de service worker.
+- Une politique CSP refuse toute connexion réseau (\`connect-src 'none'\`), les workers et l'envoi de formulaires.
+- \`trace-international-preview-fixtures-1.0.0.js\` : seuls des soldes et mouvements entièrement fictifs (CAD, EUR, USD, carte de crédit, couple, virements, taux simulés). Les données sont réinitialisées au rechargement.
+- \`v5-app-5.37.0.js\` : bootstrap de laboratoire strictement limité à la page \`trace-international-preview.html\` ; aucune initialisation Supabase, requête de taux, contrôle de redirection de version ou persistance réelle dans ce mode. Les sauvegardes et suppressions de documents simulés restent uniquement en mémoire.
+- \`trace-international-1.0.0.css\` : bannière visible et compacte sur iPhone, annonçant que les montants et taux sont fictifs.
+- \`tests/trace-international-lab.test.cjs\` : 8 contrôles statiques de sécurité, chargement, ressources, fixture et isolation.
+- \`tests/trace-international-preview-boot.test.cjs\` : 5 parcours de démarrage synthétique avec le **vrai code d'application**, la vraie logique bancaire, la bascule Canada → France, puis le filtre Couple. Pas de navigateur réel ; DOM et rendus graphiques secondaires simulés.
+
+### Découverte lors de l'audit
+
+L'interface 5.37 utilisait \`#traceIntlHome\`, absent de l'\`index.html\` actuel. Le laboratoire inclut cet élément, mais **l'entrée de production n'est volontairement pas modifiée**. La future intégration devra vérifier explicitement sa présence et l'ordre de chargement international. Une vérification syntaxique seule ne suffit pas.
+
+### Critères de validation avant toute publication
+
+1. Tester la page de laboratoire chargée localement en navigateur réel (priorité Safari iPhone) avec capture des erreurs console et absence de requêtes vers Supabase.
+2. Parcourir les comptes CAD/EUR, sélection principale, vue Couple, ajout/édition de transaction, virement CAD ↔ EUR, CSV français et navigation tactile.
+3. Recontrôler paiements de carte, doublons, soldes d'ouverture, remboursements et catégorie/partage après chaque opération fictive.
+4. Obtenir les résultats CI réels sur une PR relue ; surveiller le quota Actions sans créer d'artefact à conserver.
+5. Seulement alors envisager les branchements versionnés dans l'entrée PWA et le service worker ; aucune fusion ni déploiement pour le moment.
+
+La présence des scripts en laboratoire et le test sur DOM simulé **ne sont pas une certification Safari**.
