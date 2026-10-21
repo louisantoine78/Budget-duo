@@ -2840,7 +2840,7 @@ function renderWealth(){
  window.TraceInsights.renderWealth($('#wealthTrend'),insightWealthData(sId,bk,ports,missing));
  updateSegments();
 }
-function renderAll(){renderHome();renderBudget();renderActivity();renderWealth();if(session?.user?.id&&household)window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});}
+function renderAll(){renderHome();renderBudget();renderActivity();renderWealth();if(!internationalPreviewMode()&&session?.user?.id&&household)window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});}
 function navigate(p){$$('.page').forEach(x=>x.classList.toggle('active',x.dataset.page===p));$$('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===p));location.hash=p==='home'?'':p;window.scrollTo({top:0,behavior:document.body.classList.contains('trace-guide-open')?'auto':'smooth'});}
 function analysis(){analysisScope=homeScope;renderAnalysis();}
 function renderAnalysis(){
@@ -2945,9 +2945,15 @@ function profile(){
   $('#settingsGuide').onclick=()=>{closeSheet();setTimeout(()=>window.TraceGuide?.start(true),80);};
   $('#settingsInstall')?.addEventListener('click',()=>{closeSheet();window.TraceInstall?.openHelp?.();});
   $('#settingsNotifications').onclick=openNotificationSettings;
-  $('#settingsDelete').onclick=openTraceDeletion;
+  $('#settingsDelete').onclick=internationalPreviewMode()?()=>{
+   openSheet('Mode démonstration','<p class="empty-note">La suppression et la séparation d’un foyer sont désactivées dans le laboratoire. Aucun compte réel n’est connecté.</p>'+
+     '<button class="secondary full" id="demoSettingsBack">Retour</button>');
+   $('#demoSettingsBack').onclick=profile;
+ }:openTraceDeletion;
   $('#settingsData').onclick=openDataSettings;
-  $('#logout').onclick=async()=>{await client.auth.signOut();location.reload();};
+  $('#logout').onclick=internationalPreviewMode()?()=>{
+   closeSheet();$('#syncLabel').textContent='Démo locale · aucune connexion réelle';
+ }:async()=>{await client.auth.signOut();location.reload();};
 }
 function openProfileSettings(){
   openSheet('Mon profil',
@@ -3845,7 +3851,9 @@ function bootTrace(){
      const fixture=window.TraceInternationalPreviewFixtures;
      state=fixture.create();
      household={id:'trace-demo-only',settings:{...state.household}};
-     session=null;me='la';partner='partner';client=null;
+     session={user:{id:'trace-laboratory-fixture',email:'demo@trace.invalid',
+      created_at:'2026-10-01T00:00:00Z'}};
+     me='la';partner='partner';client=null;
      internationalQuotes={EUR:fixture.quote()};
      bind();
      hideGate();
