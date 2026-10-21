@@ -53,6 +53,10 @@
   const check=included.filter(a=>a.type==='checking').reduce((v,a)=>v+Number(estimates[a.id]||0),0);
   const debt=included.filter(a=>a.type==='card').reduce((v,a)=>v+Math.min(0,Number(estimates[a.id]||0)),0);
   const missing=included.filter(a=>estimates[a.id]===null||estimates[a.id]===undefined);
+  // A card linked to the primary account can have another currency: never
+  // subtract USD/EUR debt directly from a CAD/EUR current-account balance.
+  const mixedLinkedCurrencies=included.filter(a=>a.type==='card'&&currency(a)!==currency(main));
+  const invalidPrimary=!main||main.type!=='checking';
   // A positive card estimate may reflect missing purchases rather than a
   // verified surplus. Never promote it to available cash or global wealth.
   const cardsToReview=active.filter(a=>a.type==='card'&&Number(estimates[a.id])>0);
@@ -61,10 +65,12 @@
   const complete=balances.length>0&&balances.every(a=>a.balance!==null&&a.cad!==null)&&
    !cardsToReview.length;
   const totalCAD=complete?round(balances.reduce((n,a)=>n+a.cad,0)):null;
-  return{main,currency:currency(main),checking:missing.length?null:check,
-   card:missing.length||ambiguousCards.length||cardsToReview.some(a=>included.includes(a))?null:debt,
-   net:missing.length||ambiguousCards.length||cardsToReview.some(a=>included.includes(a))?null:round(check+debt),
-   ambiguousCards,cardsToReview,balances,globalCAD:totalCAD,complete,
+  const incompletePrimary=invalidPrimary||missing.length||ambiguousCards.length||
+   mixedLinkedCurrencies.length||cardsToReview.some(a=>included.includes(a));
+  return{main,currency:currency(main),checking:missing.length||invalidPrimary?null:check,
+   card:incompletePrimary?null:debt,
+   net:incompletePrimary?null:round(check+debt),
+   ambiguousCards,mixedLinkedCurrencies,cardsToReview,balances,globalCAD:totalCAD,complete,
    missing:balances.filter(b=>b.balance===null||b.cad===null||cardsToReview.some(a=>a.id===b.id))};
  };
  const fetchDailyRate=async(code,date,transport)=>{
