@@ -81,7 +81,7 @@ async function main(){
   couple.onclick();
   assert.match(element('#homeBalance').textContent,/8[\s\u00a0\u202f]?904/);
   assert.match(element('#traceIntlHome').innerHTML,/Voir les comptes du foyer/);
-  assert.match(element('#traceIntlHome').innerHTML,/Partenaire/);
+  assert.match(element('#traceIntlHome').innerHTML,/Élise/);
  });
  await test('lab remains explicit and does not attempt version redirect',()=>{
   assert.match(element('#syncLabel').textContent,/Démo fictive/);
