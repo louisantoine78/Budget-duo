@@ -47,3 +47,49 @@ Entrée de production : `index.html` (toujours câblée en 5.36.5). Ne pas la ba
 - **Puis seulement** câblage des ressources versionnées, service worker, changelog, PR relue, vérification GitHub Actions et GitHub Pages.
 
 Ce document décrit les limites observées et ne constitue pas une annonce de disponibilité de TRACE International.
+
+
+## Reprise suivante — progrès sécurisés (20 octobre 2026)
+
+**Tout reste dans la branche de développement. La 5.36.5 est inchangée en production.**
+
+### Édition internationale
+
+- Un nouvel éditeur dédié aux transferts bancaires multi-devises est raccordé à la fiche transaction existante. Il modifie **un seul** document de transfert, les deux montants natifs, le montant d'origine éventuel et le taux CAD daté.
+- Les comptes et la date du transfert restent fixes dans cette première itération. Les mutations ne sont appliquées en mémoire qu'après sauvegarde réussie ; toute erreur valide/serveur laisse la transaction initiale intacte.
+- Les autres mouvements spéciaux internationaux restent protégés par l'ancien garde-fou. Les dépenses/revenus/remboursements étrangers disposent désormais d'un aperçu de répartition CAD lorsque le taux daté est connu, au lieu d'un aperçu constamment vide.
+- Un avoir positif de carte de crédit non vérifié invalide le total mondial et le solde principal concerné : il n'est jamais additionné silencieusement à l'argent disponible.
+
+### Import et vue couple
+
+- Les comparaisons OCR et les contrôles de doublons des transferts comparent les **montants bancaires natifs**, pas la contre-valeur CAD.
+- Le rapprochement automatique des justificatifs de carte de crédit étrangère est désactivé jusqu'à un moteur de correspondance par montants natifs/source/destination.
+- Les CSV français en devise étrangère restent « en attente » sans CAD ni répartition nulle/NaN ; dates FR, virgules et débits/crédits font l'objet de tests fictifs.
+- La vue Couple peut agréger plusieurs comptes CAD/EUR et leurs dettes en un montant CAD courant lorsque **tous** les soldes et taux sont connus ; sinon « Situation à vérifier ». Les comptes sont dédupliqués par identifiant et les taux affichés avec leurs dates. L'épargne n'est pas confondue avec les liquidités.
+- Le chargement des taux est limité par devise et date de demande, plutôt que bloqué globalement après la première devise consultée.
+
+### Tests présents sur la branche
+
+- \`tests/trace-international.test.cjs\` — 25 scénarios de moteur FX.
+- \`tests/trace-international-editor.test.cjs\` — 6 scénarios d'interactions d'édition, erreurs et absence de mutation.
+- \`tests/trace-international-csv.test.cjs\` — 6 scénarios de CSV français et duplications natives.
+- \`tests/trace-international-couple-home.test.cjs\` — 4 scénarios de trésorerie couple et taux manquants.
+- \`tests/trace-international-wiring.test.cjs\` — 7 garde-fous d'intégration.
+- \`tests/trace-international-ui-smoke.test.cjs\` — 12 contrôles DOM simulés sur la candidate 5.37.
+- \`tests/trace-international-legacy-ledger.test.cjs\` — 44 cas historiques CAD exécutés sur la candidate 5.37.
+
+**Total : 104 scénarios isolés prévus.** Ils ont été exécutés en plusieurs groupes dans un environnement JS simulé. Ce n'est pas un test navigateur Safari ni une exécution CI GitHub complète.
+
+La configuration \`.github/workflows/trace-regression.yml\` est mise à jour **sur la branche uniquement**, sans ajout d'artefacts de rapports, pour inclure les tests 5.37 lors d'une future PR vers \`main\`. Aucun lancement n'a été demandé : ne pas consommer inutilement le quota GitHub Actions.
+
+### Non validé : blocage de livraison maintenu
+
+- Safari iPhone/PWA : chargement complet, interactions réelles, navigation, service worker et cache.
+- Réception de paiements de carte étrangère : traitement complet du rapprochement, dates d'opérations, devises différentes.
+- Cartes à débit différé : échéances, lots et règlement bancaire complet.
+- OCR multi-devises et PDF de banques françaises (aucun fournisseur réel ni capture réelle testée).
+- Extension des livrets et placements internationaux reliés à un solde de compte bancaire.
+- Vérification HTTP du service Valet dans un navigateur : la documentation officielle et les séries de données ont été consultées, mais le vrai endpoint JSON n'a pas pu être testé dans cet environnement.
+- Vérification GitHub Actions et GitHub Pages après une éventuelle activation et une PR.
+
+**Interdit :** fusionner ou modifier les références de \`index.html\`, \`sw.js\` ou les données financières avant la levée de ces blocages.
