@@ -90,4 +90,51 @@ test('dated rate cannot be taken from a future date',()=>{
 test('currency choices include European and North American bank currencies',()=>{
  assert.deepEqual([...I.currencies()],['CAD','EUR','USD','GBP','CHF']);
 });
+test('edit CAD to EUR transfer preserves the actual 150 CAD debit and 95 EUR receipt',()=>{
+ const tx={id:'transfer1',type:'transfer',status:'confirmed',accountId:CAD.id,toAccountId:EUR.id,
+  date:'2026-10-05',name:'Voyage',amountCAD:140,bankAmount:140,toBankAmount:90,categoryId:'',linkedTransactionId:null};
+ const next=I.resolveTransferEdit({transaction:tx,from:CAD,to:EUR,bankAmount:150,receivedAmount:95,name:'Virement France'});
+ assert.equal(next.bankAmount,150);assert.equal(next.amountCAD,150);assert.equal(next.toBankAmount,95);
+ assert.equal(next.type,'transfer');assert.equal(next.categoryId,'');assert.equal(next.date,tx.date);
+ assert.equal(next.accountId,CAD.id);assert.equal(next.toAccountId,EUR.id);
+ assert.equal(next.linkedTransactionId,null);assert.equal(tx.bankAmount,140);
+ assert.equal(I.amountOnAccount(next,EUR,'destination'),95);
+});
+test('edit EUR to CAD transfer preserves both native legs and dated rate without second income',()=>{
+ const tx={id:'transfer2',type:'transfer',status:'confirmed',accountId:EUR.id,toAccountId:CAD.id,
+  date:'2026-10-05',name:'Retour France',bankCurrency:'EUR',bankAmount:80,toBankAmount:119,
+  amountCAD:126,categoryId:'',statusTag:'matched'};
+ const quote={currency:'EUR',cadPerUnit:1.6,date:'2026-10-03',source:'fictitious fixture'};
+ const next=I.resolveTransferEdit({transaction:tx,from:EUR,to:CAD,bankAmount:82,receivedAmount:120,quote,name:tx.name});
+ assert.equal(next.bankAmount,82);assert.equal(next.bankCurrency,'EUR');
+ assert.equal(next.toBankAmount,120);assert.equal(next.amountCAD,131.2);
+ assert.equal(next.fxRateDate,'2026-10-03');assert.equal(next.fxRateSource,'fictitious fixture');
+ assert.equal(next.type,'transfer');assert.equal(next.statusTag,'matched');
+ assert.equal(I.amountOnAccount(next,CAD,'destination'),120);
+});
+test('edit transfer with original purchase currency preserves original price and source bank debit',()=>{
+ const tx={type:'transfer',status:'confirmed',accountId:EUR.id,toAccountId:CAD.id,date:'2026-10-05',name:'Dollar settlement'};
+ const next=I.resolveTransferEdit({transaction:tx,from:EUR,to:CAD,bankAmount:46.2,receivedAmount:70,
+  originalCurrency:'USD',originalAmount:50,quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-03'}});
+ assert.equal(next.currency,'USD');assert.equal(next.amountOriginal,50);
+ assert.equal(next.bankCurrency,'EUR');assert.equal(next.bankAmount,46.2);assert.equal(next.toBankAmount,70);
+ assert.equal(next.amountCAD,73.92);
+});
+test('transfer editor never accepts unknown destination leg',()=>{
+ const t={type:'transfer',status:'confirmed',accountId:CAD.id,toAccountId:EUR.id,date:'2026-10-05',name:'Virement'};
+ assert.throws(()=>I.resolveTransferEdit({transaction:t,from:CAD,to:EUR,bankAmount:200,receivedAmount:''}),/deux montants/);
+ assert.throws(()=>I.resolveTransferEdit({transaction:t,from:CAD,to:EUR,bankAmount:200,receivedAmount:null}),/deux montants/);
+});
+test('transfer editor forbids changing account pair or editing unconfirmed movements',()=>{
+ const tx={type:'transfer',status:'confirmed',accountId:CAD.id,toAccountId:EUR.id,date:'2026-10-05',name:'Virement'};
+ assert.throws(()=>I.resolveTransferEdit({transaction:tx,from:{...CAD,id:'another'},to:EUR,bankAmount:100,receivedAmount:60}),/incohérente/);
+ assert.throws(()=>I.resolveTransferEdit({transaction:{...tx,status:'pending'},from:CAD,to:EUR,bankAmount:100,receivedAmount:60}),/confirmé/);
+ assert.throws(()=>I.resolveTransferEdit({transaction:tx,from:CAD,to:{...EUR,owner:'partner'},bankAmount:100,receivedAmount:60}),/incohérente/);
+});
+test('transfer into a card respects its linked settlement account',()=>{
+ const tx={type:'transfer',status:'confirmed',accountId:EUR.id,toAccountId:CARD.id,date:'2026-10-05',name:'Paiement'};
+ assert.throws(()=>I.resolveTransferEdit({transaction:tx,from:EUR,to:CARD,bankAmount:100,receivedAmount:160,
+  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-05'}}),/compte courant lié/);
+});
+
 process.on('beforeExit',()=>console.log(count+' international FX scenarios passed'));
