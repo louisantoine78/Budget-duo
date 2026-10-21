@@ -94,6 +94,14 @@
  };
  const fxCache=new Map();
  const getRate=async(code,date,transport)=>{
+  // Only the isolated demo page may use fictional quotes. Real TRACE always
+  // uses a dated Bank of Canada quote or an explicitly verified manual rate.
+  if(root.__TRACE_INTERNATIONAL_PREVIEW__===true&&
+     String(root.location?.pathname||'').split('/').pop()==='trace-international-preview.html'){
+   const fixture=root.TraceInternationalPreviewFixtures?.rateFor?.(code,date);
+   if(!fixture)throw Error('Taux de démonstration non disponible pour cette devise ou cette date');
+   return fixture;
+  }
   const key=code+'-'+date;if(fxCache.has(key))return fxCache.get(key);
   const promise=fetchDailyRate(code,date,transport).catch(error=>{fxCache.delete(key);throw error;});
   fxCache.set(key,promise);return promise;
