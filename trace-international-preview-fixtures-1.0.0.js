@@ -71,9 +71,17 @@
    reconciliations:[],importDays:[],smartImports:[]
   };
  };
+ const fakeRate=(code,date)=>{
+  const daily={EUR:1.6,USD:1.4,GBP:1.82,CHF:1.65};
+  const currency=String(code||'').toUpperCase();
+  if(!Object.prototype.hasOwnProperty.call(daily,currency)||
+     !/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return null;
+  return{currency,cadPerUnit:daily[currency],date,requestedDate:date,kind:'fictional_fixture',
+   source:'TAUX FICTIF — TEST, NE PAS UTILISER POUR UNE OPÉRATION RÉELLE'};
+ };
  root.TraceInternationalPreviewFixtures=Object.freeze({
   create,
-  quote:()=>({currency:'EUR',cadPerUnit:1.6,date:iso(),requestedDate:iso(),kind:'fixture',
-   source:'TAUX FICTIF — TEST, NE PAS UTILISER POUR UNE OPÉRATION RÉELLE'})
+  quote:()=>fakeRate('EUR',iso()),
+  rateFor:fakeRate
  });
 })(window);
