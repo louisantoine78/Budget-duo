@@ -95,11 +95,11 @@
    throw Error('Prix d’achat d’origine requis lorsque sa devise diffère du compte');
   const origin=originProvided?Number(originalAmount):native;
   if(!Number.isFinite(origin)||origin<=0)throw Error('Montant d’achat invalide');
+  const cad=fxValue(native,bankCurrency,quote);
+  if(cad===null)throw Error('Taux CAD requis pour la date de cette opération');
   if(bankCurrency!=='CAD'&&quote&&(!/^\d{4}-\d{2}-\d{2}$/.test(String(quote.date||''))||
      (date&&quote.date>date)))
    throw Error('Date du taux de change invalide');
-  const cad=fxValue(native,bankCurrency,quote);
-  if(cad===null)throw Error('Taux CAD requis pour la date de cette opération');
   return{currency:purchaseCurrency,amountOriginal:round(origin),bankCurrency,bankAmount:round(native),
    amountCAD:cad,rate:purchaseCurrency===bankCurrency?quote?.cadPerUnit||1:null,
    bankRateCad:bankCurrency==='CAD'?1:Number(quote.cadPerUnit),fxRateDate:quote?.date||date||'',
