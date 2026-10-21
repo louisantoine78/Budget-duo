@@ -1775,7 +1775,9 @@ function importFile(file){
       const t={id:txDocId(),date,name,note:'',merchant:'',type,status:'pending',currency:ccy,bankCurrency:ccy,
        bankAmount:amount,rate:ccy==='CAD'?1:null,amountCAD:ccy==='CAD'?amount:null,
        amountOriginal:amount,categoryId:'',accountId,payerId:me,beneficiary:me,
-       ...traceSplit(me,ccy==='CAD'?amount:0),recurring:false,source:'csv',importFileName:file.name};
+       // A foreign import has no CAD allocation until a verified dated rate.
+       ...(ccy==='CAD'?traceSplit(me,amount):{}),
+       recurring:false,source:'csv',importFileName:file.name};
      t.importFingerprint=csvFingerprint(t);
      if(!csvImportedDuplicate(t,state.transactions)&&!csvImportedDuplicate(t,all))all.push(t);
     });
