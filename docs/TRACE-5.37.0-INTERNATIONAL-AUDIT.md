@@ -70,7 +70,7 @@ Ce document décrit les limites observées et ne constitue pas une annonce de di
 
 ### Tests présents sur la branche
 
-- \`tests/trace-international.test.cjs\` — 25 scénarios de moteur FX.
+- \`tests/trace-international.test.cjs\` — 27 scénarios de moteur FX.
 - \`tests/trace-international-editor.test.cjs\` — 6 scénarios d'interactions d'édition, erreurs et absence de mutation.
 - \`tests/trace-international-csv.test.cjs\` — 6 scénarios de CSV français et duplications natives.
 - \`tests/trace-international-couple-home.test.cjs\` — 4 scénarios de trésorerie couple et taux manquants.
@@ -78,7 +78,7 @@ Ce document décrit les limites observées et ne constitue pas une annonce de di
 - \`tests/trace-international-ui-smoke.test.cjs\` — 12 contrôles DOM simulés sur la candidate 5.37.
 - \`tests/trace-international-legacy-ledger.test.cjs\` — 44 cas historiques CAD exécutés sur la candidate 5.37.
 
-**Total : 104 scénarios isolés prévus.** Ils ont été exécutés en plusieurs groupes dans un environnement JS simulé. Ce n'est pas un test navigateur Safari ni une exécution CI GitHub complète.
+**Total : 106 scénarios isolés disponibles et exécutés en environnement JS simulé.** Ils ont été exécutés en plusieurs groupes dans un environnement JS simulé. Ce n'est pas un test navigateur Safari ni une exécution CI GitHub complète.
 
 La configuration \`.github/workflows/trace-regression.yml\` est mise à jour **sur la branche uniquement**, sans ajout d'artefacts de rapports, pour inclure les tests 5.37 lors d'une future PR vers \`main\`. Aucun lancement n'a été demandé : ne pas consommer inutilement le quota GitHub Actions.
 
@@ -93,3 +93,5 @@ La configuration \`.github/workflows/trace-regression.yml\` est mise à jour **s
 - Vérification GitHub Actions et GitHub Pages après une éventuelle activation et une PR.
 
 **Interdit :** fusionner ou modifier les références de \`index.html\`, \`sw.js\` ou les données financières avant la levée de ces blocages.
+
+**Garde-fou additionnel :** le solde principal est laissé à vérifier si une carte liée est libellée dans une devise différente de son compte courant (aucune addition EUR+CAD native). La valorisation globale conserve des conversions CAD séparées lorsque les taux sont disponibles.
