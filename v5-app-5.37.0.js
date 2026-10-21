@@ -455,7 +455,10 @@ function internationalHome(){
  window.TraceInternationalUI?.render?.({
   host:$('#traceIntlHome'),accounts,owner:me,
   mainId:state.household.primaryBankAccountByOwner?.[me],estimates,rates:internationalQuotes,
-  balanceNode:$('#homeBalance'),checkingNode:$('#homeChecking'),cardNode:$('#homeCard'),
+  // A personal main account must not overwrite the Couple dashboard values.
+  balanceNode:homeScope==='mine'?$('#homeBalance'):null,
+  checkingNode:homeScope==='mine'?$('#homeChecking'):null,
+  cardNode:homeScope==='mine'?$('#homeCard'):null,
   onSelect:async id=>{
    if(!accounts.some(a=>a.id===id&&a.type==='checking'))return;
    const before={...(state.household.primaryBankAccountByOwner||{})};
