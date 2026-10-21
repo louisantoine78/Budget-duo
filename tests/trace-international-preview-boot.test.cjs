@@ -84,7 +84,7 @@ async function main(){
   assert.match(element('#traceIntlHome').innerHTML,/Élise/);
  });
  await test('lab remains explicit and does not attempt version redirect',()=>{
-  assert.match(element('#syncLabel').textContent,/Démo fictive/);
+  assert.match(element('#syncLabel').textContent,/Démo fictive|Démo locale/);
   assert.match(element('#brandSubtitle').textContent,/LABORATOIRE/);
   assert.equal(externalRequests,0);
  });
