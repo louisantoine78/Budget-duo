@@ -19,14 +19,14 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
    (a.balance===null?'Solde inconnu':I.money(a.balance,a.nativeCurrency))+'</b></div>').join('')+'</div>'+
   '<p class="trace-intl-grand">'+(snap.complete?
    'Situation nette estimée · '+I.money(snap.globalCAD,'CAD'):
-   'Situation globale à compléter · soldes ou taux manquants')+'</p>'+
+   'Situation globale à compléter · soldes, taux ou cartes à vérifier')+'</p>'+
   '<p class="trace-intl-foot">'+[...new Set(snap.balances.filter(a=>rates[a.nativeCurrency]).map(a=>rates[a.nativeCurrency].date))].map(esc).join(' · ')+
    ' · Taux indicatifs de la Banque du Canada, non contractuels. L’épargne et les placements sont dans Patrimoine.</p>'+
  '</details>':'');
  if(snap.main){
-  if(balanceNode)balanceNode.textContent=snap.net===null?'À configurer':I.money(snap.net,cur);
+  if(balanceNode)balanceNode.textContent=snap.net===null?(snap.cardsToReview.length||snap.ambiguousCards.length?'À vérifier':'À configurer'):I.money(snap.net,cur);
   if(checkingNode)checkingNode.textContent=snap.checking===null?'—':I.money(snap.checking,cur);
-  if(cardNode)cardNode.textContent=snap.card===null?'—':snap.card<0?
+  if(cardNode)cardNode.textContent=snap.card===null?(snap.cardsToReview.length?'Avoir de carte à vérifier':'—'):snap.card<0?
    I.money(Math.abs(snap.card),cur)+' de dette':snap.card>0?'Avoir estimé '+I.money(snap.card,cur):I.money(0,cur);
  }
  const sel=host.querySelector('#traceIntlPrimary');
