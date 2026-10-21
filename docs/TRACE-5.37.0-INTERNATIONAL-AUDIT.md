@@ -124,3 +124,15 @@ L'interface 5.37 utilisait \`#traceIntlHome\`, absent de l'\`index.html\` actuel
 5. Seulement alors envisager les branchements versionnés dans l'entrée PWA et le service worker ; aucune fusion ni déploiement pour le moment.
 
 La présence des scripts en laboratoire et le test sur DOM simulé **ne sont pas une certification Safari**.
+
+
+### Point de contrôle additionnel : laboratoire d'édition
+
+- Le laboratoire initialise une session de démonstration **sans client Supabase**, ce qui autorise les parcours ordinaires des formulaires sans aucune authentification ni donnée persistée.
+- Les fonctions de séparation/suppression et déconnexion réelle sont neutralisées dans ce mode.
+- Les taux des achats et mouvements EUR/USD/GBP/CHF sont **explicitement fictifs et datés** lorsqu'ils sont demandés dans la page de laboratoire exacte. Le moteur réel de taux Banque du Canada reste inchangé hors de cette page.
+- Un scénario simule la création d'un compte courant EUR depuis Profil → Mes comptes : aucune écriture externe ni demande réseau.
+- Le scénario complet de démarrage simulé comporte désormais **7 cas**, en complément des **8 contrôles d'intégrité** du HTML sécurisé et des **106 scénarios comptables et UI préexistants** : **121 contrôles locaux/isolés** au total lors de ce palier (à réexécuter après toute modification ultérieure).
+- Aucun test en Safari réel n'a encore été effectué, aucune prévisualisation n'est publiée sur GitHub Pages, aucun appel Supabase réel n'a été exécuté et aucune autorisation de fusion n'est donnée.
+
+Ce parcours ne valide pas encore le DOM natif de Safari, l'OCR/PDF international complet, ni la qualité UX sur un iPhone réel. Ce sont des **critères de validation à discuter** avant la mise en production.
