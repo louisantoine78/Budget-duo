@@ -137,4 +137,19 @@ test('transfer into a card respects its linked settlement account',()=>{
   quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-05'}}),/compte courant lié/);
 });
 
+test('unverified positive card credit must not be reported as cash or global wealth',()=>{
+ const snap=I.snapshot({owner:'la',accounts:[CAD,CARD],
+  mainId:CAD.id,estimates:{checkingCAD:1000,cardCAD:120}});
+ assert.equal(snap.net,null);assert.equal(snap.card,null);
+ assert.equal(snap.globalCAD,null);assert.equal(snap.complete,false);
+ assert.equal(snap.cardsToReview.length,1);assert.equal(snap.missing[0].id,CARD.id);
+});
+test('foreign card credit blocks worldwide wealth even if primary CAD account is valid',()=>{
+ const foreignCard={...CARD,id:'foreignCard',currency:'EUR',country:'FR',settlementAccountId:EUR.id};
+ const snap=I.snapshot({owner:'la',accounts:[CAD,EUR,foreignCard],mainId:CAD.id,
+  estimates:{checkingCAD:1500,checkingEUR:500,foreignCard:50},
+  fxRates:{EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-12'}}});
+ assert.equal(snap.net,1500);assert.equal(snap.globalCAD,null);
+ assert.equal(snap.complete,false);assert.equal(snap.cardsToReview.length,1);
+});
 process.on('beforeExit',()=>console.log(count+' international FX scenarios passed'));
