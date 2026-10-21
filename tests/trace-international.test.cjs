@@ -152,4 +152,20 @@ test('foreign card credit blocks worldwide wealth even if primary CAD account is
  assert.equal(snap.net,1500);assert.equal(snap.globalCAD,null);
  assert.equal(snap.complete,false);assert.equal(snap.cardsToReview.length,1);
 });
+test('credit card linked to primary checking in another currency cannot be subtracted natively',()=>{
+ const cardUSD={...CARD,currency:'USD',country:'CA'};
+ const out=I.snapshot({owner:'la',accounts:[CAD,cardUSD],mainId:CAD.id,
+  estimates:{checkingCAD:1000,cardCAD:-100},
+  fxRates:{USD:{currency:'USD',cadPerUnit:1.4,date:'2026-10-20'}}});
+ assert.equal(out.net,null);
+ assert.equal(out.card,null);
+ assert.equal(out.mixedLinkedCurrencies.length,1);
+ assert.equal(out.complete,true);
+ assert.equal(out.globalCAD,860);
+});
+test('when only a card exists there is no fictitious cash primary balance',()=>{
+ const out=I.snapshot({owner:'la',accounts:[CARD],mainId:CARD.id,
+  estimates:{cardCAD:-100}});
+ assert.equal(out.net,null);assert.equal(out.checking,null);
+});
 process.on('beforeExit',()=>console.log(count+' international FX scenarios passed'));
