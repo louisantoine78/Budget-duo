@@ -881,6 +881,20 @@ function traceEditorDateLabel(iso){
  return Number(hit[3])+' '+(months[Number(hit[2])-1]||'')+' '+hit[1];
 }
 function editSmartBankMovement(t,requestedKind='',initialDraft=null){
+ const originalAccount=state.accounts.find(a=>a.id===t.accountId);
+ const oldDestination=state.accounts.find(a=>a.id===t.toAccountId);
+ // The legacy bank-movement editor is CAD-only. Its saved amount represents
+ // CAD and cannot safely rewrite native foreign balances or transfer legs.
+ // International movements are read-only here until the FX editor is audited.
+ if(window.TraceInternational.currency(originalAccount)!=='CAD'||
+    (oldDestination&&window.TraceInternational.currency(oldDestination)!=='CAD')){
+  openSheet('Mouvement international à préserver',
+   '<p class="empty-note">Cette opération est enregistrée dans sa devise native. Sa modification n’est pas encore ouverte car un changement de montant pourrait fausser les soldes ou le taux historique.</p>'+
+   '<p class="empty-note">Aucune donnée n’a été modifiée. Cette édition sera activée après les tests de la version internationale.</p>'+
+   '<button type="button" class="secondary full" id="traceFxEditClose">Fermer</button>');
+  $('#traceFxEditClose').onclick=closeSheet;
+  return;
+ }
  const own=visibleBankAccounts(me),eligibleSavings=trackedSavingsAccounts(me);
  const M=window.TraceMovement,U=window.TraceOperationUI,
    bank=state.accounts.find(a=>a.id===t.accountId),
@@ -1061,6 +1075,11 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
    investmentAccountId=savings?$('#smartMovementSavingsTo').value:null,
    savingsAccount=state.investmentAccounts.find(a=>a.id===investmentAccountId);
   const account=state.accounts.find(a=>a.id===accountId);
+  const targetAccount=state.accounts.find(a=>a.id===toAccountId);
+  if(window.TraceInternational.currency(account)!=='CAD'||
+     (targetAccount&&window.TraceInternational.currency(targetAccount)!=='CAD')){
+   $('#traceFeedback').textContent='Pour préserver les montants réels et le taux historique, termine la modification dans le futur éditeur international. Aucun changement enregistré.';return;
+  }
   if(!movement||movement.legacyOnly||movement.direction!==(direction==='in'?1:-1)||
      !account||!U.kindsFor(accountType(account),direction).some(k=>k.id===requestedType)||
      !(amount>0)||!Number.isFinite(amount)||amount>1e7||!smartStrictDate(date)||name.length<2||!accountId||
