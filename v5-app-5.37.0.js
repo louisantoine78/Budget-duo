@@ -14,6 +14,11 @@ const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).joi
 const initialBudgetMonth=new URLSearchParams(location.search).get('month');
 let client,session,household,workspaceLoadPromise=null,me='la',partner='partner',homeScope='mine',budgetScope='mine',budgetMonth=/^\d{4}-\d{2}$/.test(initialBudgetMonth||'')?initialBudgetMonth:CM,wealthScope='mine',analysisScope='mine',tab='transactions',activityMonth=CM;
 let internationalQuotes={},internationalQuoteAttempt=new Set(),internationalFxBusy=false;
+function internationalPreviewMode(){
+ return window.__TRACE_INTERNATIONAL_PREVIEW__===true&&
+  String(location.pathname||'').split('/').pop()==='trace-international-preview.html'&&
+  typeof window.TraceInternationalPreviewFixtures?.create==='function';
+}
 let state={household:{},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[],importDays:[],smartImports:[]};
 function withTimeout(promise,ms,label){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label||'Délai dépassé')),ms))]);}
 function loadingStage(text){const el=$('#cloudLoadingText');if(el)el.textContent=text;}
@@ -510,6 +515,7 @@ function internationalHome(){
 }
 
 function requestInternationalRates(currencies){
+ if(internationalPreviewMode())return; // The laboratory never requests public or private APIs.
  const date=localDateISO();
  const wanted=[...new Set(currencies)].filter(c=>c!=='CAD'&&
   (!internationalQuotes[c]||internationalQuotes[c].requestedDate!==date)&&
@@ -846,7 +852,7 @@ function openInvestmentAccountAdd(){
 /* Trace 5.6 core: persistence, category and transaction lifecycle */
 function traceNotice(e){console.error(e);const x=$('#traceFeedback');if(x)x.textContent='Erreur de synchronisation. Réessaie sans fermer Trace.';}
 function traceFeedback(){return '<div class="trace-feedback" id="traceFeedback" role="status"></div>';}
-async function removeDocument(collection,id){const {data,error}=await client.from('documents').delete().eq('household_id',household.id).eq('collection',collection).eq('item_id',String(id)).select('item_id');if(error)throw error;if(!data||data.length!==1)throw new Error('Suppression non confirmée');}
+async function removeDocument(collection,id){if(internationalPreviewMode())return;const {data,error}=await client.from('documents').delete().eq('household_id',household.id).eq('collection',collection).eq('item_id',String(id)).select('item_id');if(error)throw error;if(!data||data.length!==1)throw new Error('Suppression non confirmée');}
 function categoryKind(c){return c.budgetKind||(c.type==='income'?'income':['rent','subscriptions','phone','taxes'].includes(c.id)?'fixed':'variable');}
 function manageCategories(){
  const active=state.categories.filter(c=>!c.archived).sort((a,b)=>a.type.localeCompare(b.type)||a.name.localeCompare(b.name,'fr'));
@@ -2874,6 +2880,7 @@ function uiIcon(name){
 async function saveHouseholdSettings(){
   sync('saving');
   const settings={...(household.settings||{}),...state.household,schemaVersion:5};
+  if(internationalPreviewMode()){household.settings=settings;sync('synced','Démo locale');return;}
   const{error}=await client.from('households').update({settings,updated_by:session.user.id}).eq('id',household.id);
   if(error){sync('error');throw error;}
   household.settings=settings;
@@ -2881,6 +2888,7 @@ async function saveHouseholdSettings(){
 }
 async function saveDocument(collection,item){
   sync('saving');
+  if(internationalPreviewMode()){sync('synced','Démo locale');return;}
   const{error}=await client.from('documents').upsert({
     household_id:household.id,
     collection,
@@ -3671,7 +3679,7 @@ function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=
 let versionCheckBusy=false;
 let checkingHousehold=false;
 async function verifyActiveHousehold(){
- if(checkingHousehold||!session?.user?.id||!household)return;
+ if(internationalPreviewMode()||checkingHousehold||!session?.user?.id||!household)return;
  checkingHousehold=true;
  try{
   const {data,error}=await client.from('household_members')
@@ -3683,7 +3691,7 @@ async function verifyActiveHousehold(){
  finally{checkingHousehold=false;}
 }
 async function checkCurrentBuild(){
- if(versionCheckBusy)return;versionCheckBusy=true;
+ if(internationalPreviewMode()||versionCheckBusy)return;versionCheckBusy=true;
  try{
   const response=await fetch('./trace-version.json?check='+Date.now(),{cache:'no-store'});
   if(!response.ok)return;
@@ -3831,11 +3839,34 @@ window.TraceBankBridge={
 
 function bootTrace(){
   try{
+    if(internationalPreviewMode()){
+     // No Supabase credentials, session, storage or financial database. Values
+     // are fictional and reset when the browser reloads this isolated page.
+     const fixture=window.TraceInternationalPreviewFixtures;
+     state=fixture.create();
+     household={id:'trace-demo-only',settings:{...state.household}};
+     session=null;me='la';partner='partner';client=null;
+     internationalQuotes={EUR:fixture.quote()};
+     bind();
+     hideGate();
+     renderAll();
+     $('#syncLabel').textContent='Démo fictive · aucune sauvegarde';
+     $('#brandSubtitle').textContent='5.37.0 · LABORATOIRE';
+     window.__TRACE_PREVIEW_STATUS__={boot:'ok',build:window.__TRACE_BUILD__,
+      noSupabase:true,fixtureCount:state.transactions.length};
+     return;
+    }
     bind();
     init();
     setTimeout(checkCurrentBuild,1200);
   }catch(err){
     console.error('Trace startup error',err);
+    if(internationalPreviewMode()){
+     window.__TRACE_PREVIEW_STATUS__={boot:'error',message:String(err.message||err),noSupabase:true};
+     const msg=$('#tracePreviewStatus');
+     if(msg)msg.textContent='Erreur de chargement : '+String(err.message||err);
+     return;
+    }
     showGate('cloudAuthPanel');
     const msg=$('#cloudAuthMessage');
     if(msg)msg.textContent='Trace n’a pas pu démarrer. Recharge la page.';
