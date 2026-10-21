@@ -2756,7 +2756,9 @@ function renderWealth(){
  const investments=ports.reduce((sum,x)=>sum+(x.p.cad||0),0),
   banks=state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&['checking','card'].includes(accountType(a))),
   bankValues=banks.map(a=>({a,native:accountEstimate(a),currency:window.TraceInternational.currency(a)})),
-  bankMissing=bankValues.filter(x=>x.native===null||x.currency!=='CAD'&&!internationalQuotes[x.currency]),
+  bankMissing=bankValues.filter(x=>x.native===null||
+    x.currency!=='CAD'&&!internationalQuotes[x.currency]||
+    accountType(x.a)==='card'&&Number(x.native)>0),
   bankCAD=bankValues.reduce((n,x)=>n+(x.native===null?0:
    window.TraceInternational.fxValue(x.native,x.currency,internationalQuotes[x.currency])||0),0),
   total=bankCAD+investments,complete=!bankMissing.length&&!missing.length;
