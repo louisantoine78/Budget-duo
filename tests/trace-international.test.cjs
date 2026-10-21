@@ -63,6 +63,30 @@ test('FX quote uses last available published business day and records exact date
 test('unsafe quote or empty API response cannot create fake exchange rate',async()=>{
  await assert.rejects(()=>I.fetchDailyRate('CHF','2026-10-19',async()=>({ok:true,json:async()=>({observations:[]})})),/Aucun taux/);
 });
+test('CAD destination of EUR transfer without explicit receipt is unknown, not budget valuation',()=>{
+ const tx={type:'transfer',bankCurrency:'EUR',bankAmount:100,amountCAD:160,toAccountId:'checkingCAD'};
+ assert.equal(I.amountOnAccount(tx,CAD,'destination'),null);
+});
+test('unlinked cards across multiple same-currency current accounts require mapping',()=>{
+ const other={...CAD,id:'checkingCAD2'};
+ const snap=I.snapshot({accounts:[CAD,other,CARD],owner:'la',mainId:CAD.id,
+  estimates:{checkingCAD:1000,checkingCAD2:2000,cardCAD:-300}});
+ assert.equal(snap.net,700); // The card explicitly links to the first account.
+ const unknown={...CARD,settlementAccountId:null};
+ const ambiguous=I.snapshot({accounts:[CAD,other,unknown],owner:'la',mainId:CAD.id,
+  estimates:{checkingCAD:1000,checkingCAD2:2000,cardCAD:-300}});
+ assert.equal(ambiguous.net,null);
+ assert.equal(ambiguous.ambiguousCards.length,1);
+ assert.equal(ambiguous.globalCAD,2700);
+});
+test('cannot invent original purchase amount when purchase currency differs',()=>{
+ assert.throws(()=>I.resolveBooking({account:EUR,bankAmount:46.20,originalCurrency:'USD',
+  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-01'},date:'2026-10-01'}),/Prix d’achat d’origine requis/);
+});
+test('dated rate cannot be taken from a future date',()=>{
+ assert.throws(()=>I.resolveBooking({account:EUR,bankAmount:100,date:'2026-10-01',
+  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-02'}}),/Date du taux/);
+});
 test('currency choices include European and North American bank currencies',()=>{
  assert.deepEqual([...I.currencies()],['CAD','EUR','USD','GBP','CHF']);
 });
