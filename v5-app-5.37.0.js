@@ -2058,13 +2058,13 @@ function smartDuplicateMatches(id,values={}){
    categoryName:state.categories.find(c=>c.id===x.categoryId)?.name||'',
    source:'Capture bancaire en attente',
    exact:amt!==null&&Number(x.amount)>0&&Math.abs(Number(x.amount)-amt)<.009});});
- state.transactions.forEach(x=>{if(x.accountId===d.accountId&&x.date===day&&sameName(x.name)&&sameAmount(x.amountCAD,null))
+ state.transactions.forEach(x=>{if(x.accountId===d.accountId&&x.date===day&&sameName(x.name)&&sameAmount(x.bankAmount??x.amountCAD,null))
   out.push({id:x.id,name:x.name,date:x.date,amount:x.bankAmount??x.amountCAD,
    status:x.status==='confirmed'?'recorded':'unconfirmed',
    accountName:shortAccountLabel(state.accounts.find(a=>a.id===x.accountId)),
    categoryName:state.categories.find(c=>c.id===x.categoryId)?.name||'Non catégorisée',
    source:x.status==='confirmed'?'Activité · opération confirmée':'Activité · à vérifier',
-   exact:amt!==null&&Math.abs(Number(x.amountCAD)-amt)<.009});});
+   exact:amt!==null&&Math.abs(Number(x.bankAmount??x.amountCAD)-amt)<.009});});
  return out.sort((a,b)=>Number(b.status==='recorded')-Number(a.status==='recorded')||
   Number(b.exact)-Number(a.exact)).slice(0,5);
 }
@@ -2262,7 +2262,9 @@ async function smartIgnoreDraft(id){
    from a personal checking account. Never write a second financial transaction. */
 function smartCardPaymentMatches(accountId,date,amount){
  const target=visibleBankAccounts(me).find(a=>a.id===accountId);
- if(!target||accountType(target)!=='card')return[];
+ if(!target||accountType(target)!=='card'||window.TraceInternational.currency(target)!=='CAD')return[];
+ // Foreign-card evidence is not eligible for amount-only matching. Actual
+ // destination and source bank amounts must be reconciled independently.
  const accounts=visibleBankAccounts(me).map(a=>({id:a.id,name:shortAccountLabel(a),type:accountType(a),owner:a.owner}));
  const priorMatches=state.transactions.filter(t=>t.type==='card_statement_evidence'&&t.status==='confirmed'&&t.linkedTransactionId)
   .map(t=>({kind:'smart_draft',status:'matched_card_payment',linkedTransactionId:t.linkedTransactionId}));
@@ -2272,6 +2274,8 @@ async function smartMatchCardPaymentDraft(id,values,transferId){
  const d=state.smartImports.find(x=>x.id===id&&x.kind==='smart_draft'&&x.status==='pending');
  if(!d||!visibleBankAccounts(me).some(a=>a.id===d.accountId&&accountType(a)==='card'))
   throw Error('Capture de carte inaccessible.');
+ if(window.TraceInternational.currency(state.accounts.find(a=>a.id===d.accountId))!=='CAD')
+  throw Error('Rapprochement de carte étrangère en préparation. Ne crée pas de deuxième paiement.');
  const date=String(values?.date||''),raw=values?.amount,amount=Number(raw),name=String(values?.name||'').trim().slice(0,85);
  if(!values?.verified||d.needsAmountReview&&!values.amountChecked)
   throw Error('Vérifie le montant et la date sur la capture.');
@@ -2347,7 +2351,7 @@ async function smartApproveDraft(id,v){
  if(match?.status==='exact')throw Error('Une opération identique existe déjà. Utilise « Écarter » pour ce doublon.');
  if(match?.status==='possible'&&!v.allowPossibleDuplicate)throw Error('Une opération ressemblante existe : coche la confirmation de doublon.');
  if(['transfer','external_transfer','external_refund'].includes(type)&&state.transactions.some(t=>t.accountId===accountId&&t.date===date&&t.type===type&&
-  Math.abs(Number(t.amountCAD)-amount)<.009&&normalizedMerchant(t.name)===normalizedMerchant(name)))
+  Math.abs(Number(t.bankAmount??t.amountCAD)-amount)<.009&&normalizedMerchant(t.name)===normalizedMerchant(name)))
   throw Error('Ce mouvement semble déjà enregistré.');
  const bankAccount=state.accounts.find(a=>a.id===accountId);
  const currency=window.TraceInternational.currency(bankAccount),rateValue=String(v.manualFxRate||'').trim();
