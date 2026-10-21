@@ -50,7 +50,8 @@ test('lab boot returns before real authentication and before version redirects',
  const boot=app.slice(app.indexOf('function bootTrace('),app.indexOf('\ndocument.addEventListener',app.indexOf('function bootTrace(')));
  assert.ok(boot.indexOf('if(internationalPreviewMode())')>0);
  assert.ok(boot.indexOf('if(internationalPreviewMode())')<boot.lastIndexOf('init();'));
- assert.match(boot,/session=null;me='la';partner='partner';client=null/);
+ assert.match(boot,/id:'trace-laboratory-fixture'/);
+ assert.match(boot,/me='la';partner='partner';client=null/);
  assert.match(boot,/window\.__TRACE_PREVIEW_STATUS__/);
  assert.match(app,/if\(internationalPreviewMode\(\)\|\|versionCheckBusy\)return/);
  assert.match(app,/if\(internationalPreviewMode\(\)\)return;.*The laboratory never requests/);
