@@ -105,6 +105,38 @@
    bankRateCad:bankCurrency==='CAD'?1:Number(quote.cadPerUnit),fxRateDate:quote?.date||date||'',
    fxRateSource:bankCurrency==='CAD'?'identité':quote?.source||'saisi manuellement'};
  };
+ // Prepare an edit of ONE already-recorded international transfer. The one
+ // ledger document remains the sole source of both bank legs; budget is neutral.
+ // Dates and bank account IDs deliberately cannot change in this first editor.
+ const resolveTransferEdit=({transaction,from,to,bankAmount,receivedAmount,quote=null,
+  originalCurrency=null,originalAmount=null,name=null}={})=>{
+  if(!transaction||transaction.type!=='transfer'||transaction.status!=='confirmed')
+   throw Error('Seul un transfert confirmé peut être modifié ici');
+  if(!from||!to||from.id!==transaction.accountId||to.id!==transaction.toAccountId||
+     from.id===to.id||!from.owner||from.owner!==to.owner||from.type!=='checking'||
+     !['checking','card'].includes(to.type))
+   throw Error('Origine ou destination bancaire incohérente');
+  if(to.type==='card'&&to.settlementAccountId&&to.settlementAccountId!==from.id)
+   throw Error('Cette carte doit être remboursée depuis son compte courant lié');
+  if(String(bankAmount??'').trim()===''||String(receivedAmount??'').trim()==='')
+   throw Error('Les deux montants bancaires réels sont obligatoires');
+  const received=Number(receivedAmount);
+  if(!Number.isFinite(received)||received<=0)throw Error('Montant reçu invalide');
+  const bankCode=currency(from),originalCode=originalCurrency||transaction.currency||bankCode;
+  const original=originalAmount===null||originalAmount===undefined||originalAmount===''?
+   (originalCode===bankCode?bankAmount:null):originalAmount;
+  const booking=resolveBooking({account:from,bankAmount,originalCurrency:originalCode,
+   originalAmount:original,quote,date:transaction.date});
+  const nextName=name===null?String(transaction.name||''):String(name||'').trim();
+  if(nextName.length<2||nextName.length>85)throw Error('Libellé bancaire invalide');
+  const next={...transaction,...booking,name:nextName,toBankAmount:round(received)};
+  // The same transfer is never a new expense or income. Preserve historical
+  // link IDs and all user allocations; only change native legs and FX metadata.
+  if(Number(transaction.bankAmount??transaction.amountCAD)!==next.bankAmount||
+     Number(transaction.toBankAmount??transaction.amountCAD)!==next.toBankAmount||
+     transaction.name!==nextName)next.importFingerprint=null;
+  return next;
+ };
  root.TraceInternational=Object.freeze({valid,currency,currencies,country,mode,money,amountOnAccount,primary,snapshot,
-  fetchDailyRate,getRate,resolveBooking,fxValue});
+  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,fxValue});
 })(typeof window!=='undefined'?window:globalThis);
