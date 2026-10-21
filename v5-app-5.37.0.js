@@ -2988,6 +2988,7 @@ function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
   '<div class="formrow"><div><label class="label2">Pays du compte</label><select id="traceNewBankCountry" class="input"><option value="CA">Canada</option><option value="FR">France</option><option value="OTHER">Autre</option></select></div>'+
   '<div><label class="label2">Devise du compte</label><select id="traceNewBankCurrency" class="input">'+window.TraceInternational.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></div></div>'+
   '<label class="label2" id="traceNewBankPaymentLabel">Fonctionnement de la carte</label><select id="traceNewBankPayment" class="input"><option value="credit">Carte de crédit</option><option value="deferred" disabled>Carte à débit différé · en préparation</option></select>'+
+  '<div id="traceNewBankLinkedWrap" hidden><label class="label2" for="traceNewBankLinked">Compte courant de remboursement</label><select id="traceNewBankLinked" class="input"></select><p class="trace-intl-help">Une carte est associée à un seul compte courant pour calculer le solde principal sans double compter la dette.</p></div>'+
   '<label class="label2">Nom du compte (modifiable plus tard)</label><input class="input" id="traceNewBankName" maxlength="70" autocomplete="off">'+
   '<label class="label2" id="traceNewBankAmountLabel">Solde de référence ($)</label><input class="input" id="traceNewBankAmount" type="number" step=".01" inputmode="decimal" placeholder="À renseigner" autocomplete="off">'+
   '<p class="trace-account-amount-info" id="traceNewBankAmountInfo"></p>'+
@@ -3004,6 +3005,12 @@ function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
   const card=type.value==='card';
   if(resetName)name.value=card?'Carte de crédit':country.value==='FR'?'Compte bancaire français':'Compte courant';
   payment.hidden=!card;$('#traceNewBankPaymentLabel').hidden=!card;
+  $('#traceNewBankLinkedWrap').hidden=!card;
+  const linkedAccounts=visibleBankAccounts(me).filter(a=>accountType(a)==='checking'&&
+   window.TraceInternational.currency(a)===currency.value&&window.TraceInternational.country(a)===country.value);
+  $('#traceNewBankLinked').innerHTML='<option value="">'+(linkedAccounts.length?'Choisir le compte courant':'Crée d’abord un compte courant dans cette devise')+'</option>'+
+   linkedAccounts.map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
+  if(linkedAccounts.length===1)$('#traceNewBankLinked').value=linkedAccounts[0].id;
   $('#traceNewBankAmountLabel').textContent=(card?'Dette de carte':'Solde de référence')+' à cette date ('+currency.value+')';
   $('#traceNewBankAmount').value='';
   $('#traceNewBankAmount').min=card?'0':'';
@@ -3019,10 +3026,13 @@ function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
  $('#traceSaveNewBank').onclick=async()=>{
   const label=name.value.trim(),accountKind=type.value,raw=$('#traceNewBankAmount').value.trim(),
    n=raw===''?null:Number(raw),date=$('#traceNewBankDate').value,mode=$('#traceNewBankMode').value,
-   currencyCode=currency.value,countryCode=country.value;
+   currencyCode=currency.value,countryCode=country.value,
+   linkedId=accountKind==='card'?$('#traceNewBankLinked').value:null,
+   linkedAccount=visibleBankAccounts(me).find(a=>a.id===linkedId&&accountType(a)==='checking'&&
+    window.TraceInternational.currency(a)===currencyCode&&window.TraceInternational.country(a)===countryCode);
   if(!label||label.length>70||!['checking','card'].includes(accountKind)||
    !window.TraceInternational.valid(currencyCode)||!['CA','FR','OTHER'].includes(countryCode)||
-    (accountKind==='card'&&payment.value!=='credit')||
+    (accountKind==='card'&&(payment.value!=='credit'||!linkedAccount))||
    !/^\d{4}-\d\d-\d\d$/.test(date)||(n!==null&&(!Number.isFinite(n)||Math.abs(n)>1e9))||
    (accountKind==='card'&&n!==null&&n<0)){
    $('#traceBankSetupError').textContent='Vérifie le nom, la date et le montant. La dette de carte doit être saisie en positif.';
@@ -3033,7 +3043,8 @@ function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
    return;
   }
   const account={id:accountKind+'_'+txDocId(),owner:me,name:label,type:accountKind,
-   currency:currencyCode,country:countryCode,paymentMode:accountKind==='card'?payment.value:'immediate'};
+   currency:currencyCode,country:countryCode,paymentMode:accountKind==='card'?payment.value:'immediate',
+    ...(accountKind==='card'?{settlementAccountId:linkedId}:{})};
   const button=$('#traceSaveNewBank');button.disabled=true;button.textContent='Enregistrement…';
   let saved=false;
   try{
