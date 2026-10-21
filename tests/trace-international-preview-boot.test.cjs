@@ -83,6 +83,15 @@ async function main(){
   assert.match(element('#traceIntlHome').innerHTML,/Voir les comptes du foyer/);
   assert.match(element('#traceIntlHome').innerHTML,/Élise/);
  });
+ await test('foreign transfers use only visibly fictitious dated rates in the laboratory',async()=>{
+  const rate=await window.TraceInternational.getRate('EUR','2026-10-12');
+  assert.equal(rate.currency,'EUR');
+  assert.equal(rate.cadPerUnit,1.6);
+  assert.equal(rate.date,'2026-10-12');
+  assert.match(rate.source,/TAUX FICTIF/);
+  await assert.rejects(window.TraceInternational.getRate('JPY','2026-10-12'),/Taux de démonstration/);
+  assert.equal(externalRequests,0);
+ });
  await test('lab remains explicit and does not attempt version redirect',()=>{
   assert.match(element('#syncLabel').textContent,/Démo fictive|Démo locale/);
   assert.match(element('#brandSubtitle').textContent,/LABORATOIRE/);
