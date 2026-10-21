@@ -18,3 +18,17 @@
 .trace-intl-set-primary{background:#e9f4eb;color:#20644e;border:1px solid #d4e5d8;padding:9px 12px;border-radius:11px;font-size:12px;font-weight:700;margin:6px 0 10px}
 .trace-intl-import [hidden],.trace-intl-transaction [hidden],#manualDestAmountWrap[hidden]{display:none!important}
 @media(max-width:420px){.trace-intl-transaction,.trace-intl-import{padding:10px}.trace-intl-row{font-size:12px}.trace-intl-row b{font-size:12px}}
+
+/* This banner exists only on the isolated demo page, not in production. */
+#tracePreviewStatus.trace-intl-lab-banner{
+ display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;
+ border:1px solid #b6d8cb;background:#e7f5ed;color:#1d5646;
+ padding:10px 14px;margin:10px 0 12px;border-radius:14px;
+ font-size:12px;line-height:1.45;overflow-wrap:anywhere;
+}
+#tracePreviewStatus.trace-intl-lab-banner strong{font-weight:850;letter-spacing:.015em}
+#tracePreviewStatus.trace-intl-lab-banner span{font-size:11px;color:#456f60}
+@media(max-width:420px){
+ #tracePreviewStatus.trace-intl-lab-banner{padding:9px 11px;gap:3px}
+ #tracePreviewStatus.trace-intl-lab-banner strong{font-size:12px}
+}
