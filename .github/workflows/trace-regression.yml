@@ -27,6 +27,11 @@ jobs:
           node --check trace-insights-1.0.0.js
           node --check trace-bank-ui-2.8.1.js
           node --check sw.js
+          # Candidate 5.37.0 modules (not used by the live index.html yet)
+          node --check trace-international-1.0.0.js
+          node --check trace-international-ui-1.0.0.js
+          node --check trace-smart-inbox-3.5.0.js
+          node --check v5-app-5.37.0.js
       - name: Run isolated accounting regressions
         run: |
           node tests/trace-regression.test.cjs
@@ -34,3 +39,10 @@ jobs:
           node tests/trace-ui-smoke.test.cjs
           node tests/trace-card-payment-detail.test.cjs
           node tests/trace-duplicate-compare.test.cjs
+          # No artifacts uploaded; real financial accounts are never queried.
+          node tests/trace-international.test.cjs
+          node tests/trace-international-wiring.test.cjs
+          node tests/trace-international-ui-smoke.test.cjs
+          node tests/trace-international-editor.test.cjs
+          node tests/trace-international-csv.test.cjs
+          node tests/trace-international-couple-home.test.cjs
