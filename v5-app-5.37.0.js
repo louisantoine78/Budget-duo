@@ -1672,15 +1672,13 @@ function importFile(file){
       const btn=$('#csvCommit');btn.disabled=true;let saved=0;
       try{
        const newEntries=result.all.filter(t=>!csvImportedDuplicate(t,state.transactions));
-       const needed=[...new Map(newEntries.filter(t=>t.bankCurrency!=='CAD')
-        .map(t=>[t.bankCurrency+'|'+t.date,[t.bankCurrency,t.date]])).values()];
-       const quotes=new Map();
-       // Rates must be available for the entire batch before writing any entry.
-       for(const [cur,date] of needed)quotes.set(cur+'|'+date,await window.TraceInternational.getRate(cur,date));
+       // Unquoted foreign rows remain pending in their real bank currency.
+       // CAD is assigned only during explicit validation at a dated FX rate.
        for(const t of newEntries){
-        const account=accts.find(a=>a.id===t.accountId),quote=t.bankCurrency==='CAD'?null:quotes.get(t.bankCurrency+'|'+t.date);
-        const booking=window.TraceInternational.resolveBooking({account,bankAmount:t.bankAmount,date:t.date,quote});
-        const item={...t,...booking,...traceSplit(me,booking.amountCAD)};
+        const account=accts.find(a=>a.id===t.accountId);
+        const booked=t.bankCurrency==='CAD'?
+         window.TraceInternational.resolveBooking({account,bankAmount:t.bankAmount,date:t.date}):null;
+        const item=booked?{...t,...booked,...traceSplit(me,booked.amountCAD)}:t;
         if(csvImportedDuplicate(item,state.transactions))continue;
         await saveDocument('transactions',item);state.transactions.push(item);saved++;
        }
@@ -2347,7 +2345,10 @@ function renderActivity(){
     '<div class="trace-unconfirmed-rows">'+remaining.map(t=>
      '<button type="button" class="trace-unconfirmed-row" data-import-pending="'+esc(t.id)+'">'+
       '<span><strong>'+esc(t.name||'Opération')+'</strong><small>'+esc(shortAccountLabel(state.accounts.find(a=>a.id===t.accountId)))+
-      ' · '+esc(t.date||'Date à préciser')+'</small></span><b>'+money(t.amountCAD)+'</b></button>').join('')+'</div>':'';
+      ' · '+esc(t.date||'Date à préciser')+'</small></span><b>'+
+       (t.amountCAD===null||t.amountCAD===undefined?
+         window.TraceInternational.money(t.bankAmount,window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId)))+' · CAD à valider':
+         money(t.amountCAD))+'</b></button>').join('')+'</div>':'';
   legacy.querySelectorAll('[data-import-pending]').forEach(button=>button.onclick=()=>editTransaction(button.dataset.importPending,true));
  }
  const picker=$('#activityMonthPicker');if(picker)picker.value=activityMonth;
@@ -2967,7 +2968,7 @@ function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
   '<label class="label2">Type de compte</label><select class="input" id="traceNewBankType"><option value="checking">Compte courant</option><option value="card">Carte de crédit</option></select>'+
   '<div class="formrow"><div><label class="label2">Pays du compte</label><select id="traceNewBankCountry" class="input"><option value="CA">Canada</option><option value="FR">France</option><option value="OTHER">Autre</option></select></div>'+
   '<div><label class="label2">Devise du compte</label><select id="traceNewBankCurrency" class="input">'+window.TraceInternational.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></div></div>'+
-  '<label class="label2" id="traceNewBankPaymentLabel">Fonctionnement de la carte</label><select id="traceNewBankPayment" class="input"><option value="credit">Carte de crédit</option><option value="deferred">Carte à débit différé</option></select>'+
+  '<label class="label2" id="traceNewBankPaymentLabel">Fonctionnement de la carte</label><select id="traceNewBankPayment" class="input"><option value="credit">Carte de crédit</option><option value="deferred" disabled>Carte à débit différé · en préparation</option></select>'+
   '<label class="label2">Nom du compte (modifiable plus tard)</label><input class="input" id="traceNewBankName" maxlength="70" autocomplete="off">'+
   '<label class="label2" id="traceNewBankAmountLabel">Solde de référence ($)</label><input class="input" id="traceNewBankAmount" type="number" step=".01" inputmode="decimal" placeholder="À renseigner" autocomplete="off">'+
   '<p class="trace-account-amount-info" id="traceNewBankAmountInfo"></p>'+
@@ -3002,6 +3003,7 @@ function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
    currencyCode=currency.value,countryCode=country.value;
   if(!label||label.length>70||!['checking','card'].includes(accountKind)||
    !window.TraceInternational.valid(currencyCode)||!['CA','FR','OTHER'].includes(countryCode)||
+    (accountKind==='card'&&payment.value!=='credit')||
    !/^\d{4}-\d\d-\d\d$/.test(date)||(n!==null&&(!Number.isFinite(n)||Math.abs(n)>1e9))||
    (accountKind==='card'&&n!==null&&n<0)){
    $('#traceBankSetupError').textContent='Vérifie le nom, la date et le montant. La dette de carte doit être saisie en positif.';
