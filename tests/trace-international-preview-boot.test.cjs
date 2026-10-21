@@ -92,6 +92,21 @@ async function main(){
   await assert.rejects(window.TraceInternational.getRate('JPY','2026-10-12'),/Taux de démonstration/);
   assert.equal(externalRequests,0);
  });
+ await test('add a fictional French bank account without contacting Supabase',async()=>{
+  element('#profileBtn').onclick();
+  assert.equal(typeof element('#settingsAccounts').onclick,'function');
+  element('#settingsAccounts').onclick();
+  element('#traceAddBankAccount').onclick();
+  element('#traceNewBankCountry').value='FR';
+  element('#traceNewBankCountry').onchange();
+  element('#traceNewBankName').value='Nouvelle banque EUR fictive';
+  element('#traceNewBankAmount').value='200';
+  element('#traceNewBankDate').value='2026-10-01';
+  element('#traceNewBankMode').value='start';
+  await element('#traceSaveNewBank').onclick();
+  assert.match(element('#traceIntlHome').innerHTML,/Nouvelle banque EUR fictive/);
+  assert.equal(externalRequests,0);
+ });
  await test('lab remains explicit and does not attempt version redirect',()=>{
   assert.match(element('#syncLabel').textContent,/Démo fictive|Démo locale/);
   assert.match(element('#brandSubtitle').textContent,/LABORATOIRE/);
