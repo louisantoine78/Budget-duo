@@ -2673,7 +2673,7 @@ function renderWealth(){
  '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon">＋</span><span>Ajouter un compte</span><b>Nouveau</b><small>PEA, CELI, REER…</small></button>'
  ].join('');
  $('#wealthAddCard').onclick=openInvestmentAccountAdd;$('#wealthLiquidityCard').onclick=openAccountSettings;
- $('[data-foreign-bank]').forEach(b=>b.onclick=openAccountSettings);
+ $$('[data-foreign-bank]').forEach(b=>b.onclick=openAccountSettings);
  $$('[data-inv-account]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.invAccount)));
  window.TraceInsights.renderWealth($('#wealthTrend'),insightWealthData(sId,bk,ports,missing));
  updateSegments();
@@ -2974,7 +2974,7 @@ function openEssentialBankSetup(){
   (ready===2?'<button type="button" class="primary full" id="traceBankSetupDone">Mes deux comptes sont prêts</button>':
    '<button type="button" class="secondary full" id="traceBankSetupLater">Continuer plus tard</button>')+
   '<p class="trace-bank-setup-footer">Tu pourras renommer tes comptes et en ajouter d’autres dans Profil → Mes comptes.</p>');
- $('[data-setup-bank]').forEach(button=>button.onclick=()=>openNewBankAccount(button.dataset.setupBank,'setup'));
+ $$('[data-setup-bank]').forEach(button=>button.onclick=()=>openNewBankAccount(button.dataset.setupBank,'setup'));
  $('#traceSetupFrenchDebit').onclick=()=>openNewBankAccount('checking','setup','FR');
  $('#traceBankSetupDone')?.addEventListener('click',closeSheet);
  $('#traceBankSetupLater')?.addEventListener('click',closeSheet);
@@ -3145,8 +3145,8 @@ function openAccountSettings(){
   '<p class="trace-bank-setup-footer">Compte courant : revenus et virements. Carte de crédit : achats du quotidien ; son paiement depuis le courant n’est pas une deuxième dépense.</p>'+
   settingsBack());
  $$('[data-bank-scope]').forEach(button=>button.onclick=()=>{bankSettingsScope=button.dataset.bankScope==='couple'?'couple':'mine';openAccountSettings();});
- $('[data-rename-bank]').forEach(button=>button.onclick=()=>openRenameBankAccount(button.dataset.renameBank));
- $('[data-primary-bank]').forEach(button=>button.onclick=async()=>{
+ $$('[data-rename-bank]').forEach(button=>button.onclick=()=>openRenameBankAccount(button.dataset.renameBank));
+ $$('[data-primary-bank]').forEach(button=>button.onclick=async()=>{
   const previous={...(state.household.primaryBankAccountByOwner||{})};
   state.household.primaryBankAccountByOwner={...previous,[me]:button.dataset.primaryBank};
   button.disabled=true;
