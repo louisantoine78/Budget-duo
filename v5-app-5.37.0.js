@@ -883,6 +883,81 @@ function traceEditorDateLabel(iso){
  const months=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
  return Number(hit[3])+' '+(months[Number(hit[2])-1]||'')+' '+hit[1];
 }
+/* A single transfer document backs both international account movements.
+   Its accounts and statement date stay locked; only real amounts and FX change. */
+function editInternationalTransfer(t){
+ const I=window.TraceInternational,from=state.accounts.find(a=>a.id===t.accountId),
+  to=state.accounts.find(a=>a.id===t.toAccountId);
+ if(!from||!to||from.owner!==me||to.owner!==me||accountType(from)!=='checking'||
+    !['checking','card'].includes(accountType(to))||t.status!=='confirmed'){
+  openSheet('Virement à contrôler','<p class="empty-note">Ce virement ne peut pas être modifié sans contrôle de ses comptes. Aucune donnée modifiée.</p>'+
+   '<button class="secondary full" id="fxBack">Fermer</button>');
+  $('#fxBack').onclick=closeSheet;return;
+ }
+ const source=I.currency(from),destination=I.currency(to),
+  outgoing=I.amountOnAccount(t,from),incoming=I.amountOnAccount(t,to,'destination'),
+  original=I.valid(t.currency)?t.currency:source;
+ openSheet('Modifier un virement international',
+  '<div class="trace-edit-layout trace-bank-edit-layout">'+
+  '<p class="trace-edit-lead">Un seul mouvement relie ces deux comptes. Modifie uniquement les montants indiqués sur les relevés.</p>'+
+  '<section class="trace-edit-card"><div class="trace-edit-fields">'+
+  '<b>'+esc(shortAccountLabel(from))+' · '+source+' → '+esc(shortAccountLabel(to))+' · '+destination+'</b>'+
+  '<small>Transaction du '+esc(t.date)+' · comptes et date conservés pour protéger les rapprochements.</small>'+
+  '<label class="label2" for="fxName">Libellé</label><input id="fxName" class="input" maxlength="85" value="'+esc(t.name||'Virement')+'">'+
+  '<label class="label2" for="fxSent">Montant réellement débité ('+source+')</label>'+
+  '<input id="fxSent" class="input" type="number" inputmode="decimal" min=".01" step=".01" value="'+esc(outgoing??'')+'">'+
+  '<label class="label2" for="fxReceived">Montant réellement reçu ('+destination+')</label>'+
+  '<input id="fxReceived" class="input" type="number" inputmode="decimal" min=".01" step=".01" value="'+esc(incoming??'')+'">'+
+  '<p class="trace-intl-help">Les écarts entre les deux montants incluent éventuellement la conversion et les frais. Ils ne créent pas automatiquement une dépense.</p>'+
+  '<div class="trace-intl-transaction"><div class="formrow"><div>'+
+  '<label class="label2" for="fxOriginalCurrency">Devise du montant d’origine</label>'+
+  '<select class="input" id="fxOriginalCurrency">'+I.currencies().map(c=>'<option value="'+c+'"'+(c===original?' selected':'')+'>'+c+'</option>').join('')+'</select></div><div>'+
+  '<label class="label2" for="fxOriginalAmount">Montant d’origine (si différent)</label>'+
+  '<input id="fxOriginalAmount" class="input" type="number" step=".01" min=".01" inputmode="decimal" value="'+esc(original!==source?t.amountOriginal??'':'')+'"></div></div>'+
+  '<label class="label2" for="fxRate">Taux de référence · 1 '+source+' en CAD</label>'+
+  '<input id="fxRate" class="input" type="number" min=".000001" step="any" inputmode="decimal" '+
+  (source==='CAD'?'disabled ':'')+'placeholder="Taux daté ou taux manuel vérifié">'+
+  '<p class="trace-intl-help">'+(source==='CAD'?'CAD : aucune conversion.':
+   Number(t.bankRateCad)>0?'Taux historique : '+esc(t.bankRateCad)+' CAD · '+esc(t.fxRateDate||t.date||'')+' · '+esc(t.fxRateSource||'Enregistré'):
+   'En l’absence de taux enregistré, TRACE cherchera un taux de référence daté.')+'</p></div>'+
+  '</div></section><section class="trace-edit-impact"><h3>Effet sur tes comptes</h3>'+
+  '<div id="fxPreview" class="trace-bank-impact-summary" aria-live="polite"></div></section>'+
+  '<p id="fxError" class="trace-bank-setup-error" role="alert"></p>'+
+  '<div class="trace-edit-actions-secondary"><button id="fxCancel" type="button">Annuler</button></div>'+
+  '<div class="trace-edit-actions"><button class="primary full" id="fxSave" type="button">Enregistrer les modifications</button></div></div>');
+ $('#sheetBackdrop').classList.add('trace-premium-edit','trace-premium-movement');
+ const value=id=>$('#'+id).value.trim(),oldRate=Number(t.bankRateCad);
+ const preview=()=>{
+  const out=value('fxSent')===''?null:Number(value('fxSent')),
+   received=value('fxReceived')===''?null:Number(value('fxReceived')),
+   rate=value('fxRate')!==''?Number(value('fxRate')):oldRate,
+   cad=out!==null&&out>0?I.fxValue(out,source,rate>0?{currency:source,cadPerUnit:rate}:null):null;
+  $('#fxPreview').textContent=out===null||received===null||!(out>0)||!(received>0)?
+   'Renseigne les deux montants exacts des relevés. Un montant inconnu ne vaut pas zéro.':
+   'Départ : −'+I.money(out,source)+' · Arrivée : +'+I.money(received,destination)+
+   ' · Budget : 0 CAD · '+(cad===null?'Conversion CAD à vérifier':'Équivalent historique : '+I.money(cad,'CAD'));
+ };
+ ['fxSent','fxReceived','fxRate','fxOriginalCurrency','fxOriginalAmount'].forEach(id=>$('#'+id).addEventListener('input',preview));
+ $('#fxCancel').onclick=closeSheet;preview();
+ $('#fxSave').onclick=async()=>{
+  $('#fxError').textContent='';const btn=$('#fxSave');btn.disabled=true;
+  try{
+   const raw=value('fxRate'),rate=Number(raw),oldDate=String(t.fxRateDate||t.date||'');
+   if(raw!==''&&(!Number.isFinite(rate)||!(rate>0)))throw Error('Taux de change invalide');
+   const quote=source==='CAD'?null:raw!==''?
+    {currency:source,cadPerUnit:rate,date:t.date,source:'Taux saisi manuellement'}:
+    oldRate>0&&/^\d{4}-\d{2}-\d{2}$/.test(oldDate)&&oldDate<=t.date?
+    {currency:source,cadPerUnit:oldRate,date:oldDate,source:t.fxRateSource||'Taux historique enregistré'}:
+    await I.getRate(source,t.date);
+   const next=I.resolveTransferEdit({transaction:t,from:{...from,type:accountType(from)},
+    to:{...to,type:accountType(to)},bankAmount:value('fxSent'),receivedAmount:value('fxReceived'),
+    quote,originalCurrency:value('fxOriginalCurrency'),originalAmount:value('fxOriginalAmount'),name:value('fxName')});
+   await saveDocument('transactions',next);Object.assign(t,next);
+   closeSheet();renderAll();navigate('activity');showTab('transactions');
+  }catch(error){btn.disabled=false;$('#fxError').textContent=String(error.message||error);}
+ };
+}
+
 function editSmartBankMovement(t,requestedKind='',initialDraft=null){
  const originalAccount=state.accounts.find(a=>a.id===t.accountId);
  const oldDestination=state.accounts.find(a=>a.id===t.toAccountId);
@@ -891,6 +966,9 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
  // International movements are read-only here until the FX editor is audited.
  if(window.TraceInternational.currency(originalAccount)!=='CAD'||
     (oldDestination&&window.TraceInternational.currency(oldDestination)!=='CAD')){
+  if(t.type==='transfer'&&t.toAccountId&&t.status==='confirmed'){
+   editInternationalTransfer(t);return;
+  }
   openSheet('Mouvement international à préserver',
    '<p class="empty-note">Cette opération est enregistrée dans sa devise native. Sa modification n’est pas encore ouverte car un changement de montant pourrait fausser les soldes ou le taux historique.</p>'+
    '<p class="empty-note">Aucune donnée n’a été modifiée. Cette édition sera activée après les tests de la version internationale.</p>'+
