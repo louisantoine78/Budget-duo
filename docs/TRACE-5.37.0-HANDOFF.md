@@ -83,3 +83,14 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 - Commits de ce lot : moteur `bea4f0d392ef382e50c8c83b1f4941d7c94d22e4`, tests `6c7cb6310241f0186e6c2bb6f14ddc1b7e4c3824`, journal d'audit `13107d2b35a37c35e3543e993c67c3f596510f21`; tous `[skip ci]`.
 - **Prochain lot concret :** frais de carte et frais de règlement, analyse des règlements partiels avec rapprochement/import ; travailler avec données fictives, maintenir les blocages si les règles ne sont pas sûres. Rejouer les tests Node natifs dès qu'un checkout fiable est possible, puis les autres suites.
 - **SHA HEAD :** lire le HEAD de GitHub après chaque modification du présent relais : un document ne peut pas contenir sa propre SHA de commit de manière stable.
+
+
+## Mise à jour du 23 octobre 2026 — frais carte différée (lot suivant)
+
+- **HEAD initial de ce lot :** `41dc7a7a52fc84552342deb01ee5626b549bc519`; `main` toujours `02c70f50e7e51da79b77a91dde96a03c6c719909`. Récupérer le HEAD actuel lors de la prochaine reprise.
+- Ajout isolé de `fees` : événements `card_fee` explicites et confirmés, devise native, dates `chargeDate/budgetDate/dueDate`, montant total centime, dette carte et dépense budgétaire uniques ; `pending` sans effet comptable. Règlement complet référencé par `purchaseIds + feeIds` : transfert bancaire interne neutre pour le budget.
+- Lots sans achat mais avec frais confirmés désormais possibles ; aucun taux inventé. Remboursements commerçants antérieurs et frais confirmés se compensent selon leurs montants réels. Frais et taxes implicites ou données inconnues rejetés.
+- **Toujours bloqués :** paiement bancaire partiel, règlement multi-échéance, frais supplémentaires sur compte courant, FX complexe, ligne bancaire importée non rapprochée. `deferred` désactivé ; pas de connexion application/UI, CI, production, Supabase réel ou déploiement.
+- QA **exécutée sur fichiers candidats avant commit** : **65/65 tests V8 avec Node/DOM simulés** dans `tests/trace-international-deferred-debit.test.cjs` (48 historiques dans cette suite + 17 nouveaux). Aucun vrai Node CLI, aucune des 31 autres suites rejouée dans ce lot, aucun Safari/CI ; 633/633 simulés reste un chiffre historique d'avant ces nouveaux changements.
+- Commits : moteur `1141b9e915fd1cfb97330d982805b5396a018305`, tests `f978bc1850433cc068ca6f03ddb113430005f659`, audit `6855581d32cdcdea8bd250e57e52586e75644bc1`, tous `[skip ci]`. Le dernier commit est celui du relais ci-dessous ; une SHA ne peut pas être contenue dans le commit qui la calcule.
+- **Prochain lot concret :** définir un paiement partiel justifié par un montant bancaire réellement identifié, rejeter l'allocation implicite, préserver le budget ; enrichir ensuite le rapprochement avec import fictif. Test du vrai Node à prioriser dès que les sources GitHub peuvent être récupérées par un checkout fiable.
