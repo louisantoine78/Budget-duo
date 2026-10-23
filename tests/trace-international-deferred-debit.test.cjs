@@ -252,4 +252,126 @@ test('strict Node numeric zero for checking movement without a payment',()=>{
  const r=withRefund([merchantRefund('r1')]);
  assert.equal(Object.is(r.checkingBalanceChange,0),true);
 });
+
+const cardFee=(id,amount='2.30',opt={})=>({id,type:'card_fee',cardAccountId:card.id,
+ currency:card.currency,chargeDate:'2026-10-21',budgetDate:'2026-10-21',
+ dueDate:'2026-11-05',amount,status:'confirmed',...opt});
+const withFee=(fees=[],purchases=[purchase('p1')],settlements=[],
+ asOfDate='2026-11-05',refunds=[])=>simulate({card,checking,fees,purchases,settlements,
+ refunds,asOfDate});
+test('explicit card fee creates own budget expense and native card liability',()=>{
+ const r=withFee([cardFee('f1')]);
+ assert.equal(r.monthlyBudget['2026-10'],42.3);
+ assert.equal(r.liability,42.3);assert.equal(r.checkingBalanceChange,0);
+ assert.equal(r.cardBalanceChange,-42.3);
+ assert.equal(r.budgetFees[0].budgetExpense,true);
+ assert.equal(r.budgetFees[0].budgetIncome,false);
+ assert.equal(r.batches[0].confirmedFees,2.3);
+});
+test('full due-date debit settles purchases and specifically named card fee',()=>{
+ const r=withFee([cardFee('f1')],[purchase('p1')],
+ [debit('s1',42.30,['p1'],{feeIds:['f1']})]);
+ assert.equal(r.liability,0);assert.equal(r.checkingBalanceChange,-42.3);
+ assert.equal(r.monthlyBudget['2026-10'],42.3);
+ assert.equal(r.bankTransfers[0].budgetExpense,false);
+ assert.equal(r.bankTransfers[0].budgetIncome,false);
+ assert.equal(r.bankTransfers[0].amount,42.3);
+});
+test('separate bank transfer never creates another fee expense',()=>{
+ const r=withFee([cardFee('f1')],[purchase('p1')],
+ [debit('s1',42.30,['p1'],{feeIds:['f1'],type:'transfer'})]);
+ assert.equal(r.budgetFees.length,1);
+ assert.equal(r.bankTransfers.length,1);
+ assert.equal(r.budgetExpenses.length,1);
+});
+test('fee-only due batch is payable with explicit fee references',()=>{
+ const r=withFee([cardFee('f1')],[],[
+  debit('s1',2.3,[],{feeIds:['f1']})]);
+ assert.equal(r.liability,0);
+ assert.equal(r.monthlyBudget['2026-10'],2.3);
+ assert.equal(r.batches[0].status,'settled');
+});
+test('confirmed fee-only due batch outstanding counts toward overdue',()=>{
+ const r=withFee([cardFee('f1')],[],[]);
+ assert.equal(r.liability,2.3);assert.equal(r.overdue,2.3);
+ assert.equal(r.batches[0].status,'overdue');
+});
+test('pending fee has no budget or debt impact and cannot be auto-settled',()=>{
+ const r=withFee([cardFee('f1',2.30,{status:'pending'})]);
+ assert.equal(r.monthlyBudget['2026-10'],40);
+ assert.equal(r.liability,40);assert.equal(r.budgetFees.length,0);
+ assert.throws(()=>withFee([cardFee('f1',2.30,{status:'pending'})],
+  [purchase('p1')],[debit('s1',42.30,['p1'],{feeIds:['f1']})]),/attente/);
+});
+test('future fee not yet charged cannot affect earlier snapshot',()=>{
+ const r=withFee([cardFee('f1')],[purchase('p1')],[], '2026-10-20');
+ assert.equal(r.liability,40);assert.equal(r.budgetFees.length,0);
+});
+test('two explicitly itemized card fees settle to the cent',()=>{
+ const f=[cardFee('f1','0.01'),cardFee('f2','2.29')];
+ const r=withFee(f,[purchase('p1')],[debit('s1',42.30,['p1'],
+  {feeIds:['f1','f2']})]);
+ assert.equal(r.liability,0);assert.equal(r.budgetFees.length,2);
+});
+test('merchant credit and fee produce net settlement with no duplicate expense',()=>{
+ const r=withFee([cardFee('f1')],[purchase('p1')],
+ [debit('s1',32.29,['p1'],{feeIds:['f1']})],
+ '2026-11-05',[merchantRefund('r1','10.01')]);
+ assert.equal(r.liability,0);assert.equal(r.monthlyBudget['2026-10'],32.29);
+ assert.equal(r.bankTransfers[0].budgetExpense,false);
+});
+test('fee budget date is independent of checking settlement month',()=>{
+ const f=[cardFee('f1','2.30',{chargeDate:'2026-10-31',
+  budgetDate:'2026-11-01',dueDate:'2026-11-05'})];
+ const r=withFee(f,[purchase('p1')],[debit('s1',42.3,['p1'],
+  {feeIds:['f1']})]);
+ assert.equal(r.monthlyBudget['2026-10'],40);
+ assert.equal(r.monthlyBudget['2026-11'],2.3);
+});
+test('reject missing or duplicate fee references and partial fee settlement',()=>{
+ assert.throws(()=>withFee([cardFee('f1')],[purchase('p1')],
+  [debit('s1',42.30,['p1'])]),/lot complet/);
+ assert.throws(()=>withFee([cardFee('f1')],[purchase('p1')],
+  [debit('s1',42.30,['p1'],{feeIds:['f1','f1']})]),/deux fois/);
+ assert.throws(()=>withFee([cardFee('f1')],[purchase('p1')],
+  [debit('s1',40,['p1'],{feeIds:['f1']})]),/différent/);
+});
+test('reject fee with wrong currency, card, type, amount, or unknown metadata',()=>{
+ for(const o of [{currency:'CAD'},{cardAccountId:'wrong'},
+  {type:'income'},{amount:'0.001'},{amount:null},
+  {taxAmount:'0.1'},{fxLegAmount:'1.2'}]){
+  assert.throws(()=>withFee([cardFee('f1','2.30',o)]),/ambigus/);
+ }
+});
+test('reject malformed fee dates and disallow hidden fee surcharge',()=>{
+ for(const o of [{chargeDate:'2026-11-06'},{budgetDate:'2026-10-20'},
+   {budgetDate:'2026-12-02'},{dueDate:'2026-02-30'}]){
+  assert.throws(()=>withFee([cardFee('f1','2.30',o)]),/ambigus/);
+ }
+ assert.throws(()=>withFee([],[purchase('p1')],
+  [debit('s1',42.3,['p1'],{feeAmount:2.3})]),/invalide/);
+});
+test('reject card fee dated after bank settlement even if same due date',()=>{
+ assert.throws(()=>withFee([cardFee('f1','2.30',{chargeDate:'2026-11-01',
+  budgetDate:'2026-11-01'})],[purchase('p1')],
+  [debit('s1',42.3,['p1'],{feeIds:['f1'],debitDate:'2026-10-31'})]),/antérieur/);
+});
+test('reject mismatched due dates, unknown fee references and repeated fee id',()=>{
+ assert.throws(()=>withFee([cardFee('f1')],[purchase('p1')],
+ [debit('s1',42.3,['p1'],{feeIds:['notfound']})]),/introuvables/);
+ assert.throws(()=>withFee([cardFee('f1','2.3',{dueDate:'2026-12-05'})],
+ [purchase('p1')],[debit('s1',42.3,['p1'],{feeIds:['f1']})]),/échéances/);
+ assert.throws(()=>withFee([cardFee('f1'),cardFee('f1')]),/ambigus/);
+});
+test('reject settlement partial even when card fee is explicitly recorded',()=>{
+ assert.throws(()=>withFee([cardFee('f1')],[purchase('p1')],
+ [debit('s1',30,['p1'],{feeIds:['f1']})]),/différent/);
+});
+test('input card fee objects stay immutable with no bank writes',()=>{
+ const fees=Object.freeze([Object.freeze(cardFee('f1'))]);
+ const before=JSON.stringify(fees);
+ const r=withFee(fees);
+ assert.equal(JSON.stringify(fees),before);
+ assert.equal(r.writes,0);assert.equal(r.financialChanges,0);
+});
 console.log(count+' deferred-debit accounting laboratory scenarios passed');
