@@ -650,7 +650,8 @@ function openManualTransaction(){
   '<div id="manualWhoWrap"><label class="label2">Cette dépense concerne</label><select class="input" id="manualTxBeneficiary">'+who+'</select></div>'+
   '<div id="manualFriendsGroup" class="trace-manual-friends hidden"><b>Répartition réelle de la dépense</b>'+
   '<div class="formrow"><div><label class="label2">Part avancée aux amis ($)</label><input class="input" id="manualFriendsAmount" type="number" min="0" step=".01" value="0"></div>'+
-  '<div><label class="label2">Part de '+esc(shortMemberName(partner))+' ($)</label><input class="input" id="manualPartnerAmount" type="number" min="0" step=".01" value="0"></div></div></div>'+
+  '<div><label class="label2">Part de '+esc(shortMemberName(partner))+' ($)</label><input class="input" id="manualPartnerAmount" type="number" min="0" step=".01" value="0"></div></div>'+ 
+  '<label class="label2" for="manualFriendDebtorName">Proche concerné (facultatif, si une seule personne doit toute la part des amis)</label><input class="input" id="manualFriendDebtorName" maxlength="45" placeholder="Ex. Camille"></div>'+
   '<div id="manualTargetWrap" class="hidden"><label class="label2">Compte destinataire</label><select class="input" id="manualTarget"></select></div>'+
   '<div id="manualSavingsWrap" class="hidden"><label class="label2">Compte épargne / CELI</label><select class="input" id="manualSavings"></select></div>'+
   '<div id="manualFriendLink" class="hidden"><label class="label2">Prénom de la personne (facultatif)</label><input class="input" id="manualFriendName" maxlength="45" placeholder="Ex. Camille">'+
@@ -849,7 +850,10 @@ function openManualTransaction(){
    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{}),
    ...(['savings_transfer','savings_withdrawal'].includes(kind)?{investmentAccountId:investmentId}:{}),
    recurring:false,recurrence:{enabled:false,endDate:null,nextDate:null,frequency:null,autoConfirm:false,needsReview:false},
-   counterparty:kind==='friend_reimbursement'?$m('manualFriendName').value.trim():'',externalAmount:0,externalParticipants:[]};
+   counterparty:kind==='friend_reimbursement'?$m('manualFriendName').value.trim():'',
+   friendDebtorName:def.budget==='expense'&&beneficiary==='custom'&&Number(shares.splitAmounts?.friends)>0?
+    $m('manualFriendDebtorName').value.trim().replace(/\s+/g,' ').slice(0,45):null,
+   externalAmount:0,externalParticipants:[]};
   const btn=$m('saveManualTx');btn.disabled=true;btn.textContent='Enregistrement…';
   try{await saveDocument('transactions',item);state.transactions.push(item);closeSheet();renderAll();navigate('activity');showTab('transactions');}
   catch(e){btn.disabled=false;btn.textContent='Réessayer';error.textContent='Enregistrement impossible : '+String(e.message||e);}
