@@ -1367,7 +1367,10 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
     accountId,toAccountId,categoryId,investmentAccountId,
     transferPurpose:movement.purpose||null,relatedExpenseId:related,repaymentAllocations,
      counterparty:requestedType==='friend_reimbursement'?$('#smartMovementFriendName').value.trim():(t.counterparty||''),
-     importFingerprint:null,payerId:account.owner||t.payerId||me,...shares};
+     importFingerprint:accountId===t.accountId&&date===t.date&&name===t.name&&
+      Math.abs(Number(t.bankAmount??t.amountCAD)-amount)<.009?
+      (t.importFingerprint??null):null,
+      payerId:account.owner||t.payerId||me,...shares};
   $('#smartMovementSave').disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();}
   catch(e){$('#smartMovementSave').disabled=false;traceNotice(e);}
