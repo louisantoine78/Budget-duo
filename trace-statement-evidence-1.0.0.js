@@ -35,6 +35,10 @@
    Math.abs(n*100-Math.round(n*100))<1e-6?
    Math.round(n*100)/100:null;
  };
+ // Recompute identity at review time. A saved checkbox is not authority for
+ // an extracted amount, date or excerpt that was edited after staging.
+ const identity=row=>JSON.stringify([row.id,row.date,row.direction,row.amount,
+  row.currency,row.name,row.rawText,row.accountId,row.documentId,row.page,row.line]);
  function stage({documentId,accountId,currency,fromDate,toDate,rows}={}){
   const code=String(currency||'').toUpperCase();
   if(!String(documentId||'').trim()||!String(accountId||'').trim()||
@@ -90,8 +94,7 @@
    const normalized={id,date,name,direction,amount,currency:code,
     page,line,rawText,documentId:String(documentId),accountId:String(accountId)};
    // An approval must bind to all material evidence, including the raw excerpt.
-   const evidenceKey=JSON.stringify([normalized.id,normalized.date,normalized.direction,
-    normalized.amount,normalized.currency,normalized.name,normalized.rawText]);
+   const evidenceKey=identity(normalized);
    ready.push({...normalized,evidenceKey,reviewed:false});
   });
   return{documentId:String(documentId),accountId:String(accountId),currency:code,
@@ -109,7 +112,8 @@
   }
   const missing=staged.ready.filter(row=>{
    const a=given.get(row.id);
-   return a?.confirmed!==true||a.evidenceKey!==row.evidenceKey;
+   return a?.confirmed!==true||a.evidenceKey!==row.evidenceKey||
+    identity(row)!==row.evidenceKey;
   });
   const unknown=[...given.keys()].filter(id=>!staged.ready.some(row=>row.id===id));
   const blockers=staged.issues.length+missing.length+unknown.length;
