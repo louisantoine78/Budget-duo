@@ -109,6 +109,8 @@ async function main(){
   assert.equal(ui.writes[0].actualBalance,46.2);
   assert.equal(ui.writes[0].difference,null);
   assert.equal(ui.writes[0].currency,'EUR');
+  assert.equal(ui.writes[0].status,'confirmed');
+  assert.equal(ui.writes[0].source,'manual_balance');
  });
  await test('known native reconciliation saves exact difference without extra transaction',async()=>{
   const ui=form(ca,100);
@@ -118,6 +120,30 @@ async function main(){
   assert.equal(ui.writes[0].difference,20);
   assert.equal(ui.writes[0].currency,'CAD');
  });
+
+ await test('unsupported display currency is never labelled CAD',()=>{
+  assert.equal(I.money(42,'JPY'),'—');assert.match(I.money(42,'EUR'),/€/);
+ });
+ await test('unconfirmed or undated statements never overwrite the opening balance',()=>{
+  assert.equal(estimate(500,[
+   {accountId:ca.id,date:'2026-10-21',actualBalance:170,status:'pending'},
+   {accountId:ca.id,date:'2026-10-20',actualBalance:190,status:'incomplete'},
+   {accountId:ca.id,date:'2026-10-19',actualBalance:210,confirmed:false},
+   {accountId:ca.id,date:'',actualBalance:999,status:'confirmed'}
+  ]),500);
+ });
+ await test('confirmed reconciliation is not superseded by later draft',()=>{
+  assert.equal(estimate(500,[
+   {accountId:ca.id,date:'2026-10-15',actualBalance:125,status:'confirmed'},
+   {accountId:ca.id,date:'2026-10-20',actualBalance:150,status:'pending'}
+  ]),125);
+ });
+ await test('card linkage cannot cross countries or bank currencies',()=>{
+  const tx={id:'pay',accountId:ca.id,toAccountId:card.id,type:'transfer',status:'confirmed',date:'2026-10-10',name:'Règlement'};
+  assert.throws(()=>I.resolveTransferEdit({transaction:tx,from:ca,to:{...card,settlementAccountId:ca.id,currency:'EUR'},bankAmount:80,receivedAmount:80}),/compte courant lié/);
+  assert.throws(()=>I.resolveTransferEdit({transaction:tx,from:ca,to:{...card,settlementAccountId:ca.id,country:'FR'},bankAmount:80,receivedAmount:80}),/compte courant lié/);
+ });
+
  console.log(count+' financial invariants checked (fictional/isolated)');
 }
 main().catch(e=>{console.error('FAIL',e);process.exitCode=1;});

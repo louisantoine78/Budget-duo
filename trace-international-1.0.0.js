@@ -13,7 +13,9 @@
   return code;
  };
  const money=(value,code,decimals=2)=>{
-  const c=valid(code)?code:'CAD';
+  const requested=code===undefined||code===null||code===''?'CAD':String(code).toUpperCase();
+   if(!valid(requested))return '—';
+   const c=requested;
   if(value===null||value===undefined||value===''||!Number.isFinite(Number(value)))return '—';
   return new Intl.NumberFormat(locales[c],{style:'currency',currency:c,minimumFractionDigits:decimals,maximumFractionDigits:decimals}).format(Number(value));
  };
@@ -147,7 +149,7 @@
      from.id===to.id||!from.owner||from.owner!==to.owner||from.type!=='checking'||
      !['checking','card'].includes(to.type))
    throw Error('Origine ou destination bancaire incohérente');
-  if(to.type==='card'&&to.settlementAccountId!==from.id)
+  if(to.type==='card'&&(to.settlementAccountId!==from.id||currency(to)!==currency(from)||country(to)!==country(from)))
    throw Error('Cette carte doit être remboursée depuis son compte courant lié');
   if(String(bankAmount??'').trim()===''||String(receivedAmount??'').trim()==='')
    throw Error('Les deux montants bancaires réels sont obligatoires');

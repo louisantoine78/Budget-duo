@@ -176,6 +176,8 @@ function accountType(a){
 }
 function accountEstimate(a){
  const r=state.reconciliations.filter(x=>x.accountId===a.id&&
+   (!x.status||['confirmed','complete','matched'].includes(x.status))&&x.confirmed!==false&&
+   /^\d{4}-\d{2}-\d{2}$/.test(String(x.date||''))&&
    x.actualBalance!==null&&x.actualBalance!==undefined&&x.actualBalance!==''&&
    Number.isFinite(Number(x.actualBalance))).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
  const b=state.household.accountOpeningBalances||{},d=state.household.accountOpeningBalanceDates||{};
@@ -3410,6 +3412,7 @@ function openSingleReconcile(id){
     }
     const actual=isCard?(cardKind==='credit'?Math.abs(raw):-Math.abs(raw)):raw;
     const item={id:'rec_'+Date.now().toString(36),accountId:a.id,owner:me,date:$('#reconcileDate').value,
+     status:'confirmed',source:'manual_balance',
      ...(isCard?{cardBalanceKind:cardKind}:{}),
      currency:nativeCurrency,estimatedBalance:est,actualBalance:actual,
      difference:est===null?null:Math.round((actual-est)*100)/100};
