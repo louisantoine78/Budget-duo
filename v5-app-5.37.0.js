@@ -1118,8 +1118,12 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
      '<div class="trace-edit-control trace-edit-select-control"><select id="smartMovementCardMatch" class="input"><option value="">Choisir le paiement à rapprocher</option></select></div>'+
      '<p class="trace-bank-inline-tip" id="smartMovementCardMatchHint">Choisis un règlement du même montant déjà débité sur ton compte courant. Aucun deuxième paiement ou revenu ne sera créé.</p></div>'+
      '<div id="smartMovementSavingsWrap" class="trace-bank-extra-box hidden"><label class="label2" for="smartMovementSavingsTo">Compte épargne / CELI</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementSavingsTo" class="input"><option value="">Choisir un compte d’épargne</option>'+eligibleSavings.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+(isReadySavingsAccount(a)?'':' · à configurer')+'</option>').join('')+'</select></div><p class="trace-bank-inline-tip">Le versement change tes soldes bancaires et ton épargne, mais ne crée pas de dépense de consommation.</p></div>'+
-     '<div id="smartMovementLinkWrap" class="trace-bank-extra-box hidden"><label class="label2" for="smartMovementLink">Dépense d’origine liée · facultatif</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementLink" class="input"></select></div><p class="trace-bank-inline-tip">Un remboursement d’ami ne doit pas diminuer une deuxième fois ton budget.</p></div>'+
-     '<p class="trace-bank-inline-tip hidden" id="smartMovementFriendNote">Ce remboursement augmente le compte courant, mais ne crée pas de revenu.</p>'+
+     '<div id="smartMovementLinkWrap" class="trace-bank-extra-box hidden"><label class="label2" for="smartMovementFriendName">Prénom du proche (facultatif)</label><input id="smartMovementFriendName" class="input" maxlength="45" value="'+esc(t.counterparty||'')+'" placeholder="Ex. Camille">'+
+      '<label class="label2" for="smartMovementLink">Première avance remboursée</label><select id="smartMovementLink" class="input"></select>'+
+      '<label class="label2" for="smartMovementFirstAmount">Montant attribué (CAD)</label><input id="smartMovementFirstAmount" class="input" type="number" min=".01" step=".01" inputmode="decimal" value="'+esc(window.TraceMovement.repaymentLines(t)[0]?.amountCAD??'')+'">'+
+      '<div id="smartMovementMoreLinks"></div><button type="button" class="secondary" id="smartMovementAddLink">+ Ajouter une autre avance</button>'+
+      '<p class="trace-bank-inline-tip">Rattacher les avances au même virement déjà importé n’ajoute ni transaction ni revenu.</p></div>'+
+      '<p class="trace-bank-inline-tip hidden" id="smartMovementFriendNote">Ce remboursement augmente le compte courant, mais ne crée pas de revenu.</p>'+
     '</div></section>'+
    '<section class="trace-edit-impact trace-bank-impact" aria-labelledby="traceBankImpactTitle"><div class="trace-edit-impact-head"><span class="trace-edit-impact-symbol" aria-hidden="true">↗</span><div><h3 id="traceBankImpactTitle">Aperçu de l’impact</h3><p>Avant d’enregistrer la correction</p></div></div><div class="trace-bank-impact-summary" id="smartMovementPreview" aria-live="polite"></div></section>'+
    '<div class="trace-edit-actions-secondary"><button type="button" id="smartMovementCancel">Annuler</button><button type="button" class="trace-edit-delete" id="smartMovementRemove">Supprimer ce mouvement</button></div>'+
@@ -1154,7 +1158,37 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
  refreshBankDate();
  if(t.toAccountId)$('#smartMovementTo').value=t.toAccountId;
  if(t.investmentAccountId)$('#smartMovementSavingsTo').value=t.investmentAccountId;
- const sync=()=>{
+ const friendLines=M.repaymentLines(t),extraFriendLines=friendLines.slice(1).map(x=>({expenseId:x.expenseId,amountCAD:String(x.amountCAD)}));
+  let linkInitialized=false;
+  const renderFriendLinks=()=>{
+   const link=$('#smartMovementLink'),old=linkInitialized?link.value:(link.value||friendLines[0]?.expenseId||''),
+    rows=friendLinkOptions($('#smartMovementDate').value,.01,t.id),
+    options='<option value="">Aucune avance liée</option>'+rows.map(r=>
+     '<option value="'+esc(r.id)+'">'+esc(r.label)+' · '+esc(r.date)+' · '+money(r.remaining)+' disponibles</option>').join('');
+   link.innerHTML=options;
+   if(rows.some(r=>r.id===old))link.value=old;
+   linkInitialized=true;
+   const host=$('#smartMovementMoreLinks');
+   host.innerHTML=extraFriendLines.map((row,i)=>'<div class="formrow trace-edit-friends-grid">'+
+    '<div><label class="label2">Autre avance</label><select class="input" data-repay-expense="'+i+'">'+options+'</select></div>'+
+    '<div><label class="label2">Montant (CAD)</label><input class="input" type="number" min=".01" step=".01" value="'+esc(row.amountCAD)+'" data-repay-amount="'+i+'"></div>'+
+    '<button type="button" class="secondary" data-repay-remove="'+i+'">Retirer</button></div>').join('');
+   host.querySelectorAll('[data-repay-expense]').forEach(el=>{
+    const i=Number(el.dataset.repayExpense);el.value=extraFriendLines[i].expenseId;
+    el.onchange=()=>{extraFriendLines[i].expenseId=el.value;};
+   });
+   host.querySelectorAll('[data-repay-amount]').forEach(el=>{
+    el.oninput=()=>{extraFriendLines[Number(el.dataset.repayAmount)].amountCAD=el.value;};
+   });
+   host.querySelectorAll('[data-repay-remove]').forEach(el=>{
+    el.onclick=()=>{extraFriendLines.splice(Number(el.dataset.repayRemove),1);renderFriendLinks();};
+   });
+  };
+  $('#smartMovementAddLink').onclick=()=>{
+   if(extraFriendLines.length>=12){$('#traceFeedback').textContent='Maximum de 13 avances par remboursement.';return;}
+   extraFriendLines.push({expenseId:'',amountCAD:''});renderFriendLinks();
+  };
+  const sync=()=>{
   const id=$('#smartMovementType').value,def=M.get(id),
    budget=Boolean(def&&def.budget!=='none'),
    expense=def?.budget==='expense'||def?.budget==='refund';
@@ -1205,15 +1239,9 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
   $('#smartMovementAdditional').classList.toggle('hidden',!(hasTarget||hasExpense||hasSavings||hasFriend||cardReceived));
   $('#smartMovementCardNote').classList.toggle('hidden',id!=='card_payment');
   $('#smartMovementFriendNote').classList.toggle('hidden',!hasFriend);
-  const link=$('#smartMovementLink'),wrap=$('#smartMovementLinkWrap');
-  wrap.classList.toggle('hidden',id!=='friend_reimbursement');
-  if(id==='friend_reimbursement'){
-   const last=link.value||t.relatedExpenseId||'',rows=friendLinkOptions($('#smartMovementDate').value,Number($('#smartMovementAmount').value),t.id);
-   link.innerHTML='<option value="">Aucune dépense liée</option>'+rows.filter(r=>r.allowed).map(r=>
-    '<option value="'+esc(r.id)+'">'+esc(r.label)+' · '+esc(r.date)+' · '+money(r.remaining)+'</option>').join('');
-   if(rows.some(r=>r.id===last&&r.allowed))link.value=last;
-  }
-  $('#smartMovementPreview').textContent=cardReceived?
+  $('#smartMovementLinkWrap').classList.toggle('hidden',id!=='friend_reimbursement');
+   if(id==='friend_reimbursement')renderFriendLinks();
+   $('#smartMovementPreview').textContent=cardReceived?
     'Compte courant : déjà débité lors du transfert · Dette de carte : déjà réduite · Budget : 0 $ · Aucun mouvement supplémentaire.':
     id?movementImpactText(id,Number($('#smartMovementAmount').value),
    expense?$('#smartMovementWho').value:(state.accounts.find(a=>a.id===$('#smartMovementFrom').value)?.owner||me),Number($('#smartMovementFriends').value||0),
@@ -1307,9 +1335,21 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
    if(['friend_reimbursement','friend_advance_return','external_refund','savings_withdrawal'].includes(requestedType)&&accountType(state.accounts.find(a=>a.id===accountId))!=='checking'){
     $('#traceFeedback').textContent='Choisis le compte courant pour recevoir ce remboursement.';return;
    }
-   let related,categoryId='',shares;
+   let related,repaymentAllocations=null,categoryId='',shares;
    try{
-    related=validateFriendLink(requestedType,$('#smartMovementLink').value,date,amount,t.id);
+    if(requestedType==='friend_reimbursement'){
+      const first=$('#smartMovementLink').value,
+       extra=extraFriendLines.filter(x=>x.expenseId||String(x.amountCAD).trim()!=='');
+      if(first||extra.length){
+       if(!first)throw Error('Choisis la première avance remboursée.');
+       const raw=$('#smartMovementFirstAmount').value.trim();
+       const firstAmount=raw!==''?Number(raw):extra.length?NaN:amount;
+       repaymentAllocations=M.validateRepaymentAllocations(
+        [{expenseId:first,amountCAD:firstAmount},...extra],
+        state.transactions,state.transactions,me,date,amount,t.id);
+       related=repaymentAllocations.length===1?first:null;
+      }
+     }else related=validateFriendLink(requestedType,$('#smartMovementLink').value,date,amount,t.id);
     if(movement.budget!=='none'){
      categoryId=$('#smartMovementCategory').value;
      if(!manualCategories(movement.budget==='income'?'income':'expense').some(c=>c.id===categoryId))
@@ -1325,7 +1365,9 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
    }catch(e){$('#traceFeedback').textContent=String(e.message||e);return;}
    const next={...t,type,date,name,status:'confirmed',natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,amountCAD:Math.round(amount*100)/100,amountOriginal:Math.round(amount*100)/100,
     accountId,toAccountId,categoryId,investmentAccountId,
-    transferPurpose:movement.purpose||null,relatedExpenseId:related,importFingerprint:null,payerId:account.owner||t.payerId||me,...shares};
+    transferPurpose:movement.purpose||null,relatedExpenseId:related,repaymentAllocations,
+     counterparty:requestedType==='friend_reimbursement'?$('#smartMovementFriendName').value.trim():(t.counterparty||''),
+     importFingerprint:null,payerId:account.owner||t.payerId||me,...shares};
   $('#smartMovementSave').disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();}
   catch(e){$('#smartMovementSave').disabled=false;traceNotice(e);}
