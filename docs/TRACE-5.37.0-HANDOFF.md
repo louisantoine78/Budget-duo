@@ -72,3 +72,14 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 5. Commencer la conversation suivante avec « Lis `docs/TRACE-5.37.0-HANDOFF.md` sur la branche candidate, vérifie le HEAD et exécute le prochain lot » ; ne pas resservir l'intégralité des échanges précédents.
 
 **À faire immédiatement dans la prochaine conversation :** vérifier l'état GitHub et choisir un petit lot de sécurisation du débit différé, notamment **règles et simulations de remboursements/frais/règlements partiels**, sans activer l'option dans l'app. Terminer le lot, tests, commits, et mise à jour du présent relais. Aucune fusion ni déploiement.
+
+
+## Mise à jour après relais — lot remboursements commerçants (23 octobre 2026)
+
+- Branche candidate vérifiée avant lot : `e975beb7f5239ad79fa365721edcdfdd9dcf1e7d`; `main` stable vérifié : `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+- Implémenté **uniquement dans le moteur isolé** : remboursement commerçant confirmé avant échéance, avec date et montant natif au centime ; diminution de dette carte et compensation de dépense budgétaire sans mouvement du compte courant ni revenu ; remboursement `pending` sans impact, contrôles de doublons et trop-perçu. Fix `-0` sans paiement.
+- Règlements partiels, frais, remboursements post-règlement/post-échéance et FX différé restent **refusés**. Aucun câblage UI, aucun import ni déploiement, `deferred` toujours désactivé.
+- **QA exécutée : 48/48 scénarios de la suite `tests/trace-international-deferred-debit.test.cjs` en environnement V8 simulant `require`/modules Node.** La suite comptait 35 tests précédemment. Pas de vrai Node CLI, aucune autre suite rejouée dans ce lot ; le 633/633 antérieur reste historique, pas actualisé.
+- Commits de ce lot : moteur `bea4f0d392ef382e50c8c83b1f4941d7c94d22e4`, tests `6c7cb6310241f0186e6c2bb6f14ddc1b7e4c3824`, journal d'audit `13107d2b35a37c35e3543e993c67c3f596510f21`; tous `[skip ci]`.
+- **Prochain lot concret :** frais de carte et frais de règlement, analyse des règlements partiels avec rapprochement/import ; travailler avec données fictives, maintenir les blocages si les règles ne sont pas sûres. Rejouer les tests Node natifs dès qu'un checkout fiable est possible, puis les autres suites.
+- **SHA HEAD :** lire le HEAD de GitHub après chaque modification du présent relais : un document ne peut pas contenir sa propre SHA de commit de manière stable.
