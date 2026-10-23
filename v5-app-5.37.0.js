@@ -175,9 +175,12 @@ function accountType(a){
  return'other';
 }
 function accountEstimate(a){
- const r=state.reconciliations.filter(x=>x.accountId===a.id).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
+ const r=state.reconciliations.filter(x=>x.accountId===a.id&&
+   x.actualBalance!==null&&x.actualBalance!==undefined&&x.actualBalance!==''&&
+   Number.isFinite(Number(x.actualBalance))).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
  const b=state.household.accountOpeningBalances||{},d=state.household.accountOpeningBalanceDates||{};
- const rawBase=r?Number(r.actualBalance||0):(b[a.id]===undefined?null:Number(b[a.id]));
+ const rawBase=r?Number(r.actualBalance):
+   (b[a.id]===undefined||b[a.id]===null||b[a.id]===''?null:Number(b[a.id]));
  // Card statements normally show a positive DEBT. TRACE stores a negative
  // financial balance; older settings/reconciliations sometimes stored debt as positive.
  // Interpret those historical amounts without rewriting the user's stored records.
@@ -3381,18 +3384,19 @@ function openReconcileSettings(){
   const mine=state.accounts.filter(a=>a.owner===me&&['checking','card'].includes(accountType(a)));
   openSheet('Rapprochement',
     '<div class="settings-hero"><span class="pico large">'+uiIcon('refresh')+'</span><div><b>Vérifier les comptes</b><small>Une fois par semaine suffit</small></div></div>'+
-    (mine.length?mine.map(a=>{const r=state.reconciliations.filter(x=>x.accountId===a.id).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];const est=accountEstimate(a);return '<div class="reconcile-card"><div><b>'+esc(shortAccountLabel(a))+'</b><small>'+(r?'Dernier rapprochement : '+esc(r.date):'Jamais rapproché')+'</small></div><div class="reconcile-estimate">'+(est===null?'—':money(est))+'</div><button class="secondary reconcile-one" data-id="'+esc(a.id)+'">Rapprocher</button></div>';}).join(''):'<div class="empty-note">Ajoute d’abord tes comptes bancaires.</div>')+settingsBack()
+    (mine.length?mine.map(a=>{const r=state.reconciliations.filter(x=>x.accountId===a.id).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];const est=accountEstimate(a);return '<div class="reconcile-card"><div><b>'+esc(shortAccountLabel(a))+'</b><small>'+(r?'Dernier rapprochement : '+esc(r.date):'Jamais rapproché')+'</small></div><div class="reconcile-estimate">'+(est===null?'Solde inconnu':window.TraceInternational.money(est,window.TraceInternational.currency(a)))+'</div><button class="secondary reconcile-one" data-id="'+esc(a.id)+'">Rapprocher</button></div>';}).join(''):'<div class="empty-note">Ajoute d’abord tes comptes bancaires.</div>')+settingsBack()
   );
   $$('.reconcile-one').forEach(b=>b.onclick=()=>openSingleReconcile(b.dataset.id));
   bindSettingsBack();
 }
 function openSingleReconcile(id){
   const a=state.accounts.find(x=>x.id===id);if(!a)return;
-  const est=accountEstimate(a)??0,isCard=accountType(a)==='card';
+  const est=accountEstimate(a),isCard=accountType(a)==='card',
+    nativeCurrency=window.TraceInternational.currency(a);
   openSheet('Rapprocher · '+a.name,
-    '<div class="setting-summary"><span>Solde estimé Trace</span><b>'+money(est)+'</b></div>'+
-    '<label class="label2">'+(isCard?'Montant sur le relevé de carte ($)':'Solde réel dans la banque')+'</label>'+
-    '<input id="reconcileActual" class="input" type="number" '+(isCard?'min="0" ':'')+'step="0.01" value="'+(isCard?Math.abs(est):est).toFixed(2)+'">'+
+    '<div class="setting-summary"><span>Solde estimé Trace</span><b>'+(est===null?'Solde inconnu':window.TraceInternational.money(est,nativeCurrency))+'</b></div>'+
+    '<label class="label2">'+(isCard?'Montant sur le relevé de carte ('+nativeCurrency+')':'Solde réel dans la banque ('+nativeCurrency+')')+'</label>'+
+    '<input id="reconcileActual" class="input" type="number" '+(isCard?'min="0" ':'')+'step="0.01" value="'+(est===null?'':(isCard?Math.abs(est):est).toFixed(2))+'">'+
     (isCard?'<label class="label2">Ce montant correspond à</label><select id="reconcileCardKind" class="input"><option value="debt"'+(est<=0?' selected':'')+'>Une dette à rembourser</option><option value="credit"'+(est>0?' selected':'')+'>Un avoir réel sur la carte (solde créditeur)</option></select>'+
      '<small>Une dette diminue ta liquidité nette. Un avoir est suivi séparément sans gonfler le disponible.</small>':'')+
     '<label class="label2">Date</label><input id="reconcileDate" class="input" type="date" value="'+new Date().toISOString().slice(0,10)+'">'+
@@ -3407,7 +3411,8 @@ function openSingleReconcile(id){
     const actual=isCard?(cardKind==='credit'?Math.abs(raw):-Math.abs(raw)):raw;
     const item={id:'rec_'+Date.now().toString(36),accountId:a.id,owner:me,date:$('#reconcileDate').value,
      ...(isCard?{cardBalanceKind:cardKind}:{}),
-     estimatedBalance:est,actualBalance:actual,difference:actual-est};
+     currency:nativeCurrency,estimatedBalance:est,actualBalance:actual,
+     difference:est===null?null:Math.round((actual-est)*100)/100};
     $('#saveReconciliation').disabled=true;
     try{
      await saveDocument('reconciliations',item);

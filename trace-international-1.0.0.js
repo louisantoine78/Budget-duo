@@ -5,10 +5,16 @@
  const codes=Object.freeze(['CAD','EUR','USD','GBP','CHF']);
  const locales={CAD:'fr-CA',EUR:'fr-FR',USD:'en-US',GBP:'en-GB',CHF:'fr-CH'};
  const valid=c=>codes.includes(String(c||'').toUpperCase());
- const currency=a=>valid(a?.currency)?String(a.currency).toUpperCase():'CAD';
+ const currency=a=>{
+  const declared=a?.currency;
+  if(declared===undefined||declared===null||String(declared).trim()==='')return 'CAD'; // Historical accounts.
+  const code=String(declared).toUpperCase();
+  if(!valid(code))throw Error('Devise bancaire non prise en charge : '+code);
+  return code;
+ };
  const money=(value,code,decimals=2)=>{
   const c=valid(code)?code:'CAD';
-  if(!Number.isFinite(Number(value)))return '—';
+  if(value===null||value===undefined||value===''||!Number.isFinite(Number(value)))return '—';
   return new Intl.NumberFormat(locales[c],{style:'currency',currency:c,minimumFractionDigits:decimals,maximumFractionDigits:decimals}).format(Number(value));
  };
  const round=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
@@ -19,16 +25,19 @@
   if(!a)return null;
   const code=currency(a);
   if(leg==='destination'){
-   if(t.toBankAmount!==null&&t.toBankAmount!==undefined&&Number.isFinite(Number(t.toBankAmount)))return Number(t.toBankAmount);
+   if(t.toBankAmount!==null&&t.toBankAmount!==undefined&&t.toBankAmount!==''&&Number.isFinite(Number(t.toBankAmount)))return Number(t.toBankAmount);
    // Legacy CAD -> CAD documents only. CAD as destination of EUR/USD/etc
    // must never inherit the CAD budget valuation as a bank receipt.
-   if(code==='CAD'&&(!t.bankCurrency||String(t.bankCurrency).toUpperCase()==='CAD'))
-    return Number(t.amountCAD||0);
+   if(code==='CAD'&&(!t.bankCurrency||String(t.bankCurrency).toUpperCase()==='CAD')){
+    const legacy=t.amountCAD;
+    return legacy!==null&&legacy!==undefined&&legacy!==''&&Number.isFinite(Number(legacy))?Number(legacy):null;
+   }
    // All international destination legs need an explicit booked amount.
    return null;
   }
-  if(t.bankAmount!==null&&t.bankAmount!==undefined&&Number.isFinite(Number(t.bankAmount)))return Number(t.bankAmount);
-  return code==='CAD'?Number(t.amountCAD||0):null;
+  if(t.bankAmount!==null&&t.bankAmount!==undefined&&t.bankAmount!==''&&Number.isFinite(Number(t.bankAmount)))return Number(t.bankAmount);
+  return code==='CAD'&&t.amountCAD!==null&&t.amountCAD!==undefined&&t.amountCAD!==''&&
+   Number.isFinite(Number(t.amountCAD))?Number(t.amountCAD):null;
  };
  const fxValue=(native,code,quote)=>code==='CAD'?round(native):
   quote&&quote.currency===code&&Number.isFinite(Number(quote.cadPerUnit))&&Number(quote.cadPerUnit)>0?
@@ -107,7 +116,10 @@
   fxCache.set(key,promise);return promise;
  };
  const resolveBooking=({account,bankAmount,originalAmount=null,originalCurrency=null,quote=null,date}={})=>{
-  const bankCurrency=currency(account),native=Number(bankAmount),purchaseCurrency=valid(originalCurrency)?originalCurrency:bankCurrency;
+  const bankCurrency=currency(account),native=Number(bankAmount);
+  if(originalCurrency!==null&&originalCurrency!==undefined&&String(originalCurrency).trim()!==''&&!valid(originalCurrency))
+   throw Error('Devise d’achat d’origine non prise en charge');
+  const purchaseCurrency=valid(originalCurrency)?String(originalCurrency).toUpperCase():bankCurrency;
   if(!Number.isFinite(native)||native<=0)throw Error('Montant bancaire invalide');
   const originProvided=originalAmount!==null&&originalAmount!==undefined&&originalAmount!=='';
   if(purchaseCurrency!==bankCurrency&&!originProvided)
@@ -135,7 +147,7 @@
      from.id===to.id||!from.owner||from.owner!==to.owner||from.type!=='checking'||
      !['checking','card'].includes(to.type))
    throw Error('Origine ou destination bancaire incohérente');
-  if(to.type==='card'&&to.settlementAccountId&&to.settlementAccountId!==from.id)
+  if(to.type==='card'&&to.settlementAccountId!==from.id)
    throw Error('Cette carte doit être remboursée depuis son compte courant lié');
   if(String(bankAmount??'').trim()===''||String(receivedAmount??'').trim()==='')
    throw Error('Les deux montants bancaires réels sont obligatoires');
