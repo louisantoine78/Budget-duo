@@ -11,7 +11,7 @@ const ctx=vm.createContext({window:{}});
 vm.runInContext(engine,ctx);
 const I=ctx.window.TraceInternational;
 const start=app.indexOf('function editInternationalTransfer(');
-const end=app.indexOf('\nfunction editSmartBankMovement(',start);
+const end=app.indexOf('\nfunction editForeignFriendRepayment(',start);
 assert.ok(start>0&&end>start,'FX editor function missing');
 const factory=new Function('state','me','accountType','window','openSheet','closeSheet','$','esc','shortAccountLabel',
  'saveDocument','renderAll','navigate','showTab',
