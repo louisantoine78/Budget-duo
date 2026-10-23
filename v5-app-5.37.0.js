@@ -2159,7 +2159,16 @@ function importFile(file){
      let n=col('amount')>=0?parseCsvMoney(row[col('amount')]):NaN;
      let type;
      if(col('amount')>=0){type=n>=0?$('#csvSign').value:($('#csvSign').value==='income'?'expense':'income');}
-     else{const debit=col('debit')>=0?parseCsvMoney(row[col('debit')]):NaN,credit=col('credit')>=0?parseCsvMoney(row[col('credit')]):NaN;const cr=Number.isFinite(credit)?Math.abs(credit):0,db=Number.isFinite(debit)?Math.abs(debit):0;n=cr>0?cr:db;type=cr>0?'income':'expense';}
+     else{
+      const debit=col('debit')>=0?parseCsvMoney(row[col('debit')]):NaN,
+       credit=col('credit')>=0?parseCsvMoney(row[col('credit')]):NaN;
+      const cr=Number.isFinite(credit)?Math.abs(credit):0,
+       db=Number.isFinite(debit)?Math.abs(debit):0;
+      // A bank statement line may not simultaneously debit and credit money.
+      // Never silently take the credit when both columns are populated.
+      if((cr>0&&db>0)||(!(cr>0)&&!(db>0))){invalid.push(index+2);return;}
+      n=cr>0?cr:db;type=cr>0?'income':'expense';
+     }
      if(!date||!name||smartExactBankAmount(Math.abs(n))===null){invalid.push(index+2);return;}
      const amount=Math.abs(n),accountId=$('#csvAccount').value;
      const bankAccount=accts.find(a=>a.id===accountId),ccy=window.TraceInternational.currency(bankAccount);
