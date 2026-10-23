@@ -489,3 +489,44 @@ Depuis **les versions des fichiers source et des fichiers de tests relues sur Gi
 - Les scénarios traversant toutes les couches de l'application (import PDF bancaire, rapprochement intégral, PWA hors ligne, compte crédit, épargne, transactions couplées et régularisation du budget historique) doivent être validés sur données **fictives** dans des environnements autorisés, sans déploiement implicite.
 
 **Phase 1 : en cours, non déclarée terminée.** Reprendre les tests complets et l'intégration réelle sous autorisation, conserver la compatibilité 5.36.5 et contrôler `main`/Vercel après chaque lot. Les quatre commits peuvent être annulés individuellement sans reset ni force-push.
+
+## Phase 1 — Reprise suivante : centimes exacts et régression isolée des 24 suites (23 octobre 2026)
+
+**Périmètre :** branche `trace-5.37.0-international-accounts-fx` exclusivement, après `f83a4cf9ab5d25d84c9da2b15d46702537e7148f`. `main`, le chargeur de production 5.36.5, Supabase, les déploiements Vercel et les workflows PickPoint restent hors périmètre.
+
+### Nouvel écart comptable découvert et corrigé
+
+Dans la version de départ, `TraceMovement.validateRepaymentAllocations` appelait `Math.round(Number(n) * 100)` sans contrôler l'exactitude du montant initial au centime. Une association de remboursement fictive de `10.005 CAD` pouvait donc être enregistrée comme `10.01 CAD` ; `10.001 CAD` était ramené silencieusement à `10 CAD`.
+
+Le validateur refuse désormais les fractions de centime, aussi bien sur les lignes d'association que sur le montant bancaire du remboursement. Tolérance `1e-6` sur `raw*100` destinée aux seuls artefacts normaux de précision IEEE-754 ; aucun arrondi économique n'est autorisé. Les nombres parfaitement égaux à un nombre entier de centimes (ex. `0.1 + 0.2`) restent possibles. Aucun changement des montants enregistrés ni migration d'historiques.
+
+**Commits enregistrés sur cette branche seulement :**
+- `d8f163846a32d140347a72fc2f9a33ac8aa58aa5` : rejet des fractions de centime dans `trace-movement-5.36.0.js` ;
+- `97b0946d51592c9ee69504a2a2589d2a9c4ee4a1` : trois nouveaux scénarios de précision dans `tests/trace-international-friend-allocations.test.cjs` (17 tests réussis).
+
+### Tests de cette reprise — exécution V8 isolée
+
+Le conteneur propose `Node v22.16.0`, mais `git ls-remote` vers GitHub ne fonctionne pas (`Could not resolve host: github.com`) : **aucun checkout Node natif**, aucune commande `node tests/...` sur un clone local et aucune GitHub Action n'ont pu être exécutés. Les fichiers source et les fichiers `.test.cjs` ont été récupérés depuis la branche GitHub, puis les tests exécutés directement dans un environnement JavaScript V8 par lots, avec simulations ciblées de `fs`, `path`, `vm`, `assert`, `process` et d'éléments DOM. Certaines simulations initialement incomplètes (`URL.searchParams`, assertions asynchrones) ont été complétées et les cas concernés relancés. Ces adaptations du harnais ne constituent pas des corrections du produit.
+
+**Résultat mesuré depuis les suites réellement présentes :**
+
+| Domaine | Suites | Contrôles réussis |
+|---|---:|---:|
+| Candidate internationale | 17 | **222** |
+| Régressions historiques 5.36.5 | 5 | **232** |
+| Laboratoire fictif et boot simulé | 2 | **15** |
+| **Total V8** | **24** | **469** |
+
+Aucun échec conservé sur la dernière exécution des suites ; les suites dépendant de `trace-movement-5.36.0.js` ont été relancées après le correctif, et les cinq suites stables ont été relancées après celui-ci. Les 14 contrôles de paiement carte reposant sur des promesses différées ont été revérifiés individuellement après liquidation des microtâches : **14/14**.
+
+**Écart à signaler :** l'ancien audit annonçait **445 contrôles**, et l'ajout total de 26 cas depuis ce point pourrait laisser prévoir 471. Le recomptage depuis les 24 fichiers de tests à jour aboutit à **469** et non 471. Les deux unités de différence proviennent du décompte documentaire antérieur non rapproché ; **ce ne sont pas deux échecs observés**. Conserver 469 comme référence vérifiée ici et ne pas revendiquer un décompte historique corrigé sans vérifier les anciennes versions des suites.
+
+### Limites majeures
+
+- Le harnais V8 simule les API Node et de DOM et ne reflète pas l'intégralité de leurs comportements ; ces **469 validations ne sont pas des tests Node CLI natifs**.
+- Aucune navigation réelle sous Safari iPhone, aucun contrôle de zoom réel, aucun clavier décimal physique, aucune interaction VoiceOver ou sélection/focus clavier iOS réels.
+- Pas de session applicative multicomptes/multi-utilisateurs avec base Supabase fictive ; aucun test d'import PDF mensuel ligne par ligne ni de PWA hors ligne.
+- Le débit différé, le parcours complet d'Activité → Partage et les écrans Patrimoine demeurent dans le périmètre de phases ultérieures prévues ; ne pas les considérer comme terminés.
+- Aucune activation, fusion, migration, écriture bancaire réelle, déploiement ou GitHub Actions.
+
+**Phase 1 toujours en cours.** Condition d'achèvement : exécution Node native du référentiel, contrôles Safari avec données fictives, validation réelle des parcours essentiels d'intégration et vérification du dispositif de déploiement avant décision séparée de publication.
