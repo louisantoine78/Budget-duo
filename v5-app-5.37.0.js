@@ -1114,7 +1114,8 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
      '<div class="trace-bank-extra-box hidden" id="smartMovementExpenseWrap">'+
       '<label class="label2" for="smartMovementCategory">Catégorie de dépenses</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementCategory" class="input"></select></div>'+
       '<label class="label2" for="smartMovementWho">Pour qui ?</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementWho" class="input"><option value="'+esc(me)+'">Moi</option><option value="'+esc(partner)+'">'+esc(shortMemberName(partner))+'</option><option value="couple">Nous deux</option><option value="custom">Avec des amis · personnalisé</option></select></div>'+
-      '<div class="trace-edit-friends hidden" id="smartMovementCustom"><strong>Répartition avec des amis</strong><div class="trace-edit-friends-grid"><div><label class="label2" for="smartMovementFriends">Part des amis ($)</label><input id="smartMovementFriends" class="input" type="number" inputmode="decimal" min="0" step=".01" value="0"></div><div><label class="label2" for="smartMovementPartner">Part de '+esc(shortMemberName(partner))+' ($)</label><input id="smartMovementPartner" class="input" type="number" inputmode="decimal" min="0" step=".01" value="0"></div></div></div>'+
+      '<div class="trace-edit-friends hidden" id="smartMovementCustom"><strong>Répartition avec des amis</strong><div class="trace-edit-friends-grid"><div><label class="label2" for="smartMovementFriends">Part des amis ($)</label><input id="smartMovementFriends" class="input" type="number" inputmode="decimal" min="0" step=".01" value="0"></div><div><label class="label2" for="smartMovementPartner">Part de '+esc(shortMemberName(partner))+' ($)</label><input id="smartMovementPartner" class="input" type="number" inputmode="decimal" min="0" step=".01" value="0"></div></div>'+
+       '<label class="label2" for="smartMovementDebtorName">Proche concerné (facultatif, si une seule personne doit la part des amis)</label><input id="smartMovementDebtorName" class="input" maxlength="45" value="'+esc(t.friendDebtorName||'')+'" placeholder="Ex. Camille"></div>'+
       '<p class="trace-bank-inline-tip" id="smartMovementBudgetNote"></p>'+
      '</div>'+
      '<div id="smartMovementCardReceiveWrap" class="trace-bank-extra-box hidden">'+
@@ -1374,6 +1375,8 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
      importFingerprint:accountId===t.accountId&&date===t.date&&name===t.name&&
       Math.abs(Number(t.bankAmount??t.amountCAD)-amount)<.009?
       (t.importFingerprint??null):null,
+      friendDebtorName:movement.budget==='expense'&&shares.beneficiary==='custom'&&Number(shares.splitAmounts?.friends)>0?
+       $('#smartMovementDebtorName').value.trim().replace(/\s+/g,' ').slice(0,45):null,
       payerId:account.owner||t.payerId||me,...shares};
   $('#smartMovementSave').disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();}
@@ -1497,6 +1500,7 @@ function editTransaction(id,validating=false){
     '<input id="txFriendsAmount" class="input" type="number" inputmode="decimal" step=".01" min="0" value="'+esc(Number(t.splitAmounts?.friends||0))+'"></div>'+
     '<div><label class="label2" for="txPartnerAmount">Part de '+esc(shortMemberName(partner))+' ($)</label>'+
     '<input id="txPartnerAmount" class="input" type="number" inputmode="decimal" step=".01" min="0" value="'+esc(Number(t.splitAmounts?.partner||0))+'"></div></div>'+
+    '<label class="label2" for="txFriendDebtorName">Proche concerné (facultatif, si une seule personne doit toute la part des amis)</label><input id="txFriendDebtorName" class="input" maxlength="45" placeholder="Ex. Camille" value="'+esc(t.friendDebtorName||'')+'">'+
     '<small>Le reste correspond à ta part. La part des amis n’entre pas dans le budget du couple.</small></div>'+
   '</div></section>'+
  '<section class="trace-edit-impact" aria-labelledby="traceEditImpactTitle">'+
@@ -1667,7 +1671,10 @@ function editTransaction(id,validating=false){
    if(received>0&&Math.round(Number(sharing.splitAmounts?.friends||0)*100)<received){
      $('#traceFeedback').textContent='Cette dépense possède déjà des remboursements liés. La part des amis ne peut pas devenir inférieure aux remboursements reçus.';return;
    }
-   const next={...t,...booking,date,name,type,categoryId,accountId,...sharing,natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null};
+   const next={...t,...booking,date,name,type,categoryId,accountId,...sharing,
+    friendDebtorName:def.budget==='expense'&&beneficiary==='custom'&&Number(sharing.splitAmounts?.friends)>0?
+     $('#txFriendDebtorName').value.trim().replace(/\s+/g,' ').slice(0,45):null,
+    natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null};
   if(next.importFingerprint&&(amount!==(t.bankAmount??t.amountCAD)||date!==t.date||name!==t.name))next.importFingerprint=null;
   const btn=$(confirm?'#txValidate':'#txSave');btn.disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();navigate('activity');showTab(confirm?'transactions':validating?'review':'transactions');}
