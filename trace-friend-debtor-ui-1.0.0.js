@@ -20,7 +20,13 @@
    amount:String(x.amountCAD??'')})):[];
   if(!rows.length&&String(field.value||'').trim()){
    try{rows=root.TraceMovement.parseFriendShares(field.value)
-    .map(x=>({name:x.name,amount:String(x.amountCAD)}));}catch(_){}
+    .map(x=>({name:x.name,amount:String(x.amountCAD)}));}
+   catch(_){
+    // Never discard a preexisting value because a dependency or old format failed.
+    host.innerHTML='<p class="trace-debtor-balance trace-debtor-warning" role="alert">'+
+     'Répartition existante illisible. Aucune valeur n’a été remplacée : vérifie la saisie avant de poursuivre.</p>';
+    return false;
+   }
   }
   function update(){
    field.value=rows.map(x=>x.name+' : '+x.amount).join('\n');
