@@ -155,6 +155,26 @@ test('status as of before purchase cannot create a phantom debt or expense',()=>
  assert.equal(r.liability,0);assert.equal(r.budgetExpenses.length,0);
  assert.equal(r.checkingBalanceChange,0);
 });
+test('reject a merchant refund mistakenly passed as a deferred expense',()=>{
+ assert.throws(()=>calculate([purchase('p1',40,{type:'refund'})]),/ambigu/);
+});
+test('reject an income transaction disguised as a deferred card settlement',()=>{
+ assert.throws(()=>calculate([purchase('p1')],[debit('income',40,['p1'],{type:'income'})]),/invalide/);
+});
+test('reject implicit purchase refunds/fees instead of silently dropping their effects',()=>{
+ assert.throws(()=>calculate([purchase('p1',40,{refundAmount:10})]),/ambigu/);
+ assert.throws(()=>calculate([purchase('p1',40,{feeAmount:2})]),/ambigu/);
+});
+test('reject hidden settlement fees/refunds instead of inventing a zero-impact transfer',()=>{
+ assert.throws(()=>calculate([purchase('p1')],[debit('settle',40,['p1'],{feeAmount:2})]),/invalide/);
+ assert.throws(()=>calculate([purchase('p1')],[debit('settle',40,['p1'],{refundAmount:5})]),/invalide/);
+});
+test('known explicit accounting nature for a purchase and transfer is accepted',()=>{
+ const r=calculate([purchase('p1',40,{type:'deferred_purchase'})],
+ [debit('settle',40,['p1'],{type:'transfer'})],'2026-11-05');
+ assert.equal(r.monthlyBudget['2026-10'],40);
+ assert.equal(r.checkingBalanceChange,-40);
+});
 test('input source objects remain unchanged and no writes are performed',()=>{
  const p=Object.freeze(purchase('p1')),s=Object.freeze(debit('settle'));
  const arrP=Object.freeze([p]),arrS=Object.freeze([s]);
