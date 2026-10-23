@@ -611,3 +611,43 @@ Aucun échec lors du dernier passage. Le nombre 498 est issu des sorties des sui
 **Limites impératives :** le clonage GitHub par `git` échoue toujours dans le conteneur (résolution DNS), bien que Node v22.16.0 soit disponible. Ce ne sont **pas** des tests Node CLI sur un vrai checkout, ni GitHub Actions, ni de vrais tests Safari iPhone, PWA ou Supabase multi-utilisateur. Le relevé PDF mensuel de vérification ligne par ligne reste une phase distincte de l'import quotidien. Aucun état client historique n'a été réécrit.
 
 **Phase 1 non terminée.** Validation Node native, Safari réel et parcours PWA/Supabase fictifs restent nécessaires avant toute intégration ou publication ; toutes interdites sans accord explicite.
+
+## Phase 1 — Rapprochement des écritures CSV de natures différentes (23 octobre 2026)
+
+**Reprise :** 25ff1468f540b020cdef035603e1c2a8eb7f0be2, branche trace-5.37.0-international-accounts-fx uniquement.
+
+### Risque confirmé
+
+La détection CSV historique basée sur l'empreinte incluait le type de mouvement. Un débit de 100 CAD importé comme dépense n'était pas rapproché d'un paiement Mastercard déjà classé virement interne. Un crédit de 15 CAD importé comme revenu n'était pas rapproché d'un remboursement Camille classé external_refund. Ces CSV sont initialement pending et ne créaient pas de double comptage tant qu'ils n'étaient pas confirmés, mais une validation erronée restait possible.
+
+### Correctifs réversibles
+
+- **csvBankEvidenceMatches :** contrôle en lecture seule du compte, du sens, du montant bancaire natif vérifié et de la date (écart maximal de 2 jours). Pour les virements interdevises, comparaison de la destination avec toBankAmount effectivement enregistré ; aucun taux implicite de 1:1.
+- **Prévisualisation CSV :** affichage des lignes ressemblant à des mouvements déjà enregistrés et de leur date, nature et libellé. Aucune fusion ni suppression automatique. Les imports restent pending.
+- **Persistance :** recalcul du rapprochement avant insertion des lignes pending, conservation des références csvReviewMatchIds à examiner. Transactions précédemment confirmées laissées intactes.
+- **Validation dans l'éditeur :** si une ligne CSV à confirmer ressemble à une écriture existante, l'utilisateur doit comparer et confirmer expressément qu'elle est distincte. Le contrôle est recalculé après modification du compte, de la date ou du montant ; si une nouvelle ressemblance apparaît pendant l'édition, rouvrir la fiche pour examiner les candidats. Confirmation distincte traçable avec csvDistinctReviewedAt.
+- **Faux positifs :** deux opérations distinctes peuvent avoir le même montant, le même compte et une date proche. Les correspondances sont des alertes, pas des rapprochements automatiques définitifs. Un utilisateur peut confirmer une opération effectivement distincte après vérification.
+
+### Commits de cette reprise
+
+1. 0372fd044c080e2f56cfbca0079e2ea24f02b9bb — identification des écritures CSV similaires malgré une nature différente.
+2. ee220b9f15a79da88323956056dd28ec0a049758 — confirmation explicite dans l'éditeur CSV pending.
+3. f781aa7623e88a863b7f3cf282783defcb7eb930 — suite de tests du rapprochement inter-natures.
+4. 417b3eab27ec49cf7b64f797eb1db5c08687bc40 — tests de validation de l'éditeur réel avec DOM simulé.
+5. 0084c3d7c6fb08bed5f935312add4f5c201f03a5 — inscription dans le workflow de régression futur, déclenché uniquement sur main (aucune action lancée).
+6. 7837df660086aada8568cd7f376250e336d5df76 — tests du parcours complet import CSV fictif / aperçu / lignes en attente.
+
+### Vérification réellement effectuée dans cette session
+
+Les **27 suites actuelles** ont été récupérées depuis la branche GitHub et exécutées par lots dans un environnement JavaScript **V8 isolé**, avec simulation ciblée des API Node et DOM (et non dans une CLI Node native ou Safari).
+
+| Périmètre | Suites | Résultat V8 |
+|---|---:|---:|
+| Candidate 5.37.0, dont les 23 nouveaux contrôles CSV | 20 | 274 réussis |
+| Régressions historiques 5.36.5 | 5 | 232 réussis |
+| Laboratoire fictif et démarrage simulé | 2 | 15 réussis |
+| **Total observé cette fois** | **27** | **521/521 réussis** |
+
+Les 23 nouveaux tests couvrent Mastercard débit courant et crédit carte, retour Camille, nature différente, faux positif de commerçant, compte et devise native (EUR), transferts interdevises réels, absence de conversion fictive, dates, montant exact, statut pending, traçabilité, contrôle de l'éditeur lors de la confirmation et import intégral de deux lignes fictives. Aucune transaction réelle manipulée.
+
+**Limites et sécurité :** le conteneur dispose de Node 22 mais le clone git échoue encore par DNS sur github.com. Aucun test Node réel sur dépôt cloné, GitHub Actions, Safari iPhone, PWA ou Supabase multi-utilisateur n'a été mené. Aucun déploiement Vercel, merge, modification de main, du chargeur 5.36.5, de Supabase ou PickPoint. Les relevés PDF mensuels restent un chantier distinct. La phase 1 n'est pas déclarée achevée et toute publication exige une autorisation séparée.
