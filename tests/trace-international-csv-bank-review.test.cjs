@@ -95,7 +95,8 @@ test('CSV preview keeps all possible cross-nature matches pending',()=>{
  assert.match(app,/Aucune fusion ou suppression automatique/);
 });
 test('confirmation requires an explicit acknowledgement and records evidence IDs',()=>{
- assert.match(app,/csvConflicts.length&&!?\$\('#txCsvDistinctVerified'\)\?\.checked/);
+ assert.match(app,/csvReviewIdentity/);
+ assert.match(app,/!csvReviewUnchanged/);
  assert.match(app,/csvDistinctReviewedAt:new Date\(\)\.toISOString\(\)/);
  assert.match(app,/csvReviewMatchIds:csvConflicts\.map\(x=>x\.id\)/);
 });
@@ -105,7 +106,7 @@ test('matches never delete, merge or alter bank data',()=>{
  assert.equal(typeof match,'function');
 });
 
-async function editorScenario({initialAmount=15,bankAmount=15}={}){
+async function editorScenario({initialAmount=15,bankAmount=15,onResolveBooking=null}={}){
  const checking={id:'ca',type:'checking',currency:'CAD',owner:'la',name:'Courant'};
  const pending={id:'csv-pending',source:'csv',status:'pending',type:'income',
   date:'2026-10-13',name:'Virement Camille',accountId:'ca',
@@ -129,7 +130,7 @@ async function editorScenario({initialAmount=15,bankAmount=15}={}){
   txOriginalCurrency:'CAD',txOriginalAmount:'',
   txFriendsAmount:'0',txPartnerAmount:'0'};
  Object.entries(inputs).forEach(([key,value])=>{$('#'+key).value=value});
- const fakeWindow={TraceInternational:w.TraceInternational,
+ const fakeWindow={TraceInternational:onResolveBooking?{...w.TraceInternational,resolveBooking:options=>{onResolveBooking(environment);return w.TraceInternational.resolveBooking(options);}}:w.TraceInternational,
   TraceOperationUI:{enhanceTransaction(){},kindsFor(){return[{id:'income'}]},
    options(){return'<option value="income">Revenu</option>'}},
   TraceFriendDebtorUI:{mount(){}},
@@ -175,7 +176,40 @@ async function editorTests(){
  changed.$('#txAmount').value='15';
  await changed.$('#txValidate').onclick();
  assert.equal(changed.saved.length,0);
- assert.match(changed.$('#traceFeedback').textContent,/rouvre cette fiche/);
+ assert.match(changed.$('#traceFeedback').textContent,/rouvre cette fiche/i);
+
+ const staleAmount=await editorScenario();
+ staleAmount.$('#txCsvDistinctVerified').checked=true;
+ staleAmount.$('#txAmount').value='16';
+ staleAmount.prior.bankAmount=16;
+ await staleAmount.$('#txValidate').onclick();
+ assert.equal(staleAmount.saved.length,0);
+ assert.match(staleAmount.$('#traceFeedback').textContent,/ont changé/);
+ const staleName=await editorScenario();
+ staleName.$('#txCsvDistinctVerified').checked=true;
+ staleName.$('#txName').value='Autre description';
+ await staleName.$('#txValidate').onclick();
+ assert.equal(staleName.saved.length,0);
+ assert.match(staleName.$('#traceFeedback').textContent,/ont changé/);
+ const staleStatus=await editorScenario();
+ staleStatus.$('#txCsvDistinctVerified').checked=true;
+ staleStatus.prior.status='pending';
+ await staleStatus.$('#txValidate').onclick();
+ assert.equal(staleStatus.saved.length,0);
+ assert.match(staleStatus.$('#traceFeedback').textContent,/ont changé/);
+ const late=await editorScenario({onResolveBooking:environment=>{
+  environment.transactions.push({id:'new-proof',type:'external_refund',status:'confirmed',
+   accountId:'ca',date:'2026-10-13',bankAmount:15,name:'Nouveau remboursement'});
+ }});
+ late.$('#txCsvDistinctVerified').checked=true;
+ await late.$('#txValidate').onclick();
+ assert.equal(late.saved.length,0);
+ assert.match(late.$('#traceFeedback').textContent,/a changé depuis/);
+ const categoryOnly=await editorScenario();
+ categoryOnly.$('#txCsvDistinctVerified').checked=true;
+ categoryOnly.$('#txCategory').value='salary';
+ await categoryOnly.$('#txValidate').onclick();
+ assert.equal(categoryOnly.saved.length,1);
  const distinct=await editorScenario({initialAmount:16,bankAmount:15});
  await distinct.$('#txValidate').onclick();
  assert.equal(distinct.saved.length,1);
@@ -230,7 +264,12 @@ async function importCsvIntegration(){
 }
 
 editorTests().then(async()=>{
- count+=3;
+ count+=8;
+ console.log('PASS changed bank amount invalidates stale explicit review');
+ console.log('PASS changed merchant name invalidates stale explicit review');
+ console.log('PASS changed historical bank status invalidates stale explicit review');
+ console.log('PASS newly inserted matching bank evidence blocks delayed validation');
+ console.log('PASS unchanged bank evidence permits category-only editing');
  console.log('PASS unreviewed overlap blocked before financial save');
  console.log('PASS changed amount cannot bypass a newly discovered overlap');
  console.log('PASS distinct CSV line can be confirmed without false overlap');
