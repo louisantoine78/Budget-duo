@@ -1575,6 +1575,15 @@ function editTransaction(id,validating=false){
  const t=state.transactions.find(x=>x.id===id);if(!t)return;
  const csvReview=t.source==='csv'&&t.status!=='confirmed'?
   csvBankEvidenceMatches(t,state.transactions):[];
+ // Snapshot exactly what was compared. The checkbox is not transferable to a
+ // new amount/date/account, nor to an edited or newly confirmed bank movement.
+ const csvReviewIdentity=(row,matches)=>JSON.stringify({
+  row:[row.accountId,row.date,Number(row.bankAmount??row.amountCAD),
+   row.type,String(row.name||'').trim()],
+  matches:matches.map(x=>[x.id,x.status,x.type,x.date,x.accountId,
+   x.toAccountId,x.bankAmount,x.toBankAmount,x.amountCAD,x.name])
+ });
+ const csvInitiallyReviewed=csvReviewIdentity(t,csvReview);
  // The card-side statement line is proof, never an editable second payment.
  if(t.type==='card_statement_evidence'){
   const linked=state.transactions.find(x=>x.id===t.linkedTransactionId&&x.type==='transfer');
@@ -1809,10 +1818,14 @@ function editTransaction(id,validating=false){
   const account=state.accounts.find(a=>a.id===accountId);
   // Cross-nature CSV imports need an explicit human decision before posting.
   // Re-evaluate after edits: bank account, date or amount may have changed.
+  const csvProposed={...t,accountId,date,name,bankAmount:amount,type};
   const csvConflicts=confirm&&t.source==='csv'?
-   csvBankEvidenceMatches({...t,accountId,date,bankAmount:amount,type},state.transactions):[];
-  if(csvConflicts.length&&!$('#txCsvDistinctVerified')?.checked){
-   $('#traceFeedback').textContent='Un paiement, remboursement ou mouvement bancaire ressemble à cette ligne. Compare les opérations existantes, puis confirme qu’il s’agit d’une opération distincte. Si la comparaison n’est pas affichée, rouvre cette fiche après tes modifications.';
+   csvBankEvidenceMatches(csvProposed,state.transactions):[];
+  const csvReviewUnchanged=csvReviewIdentity(csvProposed,csvConflicts)===csvInitiallyReviewed;
+  if(csvConflicts.length&&(!$('#txCsvDistinctVerified')?.checked||!csvReviewUnchanged)){
+   $('#traceFeedback').textContent=csvReviewUnchanged?
+    'Un paiement, remboursement ou mouvement bancaire ressemble à cette ligne. Compare les opérations existantes, puis confirme qu’il s’agit d’une opération distincte.':
+    'Les éléments du rapprochement bancaire ont changé. Rouvre cette fiche pour comparer les opérations actuelles avant de confirmer.';
    return;
   }
   if(accountType(account)==='card'&&window.TraceImportGuide.cardStatementSettlementLabel(name)){
@@ -1848,6 +1861,16 @@ function editTransaction(id,validating=false){
     natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null,
     ...(confirm&&csvConflicts.length?{csvReviewMatchIds:csvConflicts.map(x=>x.id),csvDistinctReviewedAt:new Date().toISOString()}:{} )};
   if(next.importFingerprint&&(amount!==(t.bankAmount??t.amountCAD)||date!==t.date||name!==t.name))next.importFingerprint=null;
+  // A rate lookup or delayed user action may have changed the bank history
+  // after the first check. Recheck just before writing (UI-level safeguard).
+  if(confirm&&t.source==='csv'){
+   const freshMatches=csvBankEvidenceMatches(csvProposed,state.transactions);
+   if(freshMatches.length&&(!$('#txCsvDistinctVerified')?.checked||
+      csvReviewIdentity(csvProposed,freshMatches)!==csvInitiallyReviewed)){
+    $('#traceFeedback').textContent='Le rapprochement bancaire a changé depuis ton ouverture. Rouvre cette fiche et vérifie les opérations actuelles.';
+    return;
+   }
+  }
   const btn=$(confirm?'#txValidate':'#txSave');btn.disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();navigate('activity');showTab(confirm?'transactions':validating?'review':'transactions');}
   catch(e){btn.disabled=false;traceNotice(e);}
