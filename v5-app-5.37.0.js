@@ -2038,6 +2038,33 @@ function parseCsvDate(raw,format){
 }
 function csvFingerprint(t){const norm=String(t.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();return[t.date,t.type,Number(t.bankAmount??t.amountCAD).toFixed(2),norm,t.accountId].join('|');}
 function csvImportedDuplicate(t,rows){const key=csvFingerprint(t);return rows.some(x=>(x.importFingerprint||csvFingerprint(x))===key);}
+
+// Read-only review of a statement row against bank movements already in TRACE.
+// A match is a warning, never authority to delete, merge or book a transaction.
+function csvBankEvidenceMatches(row,existing=state.transactions){
+ const account=state.accounts.find(a=>a.id===row?.accountId);
+ if(!account||!/^\d{4}-\d{2}-\d{2}$/.test(String(row?.date||'')))return[];
+ const amount=smartExactBankAmount(row.bankAmount??row.amountCAD);
+ if(amount===null)return[];
+ const wanted=['income','refund','external_refund'].includes(row.type)?'in':
+  ['expense','group_expense','person_payment','external_transfer'].includes(row.type)?'out':null;
+ if(!wanted)return[];
+ const I=window.TraceInternational;
+ return(existing||[]).filter(x=>{
+  if(!x||x.id===row.id||!['confirmed','pending'].includes(x.status)||
+     dateGapDays(row.date,x.date)>2||x.type==='card_statement_evidence')return false;
+  const source=x.accountId===row.accountId,destination=x.type==='transfer'&&x.toAccountId===row.accountId;
+  const direction=destination?'in':!source?null:
+   x.type==='transfer'?'out':
+   ['income','refund','external_refund'].includes(x.type)?'in':
+   ['expense','group_expense','person_payment','external_transfer'].includes(x.type)?'out':null;
+  if(direction!==wanted)return false;
+  const bank=I.amountOnAccount(x,account,destination?'destination':'source');
+  return bank!==null&&smartExactBankAmount(bank)===amount;
+ }).sort((a,b)=>Number(b.status==='confirmed')-Number(a.status==='confirmed')||
+  dateGapDays(row.date,a.date)-dateGapDays(row.date,b.date)).slice(0,5);
+}
+
 function importFile(file){
  if(!file)return;
  const box=$('#importResult');
@@ -2092,6 +2119,10 @@ function importFile(file){
        ...(ccy==='CAD'?traceSplit(me,amount):{}),
        recurring:false,source:'csv',importFileName:file.name};
      t.importFingerprint=csvFingerprint(t);
+     // Different accounting natures (income vs friend refund, expense vs card
+     // settlement) can represent the same bank movement. Keep it pending.
+     const candidates=csvBankEvidenceMatches(t,state.transactions);
+     if(candidates.length)t.csvReviewMatchIds=candidates.map(x=>x.id);
      if(!csvImportedDuplicate(t,state.transactions)&&!csvImportedDuplicate(t,all))all.push(t);
     });
     return{all,invalid,duplicates:rows.length-invalid.length-all.length};
@@ -2099,7 +2130,13 @@ function importFile(file){
    $('#csvPreview').onclick=()=>{
     try{
      const result=build(),preview=$('#csvPreviewResult');
-     preview.innerHTML='<div class="empty-note" style="margin-top:14px"><b>'+result.all.length+' nouvelles opérations</b> · '+result.duplicates+' doublon(s) ignoré(s) · '+result.invalid.length+' ligne(s) invalide(s).</div>'+
+     const flagged=result.all.filter(t=>t.csvReviewMatchIds?.length);
+     preview.innerHTML='<div class="empty-note" style="margin-top:14px"><b>'+result.all.length+' lignes à vérifier</b> · '+result.duplicates+' doublon(s) déjà présents non réimportés · '+result.invalid.length+' ligne(s) invalide(s) · '+flagged.length+' rapprochement(s) possible(s).</div>'+
+      (flagged.length?'<div class="empty-note" role="status"><b>Vérification bancaire nécessaire</b> : certaines lignes ressemblent à des paiements de carte, remboursements ou autres mouvements déjà saisis. Rien n’est fusionné ni supprimé automatiquement.</div>'+
+       flagged.slice(0,5).map(t=>'<div class="empty-note">'+esc(t.date)+' · '+esc(t.name)+' : '+t.csvReviewMatchIds.map(id=>{
+        const matched=state.transactions.find(x=>x.id===id);
+        return matched?esc(matched.date+' · '+matched.name+' ('+matched.type+')'):'Opération à vérifier';
+       }).join(' / ')+'</div>').join(''):'')+
       result.all.slice(0,5).map(t=>'<div class="trace-list-btn"><span>'+esc(t.date)+' · '+esc(t.name)+'</span><b>'+window.TraceInternational.money(t.bankAmount,window.TraceInternational.currency(accts.find(a=>a.id===t.accountId)))+'</b></div>').join('')+
       (result.all.length?'<button class="primary full" id="csvCommit" style="margin-top:14px">Importer '+result.all.length+' opération(s) à vérifier</button>':'');
      if(!result.all.length)return;
@@ -2113,7 +2150,10 @@ function importFile(file){
         const account=accts.find(a=>a.id===t.accountId);
         const booked=t.bankCurrency==='CAD'?
          window.TraceInternational.resolveBooking({account,bankAmount:t.bankAmount,date:t.date}):null;
-        const item=booked?{...t,...booked,...traceSplit(me,booked.amountCAD)}:t;
+        const item=booked?{...t,...booked,...traceSplit(me,booked.amountCAD)}:{...t};
+        // Re-evaluate as imports can happen after the preview was opened.
+        const bankMatches=csvBankEvidenceMatches(item,state.transactions);
+        item.csvReviewMatchIds=bankMatches.map(x=>x.id);
         if(csvImportedDuplicate(item,state.transactions))continue;
         await saveDocument('transactions',item);state.transactions.push(item);saved++;
        }
