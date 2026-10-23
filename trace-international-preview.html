@@ -262,6 +262,28 @@
           </div>
         </details>
         <div id="importResult" style="margin-top:14px"></div>
+        <article class="card" id="traceDeferredSandbox" aria-label="Test fictif du débit différé" style="margin-top:16px" data-simulated="false">
+          <div class="eyebrow">Débit différé · démonstration isolée</div>
+          <h2 style="margin:5px 0 7px">Tester une échéance de 40 €</h2>
+          <p class="sub">Exemple fictif du 5 novembre 2026. Achat de 40 € en octobre, sans connexion à tes comptes. Aucun changement enregistré.</p>
+          <label style="display:block;margin:12px 0 7px">Montant réglé (€)
+            <input class="input" type="text" inputmode="decimal" id="traceDeferredAmount" value="12.35" aria-label="Montant fictif réglé en euros">
+          </label>
+          <label style="display:block;margin:7px 0"><input type="checkbox" id="traceDeferredPending"> Règlement encore en attente</label>
+          <label style="display:block;margin:7px 0"><input type="checkbox" id="traceDeferredFee"> Ajouter 2,30 € de frais de carte</label>
+          <label style="display:block;margin:7px 0"><input type="checkbox" id="traceDeferredRefund"> Ajouter 10,01 € de remboursement marchand</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">
+            <button id="traceDeferredRun" class="primary" type="button">Calculer</button>
+            <button id="traceDeferredReview" class="secondary" type="button">Revue fictive de la ligne</button>
+          </div>
+          <div class="grid grid-2" style="margin-top:10px">
+            <div class="statbox"><span>Dépense budgétaire nette</span><b id="traceDeferredBudget">—</b></div>
+            <div class="statbox"><span>Réglé et confirmé</span><b id="traceDeferredPaid">—</b></div>
+            <div class="statbox"><span>Dette restante</span><b id="traceDeferredRemaining">—</b></div>
+            <div class="statbox"><span>Effet compte courant</span><b id="traceDeferredBank">—</b></div>
+          </div>
+          <p id="traceDeferredMessage" role="status" aria-live="polite" class="sub" style="margin-top:12px">Simulation fictive uniquement.</p>
+        </article>
       </div>
     </section>
 
@@ -335,6 +357,9 @@
 <div id="traceSmartOverlay" class="trace-smart-overlay hidden"></div>
 
 <script src="trace-international-preview-fixtures-1.0.0.js"></script>
+<script src="trace-deferred-debit-1.0.0.js"></script>
+<script src="trace-deferred-bank-review-1.0.0.js"></script>
+<script src="trace-deferred-lab-ui-1.0.0.js"></script>
 <script src="trace-international-1.0.0.js"></script>
 <script src="trace-international-ui-1.0.0.js"></script>
 <script src="trace-email-confirmation-1.0.0.js"></script>
