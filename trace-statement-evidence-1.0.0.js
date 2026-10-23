@@ -8,7 +8,7 @@
  const validDate=value=>{
   const s=String(value??'').trim();
   let iso=s,match;
-  if((match=/^(\d{2})[/.](\d{2})[/.](\d{4})$/.exec(s)))
+  if((match=/^(\d{2})[/.\-](\d{2})[/.\-](\d{4})$/.exec(s)))
    iso=match[3]+'-'+match[2]+'-'+match[1];
   if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return null;
   const day=new Date(iso+'T12:00:00Z');
@@ -39,11 +39,20 @@
  // an extracted amount, date or excerpt that was edited after staging.
  const identity=row=>JSON.stringify([row.id,row.date,row.direction,row.amount,
   row.currency,row.name,row.rawText,row.accountId,row.documentId,row.page,row.line]);
+ // A document review covers the WHOLE staged statement, not just checked rows.
+ // Store a non-cryptographic snapshot for invalidating stale UI approvals.
+ const statementIdentity=staged=>JSON.stringify([
+  staged.documentId,staged.accountId,staged.currency,
+  staged.fromDate,staged.toDate,staged.totalRows,
+  staged.ready.map(x=>[x.index,x.evidenceKey,identity(x)]),
+  staged.issues.map(x=>[x.id,x.index,x.page,x.line,x.rawText,x.documentId,x.reason])
+ ]);
  function stage({documentId,accountId,currency,fromDate,toDate,rows}={}){
-  const code=String(currency||'').toUpperCase();
+  const code=String(currency||'').toUpperCase(),
+   startDate=validDate(fromDate),endDate=validDate(toDate);
   if(!String(documentId||'').trim()||!String(accountId||'').trim()||
     !['CAD','EUR','USD','GBP','CHF'].includes(code)||
-    !validDate(fromDate)||!validDate(toDate)||fromDate>toDate||
+    !startDate||!endDate||startDate>endDate||
     !Array.isArray(rows)||rows.length===0||rows.length>2000)
    throw Error('Document, compte, devise, période ou lignes du relevé invalides.');
   const ready=[],issues=[],seen=new Set();
@@ -58,7 +67,7 @@
    seen.add(id);
    const date=validDate(source?.date),name=String(source?.name||'').trim();
    if(!problem&&!date)problem='Date illisible ou impossible';
-   if(!problem&&(date<fromDate||date>toDate))problem='Date hors période du relevé';
+   if(!problem&&(date<startDate||date>endDate))problem='Date hors période du relevé';
    if(!problem&&String(source?.currency||code).toUpperCase()!==code)
     problem='Devise de ligne différente du compte';
    const hasDebit=source?.debit!==null&&source?.debit!==undefined&&
@@ -97,13 +106,23 @@
    const evidenceKey=identity(normalized);
    ready.push({...normalized,evidenceKey,reviewed:false});
   });
-  return{documentId:String(documentId),accountId:String(accountId),currency:code,
-   fromDate,toDate,ready,issues,totalRows:rows.length,
+  const staged={documentId:String(documentId),accountId:String(accountId),
+   currency:code,fromDate:startDate,toDate:endDate,ready,issues,totalRows:rows.length,
    writes:0,financialChanges:0};
+  staged.statementKey=statementIdentity(staged);
+  return staged;
  }
  function reviewedRows(staged,approvals=[]){
   if(!staged||!Array.isArray(staged.ready)||!Array.isArray(staged.issues)||
      !Array.isArray(approvals))throw Error('Révision du relevé invalide.');
+  const expected=staged.ready.length+staged.issues.length;
+  // Any changed bank account, date range, row count, row order or evidence
+  // invalidates approvals made against a previous document snapshot.
+  if(!staged.statementKey||expected!==staged.totalRows||
+     statementIdentity(staged)!==staged.statementKey)
+   return{status:'blocked',reason:'Le relevé a changé depuis sa préparation : repars de la source.',
+    issues:staged.issues.map(x=>({...x})),missingIds:[],unknownIds:[],
+    verifiedRows:[],writes:0,financialChanges:0};
   const given=new Map();
   for(const a of approvals){
    if(!a||typeof a.id!=='string'||given.has(a.id))
