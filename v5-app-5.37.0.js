@@ -2058,7 +2058,7 @@ function parseCsv(raw,sep){
 function inferCsvSep(line){const matches=[',',';','\t'].map(sep=>({sep,n:parseCsv(line,sep)[0]?.length||0}));return matches.sort((a,b)=>b.n-a.n)[0].sep;}
 function parseCsvMoney(raw){
  let s=String(raw??'').trim().replace(/\b(?:CAD|USD|EUR|GBP|CHF)\b/gi,'').replace(/[\u00a0\u202f\s$€£]/g,'');
- if(!s)return NaN;
+ if(!s||!/\d/.test(s)||(s.match(/[+-]/g)||[]).length>1||/\d[+-]\d/.test(s))return NaN;
  const negative=/^\(.*\)$/.test(s)||s.includes('-');s=s.replace(/[()\-+]/g,'');
  if(s.includes(',')&&s.includes('.'))s=s.lastIndexOf(',')>s.lastIndexOf('.')?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');
  else if(s.includes(','))s=/,\d{1,2}$/.test(s)?s.replace(',','.'):s.replace(/,/g,'');
