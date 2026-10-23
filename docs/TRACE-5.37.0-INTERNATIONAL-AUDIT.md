@@ -1075,3 +1075,14 @@ Commits du code et des tests : `1141b9e915fd1cfb97330d982805b5396a018305`, `f978
 - Accès protégé par **Vercel Authentication/SSO** sur le projet. L'API confirme le build READY mais la navigation externe n'a pas pu charger la page protégée : **aucun test navigateur de cette URL, ne pas annoncer Safari/iPhone validé**. L'utilisateur peut devoir se connecter avec son compte Vercel.
 - Le build inclut l'interface de laboratoire du débit différé. **Aucun déploiement de `main`, aucun domaine de production modifié, aucun accès à Supabase réel**, aucune migration. `deferred` reste désactivé sur le parcours de création réel.
 - **Important :** le(s) commit(s) documentaires enregistrant cette URL peuvent avancer le HEAD candidat au-delà de la SHA du build Vercel ; les seuls changements supplémentaires sont documentaires et ne sont pas déployés automatiquement (branche candidate désactivée dans `vercel.json`).
+
+
+## Lot de consolidation préproduction — éditeur descriptif étranger et portes de release (23 octobre 2026)
+
+- Départ HEAD `33366fcbaab07ee827db329047d5b38957c6f198`. `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` contrôlé inchangé.
+- Repérage : `editSmartBankMovement` est conçu pour CAD, alors que `editTransaction` pouvait aiguiller une dépense étrangère vers un formulaire hérité autorisant le changement du montant natif. Risque de modification du montant budgétaire historique dans une mauvaise devise.
+- Correctif dans `v5-app-5.37.0.js` : `editForeignExpenseMetadata` gère uniquement **nom et catégorie** des dépenses confirmées appartenant à l'utilisateur, après preuve d'un montant de banque natif, et bloque les autres modifications via le formulaire CAD. Un changement concurrent **dans l'état client local** bloque l'enregistrement et un échec de persistance ne modifie pas la transaction en mémoire. Aucune nouvelle estimation FX ni conversion fictive ; pas de correction du montant CAD ou du split.
+- Code `1fa6293ca3f820cc9b157676d8dbcae589bedb73`, nouveaux tests `649a15ad664a165383abdd0618e592c1260a4bec`, tous `[skip ci]`.
+- **53/53 contrôles ciblés en V8 simulé** : éditeur étranger 12, câblage 7, laboratoire 8, boot preview 7, règles financières 19. Les fichiers pertinents sont ceux lus directement sur GitHub après le commit. Aucun vrai Node CLI/CI, navigateur Safari, transactions Supabase ni base fictive distante. La campagne globale ancienne (633) n'a pas été relancée.
+- Nouveau document **`docs/TRACE-5.37.0-RELEASE-CHECKLIST.md`** : statut réel, limitations, définition de `GO` par tests natifs + Safari + système comptable intégré + preuves d'import + sécurité à deux + rollback. **Production NO-GO** à ce stade, à ne pas masquer par un build Vercel READY.
+- Développement et préversion indépendants de la production. Prochaine intervention prioritaire : compléter l'édition native + vérifier les opérations réelles dans un vrai grand livre fictif, sans accès financier réel, puis revue iPhone Safari.
