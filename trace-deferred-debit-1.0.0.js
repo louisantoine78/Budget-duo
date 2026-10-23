@@ -6,8 +6,10 @@
  * moves only when a CONFIRMED debit settles that purchase. Such a settlement
  * is a BANK TRANSFER, never another budget expense.
  *
- * Conservative phase-1 rule: one exact settlement per due-date batch; partial
- * settlements, checking-bank fees and FX legs are not inferred or auto-booked.
+ * Conservative phase-1: full settlements remain exact; partial settlements
+ * require an explicit due-date allocation and a human-reviewed bank line.
+ * This is a simulation, NOT verification of imported bank evidence. Checking
+ * fees, unknown FX legs and allocation across multiple dues stay blocked.
  * Merchant refunds before due date are explicit card credits/budget reversals.
  * Explicit confirmed card fees are distinct budget expenses/card liabilities.
  */
@@ -108,20 +110,48 @@
    if(!feesByDue.has(dueDate))feesByDue.set(dueDate,[]);
    feesByDue.get(dueDate).push(record);
   }
-  const settlementBatches=new Map(),settlementRecords=[];
+  const settlementBatches=new Map(),settlementRecords=[],sourceLines=new Set();
+  const settlementKeys=new Set(['id','amount','debitDate','purchaseIds',
+   'feeIds','status','cardAccountId','checkingAccountId','currency',
+   'type','settlementMode','allocationDueDate','bankEvidence']);
+  const evidenceKeys=new Set(['statementId','lineId','accountId',
+   'currency','direction','amount','debitDate','status','reviewed']);
   for(const s of settlements){
    const id=String(s?.id??'').trim(),minor=cents(s?.amount),
-    when=date(s?.debitDate),refs=s?.purchaseIds,feeRefs=s?.feeIds??[];
+    when=date(s?.debitDate),refs=s?.purchaseIds,feeRefs=s?.feeIds??[],
+    mode=s?.settlementMode??'full';
    if(!id||seen.has('s:'+id)||!when||minor===null||
       !['confirmed','pending'].includes(s.status)||
       s.cardAccountId!==card.id||s.checkingAccountId!==checking.id||
       String(s.currency).toUpperCase()!==currency||
       (s.type&&!['transfer','deferred_settlement'].includes(s.type))||
       s.feeAmount!==undefined||s.refundAmount!==undefined||
+      !['full','partial'].includes(mode)||
+      Object.keys(s).some(k=>!settlementKeys.has(k))||
       !Array.isArray(refs)||!Array.isArray(feeRefs)||
       (!refs.length&&!feeRefs.length))
     throw Error('Règlement différé invalide : montant, compte, statut ou justificatif.');
    seen.add('s:'+id);
+   // A partial payment must explicitly nominate ONE due batch and a matching
+   // bank-statement debit. Client-reviewed metadata is NOT bank certification.
+   if(mode==='partial'){
+    const e=s.bankEvidence;
+    if(s.allocationDueDate===undefined||!date(s.allocationDueDate)||
+       !e||typeof e!=='object'||Array.isArray(e)||
+       Object.keys(e).some(k=>!evidenceKeys.has(k))||
+       !String(e.statementId??'').trim()||!String(e.lineId??'').trim()||
+       e.accountId!==checking.id||
+       String(e.currency).toUpperCase()!==currency||
+       e.direction!=='debit'||cents(e.amount)!==minor||
+       e.debitDate!==when||e.status!==s.status||
+       e.reviewed!==(s.status==='confirmed'))
+     throw Error('Règlement partiel sans preuve bancaire explicite cohérente et revue.');
+    const key=JSON.stringify([checking.id,e.statementId,e.lineId]);
+    if(sourceLines.has(key))
+     throw Error('Ligne bancaire réutilisée pour plusieurs règlements.');
+    sourceLines.add(key);
+   }else if(s.allocationDueDate!==undefined||s.bankEvidence!==undefined)
+    throw Error('Mode de règlement complet avec champs partiels ambigus.');
    const uniqueRefs=new Set(refs),uniqueFees=new Set(feeRefs);
    if(uniqueRefs.size!==refs.length||uniqueFees.size!==feeRefs.length)
     throw Error('Un identifiant est cité deux fois dans le règlement.');
@@ -130,6 +160,8 @@
    if(lines.some(x=>!x)||feeLines.some(x=>!x))
     throw Error('Règlement lié à un achat ou des frais introuvables.');
    const due=lines[0]?.dueDate??feeLines[0].dueDate;
+   if(mode==='partial'&&s.allocationDueDate!==due)
+    throw Error('Échéance explicitement allouée différente du lot.');
    if(lines.some(x=>x.dueDate!==due||x.purchaseDate>when)||
       feeLines.some(x=>x.dueDate!==due||x.chargeDate>when))
     throw Error('Règlement lié à plusieurs échéances ou antérieur à une charge.');
@@ -143,12 +175,23 @@
     throw Error('Remboursement postérieur au règlement : rapprochement spécifique requis.');
    const total=batch.reduce((n,x)=>n+x.cents-creditedFor(x,when),0)+
     feeBatch.reduce((n,f)=>n+f.cents,0);
-   if(minor!==total)throw Error('Montant du règlement différent du net des achats à l’échéance.');
-   if(settlementBatches.has(due))
-    throw Error('Règlement répété sur la même échéance.');
-   settlementBatches.set(due,id);
+   if(mode==='full'&&minor!==total)
+    throw Error('Montant du règlement différent du net des achats à l’échéance.');
+   const existing=settlementBatches.get(due);
+   if(existing&&(mode!=='partial'||existing.mode!=='partial'))
+    throw Error('Règlement répété ou modes mélangés sur la même échéance.');
+   const group=existing||{mode,records:[],reservedCents:0};
+   if(group.reservedCents+minor>total)
+    throw Error('Total des règlements partiels supérieur au solde du lot.');
+   group.reservedCents+=minor;
    const settlement={id,debitDate:when,dueDate:due,cents:minor,
-    status:s.status,purchaseIds:refs.slice(),feeIds:feeRefs.slice()};
+    status:s.status,mode,purchaseIds:refs.slice(),feeIds:feeRefs.slice(),
+    bankSource:mode==='partial'?{
+     statementId:String(s.bankEvidence.statementId),lineId:String(s.bankEvidence.lineId),
+     reviewed:s.bankEvidence.reviewed
+    }:null};
+   group.records.push(settlement);
+   settlementBatches.set(due,group);
    settlementRecords.push(settlement);
   }
   const budgetByMonth=Object.create(null),spendItems=[],dueBatches=[];
@@ -194,19 +237,32 @@
     cardCredits=applicable.reduce((n,x)=>n+creditedFor(x,asOfDate),0),
     feeTotal=applicableFees.reduce((n,x)=>n+x.cents,0),
     total=gross-cardCredits+feeTotal,
-    matched=settlementRecords.find(s=>s.dueDate===due),
-    settled=!!(matched?.status==='confirmed'&&matched.debitDate<=asOfDate),
-    dueUnpaid=due<=asOfDate&&!settled&&total>0;
-   if(dueUnpaid)pendingDueCents+=total;
+    matched=settlementRecords.filter(s=>s.dueDate===due),
+    confirmed=matched.filter(s=>s.status==='confirmed'&&s.debitDate<=asOfDate),
+    pending=matched.filter(s=>s.status==='pending'&&s.debitDate<=asOfDate),
+    confirmedCents=confirmed.reduce((n,s)=>n+s.cents,0),
+    remaining=total-confirmedCents,
+    hasPending=pending.length>0,
+    dueUnpaid=due<=asOfDate&&remaining>0;
+   if(remaining<0)
+    throw Error('Solde différé impossible : règlement excédentaire par échéance.');
+   if(dueUnpaid)pendingDueCents+=remaining;
+   const paid=confirmedCents>0,complete=remaining===0;
    dueBatches.push({dueDate:due,amount:amount(total),grossAmount:amount(gross),
     confirmedRefunds:amount(cardCredits),confirmedFees:amount(feeTotal),currency,
     feeIds:applicableFees.map(x=>x.id),
     purchaseIds:applicable.map(x=>x.id),
-    status:settled?'settled':!total?'cleared_by_refund':
-     matched?.status==='pending'?'pending_review':
+    paidAmount:amount(confirmedCents),remainingAmount:amount(remaining),
+    pendingAmount:amount(pending.reduce((n,s)=>n+s.cents,0)),
+    confirmedSettlementIds:confirmed.map(s=>s.id),
+    pendingSettlementIds:pending.map(s=>s.id),
+    status:complete?(paid?'settled':'cleared_by_refund'):
+     paid?(hasPending?'partially_settled_pending_review':'partially_settled'):
+     hasPending?'pending_review':
      dueUnpaid?'overdue':'scheduled',
-    actualDebitDate:matched?.debitDate??null,
-    confirmedSettlementId:settled?matched.id:null});
+    actualDebitDate:confirmed.length?
+     confirmed.map(s=>s.debitDate).sort().slice(-1)[0]:null,
+    confirmedSettlementId:complete&&confirmed.length===1?confirmed[0].id:null});
   }
   dueBatches.sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
   return{cardAccountId:card.id,checkingAccountId:checking.id,currency,asOfDate,
@@ -221,7 +277,9 @@
    bankTransfers:settlementRecords.filter(s=>s.status==='confirmed'&&s.debitDate<=asOfDate)
     .map(s=>({id:s.id,accountId:checking.id,toAccountId:card.id,
      debitDate:s.debitDate,amount:amount(s.cents),currency,
-     budgetExpense:false,budgetIncome:false,internalTransfer:true})),
+     budgetExpense:false,budgetIncome:false,internalTransfer:true,
+     dueDate:s.dueDate,settlementMode:s.mode,
+     bankSource:s.bankSource})),
    writes:0,financialChanges:0};
  }
  root.TraceDeferredDebit=Object.freeze({simulate});
