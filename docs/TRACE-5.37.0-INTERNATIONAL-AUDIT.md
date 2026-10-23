@@ -413,3 +413,43 @@ Fichiers réellement lus depuis le dépôt GitHub puis exécutés dans le harnai
 2. Afficher clairement les remboursements à attribuer et les incohérences historiques dans Activité → Partage ; contrôler les scénarios où un remboursement de tiers paie plusieurs débiteurs.
 3. Tester les croisements réels sur données **fictives** : crédit/courant, conversions historiques, rapprochements bancaires, remboursements commerçants et parts du couple.
 4. Compléter les étapes suivantes (Activité, Imports/PDF, Patrimoine) puis autoriser séparément toute fusion/déploiement.
+
+
+## Phase 1 — Éditeur mobile des parts de proches (23 octobre 2026)
+
+Développement **exclusivement** sur `trace-5.37.0-international-accounts-fx` ; aucune modification de `main`, de l'environnement de production, du service worker stable, du manifeste stable, des données Supabase réelles, ni déploiement ou fusion.
+
+### Changement de saisie dans la candidate
+
+- Ajout du module `trace-friend-debtor-ui-1.0.0.js` (sans réseau ni écriture) qui monte, à l'ouverture des formulaires, des lignes explicites **prénom + montant CAD** avec contrôles ajouter/retirer, somme totale et restant à attribuer affichés en temps réel.
+- Les inputs utilisent `inputmode=decimal`, une taille de police de 16px afin d'éviter le zoom Safari, des cibles tactiles d'au moins 44px et une grille repliable sur une seule colonne aux petites largeurs iPhone.
+- L'éditeur préserve la saisie active (pas de re-render sur chaque touche), les montants précédemment saisis, et préremplit les avances déjà enregistrées. Le passage d'un prénom unique à plusieurs personnes est explicite ; une personne restante peut repasser au champ unique si elle doit toute la part des amis.
+- **Trois formulaires de `v5-app-5.37.0.js`** utilisent ce module : création manuelle d'une dépense partagée, modification d'un mouvement bancaire importé et modification d'une transaction. La liste multilignes initiale devient un champ `textarea` caché, conservé comme pont de compatibilité vers `friendDebtorFields` et le moteur `validateFriendDebtorShares`. Aucune structure bancaire, nature de mouvement ou transaction n'est recréée par l'interface.
+- Styles limités au CSS de la candidate `trace-international-1.0.0.css` ; script explicitement chargé dans `trace-international-preview.html` **avant** `v5-app-5.37.0.js`. La production `index.html` n'active ni l'éditeur ni les scripts candidats.
+- Compatible avec les anciens enregistrements `friendDebtorName` (un prénom) et le nouveau champ optionnel `friendDebtorShares` (plusieurs prénoms). Le calcul budgétaire Moi/Partenaire/Couple demeure inchangé. Les opérations de remboursement gardent leur seul identifiant bancaire et restent protégées contre les surremboursements.
+
+### Commits
+
+1. `c7b13521cb2bb68130805db5b6c827a50208ad20` : module autonome de saisie tactile ;
+2. `a59095387c4fb18f3ced7aaa95ba73b8b1778996` : branchement des trois éditeurs ;
+3. `e50258fe0b747d869a65a4cc38123f5d127fe265` : styles mobiles et cibles tactiles ;
+4. `8f545cf2350fea89adfbb8ef8c07d0e620a792f6` : chargement du script dans le laboratoire fictif ;
+5. `d5c2853dce0189e9886689eb23f90b6ef09320cf` : quatre tests du composant (montage, ajout, saisie, préremplissage) ;
+6. `89a0d89837b66ef1c16092f6ed87a835f256091c` : inclusion de la suite dans le workflow futur **sans déclenchement automatique sur la branche**.
+
+### Tests après modifications
+
+Tests exécutés à partir des versions réelles des fichiers GitHub, dans un harnais V8 avec **émulation partielle de certaines API Node et DOM**, exclusivement sur données fictives :
+
+- candidate 5.37.0 : **198 contrôles réussis sur 17 suites** ;
+- référence stable 5.36.5 : **232 contrôles réussis sur 5 suites** ;
+- laboratoire / boot fictif : **15 contrôles réussis sur 2 suites** ;
+- **total : 445 contrôles isolés réussis sur 24 suites**, aucun échec dans les dernières exécutions.
+
+Les tests ne sont **ni une exécution CLI Node dans un clone du dépôt, ni GitHub Actions, ni un vrai navigateur, ni Safari iPhone réel**. Le rendu tactile, l'accessibilité VoiceOver, les claviers iOS et les mutations de DOM réelles restent à vérifier dans une prévisualisation explicitement autorisée, sans données bancaires réelles.
+
+### Dépendances pour la suite
+
+1. Exécuter un vrai parcours de saisie mobile sur Safari iPhone isolé et vérifier la navigation au clavier, les lignes à retirer, les nombres décimaux et les erreurs de répartition.
+2. Poursuivre les scénarios financiers croisés (compte courant, crédit, frais FX, remboursements commerçants, partage et rapprochements), puis préparer l'espace Activité → Partage validé.
+3. Conserver l'interdiction de fusion, déploiement, réinitialisation ou écriture Supabase sans instruction explicite de mise en production.
