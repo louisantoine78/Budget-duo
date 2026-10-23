@@ -115,6 +115,73 @@ test('approval becomes invalid when page or raw excerpt changes after staging',(
  staged.ready[0].page=2;
  assert.equal(E.reviewedRows(staged,ok).status,'blocked');
 });
+test('changing the reviewed bank account invalidates approval',()=>{
+ const staged=single(),ok=approvals(staged);
+ staged.accountId='other';
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
+test('changing the reviewed currency invalidates approval',()=>{
+ const staged=single(),ok=approvals(staged);
+ staged.currency='EUR';
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
+test('changing the statement date range invalidates approval',()=>{
+ const staged=single(),ok=approvals(staged);
+ staged.fromDate='2026-10-02';
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+ staged.fromDate='2026-10-01';
+ staged.toDate='2026-10-30';
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
+test('changing the document identity invalidates approval',()=>{
+ const staged=single(),ok=approvals(staged);
+ staged.documentId='some-other-statement';
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
+test('removing a reviewed transaction from the staged document blocks completeness',()=>{
+ const staged=E.stage({...meta,rows:[
+  line(1,1,'15/10/2026',{debit:'25,00'}),
+  line(1,2,'16/10/2026',{debit:'40,00'})
+ ]}),ok=approvals(staged);
+ staged.ready.pop();
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+ assert.equal(E.reviewedRows(staged,ok).verifiedRows.length,0);
+});
+test('dropping an unreadable extracted line cannot make document complete',()=>{
+ const staged=E.stage({...meta,rows:[
+  line(1,1,'15/10/2026',{debit:'25,00'}),
+  line(1,2,'16/10/2026',{debit:'unreadable'})
+ ]}),ok=approvals(staged);
+ assert.equal(staged.issues.length,1);
+ staged.issues.length=0;
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
+test('reordering rows after review invalidates document integrity',()=>{
+ const staged=E.stage({...meta,rows:[
+  line(1,1,'15/10/2026',{debit:'25,00'}),
+  line(1,2,'16/10/2026',{debit:'40,00'})
+ ]}),ok=approvals(staged);
+ staged.ready.reverse();
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
+test('altered declared line count invalidates review',()=>{
+ const staged=single(),ok=approvals(staged);
+ staged.totalRows=2;
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
+test('unprepared document cannot be approved by constructing matching rows only',()=>{
+ const staged=single(),ok=approvals(staged);
+ delete staged.statementKey;
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
+test('French hyphenated period and transaction dates are normalized to ISO',()=>{
+ const staged=E.stage({...meta,fromDate:'01-10-2026',toDate:'31-10-2026',
+  rows:[line(1,1,'15-10-2026',{debit:'42,50'})]});
+ assert.equal(staged.fromDate,'2026-10-01');
+ assert.equal(staged.toDate,'2026-10-31');
+ assert.equal(staged.ready[0].date,'2026-10-15');
+ assert.equal(E.reviewedRows(staged,approvals(staged)).status,'reviewed');
+});
 test('mixed valid/invalid extracted lines must block the whole completeness report',()=>{
  const s=E.stage({...meta,rows:[
   line(1,1,'15/10/2026',{debit:'20,00'}),
