@@ -54,9 +54,49 @@ const total=cents(amount);if(!Number.isSafeInteger(total)||total<=0)throw Error(
 const share=def.budget==='none'?{la:0,partner:0,couple:0,friends:0}:amounts(amount,def.budget==='income'?mine:who,mine,defaultSplit,friend,other);
 const sign=def.budget==='refund'?-1:1;return{kind,bank:total/100*def.direction,budget:{la:share.la*sign,partner:share.partner*sign,couple:share.couple*sign},friends:share.friends,budgetType:def.budget};
 };
+
+// Optional multi-allocation on ONE incoming bank transaction.
+// Legacy relatedExpenseId remains readable; no migration or new bank transaction.
+const repaymentLines=t=>{
+ if(t?.type!=='external_refund'||t?.transferPurpose!=='friend_reimbursement')return[];
+ if(Array.isArray(t.repaymentAllocations)&&t.repaymentAllocations.length)
+  return t.repaymentAllocations.map(x=>({expenseId:String(x.expenseId||''),amountCAD:Number(x.amountCAD)}));
+ return t.relatedExpenseId?[{expenseId:String(t.relatedExpenseId),amountCAD:Number(t.amountCAD)}]:[];
+};
+const paidForExpense=(transactions,expenseId,excluding='')=>(transactions||[])
+ .filter(t=>t.id!==excluding&&t.status==='confirmed')
+ .reduce((total,t)=>{
+  const lines=repaymentLines(t).filter(line=>line.expenseId===expenseId);
+  if(lines.some(line=>!Number.isSafeInteger(cents(line.amountCAD))||cents(line.amountCAD)<=0))return Infinity;
+  return total+lines.reduce((amount,line)=>amount+cents(line.amountCAD),0);
+ },0);
+const validateRepaymentAllocations=(lines,expenses,transactions,owner,date,bankAmount,excluding='')=>{
+ if(!Array.isArray(lines)||!lines.length)throw Error('Choisis au moins une avance à rembourser.');
+ const bankCents=cents(bankAmount);
+ if(!Number.isSafeInteger(bankCents)||bankCents<=0)throw Error('Montant bancaire du remboursement invalide.');
+ const seen=new Set(),normalized=[];
+ let allocated=0;
+ for(const line of lines){
+  const expenseId=String(line?.expenseId||''),amount=cents(line?.amountCAD);
+  if(!expenseId||seen.has(expenseId))throw Error('Chaque avance ne peut apparaître qu’une fois.');
+  if(!Number.isSafeInteger(amount)||amount<=0)throw Error('Montant affecté à une avance invalide.');
+  const source=(expenses||[]).find(t=>t.id===expenseId&&t.status==='confirmed'&&
+   ['expense','group_expense'].includes(t.type)&&t.payerId===owner&&t.beneficiary==='custom'&&
+   String(t.date||'')<=String(date||'')&&Number(t.splitAmounts?.friends)>0);
+  if(!source)throw Error('Dépense avancée introuvable, non confirmée ou postérieure au remboursement.');
+  const available=cents(source.splitAmounts.friends)-paidForExpense(transactions,expenseId,excluding);
+  if(!Number.isSafeInteger(available)||amount>available)throw Error('Le remboursement dépasse la part des amis encore due sur cette avance.');
+  seen.add(expenseId);allocated+=amount;
+  if(!Number.isSafeInteger(allocated)||allocated>bankCents)throw Error('Les associations dépassent le virement bancaire reçu.');
+  normalized.push({expenseId,amountCAD:amount/100});
+ }
+ if(allocated!==bankCents)throw Error('La somme des avances remboursées doit correspondre exactement au virement bancaire reçu.');
+ return normalized;
+};
+
 function linkable(expenses,transactions,owner,date,amount,excluding=''){
 return (expenses||[]).filter(t=>t.id!==excluding&&t.status==='confirmed'&&['expense','group_expense'].includes(t.type)&&t.payerId===owner&&t.beneficiary==='custom'&&String(t.date||'')<=String(date||'')&&Number(t.splitAmounts?.friends)>0).map(t=>{
-const paid=(transactions||[]).filter(x=>x.id!==excluding&&x.status==='confirmed'&&x.relatedExpenseId===t.id&&x.type==='external_refund'&&x.transferPurpose==='friend_reimbursement').reduce((n,x)=>n+cents(x.amountCAD),0);
+const paid=paidForExpense(transactions,t.id,excluding);
 const remaining=Math.max(0,cents(t.splitAmounts.friends)-paid);return{id:t.id,label:t.name||'Dépense avancée',date:t.date,remaining:remaining/100,allowed:remaining>=cents(amount)};
 }).filter(t=>t.remaining>0);
 }
@@ -66,5 +106,5 @@ const match=linkable(expenses,transactions,owner,date,amount,excluding).find(x=>
 if(!match||!match.allowed)throw Error('Le remboursement dépasse la part des amis disponible ou la dépense n’est pas admissible.');
 return id;
 }
-root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,linkable,validateLink});
+root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,repaymentLines,paidForExpense,validateRepaymentAllocations,linkable,validateLink});
 })(typeof window!=='undefined'?window:globalThis);
