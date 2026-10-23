@@ -57,5 +57,6 @@ jobs:
           node tests/trace-international-friend-sharing-ui.test.cjs
           node tests/trace-international-multi-debtors.test.cjs
           node tests/trace-international-friend-rows.test.cjs
+          node tests/trace-international-card-friend-cycle.test.cjs
           node tests/trace-international-lab.test.cjs
           node tests/trace-international-preview-boot.test.cjs
