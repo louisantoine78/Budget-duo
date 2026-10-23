@@ -155,7 +155,7 @@
  // ledger document remains the sole source of both bank legs; budget is neutral.
  // Dates and bank account IDs deliberately cannot change in this first editor.
  const resolveTransferEdit=({transaction,from,to,bankAmount,receivedAmount,quote=null,
-  originalCurrency=null,originalAmount=null,name=null}={})=>{
+  originalCurrency=null,originalAmount=null,name=null,feeAmount=null}={})=>{
   if(!transaction||transaction.type!=='transfer'||transaction.status!=='confirmed')
    throw Error('Seul un transfert confirmé peut être modifié ici');
   if(!from||!to||from.id!==transaction.accountId||to.id!==transaction.toAccountId||
@@ -173,9 +173,16 @@
    (originalCode===bankCode?bankAmount:null):originalAmount;
   const booking=resolveBooking({account:from,bankAmount,originalCurrency:originalCode,
    originalAmount:original,quote,date:transaction.date});
-  const nextName=name===null?String(transaction.name||''):String(name||'').trim();
+  // Optional documented bank fee is INCLUDED in the actual amount debited,
+   // never a second bank movement or a consumption-budget expense.
+   const feeInput=feeAmount===null?(transaction.transferFeeAmount??0):feeAmount;
+   const fee=feeInput===''?0:Number(feeInput);
+   if(!Number.isFinite(fee)||fee<0||fee>booking.bankAmount)
+    throw Error('Frais de virement invalides : ils sont inclus dans le montant débité');
+   const nextName=name===null?String(transaction.name||''):String(name||'').trim();
   if(nextName.length<2||nextName.length>85)throw Error('Libellé bancaire invalide');
-  const next={...transaction,...booking,name:nextName,toBankAmount:round(received)};
+  const next={...transaction,...booking,name:nextName,toBankAmount:round(received),
+    transferFeeAmount:round(fee),transferFeeCurrency:bankCode,transferFeeIncludedInDebit:true};
   // The same transfer is never a new expense or income. Preserve historical
   // link IDs and all user allocations; only change native legs and FX metadata.
   if(Number(transaction.bankAmount??transaction.amountCAD)!==next.bankAmount||
