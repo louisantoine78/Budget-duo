@@ -100,6 +100,21 @@ test('an outdated approval cannot be transferred to altered amount or evidence',
  const changedExcerpt=single({rawText:'Other original excerpt'});
  assert.equal(E.reviewedRows(changedExcerpt,ok).status,'blocked');
 });
+test('approval becomes invalid when staged amount is edited after review',()=>{
+ const staged=single(),ok=approvals(staged);
+ staged.ready[0].amount=999.99;
+ const verdict=E.reviewedRows(staged,ok);
+ assert.equal(verdict.status,'blocked');
+ assert.equal(verdict.verifiedRows.length,0);
+});
+test('approval becomes invalid when page or raw excerpt changes after staging',()=>{
+ const staged=single(),ok=approvals(staged);
+ staged.ready[0].rawText='Changed excerpt from another page';
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+ staged.ready[0].rawText='Original PDF page 1 / ligne 1';
+ staged.ready[0].page=2;
+ assert.equal(E.reviewedRows(staged,ok).status,'blocked');
+});
 test('mixed valid/invalid extracted lines must block the whole completeness report',()=>{
  const s=E.stage({...meta,rows:[
   line(1,1,'15/10/2026',{debit:'20,00'}),
