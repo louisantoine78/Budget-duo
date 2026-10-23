@@ -50,5 +50,8 @@ jobs:
           node tests/trace-international-financial-guards.test.cjs
           node tests/trace-international-bank-investment.test.cjs
           node tests/trace-international-native-flow.test.cjs
+          node tests/trace-international-friend-allocations.test.cjs
+          node tests/trace-international-manual-repayments.test.cjs
+          node tests/trace-international-imported-repayments.test.cjs
           node tests/trace-international-lab.test.cjs
           node tests/trace-international-preview-boot.test.cjs
