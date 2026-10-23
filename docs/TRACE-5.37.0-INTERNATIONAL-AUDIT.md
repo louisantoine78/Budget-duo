@@ -959,3 +959,16 @@ Après la consignation du résultat partiel ci-dessus, la limite d'appels initia
 **Détail d'exécution 5.37.0 :** dix suites initiales (148), huit suites avances/carte/partage (91), sept suites import/relevé/débit différé (147). La nouvelle suite débit différé passe **35/35** contrôles.
 
 Cet addendum **remplace le caractère incomplet du bilan intermédiaire 415/415**, sans prétendre qu'une CI GitHub Actions, un checkout natif Node ou un navigateur Safari ont été exécutés. Aucune écriture réelle, aucun déploiement et aucune activation du modèle différé ne sont intervenus. L'interdiction de fusion vers main et la validation séparée de l'intégration UX/iPhone restent en vigueur.
+
+
+## Phase 1 — crédits commerçants avant échéance, lot isolé (23 octobre 2026)
+
+**Branche autorisée seule :** `trace-5.37.0-international-accounts-fx`. Départ : `e975beb7f5239ad79fa365721edcdfdd9dcf1e7d`. Commits code : `bea4f0d392ef382e50c8c83b1f4941d7c94d22e4` ; tests : `6c7cb6310241f0186e6c2bb6f14ddc1b7e4c3824`. Tous les commits portent `[skip ci]`. Aucune modification `main`, aucun déploiement, aucune écriture Supabase, aucun workflow lancé.
+
+- Moteur isolé `trace-deferred-debit-1.0.0.js` : paramètre optionnel `refunds` (compatibilité des anciens appels). Un remboursement marchand **confirmé**, natif à la carte, rattaché à un achat confirmé, daté et avant échéance, diminue la dette de carte et la dépense budgétaire sur une date budgétaire explicite. Ne débite pas le compte courant et n'est jamais un salaire.
+- Remboursements `pending` conservés hors des calculs. Plusieurs remboursements par achat possibles seulement si leur total, au centime exact, ne dépasse jamais le montant initial. La régularisation complète du lot tient compte des remboursements confirmés préalables. Un lot totalement remboursé devient `cleared_by_refund` sans transfert.
+- Règles conservatrices **encore bloquées** : remboursement après échéance ou postérieur au règlement bancaire, frais/taxes propres au remboursement, paiement bancaire partiel, paiement sur plusieurs échéances, frais bancaires de règlement et FX. Aucun remboursement n'est inféré à partir de l'import. Le moteur n'est relié ni au grand livre ni à l'application.
+- Correction du `-0` de `checkingBalanceChange` quand aucun règlement n'est passé, afin de satisfaire une assertion numérique stricte.
+- QA : **48/48** scénarios de la suite spécialisée exécutés dans le banc **JavaScript V8 avec modules Node simulés** : les 35 scénarios antérieurs et 13 nouveaux. Aucun test Node CLI réel, CI, navigateur Safari, PWA offline, Supabase ou imports complets n'a été exécuté. Les autres 31 suites n'ont **pas** été rejouées pendant ce lot ; le précédent 633/633 reste une référence historique, et non le bilan nouveau.
+
+**Prochain lot :** auditer et simuler les frais sur relevé différé (séparer frais de la transaction initiale et frais de règlement), puis décider et tester un modèle prudent pour règlements partiels et provenance des paiements importés. Garder l'option `deferred` désactivée.
