@@ -32,5 +32,9 @@ test('pending transfer never suppresses bank leg',()=>{
  const op={bankAccountId:'cad',type:'deposit',date:'2026-10-12',bankAmountCAD:300,linkedTransactionId:'wire'};
  assert.equal(estimate(CAD,1000,[tx],[op]),700);
 });
-test('foreign investment link is guarded until native editor',()=>assert.ok(app.includes('la liaison bancaire est bloquée')));
+test('foreign investment link requires explicit bank-native amount',()=>{
+ assert.ok(app.includes("bankRaw=$('#invBankCad').value.trim()"));
+ assert.ok(app.includes('bankCurrency,bankAmount,bankAmountCAD'));
+ assert.ok(!app.includes('la liaison bancaire est bloquée'));
+});
 console.log(count+' bank-native investment tests passed');
