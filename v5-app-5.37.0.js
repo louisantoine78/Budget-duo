@@ -1204,6 +1204,69 @@ function editForeignFriendRepayment(t){
  render();
 }
 
+
+/* Edit native-currency expense metadata without rewriting bank amounts or FX. */
+function editForeignExpenseMetadata(t){
+ const account=state.accounts.find(a=>a.id===t?.accountId),I=window.TraceInternational;
+ if(!t||!account||account.owner!==me||I.currency(account)==='CAD'||
+    t.type!=='expense'||t.status!=='confirmed'||t.toAccountId){
+  openSheet('Dépense étrangère à vérifier',
+   '<p class="empty-note">Cette opération ne peut pas être éditée par le formulaire simplifié. Aucun changement financier effectué.</p>'+
+   '<button class="secondary full" id="traceForeignMetaCancel">Fermer</button>');
+  $('#traceForeignMetaCancel').onclick=closeSheet;return;
+ }
+ const before=JSON.stringify(t),native=I.amountOnAccount(t,account),
+  categories=state.categories.filter(c=>c.type==='expense'&&!c.archived),
+  currency=I.currency(account);
+ if(native===null||!Number.isFinite(Number(native))||Number(native)<=0){
+  openSheet('Montant natif à vérifier',
+   '<p class="empty-note">Le montant bancaire de cette dépense est incomplet. Vérifie son import avant de modifier ses informations.</p>'+
+   '<button class="secondary full" id="traceForeignMetaCancel">Fermer</button>');
+  $('#traceForeignMetaCancel').onclick=closeSheet;return;
+ }
+ openSheet('Modifier une dépense internationale',
+  '<p class="trace-edit-lead">Modifie seulement la description et la catégorie. Montant, compte, date, devise et taux historique restent strictement inchangés.</p>'+
+  '<div class="empty-note">'+esc(shortAccountLabel(account))+' · '+esc(t.date)+
+   ' · '+esc(I.money(native,currency))+' · CAD historique conservé</div>'+
+  '<label class="label2" for="traceForeignMetaName">Description</label>'+
+  '<input id="traceForeignMetaName" class="input" maxlength="85" value="'+esc(t.name||'')+'">'+
+  '<label class="label2" for="traceForeignMetaCategory">Catégorie</label>'+
+  '<select id="traceForeignMetaCategory" class="input">'+
+   '<option value="">Choisir une catégorie</option>'+
+   categories.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===t.categoryId?' selected':'')+'>'+esc(c.name)+'</option>').join('')+
+  '</select>'+
+  '<p class="trace-intl-help">La répartition Moi/Couple/Proches et la valorisation CAD enregistrées ne sont pas modifiées.</p>'+
+  '<p id="traceForeignMetaError" class="trace-bank-setup-error" role="alert"></p>'+
+  '<button type="button" class="primary full" id="traceForeignMetaSave">Enregistrer les informations</button>'+
+  '<button type="button" class="secondary full" id="traceForeignMetaCancel">Annuler</button>');
+ $('#traceForeignMetaCancel').onclick=closeSheet;
+ $('#traceForeignMetaSave').onclick=async()=>{
+  const name=String($('#traceForeignMetaName').value||'').trim(),
+   categoryId=String($('#traceForeignMetaCategory').value||''),
+   error=$('#traceForeignMetaError'),button=$('#traceForeignMetaSave');
+  if(name.length<2||name.length>85||
+     !state.categories.some(c=>c.id===categoryId&&c.type==='expense'&&!c.archived)){
+   error.textContent='Renseigne une description et une catégorie de dépense valides.';return;
+  }
+  if(state.transactions.find(x=>x.id===t.id)!==t||JSON.stringify(t)!==before||
+     state.accounts.find(a=>a.id===account.id)!==account||
+     account.owner!==me||I.currency(account)!==currency){
+   error.textContent='La dépense ou le compte a changé : ferme puis rouvre la fiche.';return;
+  }
+  if(t.name===name&&t.categoryId===categoryId){closeSheet();return;}
+  const next={...t,name,categoryId};
+  button.disabled=true;
+  try{
+   await saveDocument('transactions',next);
+   Object.assign(t,next);
+   closeSheet();renderAll();navigate('activity');showTab('transactions');
+  }catch(e){
+   button.disabled=false;
+   error.textContent='Enregistrement impossible. Aucune modification locale appliquée.';
+  }
+ };
+}
+
 function editSmartBankMovement(t,requestedKind='',initialDraft=null){
  const originalAccount=state.accounts.find(a=>a.id===t.accountId);
  const oldDestination=state.accounts.find(a=>a.id===t.toAccountId);
@@ -1220,6 +1283,10 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
     (oldDestination&&window.TraceInternational.currency(oldDestination)!=='CAD')){
   if(t.type==='transfer'&&t.toAccountId&&t.status==='confirmed'){
    editInternationalTransfer(t);return;
+  }
+  if(originalAccount&&originalAccount.owner===me&&
+     t.type==='expense'&&t.status==='confirmed'&&!t.toAccountId){
+   editForeignExpenseMetadata(t);return;
   }
   openSheet('Mouvement international à préserver',
    '<p class="empty-note">Cette opération est enregistrée dans sa devise native. Sa modification n’est pas encore ouverte car un changement de montant pourrait fausser les soldes ou le taux historique.</p>'+
@@ -1606,6 +1673,21 @@ function editTransaction(id,validating=false){
  }
  if(['external_transfer','external_refund'].includes(t.type)||t.type==='transfer'){editSmartBankMovement(t);return;}
  if(!['expense','income','refund'].includes(t.type)){openSheet('Opération','<div class="empty-note">Cette opération spéciale peut être supprimée mais pas transformée automatiquement.</div><button class="secondary full trace-danger" id="specialRemove">Supprimer</button>');$('#specialRemove').onclick=()=>deleteTransaction(t);return;}
+
+ const foreignAccount=state.accounts.find(a=>a.id===t.accountId);
+ if(foreignAccount&&window.TraceInternational.currency(foreignAccount)!=='CAD'&&
+    ['expense','income','refund'].includes(t.type)){
+  if(t.type==='expense'&&t.status==='confirmed'&&
+     foreignAccount.owner===me&&!t.toAccountId)
+   editForeignExpenseMetadata(t);
+  else{
+   openSheet('Opération internationale à vérifier',
+    '<p class="empty-note">Cette écriture requiert une validation dans sa devise native. Aucun montant ni taux historique n’a été modifié.</p>'+
+    '<button class="secondary full" id="traceForeignEditClose">Fermer</button>');
+   $('#traceForeignEditClose').onclick=closeSheet;
+  }
+  return;
+ }
 
  const accounts=[...visibleBankAccounts(me),...state.accounts.filter(a=>a.id===t.accountId&&!visibleBankAccounts(me).some(v=>v.id===a.id))];
  const displayEditDate=value=>{
