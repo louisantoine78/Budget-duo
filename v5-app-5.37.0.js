@@ -1281,9 +1281,7 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
      shares=who==='custom'?traceCustomShares(amount,$('#smartMovementFriends').value,$('#smartMovementPartner').value):
       {beneficiary:who,...traceSplit(who,amount)};
     }else shares={beneficiary:me,...traceSplit(me,amount)};
-    const received=state.transactions.filter(x=>x.status==='confirmed'&&x.relatedExpenseId===t.id&&
-     x.type==='external_refund'&&x.transferPurpose==='friend_reimbursement')
-     .reduce((sum,x)=>sum+Math.round(Number(x.amountCAD)*100),0);
+    const received=window.TraceMovement.paidForExpense(state.transactions,t.id);
     if(received>0&&Math.round(Number(shares.splitAmounts?.friends||0)*100)<received){
      throw Error('Cette dépense possède des remboursements liés. Tu dois conserver au moins la part des amis déjà remboursée.');
     }
@@ -1579,8 +1577,7 @@ function editTransaction(id,validating=false){
    sharing=beneficiary==='custom'?traceCustomShares(booking.amountCAD,$('#txFriendsAmount').value,$('#txPartnerAmount').value):
     {beneficiary,...traceSplit(beneficiary,booking.amountCAD)};
   }catch(e){$('#traceFeedback').textContent=e.message;return;}
-  const received=state.transactions.filter(x=>x.status==='confirmed'&&x.relatedExpenseId===t.id&&x.type==='external_refund'&&x.transferPurpose==='friend_reimbursement')
-    .reduce((sum,x)=>sum+Math.round(Number(x.amountCAD)*100),0);
+  const received=window.TraceMovement.paidForExpense(state.transactions,t.id);
    if(received>0&&Math.round(Number(sharing.splitAmounts?.friends||0)*100)<received){
      $('#traceFeedback').textContent='Cette dépense possède déjà des remboursements liés. La part des amis ne peut pas devenir inférieure aux remboursements reçus.';return;
    }
@@ -1595,7 +1592,7 @@ function editTransaction(id,validating=false){
 }
 function deleteTransaction(t){
  if(requireCardEvidenceUnlink(t))return;
- if(state.transactions.some(x=>x.relatedExpenseId===t.id&&x.status==='confirmed')){
+ if(state.transactions.some(x=>x.status==='confirmed'&&window.TraceMovement.repaymentLines(x).some(line=>line.expenseId===t.id))){
   openSheet('Remboursements encore liés','<p class="empty-note">Cette dépense est liée à un ou plusieurs remboursements confirmés. Modifie d’abord ces remboursements pour retirer leur lien avant de supprimer la dépense d’origine.</p><button class="secondary full" id="linkedExpenseBack">Retour</button>');
   $('#linkedExpenseBack').onclick=closeSheet;return;
  }
