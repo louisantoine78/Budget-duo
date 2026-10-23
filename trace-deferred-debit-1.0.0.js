@@ -46,6 +46,8 @@
       !date(p?.budgetDate)||!date(p?.dueDate)||minor===null||
       p.purchaseDate>p.dueDate||p.budgetDate>p.dueDate||
       p.cardAccountId!==card.id||String(p.currency).toUpperCase()!==currency||
+      (p.type&&!['expense','deferred_purchase'].includes(p.type))||
+      p.refundAmount!==undefined||p.feeAmount!==undefined||
       p.status&&p.status!=='confirmed')
     throw Error('Achat différé ambigu : date, montant, devise, statut ou identifiant.');
    seen.add('p:'+id);
@@ -55,14 +57,17 @@
    if(!byDue.has(p.dueDate))byDue.set(p.dueDate,[]);
    byDue.get(p.dueDate).push(purchase);
   }
-  const paid=new Map(),settlementBatches=new Map(),settlementRecords=[];
+  const settlementBatches=new Map(),settlementRecords=[];
   for(const s of settlements){
    const id=String(s?.id??'').trim(),minor=cents(s?.amount),
     when=date(s?.debitDate),refs=s?.purchaseIds;
    if(!id||seen.has('s:'+id)||!when||minor===null||
       !['confirmed','pending'].includes(s.status)||
       s.cardAccountId!==card.id||s.checkingAccountId!==checking.id||
-      String(s.currency).toUpperCase()!==currency||!Array.isArray(refs)||!refs.length)
+      String(s.currency).toUpperCase()!==currency||
+      (s.type&&!['transfer','deferred_settlement'].includes(s.type))||
+      s.feeAmount!==undefined||s.refundAmount!==undefined||
+      !Array.isArray(refs)||!refs.length)
     throw Error('Règlement différé invalide : montant, compte, statut ou justificatif.');
    seen.add('s:'+id);
    const uniqueRefs=new Set(refs);
@@ -83,7 +88,6 @@
    const settlement={id,debitDate:when,dueDate:due,cents:minor,
     status:s.status,purchaseIds:refs.slice()};
    settlementRecords.push(settlement);
-   if(s.status==='confirmed')for(const x of batch)paid.set(x.id,settlement);
   }
   const budgetByMonth=Object.create(null),spendItems=[],dueBatches=[];
   for(const p of byId.values()){
