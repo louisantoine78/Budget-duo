@@ -61,4 +61,23 @@ test('legacy single-link aware of multi-assignment',()=>{
 test('ordinary income never participates in advance repayment',()=>{
  assert.equal(M.repaymentLines({type:'income',relatedExpenseId:'resto',amountCAD:60}).length,0);
 });
+test('fraction of a cent in one repayment allocation is refused, never rounded',()=>{
+ for(const amount of [10.001,10.005,10.999])assert.throws(
+  ()=>M.validateRepaymentAllocations([{expenseId:'resto',amountCAD:amount}],
+   expenses,[],'la','2026-10-12',Math.round(amount*100)/100),
+  /Montant affecté/);
+});
+test('fraction of a cent in bank repayment total is refused',()=>{
+ for(const bankAmount of [10.001,10.005,10.999])assert.throws(
+  ()=>M.validateRepaymentAllocations([{expenseId:'resto',amountCAD:10}],
+   expenses,[],'la','2026-10-12',bankAmount),
+  /Montant bancaire/);
+});
+test('amounts with exact cents remain accepted without floating drift',()=>{
+ const x=M.validateRepaymentAllocations(
+  [{expenseId:'resto',amountCAD:0.1+0.2}],
+  expenses,[],'la','2026-10-12',0.3);
+ assert.equal(x[0].amountCAD,0.3);
+});
+
 console.log(n+' multi-advance tests passed');
