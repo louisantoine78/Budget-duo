@@ -1081,9 +1081,112 @@ function editInternationalTransfer(t){
  };
 }
 
+function editForeignFriendRepayment(t){
+ const I=window.TraceInternational,M=window.TraceMovement,
+  bank=state.accounts.find(a=>a.id===t.accountId);
+ if(!bank||bank.owner!==me){
+  openSheet('Remboursement étranger à vérifier',
+   '<p class="empty-note">Compte source introuvable ou non autorisé. Aucun changement.</p>'+
+   '<button type="button" id="foreignFriendClose" class="secondary full">Fermer</button>');
+  $('#foreignFriendClose').onclick=closeSheet;return;
+ }
+ let verified;
+ try{verified=I.verifiedForeignFriendRefund(t,{...bank,type:accountType(bank)});}
+ catch(error){
+  openSheet('Taux du remboursement à vérifier',
+   '<p class="empty-note">'+esc(error.message||error)+
+   ' Le montant bancaire et le budget historique restent inchangés. Corrige d’abord la preuve de change.</p>'+
+   '<button type="button" id="foreignFriendClose" class="secondary full">Fermer</button>');
+  $('#foreignFriendClose').onclick=closeSheet;return;
+ }
+ const existing=M.repaymentLines(t),extras=existing.slice(1).map(x=>({
+   expenseId:x.expenseId,amountCAD:String(x.amountCAD)}));
+ openSheet('Associer le remboursement international',
+  '<p class="trace-edit-lead">Le virement bancaire reste inchangé. Seuls les liens vers les dépenses avancées sont modifiables.</p>'+
+  '<div class="empty-note">'+esc(shortAccountLabel(bank))+' · '+esc(t.date)+' · '+
+   I.money(verified.bankAmount,verified.bankCurrency)+' réellement reçu · '+
+   I.money(verified.amountCAD,'CAD')+' comptabilisés au taux du '+esc(verified.fxRateDate)+
+   ' ('+esc(verified.fxRateSource)+')</div>'+
+  '<label class="label2" for="foreignFriendName">Proche (facultatif)</label>'+
+   '<input class="input" id="foreignFriendName" maxlength="45" value="'+esc(t.counterparty||'')+'" placeholder="Ex. Camille">'+
+  '<label class="label2" for="foreignFriendFirst">Première avance</label>'+
+   '<select class="input" id="foreignFriendFirst"></select>'+
+  '<label class="label2" for="foreignFriendFirstAmount">Montant attribué (CAD de référence)</label>'+
+   '<input class="input" id="foreignFriendFirstAmount" type="number" min=".01" step=".01" inputmode="decimal" value="'+esc(existing[0]?.amountCAD??'')+'">'+
+  '<div id="foreignFriendOther"></div>'+
+  '<button type="button" class="secondary" id="foreignFriendAdd">+ Ajouter une autre avance</button>'+
+  '<p class="empty-note">Répartis exactement '+I.money(verified.amountCAD,'CAD')+
+   '. Aucun revenu et aucun deuxième mouvement bancaire ne seront créés.</p>'+
+  '<p id="foreignFriendError" role="alert"></p>'+
+  '<button type="button" class="primary full" id="foreignFriendSave">Enregistrer les associations</button>'+
+  '<button type="button" class="secondary full" id="foreignFriendCancel">Annuler</button>');
+ let initialized=false;
+ const choices=()=>friendLinkOptions(t.date,.01,t.id),
+  render=()=>{
+   const sel=$('#foreignFriendFirst'),old=initialized?sel.value:(sel.value||existing[0]?.expenseId||''),
+    candidates=choices(),
+    opts='<option value="">Aucune avance liée</option>'+candidates.map(x=>
+     '<option value="'+esc(x.id)+'">'+esc(x.label)+' · '+I.money(x.remaining,'CAD')+' disponibles</option>').join('');
+   sel.innerHTML=opts;if(candidates.some(x=>x.id===old))sel.value=old;
+   initialized=true;
+   const host=$('#foreignFriendOther');
+   host.innerHTML=extras.map((x,i)=>'<div class="formrow">'+
+    '<div><label class="label2">Autre avance</label><select class="input" data-foreign-expense="'+i+'">'+opts+'</select></div>'+
+    '<div><label class="label2">Montant (CAD)</label><input class="input" type="number" min=".01" step=".01" inputmode="decimal" data-foreign-amount="'+i+'" value="'+esc(x.amountCAD)+'"></div>'+
+    '<button type="button" class="secondary" data-foreign-remove="'+i+'">Retirer</button></div>').join('');
+   host.querySelectorAll('[data-foreign-expense]').forEach(el=>{
+    const i=Number(el.dataset.foreignExpense);el.value=extras[i].expenseId;
+    el.onchange=()=>{extras[i].expenseId=el.value;};
+   });
+   host.querySelectorAll('[data-foreign-amount]').forEach(el=>{
+    el.oninput=()=>{extras[Number(el.dataset.foreignAmount)].amountCAD=el.value;};
+   });
+   host.querySelectorAll('[data-foreign-remove]').forEach(el=>{
+    el.onclick=()=>{extras.splice(Number(el.dataset.foreignRemove),1);render();};
+   });
+  };
+ $('#foreignFriendAdd').onclick=()=>{
+  if(extras.length>=12){$('#foreignFriendError').textContent='Maximum de 13 avances.';return;}
+  extras.push({expenseId:'',amountCAD:''});render();
+ };
+ $('#foreignFriendCancel').onclick=closeSheet;
+ $('#foreignFriendSave').onclick=async()=>{
+  $('#foreignFriendError').textContent='';
+  try{
+   // Re-verify the imported FX evidence at save time; do not mutate its legs.
+   const reference=I.verifiedForeignFriendRefund(t,{...bank,type:accountType(bank)}),
+    first=$('#foreignFriendFirst').value,
+    extra=extras.filter(x=>x.expenseId||String(x.amountCAD).trim()!=='');
+   let allocations=null,related=null;
+   if(first||extra.length){
+    if(!first)throw Error('Choisis la première avance.');
+    const raw=$('#foreignFriendFirstAmount').value.trim();
+    const amount=raw!==''?Number(raw):extra.length?NaN:reference.amountCAD;
+    allocations=M.validateRepaymentAllocations(
+     [{expenseId:first,amountCAD:amount},...extra],
+     state.transactions,state.transactions,me,t.date,reference.amountCAD,t.id);
+    related=allocations.length===1?first:null;
+   }
+   const next={...t,relatedExpenseId:related,repaymentAllocations:allocations,
+    counterparty:$('#foreignFriendName').value.trim()};
+   $('#foreignFriendSave').disabled=true;
+   await saveDocument('transactions',next);
+   Object.assign(t,next);closeSheet();renderAll();navigate('activity');showTab('transactions');
+  }catch(error){$('#foreignFriendSave').disabled=false;
+   $('#foreignFriendError').textContent=String(error.message||error);}
+ };
+ render();
+}
+
 function editSmartBankMovement(t,requestedKind='',initialDraft=null){
  const originalAccount=state.accounts.find(a=>a.id===t.accountId);
  const oldDestination=state.accounts.find(a=>a.id===t.toAccountId);
+ // A verified foreign friend refund can update its links without touching the
+ // bank's native credit, CAD budget snapshot, historical rate or import proof.
+ if(originalAccount&&window.TraceInternational.currency(originalAccount)!=='CAD'&&
+    t.type==='external_refund'&&t.transferPurpose==='friend_reimbursement'&&t.status==='confirmed'){
+  editForeignFriendRepayment(t);return;
+ }
  // The legacy bank-movement editor is CAD-only. Its saved amount represents
  // CAD and cannot safely rewrite native foreign balances or transfer legs.
  // International movements are read-only here until the FX editor is audited.
