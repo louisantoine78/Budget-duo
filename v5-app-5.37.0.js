@@ -203,7 +203,13 @@ function accountEstimate(a){
   }
   return x;
  },0);
- const investMovement=state.investmentOperations.filter(o=>o.bankAccountId===a.id&&afterBoundary(o.date,boundary)).reduce((v,o)=>v+(o.type==='deposit'?-Number(o.bankAmount??o.bankAmountCAD??o.amount??0):o.type==='withdrawal'?Number(o.bankAmount??o.bankAmountCAD??o.amount??0):0),0);
+ const investMovement=state.investmentOperations.filter(o=>o.bankAccountId===a.id&&afterBoundary(o.date,boundary)).reduce((v,o)=>{
+    if(!['deposit','withdrawal'].includes(o.type))return v;
+    if(o.linkedTransactionId&&state.transactions.some(t=>t.id===o.linkedTransactionId&&
+     t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)))return v;
+    const native=window.TraceInternational.investmentBankAmount(o,a);
+    return native===null?NaN:v+(o.type==='deposit'?-native:native);
+   },0);
  const total=base+movement+investMovement;return Number.isFinite(total)?total:null;
 }
 function bank(s){
@@ -2774,7 +2780,11 @@ function openInvestmentOperation(account,original=null){
   if(!date||(['deposit','withdrawal','dividend','fee'].includes(type)&&!(amount>0))||(['buy','sell'].includes(type)&&!(quantity>0&&unitPrice>0))||(type==='quote'&&!(unitPrice>=0))||(['buy','sell','quote'].includes(type)&&!/^[A-Z0-9._-]{1,16}$/.test(symbol))||!(fee>=0)){
    $('#traceFeedback').textContent='Vérifie la date, le montant, les titres et les frais.';return;
   }
-  const bankAccountId=['deposit','withdrawal'].includes(type)?$('#invBank').value||null:null,bankAmountCAD=bankAccountId?(account.currency==='CAD'?amount:Number($('#invBankCad').value)):null;
+  const bankAccountId=['deposit','withdrawal'].includes(type)?$('#invBank').value||null:null;
+   if(bankAccountId&&window.TraceInternational.currency(state.accounts.find(a=>a.id===bankAccountId))!=='CAD'){
+    $('#traceFeedback').textContent='Compte en devise étrangère : la liaison bancaire est bloquée tant que ce formulaire ne permet pas de saisir le montant natif réel.';return;
+   }
+   const bankAmountCAD=bankAccountId?(account.currency==='CAD'?amount:Number($('#invBankCad').value)):null;
   if(bankAccountId&&(!(bankAmountCAD>0)||!Number.isFinite(bankAmountCAD))){$('#traceFeedback').textContent='Saisis le montant exact en CAD pour ce mouvement bancaire.';return;}
   const next={id:original?.id||'op_'+txDocId(),accountId:account.id,type,date,
    symbol:['buy','sell','quote'].includes(type)?symbol:'',quantity:['buy','sell'].includes(type)?quantity:0,
