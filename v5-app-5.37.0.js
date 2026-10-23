@@ -2160,8 +2160,14 @@ function importFile(file){
      let type;
      if(col('amount')>=0){type=n>=0?$('#csvSign').value:($('#csvSign').value==='income'?'expense':'income');}
      else{
-      const debit=col('debit')>=0?parseCsvMoney(row[col('debit')]):NaN,
-       credit=col('credit')>=0?parseCsvMoney(row[col('credit')]):NaN;
+      const rawDebit=col('debit')>=0?row[col('debit')]:'',
+       rawCredit=col('credit')>=0?row[col('credit')]:'',
+       debit=parseCsvMoney(rawDebit),credit=parseCsvMoney(rawCredit);
+      // A non-empty but unreadable bank cell cannot be interpreted as zero.
+      if((String(rawDebit??'').trim()&&!Number.isFinite(debit))||
+         (String(rawCredit??'').trim()&&!Number.isFinite(credit))){
+       invalid.push(index+2);return;
+      }
       const cr=Number.isFinite(credit)?Math.abs(credit):0,
        db=Number.isFinite(debit)?Math.abs(debit):0;
       // A bank statement line may not simultaneously debit and credit money.
