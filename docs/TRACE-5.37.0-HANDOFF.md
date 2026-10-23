@@ -147,3 +147,14 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 - **Tests V8 à modules Node simulés** exécutés : nouvel éditeur 12/12, câblage 7/7, intégrité labo 8/8, boot application fictive 7/7, invariants financiers 19/19 (**53/53**). Ni tests Node CLI réels ni Safari/CI ni base de données distante ; **ce n'est pas** une certification générale 5.37.0.
 - **NOUVELLE SOURCE DE VÉRITÉ DES BLOQUANTS :** `docs/TRACE-5.37.0-RELEASE-CHECKLIST.md`. Toutes les portes production restent ouvertes : implémentation comptable différée dans grand livre réel, validation FX/import/partage, base de données fictive isolée, tests natifs et navigateur iPhone, SW/manifest/version/rollback, acceptation release.
 - **Préversion à actualiser** manuellement via Vercel sur le HEAD candidat après commit de ce handoff et vérifier READY/commit. Ne pas modifier le domaine de production ni `main`.
+
+
+## Préversion actualisée sur Vercel — 23 octobre 2026
+
+- **Déploiement Vercel confirmé READY**, projet indépendant `trace-v5-preview`, ID `dpl_7QtLTNPtDzAoyLdfH37Q2fTER7AM`, URL **https://trace-v5-preview-delmx4spz-lambotla-1719.vercel.app/trace-international-preview.html**. Target Preview (API Vercel `target:null`), **pas production**.
+- **SHA déployée vérifiée** `2c312f0021d2df92d3fb98e906c169cc76f82698`, candidate `trace-5.37.0-international-accounts-fx`. Elle inclut `v5-app-5.37.0.js` mis à jour pour l'éditeur **libellé/catégorie des dépenses étrangères confirmées**, le laboratoire de débit différé, les nouveaux tests et la checklist de release.
+- **Main** `02c70f50e7e51da79b77a91dde96a03c6c719909` et production 5.36.5 préservés. Aucun changement de `index.html`, du service worker, du manifeste, aucun vrai compte Supabase contacté, aucune CI exécutée, aucune donnée réelle modifiée. Les données de la préversion restent fictives et la CSP coupe le réseau.
+- Le projet est protégé par **Vercel Authentication/SSO**. `READY` atteste le build Vercel, mais **pas** la réussite d'un test de navigation sur Safari. L'utilisateur devra potentiellement ouvrir le lien connecté à Vercel.
+- **Série QA du lot** : 53/53 contrôles V8 simulés ciblant édition, câblage, boot de la preview et garde-fous financiers. Les 121 tests ciblés précédents sont historiques au commit précédent et ne remplacent pas une campagne complète sur HEAD.
+- **Prochain point de reprise impératif :** la checklist `docs/TRACE-5.37.0-RELEASE-CHECKLIST.md`. Priorités : intégrer sans régression le débit différé et les imports au vrai modèle de transactions **sur données fictives isolées**, puis faire les tests Node natifs et un vrai parcours Safari iPhone, avant de demander l'accord pour la production.
+- **Remarque :** ce commit documentaire fait avancer HEAD après le déploiement confirmé `2c312f` mais **ne change aucun JavaScript ni le HTML déployé** ; ne pas confondre un décalage SHA documentaire avec une différence fonctionnelle.
