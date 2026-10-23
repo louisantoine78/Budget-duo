@@ -994,3 +994,30 @@ Cet addendum **remplace le caractère incomplet du bilan intermédiaire 415/415*
 Commits du code et des tests : `1141b9e915fd1cfb97330d982805b5396a018305`, `f978bc1850433cc068ca6f03ddb113430005f659`. Tous deux `[skip ci]`.
 
 **Prochain chantier borné :** modéliser un règlement bancaire partiel explicite avec allocations prouvables par échéance et statut de confirmation, ou laisser le blocage si les justificatifs sont insuffisants ; ensuite traiter le rapprochement d'une ligne d'import bancaire vers un règlement déjà identifié, sans nouvelle dépense ni confirmation automatique. Les frais du compte courant restent distincts des frais sur carte.
+
+
+## Phase 1 — règlements fractionnés sur carte à débit différé, simulation isolée (23 octobre 2026)
+
+**GitHub contrôlé au départ :** `trace-5.37.0-international-accounts-fx` au commit `9c2805b9a23e7d7eb3e28e87423ab2c015784244` ; `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Fichiers modifiés uniquement dans la candidate.
+
+### Modèle comptable introduit (NON activé et NON certifié par une banque)
+
+- Règlement `settlementMode:'partial'` explicitement attaché à **une seule échéance** via `allocationDueDate`, avec liste exhaustive des `purchaseIds` et `feeIds` déjà déterminés pour ce lot. Aucun prorata, répartition implicite entre achats ou réallocation inter-échéances.
+- `bankEvidence` est obligatoire pour chaque fraction : `statementId`, `lineId`, `accountId` du courant de règlement, devise native, sens `debit`, montant exact, `debitDate`, statut et booléen `reviewed`. Le moteur vérifie la cohérence stricte et refuse qu'une même ligne `statementId+lineId+accountId` finance deux fractions, même sous deux identifiants de règlement différents.
+- **Limite de confiance impérative :** `reviewed:true` est un *indicateur de revue humaine fourni au simulateur*, **pas** une vérification auprès de la banque, une identité de document cryptographique, ni une contrainte d'unicité persistante/serveur. L'authenticité, l'idempotence inter-imports et la concurrence devront être sécurisées lors de l'intégration à une base fictive isolée.
+- Seuls les règlements `confirmed` à la date de situation diminuent la dette différée et le compte courant. Une fraction `pending` demeure sans impact financier, reste affichée comme en cours de revue, et ne peut pas prendre la place d'une confirmation. Les montants confirmés **et** en attente sont réservés pour empêcher de planifier un total supérieur au net de l'échéance.
+- Les sorties par échéance distinguent désormais `paidAmount`, `remainingAmount`, `pendingAmount`, les identifiants de fractions confirmées/en attente et le dernier débit effectivement confirmé. Le retard correspond au **solde restant dû**, pas au montant initial de l'échéance. Les flux bancaires produits par la simulation sont des **transferts internes sans second impact budgétaire**. Les achats, frais et remboursements marchands conservent leurs propres dates budgétaires.
+- Les règlements complets préexistants fonctionnent encore en `settlementMode:'full'` implicite, avec contrôle du montant intégral. Le mélange de `full` et `partial` pour une même échéance est bloqué. Une fraction sans preuve, une ligne réutilisée, un dépassement, un paiement inter-devises implicite, une surcharge non modélisée, un mauvais compte/date/statut ou une allocation multi-échéance sont refusés.
+
+### QA réellement exécutée
+
+- **84/84 scénarios** de la suite spécialisée `tests/trace-international-deferred-debit.test.cjs` en **harnais JavaScript V8 avec modules Node simulés** : les 65 anciens scénarios et 19 nouveaux (centimes, remboursements/frais, échéances indépendantes, retards, pending, doubles identifiants de ligne, frais inconnus, immutabilité).
+- La suite historique de cette fonctionnalité a été rejouée avant les changements de tests et la suite de 84 a été exécutée après modifications. **Ce n'est pas une exécution Node CLI native** : les essais de `git ls-remote` depuis le conteneur ont encore échoué (DNS `github.com`). Pas de CI GitHub Actions, pas de test Safari/PWA ni d'écriture Supabase. Les 31 autres suites n'ont pas été rejouées dans ce lot : **633/633 est un résultat historique sur une version antérieure**, pas le résultat global du code actuel.
+
+### Enregistrement et prochaine étape
+
+- Moteur : `aaa66fa00461c0c6ead0ea89856eb6332ceef8e4`
+- 19 tests complémentaires : `65493b155b798422806e44e649000a608e0d30f9`
+- Tous les commits portent `[skip ci]` ; aucune fusion, PR, CI ou activation de `deferred`.
+
+**Prochain lot borné :** rapprochement **en lecture seule** d'une ligne fictive déjà extraite d'un CSV/PDF bancaire avec une fraction `pending` ou `confirmed`, en préservant le sens, le compte, la devise, la provenance (document/ligne) et l'interdiction de confirmer/ajouter automatiquement des opérations. Ajouter les simulations de collisions inter-imports et de changements de ligne après revue. Puis Node natif, base fictive et Safari avant intégration.
