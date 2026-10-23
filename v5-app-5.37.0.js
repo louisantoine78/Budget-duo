@@ -667,7 +667,8 @@ function openManualTransaction(){
   '<div class="formrow"><div><label class="label2">Part avancée aux amis ($)</label><input class="input" id="manualFriendsAmount" type="number" min="0" step=".01" value="0"></div>'+
   '<div><label class="label2">Part de '+esc(shortMemberName(partner))+' ($)</label><input class="input" id="manualPartnerAmount" type="number" min="0" step=".01" value="0"></div></div>'+ 
   '<label class="label2" for="manualFriendDebtorName">Un seul proche (facultatif)</label><input class="input" id="manualFriendDebtorName" maxlength="45" placeholder="Ex. Camille">'+
-   '<label class="label2" for="manualFriendDebtorShares">Ou plusieurs proches (un par ligne)</label><textarea class="input" id="manualFriendDebtorShares" rows="3" placeholder="Camille : 30,00&#10;Alex : 20,00"></textarea></div>'+
+   '<textarea id="manualFriendDebtorShares" hidden aria-hidden="true" tabindex="-1"></textarea>'+
+  '<div id="manualFriendDebtorRows" class="trace-friend-debtors"></div></div>'+
   '<div id="manualTargetWrap" class="hidden"><label class="label2">Compte destinataire</label><select class="input" id="manualTarget"></select></div>'+
   '<div id="manualSavingsWrap" class="hidden"><label class="label2">Compte épargne / CELI</label><select class="input" id="manualSavings"></select></div>'+
   '<div id="manualFriendLink" class="hidden"><label class="label2">Prénom de la personne (facultatif)</label><input class="input" id="manualFriendName" maxlength="45" placeholder="Ex. Camille">'+
@@ -680,6 +681,8 @@ function openManualTransaction(){
   '<button class="primary full trace-manual-save" id="saveManualTx" type="button">Enregistrer l’opération</button>'+
   '<button class="secondary full" id="cancelManualTx" type="button">Annuler</button>');
  window.TraceOperationUI.enhanceManual();
+ window.TraceFriendDebtorUI?.mount({fieldId:'manualFriendDebtorShares',
+  singleId:'manualFriendDebtorName',totalId:'manualFriendsAmount',hostId:'manualFriendDebtorRows'});
  const $m=id=>$('#'+id),other=partner;
  const supportedKinds=()=>{const account=bankAccounts.find(x=>x.id===$m('manualTxAccount').value);
   if(!account)return M.kinds.filter(x=>!x.legacyOnly);
@@ -1257,9 +1260,10 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
       '<label class="label2" for="smartMovementWho">Pour qui ?</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementWho" class="input"><option value="'+esc(me)+'">Moi</option><option value="'+esc(partner)+'">'+esc(shortMemberName(partner))+'</option><option value="couple">Nous deux</option><option value="custom">Avec des amis · personnalisé</option></select></div>'+
       '<div class="trace-edit-friends hidden" id="smartMovementCustom"><strong>Répartition avec des amis</strong><div class="trace-edit-friends-grid"><div><label class="label2" for="smartMovementFriends">Part des amis ($)</label><input id="smartMovementFriends" class="input" type="number" inputmode="decimal" min="0" step=".01" value="0"></div><div><label class="label2" for="smartMovementPartner">Part de '+esc(shortMemberName(partner))+' ($)</label><input id="smartMovementPartner" class="input" type="number" inputmode="decimal" min="0" step=".01" value="0"></div></div>'+
        '<label class="label2" for="smartMovementDebtorName">Un seul proche (facultatif)</label><input id="smartMovementDebtorName" class="input" maxlength="45" value="'+esc(t.friendDebtorName||'')+'" placeholder="Ex. Camille">'+
-       '<label class="label2" for="smartMovementDebtorShares">Ou plusieurs proches (un par ligne)</label><textarea class="input" id="smartMovementDebtorShares" rows="3" placeholder="Camille : 30,00&#10;Alex : 20,00">'+
-       esc((t.friendDebtorShares||[]).map(x=>x.name+' : '+Number(x.amountCAD).toFixed(2).replace('.',',')).join('\n'))+'</textarea></div>'+
-      '<p class="trace-bank-inline-tip" id="smartMovementBudgetNote"></p>'+
+       '<textarea id="smartMovementDebtorShares" hidden aria-hidden="true" tabindex="-1">'+
+       esc((t.friendDebtorShares||[]).map(x=>x.name+' : '+Number(x.amountCAD).toFixed(2).replace('.',',')).join('\n'))+'</textarea>'+
+       '<div id="smartMovementDebtorRows" class="trace-friend-debtors"></div></div>'+
+       '<p class="trace-bank-inline-tip" id="smartMovementBudgetNote"></p>'+
      '</div>'+
      '<div id="smartMovementCardReceiveWrap" class="trace-bank-extra-box hidden">'+
      '<label class="label2" for="smartMovementCardMatch">Paiement correspondant sur le compte courant</label>'+
@@ -1280,6 +1284,9 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
   '</div>');
  $('#sheetBackdrop').classList.add('trace-premium-edit','trace-premium-movement');
  U.enhanceBankMovement();
+ window.TraceFriendDebtorUI?.mount({fieldId:'smartMovementDebtorShares',
+  singleId:'smartMovementDebtorName',totalId:'smartMovementFriends',
+  hostId:'smartMovementDebtorRows',initial:t.friendDebtorShares||[]});
  const stored=M.fromStored(t)==='transfer'&&t.toAccountId&&accountType(state.accounts.find(x=>x.id===t.toAccountId))==='card'?'card_payment':M.fromStored(t),
   guessed=requestedKind||stored,
   initial=types.some(k=>k.id===guessed)?guessed:(types.some(k=>k.id===stored)?stored:'');
@@ -1644,9 +1651,10 @@ function editTransaction(id,validating=false){
     '<div><label class="label2" for="txPartnerAmount">Part de '+esc(shortMemberName(partner))+' ($)</label>'+
     '<input id="txPartnerAmount" class="input" type="number" inputmode="decimal" step=".01" min="0" value="'+esc(Number(t.splitAmounts?.partner||0))+'"></div></div>'+
     '<label class="label2" for="txFriendDebtorName">Un seul proche (facultatif)</label><input id="txFriendDebtorName" class="input" maxlength="45" placeholder="Ex. Camille" value="'+esc(t.friendDebtorName||'')+'">'+
-    '<label class="label2" for="txFriendDebtorShares">Ou plusieurs proches (un par ligne)</label><textarea class="input" id="txFriendDebtorShares" rows="3" placeholder="Camille : 30,00&#10;Alex : 20,00">'+
-    esc((t.friendDebtorShares||[]).map(x=>x.name+' : '+Number(x.amountCAD).toFixed(2).replace('.',',')).join('\n'))+'</textarea>'+
-    '<small>Le reste correspond à ta part. La part des amis n’entre pas dans le budget du couple.</small></div>'+
+    '<textarea id="txFriendDebtorShares" hidden aria-hidden="true" tabindex="-1">'+
+       esc((t.friendDebtorShares||[]).map(x=>x.name+' : '+Number(x.amountCAD).toFixed(2).replace('.',',')).join('\n'))+'</textarea>'+
+       '<div id="txFriendDebtorRows" class="trace-friend-debtors"></div>'+
+       '<small>Le reste correspond à ta part. La part des amis n’entre pas dans le budget du couple.</small></div>'+
   '</div></section>'+
  '<section class="trace-edit-impact" aria-labelledby="traceEditImpactTitle">'+
   '<div class="trace-edit-impact-head"><span class="trace-edit-impact-symbol" aria-hidden="true">↗</span>'+
@@ -1676,6 +1684,9 @@ function editTransaction(id,validating=false){
  '</div>');
  $('#sheetBackdrop').classList.add('trace-premium-edit');
  window.TraceOperationUI.enhanceTransaction();
+ window.TraceFriendDebtorUI?.mount({fieldId:'txFriendDebtorShares',
+  singleId:'txFriendDebtorName',totalId:'txFriendsAmount',
+  hostId:'txFriendDebtorRows',initial:t.friendDebtorShares||[]});
  $('#txAccount').value=t.accountId||'';$('#txWho').value=t.beneficiary||me;
  $('#txOriginalCurrency').value=t.currency||window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId));
  if($('#txOriginalCurrency').value===window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId))&&
