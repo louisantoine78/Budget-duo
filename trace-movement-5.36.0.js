@@ -57,6 +57,46 @@ const sign=def.budget==='refund'?-1:1;return{kind,bank:total/100*def.direction,b
 
 // Optional multi-allocation on ONE incoming bank transaction.
 // Legacy relatedExpenseId remains readable; no migration or new bank transaction.
+const personKey=x=>String(x||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('fr');
+// Optional multi-debtor split, exclusively metadata of the friends budget share.
+const parseFriendShares=text=>String(text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(line=>{
+ const hit=/^(.+?)\s*:\s*(\d+(?:[.,]\d{1,2})?)\s*$/.exec(line);
+ if(!hit)throw Error('Indique un prénom et un montant par ligne : Camille : 25,00.');
+ return{name:hit[1].trim(),amountCAD:Number(hit[2].replace(',','.'))};
+});
+const friendShares=t=>{
+ if(Array.isArray(t?.friendDebtorShares)&&t.friendDebtorShares.length)
+  return t.friendDebtorShares.map(x=>({name:String(x.name||'').trim(),amountCAD:Number(x.amountCAD)}));
+ const name=String(t?.friendDebtorName||'').trim(),amount=Number(t?.splitAmounts?.friends);
+ return name&&Number.isFinite(amount)&&amount>0?[{name,amountCAD:amount}]:[];
+};
+const paidForDebtor=(transactions,expenseId,name,excluding='')=>(transactions||[])
+ .filter(t=>t.id!==excluding&&t.status==='confirmed'&&personKey(t.counterparty)===personKey(name))
+ .reduce((total,t)=>total+repaymentLines(t).filter(x=>x.expenseId===expenseId)
+  .reduce((n,line)=>n+cents(line.amountCAD),0),0);
+const validateFriendDebtorShares=(lines,friendsTotal,transactions=[],expenseId='')=>{
+ if(!Array.isArray(lines)||!lines.length||lines.length>13)
+  throw Error('Indique entre 1 et 13 proches pour cette part.');
+ const total=cents(friendsTotal),seen=new Set();let sum=0;
+ if(!Number.isSafeInteger(total)||total<=0)throw Error('La part des amis doit être positive.');
+ const normalized=lines.map(x=>{
+  const name=String(x?.name||'').trim().replace(/\s+/g,' '),key=personKey(name),
+   raw=Number(x?.amountCAD),amount=cents(raw);
+  if(!key||name.length>45||seen.has(key))throw Error('Prénom manquant, trop long ou en double.');
+  if(!Number.isFinite(raw)||!Number.isSafeInteger(amount)||amount<=0||Math.abs(raw*100-amount)>.0001)
+   throw Error('Montant de chaque proche invalide au centime.');
+  if(expenseId&&paidForDebtor(transactions,expenseId,name)>amount)
+   throw Error('Les remboursements confirmés dépassent la part de ce proche.');
+  seen.add(key);sum+=amount;return{name,amountCAD:amount/100};
+ });
+ if(sum!==total)throw Error('La somme des proches doit égaler exactement la part avancée aux amis.');
+ if(expenseId)for(const t of transactions||[]){
+  if(t.status!=='confirmed'||!repaymentLines(t).some(x=>x.expenseId===expenseId))continue;
+  if(!seen.has(personKey(t.counterparty)))
+   throw Error('Remboursement lié non attribué à un proche de cette dépense. Vérifie-le avant de modifier la répartition.');
+ }
+ return normalized;
+};
 const repaymentLines=t=>{
  if(t?.type!=='external_refund'||t?.transferPurpose!=='friend_reimbursement')return[];
  if(Array.isArray(t.repaymentAllocations)&&t.repaymentAllocations.length)
@@ -70,7 +110,7 @@ const paidForExpense=(transactions,expenseId,excluding='')=>(transactions||[])
   if(lines.some(line=>!Number.isSafeInteger(cents(line.amountCAD))||cents(line.amountCAD)<=0))return Infinity;
   return total+lines.reduce((amount,line)=>amount+cents(line.amountCAD),0);
  },0);
-const validateRepaymentAllocations=(lines,expenses,transactions,owner,date,bankAmount,excluding='')=>{
+const validateRepaymentAllocations=(lines,expenses,transactions,owner,date,bankAmount,excluding='',counterparty='')=>{
  if(!Array.isArray(lines)||!lines.length)throw Error('Choisis au moins une avance à rembourser.');
  const bankCents=cents(bankAmount);
  if(!Number.isSafeInteger(bankCents)||bankCents<=0)throw Error('Montant bancaire du remboursement invalide.');
@@ -84,6 +124,13 @@ const validateRepaymentAllocations=(lines,expenses,transactions,owner,date,bankA
    ['expense','group_expense'].includes(t.type)&&t.payerId===owner&&t.beneficiary==='custom'&&
    String(t.date||'')<=String(date||'')&&Number(t.splitAmounts?.friends)>0);
   if(!source)throw Error('Dépense avancée introuvable, non confirmée ou postérieure au remboursement.');
+  const individual=friendShares(source);
+  if(individual.length>1){
+   const name=personKey(counterparty),matched=individual.find(x=>personKey(x.name)===name);
+   if(!name||!matched)throw Error('Choisis le proche concerné par ce remboursement.');
+   if(amount>cents(matched.amountCAD)-paidForDebtor(transactions,expenseId,matched.name,excluding))
+    throw Error('Le remboursement dépasse la part encore due par ce proche.');
+  }
   const available=cents(source.splitAmounts.friends)-paidForExpense(transactions,expenseId,excluding);
   if(!Number.isSafeInteger(available)||amount>available)throw Error('Le remboursement dépasse la part des amis encore due sur cette avance.');
   seen.add(expenseId);allocated+=amount;
@@ -110,30 +157,43 @@ return id;
 // bank receipt: historical expenses often have only an aggregate friends share.
 const friendReceivables=(transactions,owner)=>{
  const groups=new Map();
+ const add=(name,t,advance,received,review=false)=>{
+  const key=personKey(name)||'__unassigned__';
+  if(!groups.has(key))groups.set(key,{owner,name:name||'À attribuer',unassigned:!name,
+   advancedCents:0,receivedCents:0,outstandingCents:0,unattributedCents:0,advances:[]});
+  const g=groups.get(key),due=Math.max(0,advance-received);
+  g.advancedCents+=advance;g.receivedCents+=received;g.outstandingCents+=due;
+  if(review)g.unattributedCents+=received;
+  g.advances.push({expenseId:t.id,label:t.name||'Dépense avancée',date:t.date,
+   advancedCAD:advance/100,receivedCAD:received/100,outstandingCAD:due/100,
+   overpaid:received>advance,reviewRequired:review});
+ };
  for(const t of transactions||[]){
   if(t.status!=='confirmed'||!['expense','group_expense'].includes(t.type)||
      t.beneficiary!=='custom'||t.payerId!==owner)continue;
-  const advanced=cents(t.splitAmounts?.friends);
-  if(!Number.isSafeInteger(advanced)||advanced<=0)continue;
-  const already=paidForExpense(transactions,t.id);
-  if(!Number.isSafeInteger(already)||already<0)continue;
-  const name=String(t.friendDebtorName||'').trim().replace(/\s+/g,' ').slice(0,45);
-  const key=name?name.toLocaleLowerCase('fr'):'__unassigned__';
-  if(!groups.has(key))groups.set(key,{owner,name:name||'À attribuer',unassigned:!name,
-   advancedCents:0,receivedCents:0,outstandingCents:0,advances:[]});
-  const group=groups.get(key),remaining=Math.max(0,advanced-already);
-  group.advancedCents+=advanced;group.receivedCents+=Math.min(already,advanced);
-  group.outstandingCents+=remaining;
-  group.advances.push({expenseId:t.id,label:t.name||'Dépense avancée',date:t.date,
-   advancedCAD:advanced/100,receivedCAD:Math.min(already,advanced)/100,
-   outstandingCAD:remaining/100,overpaid:already>advanced});
+  const advance=cents(t.splitAmounts?.friends);
+  if(!Number.isSafeInteger(advance)||advance<=0)continue;
+  const paid=paidForExpense(transactions,t.id);
+  if(!Number.isSafeInteger(paid)||paid<0)continue;
+  const shares=friendShares(t);
+  if(shares.length>1){
+   let attributable=0;
+   for(const x of shares){
+    const a=cents(x.amountCAD),repaid=paidForDebtor(transactions,t.id,x.name);
+    if(!Number.isSafeInteger(a)||a<=0||!Number.isSafeInteger(repaid))continue;
+    add(x.name,t,a,Math.min(a,repaid));attributable+=repaid;
+   }
+   if(paid>attributable)add('',t,0,Math.min(paid-attributable,advance),true);
+  }else add(shares[0]?.name||'',t,advance,Math.min(paid,advance),paid>advance);
  }
  return [...groups.values()].map(g=>({
   owner:g.owner,name:g.name,unassigned:g.unassigned,
   advancedCAD:g.advancedCents/100,receivedCAD:g.receivedCents/100,
-  outstandingCAD:g.outstandingCents/100,advances:g.advances
- })).sort((a,b)=>Number(a.unassigned)-Number(b.unassigned)||b.outstandingCAD-a.outstandingCAD||a.name.localeCompare(b.name,'fr'));
+  outstandingCAD:g.outstandingCents/100,unattributedCAD:g.unattributedCents/100,
+  advances:g.advances
+ })).sort((a,b)=>Number(a.unassigned)-Number(b.unassigned)||
+   b.outstandingCAD-a.outstandingCAD||a.name.localeCompare(b.name,'fr'));
 };
 
-root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,repaymentLines,paidForExpense,validateRepaymentAllocations,linkable,validateLink,friendReceivables});
+root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,repaymentLines,paidForExpense,validateRepaymentAllocations,linkable,validateLink,friendReceivables,friendShares,parseFriendShares,validateFriendDebtorShares,paidForDebtor});
 })(typeof window!=='undefined'?window:globalThis);
