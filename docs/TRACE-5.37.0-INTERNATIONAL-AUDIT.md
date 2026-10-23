@@ -365,3 +365,51 @@ Fichiers lus depuis GitHub et évalués dans un harnais JS V8 qui **émule certa
 4. Checkout réel Node et tests Safari iPhone sur environnement isolé autorisé ; ne pas activer ni déployer la candidate avant validation distincte.
 
 **Retour arrière :** reverts ciblés sur la branche International, sans force-push, sans reset ni modification Supabase.
+
+
+## Phase 1 — Plusieurs débiteurs sur une seule dépense (23 octobre 2026)
+
+Périmètre : exclusivement `trace-5.37.0-international-accounts-fx` ; aucune écriture dans la base réelle, aucune mutation de `main`, aucun déploiement et aucun changement du chargeur de la production 5.36.5.
+
+### Moteur comptable
+
+- Schéma optionnel `friendDebtorShares: [{name,amountCAD},...]` sur une **dépense existante**, conservant `splitAmounts.friends`, le montant bancaire natif/CAD et les parts budgétaires Moi/Couple. Aucun changement de nature de mouvement ni nouvelle transaction.
+- `friendShares`, `parseFriendShares`, `validateFriendDebtorShares`, `paidForDebtor` : plusieurs prénoms sans doublon (comparaison insensible à la casse), montants positifs au centime, total exactement égal à la part des amis, limites individuelles des remboursements confirmés, interdiction de renommer/retirer une attribution lorsqu'un remboursement confirmé serait orphelin.
+- `validateRepaymentAllocations` accepte facultativement le nom du débiteur correspondant : pour une dépense multi-débiteurs, refuse un virement de personne inconnue et plafonne son remboursement à **sa part encore due**, indépendamment des créances des autres personnes. Le total du virement doit toujours égaler la somme des allocations bancaires.
+- `friendReceivables` calcule les soldes par prénom et par propriétaire ; ne réattribue pas une ancienne créance sans prénom au payeur d'un virement. Les montants remboursés à une dépense multi-débiteurs sans débiteur identifiable sont signalés dans `unattributedCAD` et `reviewRequired` plutôt que devinés.
+- La dette entre partenaires, les budgets historiques CAD, les remboursements commerçants, les virements internes et les paiements de carte sont inchangés.
+
+### Formulaires et rétrocompatibilité
+
+- Champ `friendDebtorShares` accessible dans la saisie manuelle et les deux éditeurs de dépenses : plusieurs lignes au format `Camille : 30,00` / `Alex : 20,00`, ou champ historique à prénom unique, mais jamais les deux simultanément.
+- Les remboursements manuels, importés CAD et importés EUR vérifiés transmettent le prénom du proche au validateur d'association. Un versement ne peut solder la part d'un autre débiteur. Les mouvements étrangers conservent toujours les montants natifs et CAD historisés et la preuve d'import.
+- Les historiques `friendDebtorName`, `relatedExpenseId` et les dépenses sans nom restent interprétables sans migration ni réécriture de la base.
+
+### Commits de l'étape
+
+- `329babf614e95f9ca5426d61f9c57cd250de9951` : moteur multi-débiteurs et plafonds de remboursement.
+- `397c671c3bc7aec9e7857c2ab244019f61bcc641` : champs de saisie sur trois parcours existants.
+- `a90f308dee8e18d6007e846016ef46a30b797e0c` : validations des dépenses manuelles et éditeur bancaire, contrôle de contrepartie des remboursements.
+- `0ed975880bd6cf99263f167b0c55c0f8b417185d` : validation sur éditeur historique de transaction.
+- `cfb61764f3e64c3391fae06a3f6513885b9299a1` : fixture manuelle adaptée au validateur partagé.
+- `883d411020ab4ea305779a4685da8149a9b9286e` : fixture d'édition importée adaptée au validateur partagé.
+- `900464d77e1aa4c560575db309011af66851d88e` : huit tests ciblés de répartition et de remboursement nominatif.
+- `80caede5d459ee527e070416844776f0cb068584` : nouvelle suite inscrite dans le workflow futur sans changer ses déclencheurs.
+
+### Exécution et limites
+
+Fichiers réellement lus depuis le dépôt GitHub puis exécutés dans le harnais de compatibilité **JavaScript V8 avec API Node simulées**, uniquement sur données fictives :
+
+- Candidate 5.37.0 : **194 contrôles réussis / 16 suites**.
+- Base historique stable 5.36.5 : **232 contrôles réussis / 5 suites**.
+- Laboratoire fictif et démarrage simulé : **15 contrôles réussis / 2 suites**.
+- **441 contrôles isolés réussis au total, 23 suites**, sans échec lors des dernières exécutions.
+- Les premières régressions avaient trouvé deux fixtures de formulaires ne fournissant pas le nouveau validateur ; elles ont été corrigées pour injecter la **vraie fonction** plutôt qu'un substitut silencieux.
+- **Non réalisé** : Node CLI sur un clone local, GitHub Actions exécutées, test d'interface iPhone/Safari réel, intégration PWA et validation sur comptes fictifs dans un navigateur. Ne pas considérer la candidate prête à publier.
+
+### Suites nécessaires
+
+1. Remplacer la saisie multiligne provisoire par une interface iPhone à lignes structurées et actions ajouter/retirer, dans l'identité TRACE déjà validée.
+2. Afficher clairement les remboursements à attribuer et les incohérences historiques dans Activité → Partage ; contrôler les scénarios où un remboursement de tiers paie plusieurs débiteurs.
+3. Tester les croisements réels sur données **fictives** : crédit/courant, conversions historiques, rapprochements bancaires, remboursements commerçants et parts du couple.
+4. Compléter les étapes suivantes (Activité, Imports/PDF, Patrimoine) puis autoriser séparément toute fusion/déploiement.
