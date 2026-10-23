@@ -705,3 +705,47 @@ Les nouvelles simulations contrôlent que les modifications de montant, de libel
 **Limitations inchangées :** les suites n'ont pas été exécutées dans un checkout Node natif (clone GitHub bloqué par DNS dans le conteneur) ni dans Safari iPhone ; tests Supabase intégrés, PWA, UX tactile et rapprochement mensuel PDF restent nécessaires. Aucun accès aux données Supabase réelles, migration, fusion, activation, suppression automatique de doublons, déploiement ou réactivation de workflows PickPoint.
 
 **Phase 1 non terminée.** Toute modification de `main` ou publication exige une autorisation expresse ultérieure.
+
+## Phase 1 — Relevés CSV : colonnes Débit / Crédit ambiguës (23 octobre 2026)
+
+**Périmètre autorisé :** branche `trace-5.37.0-international-accounts-fx` uniquement, depuis `bb4878c865932dc0cc7a3cd17af44511a99d4a7c`. Aucun accès ou écriture Supabase, aucune fusion, aucun déploiement ou CI lancé ; `main` et l'application 5.36.5 restent préservées.
+
+### Défaillances financières reproduites dans le code candidat initial
+
+1. Pour un relevé CSV fictif contenant **75 CAD au débit et 50 CAD au crédit sur une même ligne**, `importFile` choisissait silencieusement un mouvement `income` de 50 CAD et le créait en `pending`, malgré deux colonnes simultanément positives. Aucun mouvement n'était encore `confirmed`, mais une validation manuelle ultérieure pouvait contaminer les comptes et le budget.
+2. Avec `Débit = ILLISIBLE` et `Crédit = 50 CAD`, une cellule bancaire non vide mais impossible à analyser était silencieusement traitée comme une absence de débit ; l'import retenait 50 CAD.
+3. Le parseur `parseCsvMoney` acceptait un champ composé uniquement de caractères de signe (`--`, `+`, `-`) et le convertissait en 0. Un signe intégré (`1-0`) pouvait être interprété comme un montant négatif fictif.
+
+### Mesures conservatrices appliquées à la candidate
+
+- Quand les colonnes `Débit` et `Crédit` sont utilisées, elles doivent contenir **exactement une valeur positive**, l'autre étant vide ou nulle. Deux valeurs positives ou deux valeurs nulles/vides invalident la ligne.
+- Un champ bancaire **non vide et illisible** invalide toute la ligne au lieu d'être converti en zéro.
+- La lecture `parseCsvMoney` refuse les valeurs dépourvues de chiffres, les signes répétés et ceux placés entre deux chiffres ; les écritures bancaires classiques `-50,00`, `50,00-`, `1 234,56` et `1,234.56` restent prises en charge.
+- Les lignes invalides sont **signalées dans le bilan de prévisualisation** avec leur numéro de ligne ; elles ne sont ni persistées, ni comptabilisées, ni transformées en une autre nature. Les autres lignes valides du même fichier restent proposées en `pending` ; leurs numéros de ligne d'origine sont conservés.
+- Le format alternatif `Montant signé` continue de fonctionner indépendamment des deux colonnes `Débit` / `Crédit`.
+
+### Commits GitHub de ce lot
+
+- `877b05c4dbec97102747b449c4f5928025663393` — rejet des lignes CSV avec débit et crédit simultanément non nuls.
+- `6ac6161229987f5b1f6fba3c02cab1875da0b0a4` — refus des cellules bancaires non vides mais illisibles.
+- `a1a695442791aa8fbad12766c5f26e2d253cdd51` — durcissement conservateur de `parseCsvMoney`.
+- `69565ecc510c292d60973610fed478a2bf809f33` — ajout d'une nouvelle suite `tests/trace-international-csv-column-safety.test.cjs`.
+- `eddbd94ede0549593b686521eb7f65c9535e6453` — enrichissement à **11 scénarios** pour les signes invalides.
+- `2ca184e1adce0c9871b28070fce2733b5f7338fa` — inclusion de la suite dans le workflow historique **main-only**, sans exécuter GitHub Actions.
+
+### Réexécution isolée observée dans ce lot
+
+Les fichiers de **29 suites** ont été récupérés via l'application GitHub connectée et exécutés, en quatre lots, dans un environnement V8 avec simulations contrôlées de modules Node / DOM. Les résultats de ces simulations, et non d'une CLI Node réelle, sont :
+
+| Périmètre | Suites | Contrôles réussis |
+|---|---:|---:|
+| Candidate International 5.37.0, dont la nouvelle suite de 11 cas | 22 | **295** |
+| Tests historiques 5.36.5 | 5 | **232** |
+| Laboratoire et boot fictifs | 2 | **15** |
+| **Total observé** | **29** | **542/542** |
+
+La nouvelle suite couvre la ligne doublement débitée/créditée, débit ou crédit valide, cellule malformée adjacente à une cellule valide, colonnes vides/à zéro, colonne à zéro explicite, conservation des numéros physiques de ligne dans un fichier mêlant valeurs valides et invalides, ainsi que le format `Montant signé`.
+
+**Limites :** impossible de cloner le dépôt par Git à partir du conteneur (erreur DNS `github.com`), même si Node v22.16.0 est disponible. Aucune exécution Node CLI sur checkout natif, aucun test Safari iPhone/PWA, aucune écriture Supabase ni transaction bancaire réelle. Les erreurs concurrentes distribuées exigent toujours de vraies validations de bout en bout et une contrainte serveur avant la publication. Le relevé PDF mensuel demeure destiné à vérifier la couverture des mouvements existants plutôt qu'à les importer à nouveau.
+
+**Phase 1 toujours ouverte.** Aucune modification de `main`, du chargeur PWA stable, des versions, du service worker, du déploiement Vercel ou de PickPoint.
