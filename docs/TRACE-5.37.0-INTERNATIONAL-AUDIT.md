@@ -571,3 +571,43 @@ Nouvelle suite `tests/trace-international-card-friend-cycle.test.cjs`, sans donn
 Exécuter les 25 suites avec la vraie CLI Node dès qu'un checkout local est possible, tester le parcours dans Safari iPhone réel avec données fictives, puis les rapprochements PDF mensuels et les écarts de dates des relevés. Garder l'activation de `index.html`, `trace-version.json`, `sw.js`, le déploiement, la fusion et toute migration soumis à une autorisation expresse séparée.
 
 **Phase 1 non terminée.** Aucun changement du moteur de production ou des données réelles lors de ce lot.
+
+## Phase 1 — Sécurisation des montants d'import OCR et CSV (23 octobre 2026)
+
+**Périmètre :** `trace-5.37.0-international-accounts-fx` uniquement. Production et `main` préservées. Aucun déploiement, aucun accès ou mutation Supabase réels, aucune migration, aucune GitHub Action déclenchée.
+
+### Défaut réellement reproduit
+
+Sur une capture Mastercard fictive, `smartMatchCardPaymentDraft` acceptait `99.999 CAD` comme montant d'une preuve pour un virement de `100 CAD`, puis le sauvegardait comme `100 CAD`. Ceci constitue un arrondissement silencieux de données bancaires. Le risque se retrouvait dans la validation `smartApproveDraft`, le staging `smartStageRows` et les lignes CSV au-delà de deux décimales.
+
+### Correction ciblée
+
+- Fonction interne commune `smartExactBankAmount` dans la candidate `v5-app-5.37.0.js` : accepte uniquement les montants positifs au centime exact (tolérance `1e-6` sur le calcul en centimes pour les artefacts IEEE-754), sans arrondi financier implicite.
+- Une capture OCR douteuse reste `pending` avec montant non validé (`null`) et `needsAmountReview` : aucune transaction bancaire n'est créée lors de cette étape.
+- Un rapprochement carte ou une validation d'import rejette explicitement la fraction de centime avant d'écrire.
+- Une ligne CSV à montant non valide est comptée parmi les lignes invalides avant import ; elle n'est pas ajoutée silencieusement au budget ou au ledger.
+- Les valeurs exactes et les rapprochements corrects réutilisent toujours le mouvement existant, sans nouvel achat, remboursement ou paiement de carte.
+
+### Commits
+
+1. `a48c72947a52ad09b69fdd38a9e12ca4fe7e357a` — correction OCR, validation et paiement Mastercard.
+2. `f5b69b9609e7b0f3f30560096ec56a7ff3966b64` — rejet des fractions de centime des CSV.
+3. `0fb27a34d128d8348c385b8485d6369598c049fd` — nouvelle suite `tests/trace-international-import-cents.test.cjs` de 12 contrôles sur sources réelles et données fictives.
+4. `c586aa613e11bd48b7f3aa96cbc2a65334eb86dd` — inscription de la suite dans `.github/workflows/trace-regression.yml`, **sans modifier les déclencheurs** `push/pull_request` sur `main` uniquement, sans lancer CI.
+
+### Campagne de vérification de cette reprise
+
+Toutes les 26 suites du workflow, incluant les nouvelles suites de cycle Mastercard et d'import, ont été lues depuis GitHub, puis exécutées en plusieurs lots dans un environnement JavaScript V8 avec simulations de `fs`, `path`, `vm`, `assert`, `process` et du DOM. Une première défaillance due à `assert.rejects` absent du harnais de laboratoire a été corrigée **uniquement dans le simulateur**, puis les sept scénarios du laboratoire ont été rejoués avec succès.
+
+| Périmètre | Suites | Contrôles réussis |
+|---|---:|---:|
+| Candidate International 5.37.0 | 19 | **251** |
+| Régressions historiques 5.36.5 | 5 | **232** |
+| Laboratoire fictif | 2 | **15** |
+| **Total réellement observé** | **26** | **498/498** |
+
+Aucun échec lors du dernier passage. Le nombre 498 est issu des sorties des suites actuelles, et non du bilan documentaire précédent (484 théoriques avant ajout de 12 cas). Le décompte préexistant comportait des imprécisions, dont 27 cas présents dans `trace-international.test.cjs` contre 25 anciennement cités ; ne pas additionner les anciens chiffres comme des résultats réexécutés.
+
+**Limites impératives :** le clonage GitHub par `git` échoue toujours dans le conteneur (résolution DNS), bien que Node v22.16.0 soit disponible. Ce ne sont **pas** des tests Node CLI sur un vrai checkout, ni GitHub Actions, ni de vrais tests Safari iPhone, PWA ou Supabase multi-utilisateur. Le relevé PDF mensuel de vérification ligne par ligne reste une phase distincte de l'import quotidien. Aucun état client historique n'a été réécrit.
+
+**Phase 1 non terminée.** Validation Node native, Safari réel et parcours PWA/Supabase fictifs restent nécessaires avant toute intégration ou publication ; toutes interdites sans accord explicite.
