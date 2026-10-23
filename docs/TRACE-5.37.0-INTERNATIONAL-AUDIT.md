@@ -530,3 +530,44 @@ Aucun échec conservé sur la dernière exécution des suites ; les suites dépe
 - Aucune activation, fusion, migration, écriture bancaire réelle, déploiement ou GitHub Actions.
 
 **Phase 1 toujours en cours.** Condition d'achèvement : exécution Node native du référentiel, contrôles Safari avec données fictives, validation réelle des parcours essentiels d'intégration et vérification du dispositif de déploiement avant décision séparée de publication.
+
+## Phase 1 — Cycle Mastercard / avances / remboursements / rapprochements (23 octobre 2026)
+
+**Point de départ :** `ea040277ddeb92eb2dec5be73cb0639b44e5e536`, branche candidate `trace-5.37.0-international-accounts-fx` uniquement.
+
+### Tests de cycle financier ajoutés
+
+Nouvelle suite `tests/trace-international-card-friend-cycle.test.cjs`, sans données ou réseau réels, qui extrait et exécute les **vraies fonctions** `accountEstimate`, `summary`, `sharingHistory`, `coupleBalance`, `TraceMovement.friendReceivables` et `TraceInternational.snapshot` à partir des fichiers GitHub de la candidate. État bancaire et contexte de test entièrement fictifs.
+
+**Scénario :** compte courant canadien ouvert à 1 000 CAD, Mastercard ouverte à 0 CAD, achat restaurant 120 CAD sur carte, ventilé 45 CAD Moi / 25 CAD Partenaire / 50 CAD Amis (Camille 30 et Alex 20), remboursement partiel Camille 15 CAD sur le courant, paiement Mastercard 100 CAD depuis le courant, preuve de paiement sur relevé carte, puis remboursement commerçant 12 CAD sur la Mastercard.
+
+**Contrôles effectués et réussis (15/15 via V8 isolé) :**
+1. L'achat carte accroît uniquement la dette et n'abaisse pas le courant lors de l'achat.
+2. Le budget de l'achat vaut 45 Moi, 25 Partenaire, 70 Couple, hors 50 d'avances.
+3. Camille et Alex ont des créances nominatives 30 et 20 indépendantes.
+4. Le remboursement confirmé 15 augmente le courant, réduit seulement Camille et ne crée aucun revenu.
+5. Le remboursement en attente ne touche ni le solde ni la créance.
+6. Le paiement carte 100 est neutre pour le budget ; courant 915 et Mastercard −20 après réception Camille.
+7. La preuve de paiement importée sur la carte ne crédite pas une deuxième fois la carte.
+8. Le remboursement commerçant 12 réduit la dette carte à −8 et les dépenses Couple à 58, sans modifier les créances.
+9. La liquidité nette CAD après le remboursement Camille et le paiement carte est de 895 (915 − 20), sans double comptage.
+10. Un remboursement au-dessus du restant dû à Camille ou attribué à un inconnu est refusé.
+11. Une baisse de l'avance de Camille en dessous de sa somme déjà remboursée est refusée.
+12. Les rapprochements CAD du 12 octobre clos à 915 (courant) et −8 (carte) ne rejouent pas les mouvements antérieurs.
+13. Un rapprochement `pending` plus récent ne remplace pas le dernier confirmé.
+14. Un nouvel achat après rapprochement modifie le solde carte exactement une fois.
+15. Un solde initial absent demeure inconnu (null), pas zéro.
+
+**Résultat distinct de cette session : 15/15**, tous les scénarios de la nouvelle suite ont été rejoués dans un harnais V8 avec implémentations simulées des API `fs/path/vm/assert`. Le dépôt n'a pas pu être cloné dans le conteneur Node v22.16.0, erreur DNS `Could not resolve host: github.com`. Aucun test Node sur un clone réel, Safari, PWA, CI ou Supabase n'est revendiqué.
+
+**Commits :**
+- `042d8d99608b874d88986d15b7c445acbbaf0723` : ajout de la suite fictive de cycle Mastercard/Amis ;
+- `1d848c7fc29b32a6138267191b7adcf271a477fa` : ajout de la nouvelle suite au workflow `trace-regression.yml` **sans modification de ses déclencheurs**, qui restent `push` / `pull_request` sur `main` uniquement. Aucune exécution GitHub Actions déclenchée par les commits candidats.
+
+**Décompte :** le bilan précédent de 469 contrôles V8 sur 24 suites reste un bilan **de la session précédente**, pas une réexécution globale durant ce lot. Cette nouvelle suite ajoute 15 cas et porte l'inventaire théorique à 484 contrôles sur 25 suites ; **ne pas présenter 484/484 comme une nouvelle campagne globale exécutée**.
+
+### Prochaines validations encore nécessaires
+
+Exécuter les 25 suites avec la vraie CLI Node dès qu'un checkout local est possible, tester le parcours dans Safari iPhone réel avec données fictives, puis les rapprochements PDF mensuels et les écarts de dates des relevés. Garder l'activation de `index.html`, `trace-version.json`, `sw.js`, le déploiement, la fusion et toute migration soumis à une autorisation expresse séparée.
+
+**Phase 1 non terminée.** Aucun changement du moteur de production ou des données réelles lors de ce lot.
