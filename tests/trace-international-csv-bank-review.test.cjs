@@ -104,4 +104,88 @@ test('matches never delete, merge or alter bank data',()=>{
  assert.equal(JSON.stringify(tx),before);
  assert.equal(typeof match,'function');
 });
-console.log(count+' fictional CSV cross-nature reconciliation checks passed');
+
+async function editorScenario({initialAmount=15,bankAmount=15}={}){
+ const checking={id:'ca',type:'checking',currency:'CAD',owner:'la',name:'Courant'};
+ const pending={id:'csv-pending',source:'csv',status:'pending',type:'income',
+  date:'2026-10-13',name:'Virement Camille',accountId:'ca',
+  bankAmount:initialAmount,amountCAD:initialAmount,
+  payerId:'la',beneficiary:'la',categoryId:'salary'};
+ const prior={id:'friend-refund',type:'external_refund',status:'confirmed',
+  date:'2026-10-13',accountId:'ca',bankAmount:bankAmount,amountCAD:bankAmount,
+  name:'Camille'};
+ const environment={accounts:[checking],transactions:[pending,prior],
+  household:{defaultSplit:{la:50,partner:50}},
+  categories:[{id:'salary',name:'Salaire',type:'income'}]};
+ const nodes=new Map();function $(id){
+  if(!nodes.has(id))nodes.set(id,{value:'',checked:false,textContent:'',innerHTML:'',
+   classList:{add(){},remove(){},toggle(){}},dataset:{},disabled:false,
+   addEventListener(){},querySelector:()=>({disabled:false})});
+  return nodes.get(id);
+ }
+ const inputs={txAccount:'ca',txWho:'la',txType:'income',
+  txName:'Virement Camille',txAmount:String(initialAmount),
+  txDate:'2026-10-13',txCategory:'salary',txFxOverride:'',
+  txOriginalCurrency:'CAD',txOriginalAmount:'',
+  txFriendsAmount:'0',txPartnerAmount:'0'};
+ Object.entries(inputs).forEach(([key,value])=>{$('#'+key).value=value});
+ const fakeWindow={TraceInternational:w.TraceInternational,
+  TraceOperationUI:{enhanceTransaction(){},kindsFor(){return[{id:'income'}]},
+   options(){return'<option value="income">Revenu</option>'}},
+  TraceFriendDebtorUI:{mount(){}},
+  TraceImportGuide:{cardStatementSettlementLabel:()=>false},
+  TraceMovement:{fromStored:()=> 'income',get:()=>({type:'income',budget:'income',help:''}),paidForExpense:()=>0}};
+ const matcher=new Function('state','window','dateGapDays','smartExactBankAmount',
+  'return ('+app.slice(sourceStart,sourceEnd)+');')(
+   environment,fakeWindow,getDateGap,exact);
+ let rendered='',saved=[];
+ const deps={state:environment,window:fakeWindow,$,me:'la',partner:'partner',
+  csvBankEvidenceMatches:matcher,requireCardEvidenceUnlink:()=>false,
+  accountType:a=>a?.type,openSheet:(title,html)=>{rendered=html},
+  closeSheet(){},esc:x=>String(x??''),visibleBankAccounts:()=>[checking],
+  shortAccountLabel:a=>a.name,shortMemberName:()=> 'Partenaire',
+  traceFeedback:()=>'',traceNotice:e=>{throw e},
+  manualCategories:()=>environment.categories,
+  movementImpact:()=>({bank:15,budget:{la:15,partner:0,couple:15},friends:0}),
+  money:x=>String(x)+' CAD',friendDebtorFields:()=>({}),
+  traceSplit:()=>({split:{la:100,partner:0},splitAmounts:{la:15,partner:0}}),
+  traceCustomShares:()=>({}),renderAll(){},navigate(){},showTab(){},
+  saveDocument:async(collection,item)=>{saved.push({collection,item})}};
+ const at=app.indexOf('function editTransaction('),
+  until=app.indexOf('\nfunction deleteTransaction(',at);
+ const editor=new Function(...Object.keys(deps),'return ('+app.slice(at,until)+');')(
+  ...Object.values(deps));
+ editor('csv-pending',true);
+ return{$,pending,rendered,saved,prior};
+}
+async function editorTests(){
+ const matched=await editorScenario();
+ assert.match(matched.rendered,/txCsvDistinctVerified/);
+ await matched.$('#txValidate').onclick();
+ assert.equal(matched.saved.length,0);
+ assert.match(matched.$('#traceFeedback').textContent,/Compare les opérations/);
+ matched.$('#txCsvDistinctVerified').checked=true;
+ await matched.$('#txValidate').onclick();
+ assert.equal(matched.saved.length,1);
+ assert.equal(matched.saved[0].item.status,'confirmed');
+ assert.deepEqual(matched.saved[0].item.csvReviewMatchIds,['friend-refund']);
+ assert.ok(matched.saved[0].item.csvDistinctReviewedAt);
+ const changed=await editorScenario({initialAmount:16,bankAmount:15});
+ assert.doesNotMatch(changed.rendered,/txCsvDistinctVerified/);
+ changed.$('#txAmount').value='15';
+ await changed.$('#txValidate').onclick();
+ assert.equal(changed.saved.length,0);
+ assert.match(changed.$('#traceFeedback').textContent,/rouvre cette fiche/);
+ const distinct=await editorScenario({initialAmount:16,bankAmount:15});
+ await distinct.$('#txValidate').onclick();
+ assert.equal(distinct.saved.length,1);
+ assert.equal(distinct.saved[0].item.status,'confirmed');
+}
+editorTests().then(()=>{
+ count+=3;
+ console.log('PASS unreviewed overlap blocked before financial save');
+ console.log('PASS changed amount cannot bypass a newly discovered overlap');
+ console.log('PASS distinct CSV line can be confirmed without false overlap');
+ console.log(count+' fictional CSV cross-nature reconciliation checks passed');
+}).catch(error=>{console.error('FAIL CSV editor guards',error);process.exitCode=1;});
+
