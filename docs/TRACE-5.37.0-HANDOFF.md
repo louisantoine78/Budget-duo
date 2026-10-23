@@ -94,3 +94,15 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 - QA **exécutée sur fichiers candidats avant commit** : **65/65 tests V8 avec Node/DOM simulés** dans `tests/trace-international-deferred-debit.test.cjs` (48 historiques dans cette suite + 17 nouveaux). Aucun vrai Node CLI, aucune des 31 autres suites rejouée dans ce lot, aucun Safari/CI ; 633/633 simulés reste un chiffre historique d'avant ces nouveaux changements.
 - Commits : moteur `1141b9e915fd1cfb97330d982805b5396a018305`, tests `f978bc1850433cc068ca6f03ddb113430005f659`, audit `6855581d32cdcdea8bd250e57e52586e75644bc1`, tous `[skip ci]`. Le dernier commit est celui du relais ci-dessous ; une SHA ne peut pas être contenue dans le commit qui la calcule.
 - **Prochain lot concret :** définir un paiement partiel justifié par un montant bancaire réellement identifié, rejeter l'allocation implicite, préserver le budget ; enrichir ensuite le rapprochement avec import fictif. Test du vrai Node à prioriser dès que les sources GitHub peuvent être récupérées par un checkout fiable.
+
+
+## Mise à jour — lot règlements partiels différés (23 octobre 2026)
+
+**HEAD initial avant ce lot** : `9c2805b9a23e7d7eb3e28e87423ab2c015784244`. `main` vérifiée inchangée : `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+
+- Moteur `trace-deferred-debit-1.0.0.js` **toujours isolé** : fractions `settlementMode:'partial'` admises uniquement avec allocation explicite à une échéance et `bankEvidence` (document/ligne/compte courant/devise/date/sens/montant/statut/revue humaine). Contrôles d'ID de ligne dupliqué, réserve des paiements `confirmed` et `pending`, rejet de surpaiement, d'allocations entre échéances, de frais ou taux implicites. Règlements complets antérieurs rétrocompatibles.
+- Les sorties donnent le payé, restant et en attente par échéance ; le retard est recalculé sur le **solde restant**. Paiements confirmés = transfert courant→carte **neutre dans le budget** ; `pending` = aucun changement de dette/trésorerie.
+- **L'élément `bankEvidence.reviewed:true` reste une déclaration client fictive, jamais une authentification bancaire ni un rapprochement d'import réellement vérifié.** Aucune contrainte transactionnelle serveur n'est encore branchée.
+- **QA : 84/84 contrôles V8 avec modules Node simulés**, soit 65 anciens + 19 nouveaux. Pas de vrai Node CLI, CI ni Safari ; les autres 31 suites non rejouées pendant ce lot. La référence globale historique 633/633 n'est pas un bilan nouveau.
+- Commits `[skip ci]` du lot : moteur `aaa66fa00461c0c6ead0ea89856eb6332ceef8e4`, tests `65493b155b798422806e44e649000a608e0d30f9`, audit `f1c5696cee6ff801bcfa27cee0f4e3279580d921`. Après mise à jour du présent relais, **relire HEAD réel sur GitHub** plutôt que deviner sa SHA propre.
+- **À faire ensuite :** audit/outil isolé de **correspondance en lecture seule** d'une ligne bancaire déjà structurée avec une fraction de règlement, gestion des imports répétés et preuves périmées. Aucun mouvement créé/confirmé automatiquement. Tester les cas fictifs, continuer la sécurisation de la phase 1. Ne pas modifier `main`, la CI, la PWA, Supabase réel, ni déployer.
