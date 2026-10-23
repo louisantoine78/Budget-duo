@@ -64,5 +64,6 @@ jobs:
           node tests/trace-international-csv-column-safety.test.cjs
           node tests/trace-international-statement-reconciliation.test.cjs
           node tests/trace-international-statement-evidence.test.cjs
+          node tests/trace-international-deferred-debit.test.cjs
           node tests/trace-international-lab.test.cjs
           node tests/trace-international-preview-boot.test.cjs
