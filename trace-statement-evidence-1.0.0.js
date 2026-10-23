@@ -40,7 +40,7 @@
   if(!String(documentId||'').trim()||!String(accountId||'').trim()||
     !['CAD','EUR','USD','GBP','CHF'].includes(code)||
     !validDate(fromDate)||!validDate(toDate)||fromDate>toDate||
-    !Array.isArray(rows)||rows.length>2000)
+    !Array.isArray(rows)||rows.length===0||rows.length>2000)
    throw Error('Document, compte, devise, période ou lignes du relevé invalides.');
   const ready=[],issues=[],seen=new Set();
   rows.forEach((source,index)=>{
