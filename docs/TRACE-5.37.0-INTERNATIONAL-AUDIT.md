@@ -1066,3 +1066,12 @@ Commits du code et des tests : `1141b9e915fd1cfb97330d982805b5396a018305`, `f978
 **Préversion déjà créée lors de la reprise, avant la nouvelle interface :** `dpl_B3miyL7HUqp4QdTPj24TWA6SHQs9`, commit `bccbca51c49b524a4fe6e46bd6a0006a7c003de6`, état Vercel `READY`, destination `trace-v5-preview`, target Preview. Elle ne contient **pas** l'interface interactive ajoutée ensuite ; consulter Vercel pour le nouveau déploiement à la suite du présent relais.
 
 **Reste à faire avant production :** raccorder au vrai grand livre via des modèles vérifiés et une base fictive multi-utilisateurs ; terminer la validation des parcours import/réconciliation/OCR/FX et des cinq onglets sur Safari iPhone ; obtenir un vrai test Node CI autorisé ; ne pas lever les verrous financiers ni migrer de données tant que non validé.
+
+
+## Livraison de la préversion fictive — contrôle Vercel (23 octobre 2026)
+
+- Projet Vercel **`trace-v5-preview`**, projet ID `prj_NvXLdQg1KAmDlcYzdjNhFpYls0Bj`, déploiement `dpl_7Tk3K4nYzYbz1rGp1eLCb17TDsLA`, **READY** vérifié par l'API Vercel, target **Preview** (`null`, pas `production`).
+- **Commit réellement déployé :** `5989f220492d1bd2fa6bf9576cf773129f94e413` sur la candidate. URL : https://trace-v5-preview-g9oqwi2ok-lambotla-1719.vercel.app/trace-international-preview.html
+- Accès protégé par **Vercel Authentication/SSO** sur le projet. L'API confirme le build READY mais la navigation externe n'a pas pu charger la page protégée : **aucun test navigateur de cette URL, ne pas annoncer Safari/iPhone validé**. L'utilisateur peut devoir se connecter avec son compte Vercel.
+- Le build inclut l'interface de laboratoire du débit différé. **Aucun déploiement de `main`, aucun domaine de production modifié, aucun accès à Supabase réel**, aucune migration. `deferred` reste désactivé sur le parcours de création réel.
+- **Important :** le(s) commit(s) documentaires enregistrant cette URL peuvent avancer le HEAD candidat au-delà de la SHA du build Vercel ; les seuls changements supplémentaires sont documentaires et ne sont pas déployés automatiquement (branche candidate désactivée dans `vercel.json`).
