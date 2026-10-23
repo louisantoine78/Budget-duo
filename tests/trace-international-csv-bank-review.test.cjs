@@ -181,11 +181,63 @@ async function editorTests(){
  assert.equal(distinct.saved.length,1);
  assert.equal(distinct.saved[0].item.status,'confirmed');
 }
-editorTests().then(()=>{
+
+async function importCsvIntegration(){
+ const account={id:'ca',type:'checking',currency:'CAD',owner:'la',name:'Courant'};
+ const existing=[
+  {id:'card-payment',type:'transfer',status:'confirmed',date:'2026-10-12',
+   name:'Règlement Mastercard',accountId:'ca',toAccountId:'mc',bankAmount:100,amountCAD:100},
+  {id:'camille',type:'external_refund',status:'confirmed',date:'2026-10-13',
+   name:'Camille',accountId:'ca',amountCAD:15,bankAmount:15}];
+ const environment={accounts:[account],transactions:existing.slice()},writes=[];
+ const nodes=new Map(),$=key=>{
+  if(!nodes.has(key))nodes.set(key,{value:'',dataset:{},
+   innerHTML:'',textContent:'',disabled:false,onclick:null});
+  return nodes.get(key);
+ };
+ class FileReaderFake{readAsText(file){this.result=file.csv;this.onload();}}
+ const deps={state:environment,window:w,$,me:'la',FileReader:FileReaderFake,
+  visibleBankAccounts:()=>[account],shortAccountLabel:a=>a.name,
+  esc:x=>String(x??''),txDocId:(()=>{let n=0;return()=> 'import-'+(++n)})(),
+  smartExactBankAmount:exact,dateGapDays:getDateGap,
+  traceSplit:()=>({split:{la:100,partner:0},splitAmounts:{la:15,partner:0}}),
+  saveDocument:async(c,row)=>writes.push({c,row}),
+  renderAll(){},navigate(){},showTab(){},console:{error(){}}};
+ const source=app.slice(app.indexOf('function normalizedCsvKey('),
+  app.indexOf('/* Merchant suggestions',app.indexOf('function normalizedCsvKey(')));
+ const importFile=new Function(...Object.keys(deps),source+'\nreturn importFile;')(
+  ...Object.values(deps));
+ const csv='Date;Libellé;Débit;Crédit\n'+
+  '12/10/2026;Paiement Mastercard;100,00;\n'+
+  '13/10/2026;Virement Camille;;15,00\n';
+ importFile({name:'octobre.csv',size:csv.length,type:'text/csv',csv});
+ const columns={date:'0',name:'1',amount:'-1',debit:'2',credit:'3'};
+ for(const [name,value] of Object.entries(columns))$('#csvCol_'+name).value=value;
+ $('#csvDateFormat').value='dmy';$('#csvAccount').value='ca';
+ $('#csvPreview').onclick();
+ const preview=$('#csvPreviewResult').innerHTML;
+ assert.match(preview,/2 rapprochement\(s\) possible\(s\)/);
+ assert.match(preview,/Règlement Mastercard/);
+ assert.match(preview,/Camille/);
+ await $('#csvCommit').onclick();
+ assert.equal(writes.length,2);
+ assert.ok(writes.every(x=>x.c==='transactions'&&x.row.status==='pending'));
+ assert.deepEqual(writes.map(x=>x.row.csvReviewMatchIds),[['card-payment'],['camille']]);
+ assert.equal(environment.transactions.filter(x=>x.status==='confirmed').length,2);
+ assert.equal(environment.transactions.length,4);
+ assert.equal(existing[0].type,'transfer');
+ assert.equal(existing[1].type,'external_refund');
+}
+
+editorTests().then(async()=>{
  count+=3;
  console.log('PASS unreviewed overlap blocked before financial save');
  console.log('PASS changed amount cannot bypass a newly discovered overlap');
  console.log('PASS distinct CSV line can be confirmed without false overlap');
+ await importCsvIntegration();
+ count+=2;
+ console.log('PASS real CSV preview flags Mastercard and friend refund for review');
+ console.log('PASS committing CSV creates pending rows only and preserves original bank ledger');
  console.log(count+' fictional CSV cross-nature reconciliation checks passed');
 }).catch(error=>{console.error('FAIL CSV editor guards',error);process.exitCode=1;});
 
