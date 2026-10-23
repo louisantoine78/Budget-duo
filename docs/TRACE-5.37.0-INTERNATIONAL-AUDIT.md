@@ -136,3 +136,51 @@ La présence des scripts en laboratoire et le test sur DOM simulé **ne sont pas
 - Aucun test en Safari réel n'a encore été effectué, aucune prévisualisation n'est publiée sur GitHub Pages, aucun appel Supabase réel n'a été exécuté et aucune autorisation de fusion n'est donnée.
 
 Ce parcours ne valide pas encore le DOM natif de Safari, l'OCR/PDF international complet, ni la qualité UX sur un iPhone réel. Ce sont des **critères de validation à discuter** avant la mise en production.
+
+
+## Reprise sécurisée — 22 octobre 2026 (phases 0 et 1)
+
+**Périmètre : branche International uniquement.** La branche main demeure au commit 02c70f50e7e51da79b77a91dde96a03c6c719909, TRACE 5.36.5. Aucun changement d'entrée de production, service worker, manifeste, trace-version.json, données Supabase, fusion ou déploiement n'a été effectué par cette reprise.
+
+### Commits techniques appliqués
+
+**d40b259efe9bfeafbddb3cd7b87b410ba2891dca — protection des mouvements et rapprochements :**
+- Un montant bancaire absent, null ou vide ne devient plus fictivement zéro ; zéro réellement enregistré et historiques CAD sont préservés.
+- Une devise bancaire explicitement non prise en charge est rejetée, tandis que les comptes historiques sans devise restent CAD.
+- Rejet des devises originales invalides, protection contre l'affichage à zéro d'un montant inconnu.
+- Refus des éditions de transferts vers une carte dépourvue de compte courant de règlement explicitement associé.
+- Les rapprochements sans montant vérifié ne réinitialisent plus la trésorerie ; les champs inconnus ne sont pas préremplis à zéro.
+- Les rapprochements manuels conservent montants en devise native et référence de devise ; différence nulle seulement si arithmétiquement zéro, et null si référence inconnue.
+- Nouvelle suite tests/trace-international-financial-guards.test.cjs ajoutée au workflow de régression sur branche.
+- vercel.json désactive les déploiements automatiques pour la branche trace-5.37.0-international-accounts-fx.
+
+**f915577bf5686322e52c51a4ecbc7b359983ce9a — garde-fous complémentaires :**
+- Les rapprochements en attente, incomplets, explicitement non vérifiés ou non datés ne deviennent pas des soldes de référence.
+- Les rapprochements anciens sans statut restent compatibles. Les nouveaux rapprochements manuels portent les attributs status=confirmed et source=manual_balance.
+- Édition de carte : contrôle explicite de la devise, du pays et du compte courant associé.
+- Devise d'affichage inconnue non présentée comme CAD.
+- Suite de garde-fous étendue à 19 scénarios fictifs.
+
+### Vérifications de phase 0
+
+Vérifications réalisées au moyen du vrai contenu des fichiers récupérés sur GitHub, exécuté dans un harnais JavaScript V8 simulant des interfaces Node.js ; aucune base bancaire réelle, aucun réseau applicatif et aucune écriture Supabase. Il ne s'agit **pas** d'une exécution Node CLI, d'un résultat de CI GitHub, d'un navigateur réel ou de Safari.
+
+- Avant modifications : 150 contrôles de régression historique, 44 de comptabilité CAD, 14 de détail de paiements de carte, 12 de doublons et 27 de moteur FX, soit 247 contrôles réussis sur ces suites.
+- Après le commit f915577b : moteur FX 27 ; scénarios historiques sur candidate 44 ; éditeur 6 ; câblage 7 ; CSV 6 ; vue Couple 4 ; garde-fous financiers 19 ; UI International 12. Total : 125 contrôles réussis.
+- Après le même commit : laboratoire 8 ; démarrage simulé 7 ; UI historique 12. Total : 27 contrôles réussis supplémentaires.
+- **Total post-commit sur la candidate : 152 contrôles isolés réussis, zéro échec observé.**
+- Syntaxe JavaScript des deux fichiers modifiés vérifiée dans V8.
+- Le workflow trace-regression.yml est toujours déclenché uniquement sur main ou les PR vers main ; aucune CI n'a été volontairement exécutée.
+- Au contrôle suivant les commits, Vercel avait toujours pour dernier déploiement READY la version de SHA 8ca41fbb. Aucun déploiement associé aux nouveaux commits n'était visible.
+
+### Phase 1 — restant avant de la déclarer terminée
+
+1. Exécuter l'ensemble des suites dans Node.js réel sur un checkout isolé, et les futurs tests dans Safari iPhone, sans activer de CI ni déployer avant autorisation.
+2. Renforcer les scénarios fictifs multi-devises : frais de virement, paiements de carte sur les deux comptes, avances et remboursements, répartition Moi/Partenaire/Amis et absence de revenu ou dépense fictifs.
+3. Vérifier réellement la disponibilité HTTP et les séries de la Banque du Canada Valet ; les simulations actuelles ne certifient pas le service.
+4. Préserver le caractère figé des conversions historiques et des budgets anciens lors des changements de compte principal.
+5. Garder le débit différé désactivé tant que les échéances et règlements ne sont pas développés.
+6. Les travaux à venir sur épargne internationale, rapprochement PDF ligne par ligne, Activité, Partage, Budget, Accueil et Patrimoine restent à réaliser conformément au cahier des charges validé.
+7. Conserver index.html, sw.js, manifest.webmanifest et trace-version.json sur la version 5.36.5 jusqu'à autorisation explicite distincte de fusion/publication.
+
+**Retour arrière :** les seuls commits de code de cette reprise sont d40b259e et f915577b. En cas de régression, préparer un revert contrôlé sur la branche International ; ne pas faire de force-push, ne pas toucher main ni réinitialiser Supabase.
