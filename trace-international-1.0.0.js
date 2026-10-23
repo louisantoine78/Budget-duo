@@ -84,6 +84,19 @@
    ambiguousCards,mixedLinkedCurrencies,cardsToReview,balances,globalCAD:totalCAD,complete,
    missing:balances.filter(b=>b.balance===null||b.cad===null||cardsToReview.some(a=>a.id===b.id))};
  };
+ const investmentBankAmount=(op,bank)=>{
+  if(!op||!bank)return null;
+  const currencyNative=currency(bank);
+  if(op.bankCurrency&&String(op.bankCurrency).toUpperCase()!==currencyNative)return null;
+  let amount=op.bankAmount;
+  if(amount===null||amount===undefined||amount===''){
+    if(currencyNative!=='CAD')return null;
+    amount=op.bankAmountCAD??op.amount;
+  }
+  if(amount===null||amount===undefined||amount==='')return null;
+  const n=Number(amount);
+  return Number.isFinite(n)&&n>0?round(n):null;
+ };
  const fetchDailyRate=async(code,date,transport)=>{
   const c=String(code||'').toUpperCase();
   if(!valid(c))throw Error('Devise non prise en charge');
@@ -171,5 +184,5 @@
   return next;
  };
  root.TraceInternational=Object.freeze({valid,currency,currencies,country,mode,money,amountOnAccount,primary,snapshot,
-  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,fxValue});
+  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,investmentBankAmount,fxValue});
 })(typeof window!=='undefined'?window:globalThis);
