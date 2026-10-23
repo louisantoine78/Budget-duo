@@ -819,7 +819,7 @@ function openManualTransaction(){
     (!investmentId||accountType(bankAccount)!=='checking'||!trackedSavingsAccounts(me).some(a=>a.id===investmentId&&isReadySavingsAccount(a)&&date>a.openingDate))){
     error.textContent='Configure ton CELI et son solde initial, puis choisis un mouvement à une date ultérieure.';return;
   }
-  let shares,related,repaymentAllocations=null,booking,destinationBankAmount;
+  let shares,related,repaymentAllocations=null,booking,destinationBankAmount,friendDebtors;
   try{
    const currency=window.TraceInternational.currency(bankAccount),
     input=$m('manualFxRate').value.trim(),userRate=Number(input);
@@ -844,6 +844,8 @@ function openManualTransaction(){
    shares=beneficiary==='custom'?
     traceCustomShares(booking.amountCAD,$m('manualFriendsAmount').value,$m('manualPartnerAmount').value):
     {beneficiary,...traceSplit(beneficiary,booking.amountCAD)};
+   friendDebtors=friendDebtorFields(shares.splitAmounts?.friends,
+    $m('manualFriendDebtorName').value,$m('manualFriendDebtorShares').value);
    if(kind==='friend_reimbursement'){
     const first=$m('manualRelatedExpense').value,
      extra=extraFriendLines.filter(x=>x.expenseId||String(x.amountCAD).trim()!=='');
@@ -853,7 +855,7 @@ function openManualTransaction(){
      const firstAmount=firstRaw!==''?Number(firstRaw):extra.length?NaN:booking.amountCAD;
      repaymentAllocations=M.validateRepaymentAllocations(
       [{expenseId:first,amountCAD:firstAmount},...extra],
-      state.transactions,state.transactions,me,date,booking.amountCAD);
+      state.transactions,state.transactions,me,date,booking.amountCAD,'',$m('manualFriendName').value);
      related=repaymentAllocations.length===1?first:null;
     }
    }else related=validateFriendLink(kind,$m('manualRelatedExpense').value,date,booking.amountCAD);
@@ -861,14 +863,12 @@ function openManualTransaction(){
   const item={id:txDocId(),date,name,note:'',merchant:'',type:def.type,transferPurpose:def.purpose||null,
    status:'confirmed',...booking,
    ...(['transfer','card_payment'].includes(kind)?{toBankAmount:destinationBankAmount}:{}),
-   categoryId,accountId,payerId:me,...shares,
+   categoryId,accountId,payerId:me,...shares,...friendDebtors,
    ...(related?{relatedExpenseId:related}:{}),...(repaymentAllocations?{repaymentAllocations}:{}),
    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{}),
    ...(['savings_transfer','savings_withdrawal'].includes(kind)?{investmentAccountId:investmentId}:{}),
    recurring:false,recurrence:{enabled:false,endDate:null,nextDate:null,frequency:null,autoConfirm:false,needsReview:false},
    counterparty:kind==='friend_reimbursement'?$m('manualFriendName').value.trim():'',
-   friendDebtorName:def.budget==='expense'&&beneficiary==='custom'&&Number(shares.splitAmounts?.friends)>0?
-    $m('manualFriendDebtorName').value.trim().replace(/\s+/g,' ').slice(0,45):null,
    externalAmount:0,externalParticipants:[]};
   const btn=$m('saveManualTx');btn.disabled=true;btn.textContent='Enregistrement…';
   try{await saveDocument('transactions',item);state.transactions.push(item);closeSheet();renderAll();navigate('activity');showTab('transactions');}
@@ -1187,7 +1187,7 @@ function editForeignFriendRepayment(t){
     const amount=raw!==''?Number(raw):extra.length?NaN:reference.amountCAD;
     allocations=M.validateRepaymentAllocations(
      [{expenseId:first,amountCAD:amount},...extra],
-     state.transactions,state.transactions,me,t.date,reference.amountCAD,t.id);
+     state.transactions,state.transactions,me,t.date,reference.amountCAD,t.id,$('#foreignFriendName').value);
     related=allocations.length===1?first:null;
    }
    const next={...t,relatedExpenseId:related,repaymentAllocations:allocations,
@@ -1483,7 +1483,7 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
    if(['friend_reimbursement','friend_advance_return','external_refund','savings_withdrawal'].includes(requestedType)&&accountType(state.accounts.find(a=>a.id===accountId))!=='checking'){
     $('#traceFeedback').textContent='Choisis le compte courant pour recevoir ce remboursement.';return;
    }
-   let related,repaymentAllocations=null,categoryId='',shares;
+   let related,repaymentAllocations=null,categoryId='',shares,friendDebtors;
    try{
     if(requestedType==='friend_reimbursement'){
       const first=$('#smartMovementLink').value,
@@ -1494,7 +1494,7 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
        const firstAmount=raw!==''?Number(raw):extra.length?NaN:amount;
        repaymentAllocations=M.validateRepaymentAllocations(
         [{expenseId:first,amountCAD:firstAmount},...extra],
-        state.transactions,state.transactions,me,date,amount,t.id);
+        state.transactions,state.transactions,me,date,amount,t.id,$('#smartMovementFriendName').value);
        related=repaymentAllocations.length===1?first:null;
       }
      }else related=validateFriendLink(requestedType,$('#smartMovementLink').value,date,amount,t.id);
@@ -1506,6 +1506,8 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
      shares=who==='custom'?traceCustomShares(amount,$('#smartMovementFriends').value,$('#smartMovementPartner').value):
       {beneficiary:who,...traceSplit(who,amount)};
     }else shares={beneficiary:me,...traceSplit(me,amount)};
+    friendDebtors=friendDebtorFields(shares.splitAmounts?.friends,
+     $('#smartMovementDebtorName').value,$('#smartMovementDebtorShares').value,t.id);
     const received=window.TraceMovement.paidForExpense(state.transactions,t.id);
     if(received>0&&Math.round(Number(shares.splitAmounts?.friends||0)*100)<received){
      throw Error('Cette dépense possède des remboursements liés. Tu dois conserver au moins la part des amis déjà remboursée.');
@@ -1518,9 +1520,7 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
      importFingerprint:accountId===t.accountId&&date===t.date&&name===t.name&&
       Math.abs(Number(t.bankAmount??t.amountCAD)-amount)<.009?
       (t.importFingerprint??null):null,
-      friendDebtorName:movement.budget==='expense'&&shares.beneficiary==='custom'&&Number(shares.splitAmounts?.friends)>0?
-       $('#smartMovementDebtorName').value.trim().replace(/\s+/g,' ').slice(0,45):null,
-      payerId:account.owner||t.payerId||me,...shares};
+      payerId:account.owner||t.payerId||me,...shares,...friendDebtors};
   $('#smartMovementSave').disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();}
   catch(e){$('#smartMovementSave').disabled=false;traceNotice(e);}
