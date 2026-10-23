@@ -221,3 +221,46 @@ Les fichiers de la branche ont été relus via GitHub, puis les suites ont été
 5. Ne pas activer la 5.37.0 dans `index.html`, `sw.js` ni `trace-version.json` et ne fusionner aucune branche sans autorisation explicite.
 
 **Retour arrière :** un revert contrôlé des quatre commits ci-dessus sur la seule branche International, sans force-push ni action destructive, préserve la référence 5.36.5.
+
+
+## Phase 1 — Saisie native des placements et frais inclus (23 octobre 2026)
+
+Périmètre strict : branche `trace-5.37.0-international-accounts-fx` ; aucune fusion, aucun déploiement et aucune écriture Supabase. Toutes les opérations de validation sont fictives.
+
+### Fonctionnalités codées
+
+- **Patrimoine / versements et retraits :** le formulaire de la version candidate propose désormais le montant réel en devise native du compte bancaire sélectionné (CAD, EUR, USD, GBP, CHF). La présentation montre la devise et l'impact bancaire hors budget ; le champ est obligatoire et ne reçoit jamais une contre-valeur CAD fictive lorsqu'un compte étranger est sélectionné.
+- Les opérations de placement conservent `bankAccountId`, `bankCurrency`, `bankAmount` et `bankAmountCAD` uniquement si le compte bancaire est réellement en CAD. Les enregistrements historiques CAD à `bankAmountCAD` restent lisibles et modifiables.
+- Si un placement est explicitement associé par `linkedTransactionId` à un mouvement bancaire déjà confirmé, ce mouvement n'est jamais débité deux fois. Le formulaire bloque la modification silencieuse du compte/de la nature ou du montant natif quand la transaction bancaire liée a déjà été confirmée.
+- **Éditeur de virements internationaux :** ajout d'un champ facultatif de frais bancaires *inclus dans le montant réellement débité*, dans la devise native du compte source. Enregistrement de `transferFeeAmount`, `transferFeeCurrency` et `transferFeeIncludedInDebit` ; vérification d'un montant positif ou nul et inférieur ou égal au débit. Les frais documentés ne déclenchent ni un second mouvement bancaire ni une dépense de consommation fictive. Les deux jambes du transfert restent les montants débités/reçus réellement constatés.
+- **Limite volontaire :** les frais prélevés sous forme d'une écriture bancaire indépendante ne sont pas inclus dans ce champ ; ils devront être rapprochés comme une ligne distincte existante sans duplication. Le formulaire international et les devises de référence budgétaires seront encore affinés dans les phases prévues.
+
+### Commits GitHub de ce lot
+
+1. `47813cd0d5d940765df3440550584f9b830ec46e` : métadonnées de frais inclus et validation du moteur.
+2. `19d5255606d67a3ce9ad5c43d6c8d3ea1a908506` : nouveaux champs natifs et frais dans la candidate.
+3. `1d71448483b8522e4c95a46933220d77e8c49655` : garde de cohérence des opérations de placement déjà liées.
+4. `1b509aeba3d3ff31880878409a7e63e347cdb650` : nouvelle suite de 11 tests d'interaction.
+5. `c25d8a560a69bf351b55a03c6433fa2f1fb3115e` : adaptation du contrôle de l'ancien blocage temporaire à la nouvelle saisie native.
+6. `fee8d383de830f7fa22dd68a4f78c8b90d64da5d` : intégration de la nouvelle suite au workflow futur, sans en changer les déclencheurs.
+7. `a992d96ad1d712edef5e530fa5bd1077848cc877` : deux tests supplémentaires du formulaire d'édition des frais.
+
+### Résultats de tests du lot
+
+Tous les tests ont été effectués depuis les fichiers réels du dépôt, au moyen d'un harnais JavaScript V8 isolé avec certaines API Node simulées, et sans accès à la production ni aux transactions réelles :
+
+- Candidate 5.37.0 : **148 réussites** (10 suites).
+- Régressions historiques 5.36.5 : **232 réussites** (5 suites).
+- Laboratoire statique et démarrage simulé : **15 réussites** (2 suites).
+- **Total : 395 contrôles isolés réussis sur 17 suites**, aucun échec observé après correction du simulateur de formulaire ; ne pas confondre avec les tests Native Node/CI/Safari.
+
+La CLI Node.js existe localement mais le clone du dépôt n'est pas accessible par DNS depuis le conteneur ; les tests natifs, les tests de PWA hors ligne et Safari iPhone réel ne sont donc **pas validés**.
+
+### Prochaines dépendances
+
+1. Vérifier la saisie native dans un navigateur Safari réel, notamment les montants et l'espacement des libellés.
+2. Finaliser les autres scénarios de phase 1 : remboursements partiels/groupés, Partage multi-bénéficiaires, transferts et frais sur relevé, et changements de devise de référence sans altération rétroactive.
+3. Enchaîner ensuite les phases Activité/Partage, Import et rapprochement PDF ligne par ligne sans élargir la navigation à plus de cinq onglets.
+4. Aucune activation de 5.37.0 dans `index.html`, `sw.js` ou `trace-version.json` avant validation expresse distincte.
+
+Pour revenir en arrière, effectuer des reverts contrôlés des commits du lot **sur la branche candidate uniquement** ; aucune réinitialisation Supabase ni force-push.
