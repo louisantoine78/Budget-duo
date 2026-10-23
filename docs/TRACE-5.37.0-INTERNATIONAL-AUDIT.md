@@ -799,3 +799,58 @@ Aucun échec lors de cette campagne isolée. Les 22 nouveaux cas testent notamme
 4. Ne pas créer automatiquement de revenus/dépenses, réécrire les budgets CAD historiques, fusionner des enregistrements, lancer GitHub Actions, activer le module dans `index.html`, modifier `main` ou déployer sans nouvelle autorisation.
 
 **Phase 1 reste ouverte.**
+
+## Phase 1 — Préparation contrôlée des lignes de relevés PDF (23 octobre 2026)
+
+**Point de reprise GitHub avant ce lot :** `bf3149fe63d3186a2d1e5798f27f691bf5bfe5b7`. Travaux effectués uniquement sur `trace-5.37.0-international-accounts-fx`, sans modification de `main`, sans fusion, sans déploiement, sans GitHub Actions et sans lecture/écriture de données réelles Supabase.
+
+### Réalisation nouvelle — module de preuves documentaires isolé
+
+Le module `trace-statement-evidence-1.0.0.js` a été créé. Il **ne lit ni les octets d'un PDF, ni un OCR brut**, et n'est activé ni dans `index.html` ni dans `trace-international-preview.html`. Il reçoit des **lignes déjà extraites et structurées** d'un relevé fictif, avec document, compte, devise native, période, numéro de page, numéro de ligne et texte original.
+
+- `stage` : normalise strictement les dates ISO/JJ-MM-AAAA, montants natifs à centimes exacts, colonnes Débit/Crédit exclusives, sens entrant/sortant et devise du compte. Les lignes de date impossible, hors période, sans preuve de page/ligne/texte, en devise incorrecte, contradictoires, doublons d'emplacement, ou présentant un montant illisible restent dans `issues`. Un relevé vide est invalide.
+- `reviewedRows` : demande la confirmation **explicite de chaque ligne** et de la même preuve. Les justificatifs qui changent de montant, date, libellé, sens, devise, document, compte, page, ligne ou extrait après leur préparation invalident l'approbation et bloquent la comparaison. Toutes les lignes problématiques doivent être résolues avant de produire un rapport complet ; aucun nombre n'est inventé.
+- `compareReviewed` : une fois toutes les lignes confirmées, transmet uniquement leurs valeurs documentées au module isolé `trace-statement-reconcile-1.0.0.js` développé au lot précédent. Le compte et la devise doivent correspondre. Il ne crée jamais de nouvelles transactions, de revenus ou dépenses et ne certifie aucun solde.
+
+Il s'agit d'une **étape de préparation et de tests**, pas d'un import PDF fonctionnel ni d'un écran prêt à utiliser. Les informations fournies par un extracteur futur devront être revues par une personne avant toute comparaison complète. Les remboursements de proches, paiements de carte et virements entre devises continuent à suivre les règles du rapprochement natif déjà testé.
+
+### Commits de ce lot
+
+1. `695a18922bfb159046198d7a17b427cb76ce3417` — nouveau module de préparation des preuves PDF déjà extraites.
+2. `ed883c731bd61d18d005d4cced48926f61c31336` — rejet des relevés sans aucune ligne.
+3. `f3bc03e41f400bac897d6193650d708ad628815a` — 22 tests initialement créés pour les lignes PDF structurées et la confirmation humaine.
+4. `3ba2b76ff5e79e7035013176c43c340023612dd2` — inscription des tests au workflow futur **main-only** sans lancer de CI.
+5. `4dafc4bbbe54e9c56993742b3d2faf081ebeb218` — invalidation des approbations après modification du document préparé.
+6. `a516485548e2c220cf24ce0258f08516999167eb` — deux scénarios supplémentaires de preuve modifiée, portant la suite à **24 tests**.
+
+### Campagne de tests observée dans cette reprise
+
+Les fichiers ont été récupérés depuis le connecteur GitHub et les **31 suites** ont été exécutées par groupes avec des modules Node/DOM simulés dans l'environnement JavaScript V8. Les deux suites dédiées aux relevés (`trace-international-statement-evidence.test.cjs` et `trace-international-statement-reconciliation.test.cjs`) ont été rejouées après le dernier garde-fou : **46/46 cas réussis**.
+
+| Périmètre | Suites | Contrôles passés |
+|---|---:|---:|
+| International 5.37.0 (incluant les 24 nouveaux tests de preuves) | 24 | 341 |
+| Régressions historiques 5.36.5 | 5 | 232 |
+| Laboratoire fictif et boot simulé | 2 | 15 |
+| **Total de cette reprise** | **31** | **588/588** |
+
+Ces résultats **ne sont pas** des tests natifs Node CLI sur un checkout local, ni des essais réels Safari iPhone/PWA, ni une validation Supabase multi-utilisateur.
+
+### État d'avancement fonctionnel consolidé (au 23 octobre 2026)
+
+| Domaine 5.37.0 | Réalisé en code candidat ou module isolé | Encore nécessaire avant une publication |
+|---|---|---|
+| Moteur multi-comptes/multi-devises | Montants natifs CAD/EUR/USD/GBP/CHF, comptes pays, taux datés, aucun FX implicite 1:1, transferts avec montant réel reçu, tests isolés | Validation HTTP Valet, intégration réelle et Safari |
+| Modèles bancaires CA et FR | Compte courant, cartes crédit liées, débit immédiat, paiements neutres budget | Parcours réel multicomptes et rapprochements bancaires |
+| Répartitions Moi/partenaire/amis | Avances, remboursements multiples/partiels, identités de débiteurs, moteurs et écrans ponctuels candidats testés | UX et régressions multi-utilisateurs et mobiles réelles |
+| Imports | CSV FR/CA, devises natives en attente, doublons revus, centimes exacts, OCR intelligent candidat | Vraies pièces bancaires représentatives, workflow final stable |
+| Contrôle de relevé mensuel | Comparateur read-only et préparateur read-only de lignes **préalablement extraites**, 46 contrôles dédiés | Extraction réelle du PDF, contrôle manuel UI, état de rapprochement validé, écarts bancaires |
+| Accueil et synthèse Couple | Logique et éléments candidats d'agrégation multi-comptes, ambiguïtés empêchant un faux solde | Terminer UX et tests Safari réels de tous les cas |
+| Activité/Budget/Patrimoine | Identité, structures et composants candidats partiels et conception de 5 onglets consolidée | Finaliser le parcours cible sans perte de fonctions 5.36.5 |
+| Épargne et placements internationaux | Premières écritures et validations natives candidates | Raccordement complet aux comptes multi-devises, valorisations et navigation |
+| Débit différé | Option volontairement désactivée | Moteur échéance/achat/débit, tests de règlement sans double consommation |
+| Livraison | Laboratoire fictif indépendant sans Supabase réel, 31 suites V8 | Node natif, Safari iPhone, PWA offline, véritables essais intégrés, revue de PR, approbation pour publication |
+
+**Appréciation :** le cœur comptable international est largement développé et s'est enrichi de nombreux garde-fous ; les cinq écrans finalisés, le débit différé, l'extraction PDF, la validation en navigateur et la vraie intégration restent des jalons significatifs. Aucun pourcentage de complétion global ne peut être déduit honnêtement du nombre de commits/tests.
+
+**Phase 1 maintenue ouverte.** Aucune autorisation de modification de `main`, de la version de production, du service worker, d'une donnée Supabase réelle ou de déploiement.
