@@ -184,3 +184,40 @@ Vérifications réalisées au moyen du vrai contenu des fichiers récupérés su
 7. Conserver index.html, sw.js, manifest.webmanifest et trace-version.json sur la version 5.36.5 jusqu'à autorisation explicite distincte de fusion/publication.
 
 **Retour arrière :** les seuls commits de code de cette reprise sont d40b259e et f915577b. En cas de régression, préparer un revert contrôlé sur la branche International ; ne pas faire de force-push, ne pas toucher main ni réinitialiser Supabase.
+
+
+## Poursuite de phase 1 — isolation des écritures de placements (23 octobre 2026)
+
+**Périmètre :** branche `trace-5.37.0-international-accounts-fx` uniquement. La production 5.36.5, `main`, les données bancaires réelles et Supabase sont inchangés.
+
+### Commits ajoutés
+
+- `6628344caa400082fed63372b53a00965e46d17b` : nouvelle fonction `TraceInternational.investmentBankAmount`. Elle distingue le montant réellement comptabilisé en devise native des champs `bankAmountCAD` hérités. La compatibilité de ces derniers n'est autorisée que pour des comptes CAD.
+- `ceec02590ea52bb9450e71d40d37760e0d156f8c` : `accountEstimate` traite le montant natif des écritures de placements, retourne un solde inconnu si la jambe étrangère est absente, et évite une seconde comptabilisation pour une opération explicitement liée à une transaction bancaire confirmée. L'ancien formulaire de placement à liaison bancaire CAD refuse provisoirement les comptes étrangers, faute de champ natif fiable.
+- `b644fb8621d732003e332b0ee99feee411ca4879` : nouvelle suite de **10 tests fictifs** pour les soldes bancaires CAD/EUR, montants natifs manquants, liaison explicite et transferts non confirmés.
+- `e9f81e58893c428459591554b1e3541e795ba7d4` : ajout des nouveaux tests au workflow de régression candidat, sans changer ses déclencheurs (push et PR vers `main` uniquement).
+
+**Protection :** aucun taux fictif entre CAD et EUR n'est créé. L'ancien formulaire n'est pas considéré comme une saisie internationale complète. Le nouveau champ natif et son UX dans Patrimoine devront être finalisés ultérieurement, conformément au cahier des charges validé. Aucune suppression automatique de doublons et aucune réécriture massive de données existantes.
+
+### Vérifications après les commits
+
+Les fichiers de la branche ont été relus via GitHub, puis les suites ont été exécutées dans un **harnais JavaScript V8 simulant les API Node.js**, sur données exclusivement fictives. Tous les résultats ci-dessous correspondent à ce harnais, pas à Node CLI, CI GitHub ou Safari :
+
+- Candidate 5.37.0 : **135 contrôles réussis** sur neuf suites moteur / historique sur candidat / UI / import / garde-fous / nouvel investissement.
+- Laboratoire fictif : **15 contrôles réussis** (huit statiques et sept démarrages simulés).
+- Historique stable 5.36.5 : **232 contrôles réussis** sur cinq suites (150 régressions générales, 44 comptables, 12 UI, 14 détail carte, 12 doublons).
+- **382 vérifications isolées passées sur 16 suites distinctes**, aucune défaillance produit observée dans ces exécutions. Les premières tentatives de laboratoire ont nécessité une correction du harnais de tests pour simuler `assert.rejects`, puis les 7 cas de démarrage ont réussi.
+
+**Node natif :** `node v22.16.0` est installé localement, mais le clone GitHub a échoué faute de résolution DNS du dépôt. Le code n'a donc pas pu être exécuté via un véritable checkout Node.js. Aucun lancement GitHub Actions n'a été effectué pour préserver les quotas. Une validation CI/Node réelle demeure obligatoire avant toute livraison.
+
+**Banque du Canada :** documentation officielle de la série `FXEURCAD` consultée, mais l'endpoint JSON réel n'était pas accessible depuis l'environnement de contrôle ; les requêtes de taux restent non certifiées en conditions réelles.
+
+### Prochaines étapes techniques
+
+1. Vérifier les mêmes tests dans Node natif / CI contrôlée, puis Safari iPhone réel sur données fictives isolées.
+2. Finaliser les écritures de placements liées à un compte en EUR ou autre devise : montant natif, devise du compte, preuves et conversions datées, sans conversion inventée. Lever ensuite le garde-fou temporaire de l'éditeur.
+3. Compléter le moteur financier avec des tests de frais de transfert, remboursements partiels et groupés, transactions carte sur les deux comptes et changement de devise principale sans altération des budgets historiques.
+4. Conserver la désactivation du débit différé et du nouveau rapprochement PDF jusqu'à implémentation et tests spécialisés.
+5. Ne pas activer la 5.37.0 dans `index.html`, `sw.js` ni `trace-version.json` et ne fusionner aucune branche sans autorisation explicite.
+
+**Retour arrière :** un revert contrôlé des quatre commits ci-dessus sur la seule branche International, sans force-push ni action destructive, préserve la référence 5.36.5.
