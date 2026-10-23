@@ -112,12 +112,18 @@ const paidForExpense=(transactions,expenseId,excluding='')=>(transactions||[])
  },0);
 const validateRepaymentAllocations=(lines,expenses,transactions,owner,date,bankAmount,excluding='',counterparty='')=>{
  if(!Array.isArray(lines)||!lines.length)throw Error('Choisis au moins une avance à rembourser.');
- const bankCents=cents(bankAmount);
+ // Repayment associations must never silently round fractions of a cent.
+ const exactCents=value=>{
+  const raw=Number(value),rounded=cents(value);
+  return Number.isFinite(raw)&&Number.isSafeInteger(rounded)&&
+   Math.abs(raw*100-rounded)<1e-6?rounded:NaN;
+ };
+ const bankCents=exactCents(bankAmount);
  if(!Number.isSafeInteger(bankCents)||bankCents<=0)throw Error('Montant bancaire du remboursement invalide.');
  const seen=new Set(),normalized=[];
  let allocated=0;
  for(const line of lines){
-  const expenseId=String(line?.expenseId||''),amount=cents(line?.amountCAD);
+  const expenseId=String(line?.expenseId||''),amount=exactCents(line?.amountCAD);
   if(!expenseId||seen.has(expenseId))throw Error('Chaque avance ne peut apparaître qu’une fois.');
   if(!Number.isSafeInteger(amount)||amount<=0)throw Error('Montant affecté à une avance invalide.');
   const source=(expenses||[]).find(t=>t.id===expenseId&&t.status==='confirmed'&&
