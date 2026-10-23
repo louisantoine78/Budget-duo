@@ -666,7 +666,8 @@ function openManualTransaction(){
   '<div id="manualFriendsGroup" class="trace-manual-friends hidden"><b>Répartition réelle de la dépense</b>'+
   '<div class="formrow"><div><label class="label2">Part avancée aux amis ($)</label><input class="input" id="manualFriendsAmount" type="number" min="0" step=".01" value="0"></div>'+
   '<div><label class="label2">Part de '+esc(shortMemberName(partner))+' ($)</label><input class="input" id="manualPartnerAmount" type="number" min="0" step=".01" value="0"></div></div>'+ 
-  '<label class="label2" for="manualFriendDebtorName">Proche concerné (facultatif, si une seule personne doit toute la part des amis)</label><input class="input" id="manualFriendDebtorName" maxlength="45" placeholder="Ex. Camille"></div>'+
+  '<label class="label2" for="manualFriendDebtorName">Un seul proche (facultatif)</label><input class="input" id="manualFriendDebtorName" maxlength="45" placeholder="Ex. Camille">'+
+   '<label class="label2" for="manualFriendDebtorShares">Ou plusieurs proches (un par ligne)</label><textarea class="input" id="manualFriendDebtorShares" rows="3" placeholder="Camille : 30,00&#10;Alex : 20,00"></textarea></div>'+
   '<div id="manualTargetWrap" class="hidden"><label class="label2">Compte destinataire</label><select class="input" id="manualTarget"></select></div>'+
   '<div id="manualSavingsWrap" class="hidden"><label class="label2">Compte épargne / CELI</label><select class="input" id="manualSavings"></select></div>'+
   '<div id="manualFriendLink" class="hidden"><label class="label2">Prénom de la personne (facultatif)</label><input class="input" id="manualFriendName" maxlength="45" placeholder="Ex. Camille">'+
@@ -964,6 +965,28 @@ function editCategory(current){
  };
 }
 
+function friendDebtorFields(friendAmount,oneName='',linesText='',editingExpenseId=''){
+ const M=window.TraceMovement,name=String(oneName||'').trim(),
+  text=String(linesText||'').trim(),amount=Number(friendAmount);
+ if(!(amount>0)||!Number.isFinite(amount))return{friendDebtorName:null,friendDebtorShares:null};
+ if(name&&text)throw Error('Choisis soit un seul prénom, soit plusieurs proches.');
+ if(text){
+  const raw=M.parseFriendShares(text);
+  if(raw.length<2)throw Error('Pour une seule personne, utilise le champ prénom.');
+  return{friendDebtorName:null,friendDebtorShares:M.validateFriendDebtorShares(
+   raw,amount,state.transactions,editingExpenseId)};
+ }
+ if(name){
+  const [person]=M.validateFriendDebtorShares([{name,amountCAD:amount}],
+   amount,state.transactions,editingExpenseId);
+  return{friendDebtorName:person.name,friendDebtorShares:null};
+ }
+ const previous=editingExpenseId?state.transactions.find(x=>x.id===editingExpenseId):null;
+ if(previous?.friendDebtorShares?.length&&M.paidForExpense(state.transactions,editingExpenseId)>0)
+  throw Error('Cette répartition possède des remboursements liés. Vérifie-les avant de retirer les noms.');
+ return{friendDebtorName:null,friendDebtorShares:null};
+}
+
 function traceCustomShares(amount,friends,partnerAmount){
  const p=window.TraceMovement.amounts(amount,'custom',me,state.household.defaultSplit||{la:50,partner:50},friends,partnerAmount);
  return{beneficiary:'custom',split:{la:p.la/amount*100,partner:p.partner/amount*100,friends:p.friends/amount*100},splitMode:'percent',splitAmounts:{la:p.la,partner:p.partner,friends:p.friends}};
@@ -1233,7 +1256,9 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
       '<label class="label2" for="smartMovementCategory">Catégorie de dépenses</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementCategory" class="input"></select></div>'+
       '<label class="label2" for="smartMovementWho">Pour qui ?</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementWho" class="input"><option value="'+esc(me)+'">Moi</option><option value="'+esc(partner)+'">'+esc(shortMemberName(partner))+'</option><option value="couple">Nous deux</option><option value="custom">Avec des amis · personnalisé</option></select></div>'+
       '<div class="trace-edit-friends hidden" id="smartMovementCustom"><strong>Répartition avec des amis</strong><div class="trace-edit-friends-grid"><div><label class="label2" for="smartMovementFriends">Part des amis ($)</label><input id="smartMovementFriends" class="input" type="number" inputmode="decimal" min="0" step=".01" value="0"></div><div><label class="label2" for="smartMovementPartner">Part de '+esc(shortMemberName(partner))+' ($)</label><input id="smartMovementPartner" class="input" type="number" inputmode="decimal" min="0" step=".01" value="0"></div></div>'+
-       '<label class="label2" for="smartMovementDebtorName">Proche concerné (facultatif, si une seule personne doit la part des amis)</label><input id="smartMovementDebtorName" class="input" maxlength="45" value="'+esc(t.friendDebtorName||'')+'" placeholder="Ex. Camille"></div>'+
+       '<label class="label2" for="smartMovementDebtorName">Un seul proche (facultatif)</label><input id="smartMovementDebtorName" class="input" maxlength="45" value="'+esc(t.friendDebtorName||'')+'" placeholder="Ex. Camille">'+
+       '<label class="label2" for="smartMovementDebtorShares">Ou plusieurs proches (un par ligne)</label><textarea class="input" id="smartMovementDebtorShares" rows="3" placeholder="Camille : 30,00&#10;Alex : 20,00">'+
+       esc((t.friendDebtorShares||[]).map(x=>x.name+' : '+Number(x.amountCAD).toFixed(2).replace('.',',')).join('\n'))+'</textarea></div>'+
       '<p class="trace-bank-inline-tip" id="smartMovementBudgetNote"></p>'+
      '</div>'+
      '<div id="smartMovementCardReceiveWrap" class="trace-bank-extra-box hidden">'+
@@ -1618,7 +1643,9 @@ function editTransaction(id,validating=false){
     '<input id="txFriendsAmount" class="input" type="number" inputmode="decimal" step=".01" min="0" value="'+esc(Number(t.splitAmounts?.friends||0))+'"></div>'+
     '<div><label class="label2" for="txPartnerAmount">Part de '+esc(shortMemberName(partner))+' ($)</label>'+
     '<input id="txPartnerAmount" class="input" type="number" inputmode="decimal" step=".01" min="0" value="'+esc(Number(t.splitAmounts?.partner||0))+'"></div></div>'+
-    '<label class="label2" for="txFriendDebtorName">Proche concerné (facultatif, si une seule personne doit toute la part des amis)</label><input id="txFriendDebtorName" class="input" maxlength="45" placeholder="Ex. Camille" value="'+esc(t.friendDebtorName||'')+'">'+
+    '<label class="label2" for="txFriendDebtorName">Un seul proche (facultatif)</label><input id="txFriendDebtorName" class="input" maxlength="45" placeholder="Ex. Camille" value="'+esc(t.friendDebtorName||'')+'">'+
+    '<label class="label2" for="txFriendDebtorShares">Ou plusieurs proches (un par ligne)</label><textarea class="input" id="txFriendDebtorShares" rows="3" placeholder="Camille : 30,00&#10;Alex : 20,00">'+
+    esc((t.friendDebtorShares||[]).map(x=>x.name+' : '+Number(x.amountCAD).toFixed(2).replace('.',',')).join('\n'))+'</textarea>'+
     '<small>Le reste correspond à ta part. La part des amis n’entre pas dans le budget du couple.</small></div>'+
   '</div></section>'+
  '<section class="trace-edit-impact" aria-labelledby="traceEditImpactTitle">'+
