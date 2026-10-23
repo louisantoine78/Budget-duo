@@ -38,7 +38,11 @@ function setup(){
    nodes.set(id,x);
   }return nodes.get(id);
  };
- const deps={state,me:'la',partner:'partner',window:w,$,openSheet:()=>{},closeSheet:()=>{},
+ const helperFrom=code.indexOf('function friendDebtorFields('),
+ helperTo=code.indexOf('\nfunction traceCustomShares(',helperFrom);
+ assert.ok(helperFrom>0&&helperTo>helperFrom);
+ const friendDebtorFields=new Function('state','window','return ('+code.slice(helperFrom,helperTo)+');')(state,w);
+ const deps={state,friendDebtorFields,me:'la',partner:'partner',window:w,$,openSheet:()=>{},closeSheet:()=>{},
   visibleBankAccounts:()=>[bank],trackedSavingsAccounts:()=>[],isReadySavingsAccount:()=>false,
   accountType:a=>a?.type,shortAccountLabel:a=>a?.name||'',traceEditorDateLabel:x=>x,
   traceFeedback:()=>'',esc:x=>String(x??''),shortMemberName:()=> 'Élise',money:x=>String(x),
