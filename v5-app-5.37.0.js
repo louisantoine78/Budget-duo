@@ -2078,6 +2078,18 @@ function parseCsvDate(raw,format){
 function csvFingerprint(t){const norm=String(t.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();return[t.date,t.type,Number(t.bankAmount??t.amountCAD).toFixed(2),norm,t.accountId].join('|');}
 function csvImportedDuplicate(t,rows){const key=csvFingerprint(t);return rows.some(x=>(x.importFingerprint||csvFingerprint(x))===key);}
 
+// Only identical rows of the SAME statement file, account and physical row
+// are idempotent. Equal prices/merchant/date can be separate real purchases.
+function csvAlreadyImportedSourceRow(t,rows){
+ const index=Number(t?.csvSourceRowIndex);
+ if(!Number.isSafeInteger(index)||index<2||!t.importFileName)return false;
+ const fingerprint=csvFingerprint(t);
+ return(rows||[]).some(x=>x.source==='csv'&&x.accountId===t.accountId&&
+  x.importFileName===t.importFileName&&Number(x.csvSourceRowIndex)===index&&
+  (x.importFingerprint||csvFingerprint(x))===fingerprint);
+}
+
+
 // Read-only review of a statement row against bank movements already in TRACE.
 // A match is a warning, never authority to delete, merge or book a transaction.
 function csvBankEvidenceMatches(row,existing=state.transactions){
@@ -2156,13 +2168,16 @@ function importFile(file){
        amountOriginal:amount,categoryId:'',accountId,payerId:me,beneficiary:me,
        // A foreign import has no CAD allocation until a verified dated rate.
        ...(ccy==='CAD'?traceSplit(me,amount):{}),
-       recurring:false,source:'csv',importFileName:file.name};
+       recurring:false,source:'csv',importFileName:file.name,
+       csvSourceRowIndex:index+2};
      t.importFingerprint=csvFingerprint(t);
      // Different accounting natures (income vs friend refund, expense vs card
      // settlement) can represent the same bank movement. Keep it pending.
-     const candidates=csvBankEvidenceMatches(t,state.transactions);
+     const candidates=csvBankEvidenceMatches(t,[...state.transactions,...all]);
      if(candidates.length)t.csvReviewMatchIds=candidates.map(x=>x.id);
-     if(!csvImportedDuplicate(t,state.transactions)&&!csvImportedDuplicate(t,all))all.push(t);
+     // Preserve even identical-looking transactions in the same statement.
+     // Reimporting the very same source row is the only silent no-op.
+     if(!csvAlreadyImportedSourceRow(t,state.transactions))all.push(t);
     });
     return{all,invalid,duplicates:rows.length-invalid.length-all.length};
    };
@@ -2182,7 +2197,7 @@ function importFile(file){
      $('#csvCommit').onclick=async()=>{
       const btn=$('#csvCommit');btn.disabled=true;let saved=0;
       try{
-       const newEntries=result.all.filter(t=>!csvImportedDuplicate(t,state.transactions));
+       const newEntries=result.all.filter(t=>!csvAlreadyImportedSourceRow(t,state.transactions));
        // Unquoted foreign rows remain pending in their real bank currency.
        // CAD is assigned only during explicit validation at a dated FX rate.
        for(const t of newEntries){
@@ -2193,7 +2208,7 @@ function importFile(file){
         // Re-evaluate as imports can happen after the preview was opened.
         const bankMatches=csvBankEvidenceMatches(item,state.transactions);
         item.csvReviewMatchIds=bankMatches.map(x=>x.id);
-        if(csvImportedDuplicate(item,state.transactions))continue;
+        if(csvAlreadyImportedSourceRow(item,state.transactions))continue;
         await saveDocument('transactions',item);state.transactions.push(item);saved++;
        }
        renderAll();navigate('activity');showTab('review');
