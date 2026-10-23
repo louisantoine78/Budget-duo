@@ -128,3 +128,12 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 - Le déploiement initial **avant ajout UI** vers `trace-v5-preview` est `dpl_B3miyL7HUqp4QdTPj24TWA6SHQs9` au commit `bccbca5`, état **READY** ; la page est potentiellement protégée par authentification Vercel. Inspecter le dernier déploiement Vercel après ce relais pour obtenir l'URL au commit actualisé, et la vérifier avant d'affirmer qu'elle est accessible.
 - **Prochain chantier concret de production :** auditer l'intégration directe dans le flux Activité/import intelligent du modèle différé avec écritures sûres, sécuriser double comptage/frais/règlements partiels sur une base totalement fictive, compléter UX des cinq onglets, exécuter Node/CI et navigateur Safari. L'objectif est une 5.37.0 fonctionnelle et sûre ; ne pas réactiver `deferred` prématurément.
 - **Prochaine reprise :** toujours lire ce relais et vérifier HEAD GitHub. Ne jamais déployer vers `main` ou prod sans tests et autorisation spécifique.
+
+
+## Livraison de la préversion fictive — contrôle Vercel (23 octobre 2026)
+
+- Projet Vercel **`trace-v5-preview`**, projet ID `prj_NvXLdQg1KAmDlcYzdjNhFpYls0Bj`, déploiement `dpl_7Tk3K4nYzYbz1rGp1eLCb17TDsLA`, **READY** vérifié par l'API Vercel, target **Preview** (`null`, pas `production`).
+- **Commit réellement déployé :** `5989f220492d1bd2fa6bf9576cf773129f94e413` sur la candidate. URL : https://trace-v5-preview-g9oqwi2ok-lambotla-1719.vercel.app/trace-international-preview.html
+- Accès protégé par **Vercel Authentication/SSO** sur le projet. L'API confirme le build READY mais la navigation externe n'a pas pu charger la page protégée : **aucun test navigateur de cette URL, ne pas annoncer Safari/iPhone validé**. L'utilisateur peut devoir se connecter avec son compte Vercel.
+- Le build inclut l'interface de laboratoire du débit différé. **Aucun déploiement de `main`, aucun domaine de production modifié, aucun accès à Supabase réel**, aucune migration. `deferred` reste désactivé sur le parcours de création réel.
+- **Important :** le(s) commit(s) documentaires enregistrant cette URL peuvent avancer le HEAD candidat au-delà de la SHA du build Vercel ; les seuls changements supplémentaires sont documentaires et ne sont pas déployés automatiquement (branche candidate désactivée dans `vercel.json`).
