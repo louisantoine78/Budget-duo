@@ -275,11 +275,26 @@ function editTricountOpening(){
 }
 
 function openSharing(){
- const b=coupleBalance(),creditor=b>0?'la':'partner',debtor=b>0?'partner':'la',rows=sharingHistory();
+ const b=coupleBalance(),creditor=b>0?'la':'partner',debtor=b>0?'partner':'la',rows=sharingHistory(),
+   friends=['la','partner'].flatMap(owner=>window.TraceMovement.friendReceivables(state.transactions,owner)),
+   friendDue=friends.reduce((sum,entry)=>sum+entry.outstandingCAD,0),
+   fmtFriends=value=>window.TraceInternational.money(value,'CAD');
  openSheet('Partage du couple',
   '<div class="settings-hero"><span class="pico large">'+uiIcon('heart')+'</span><div><b>'+(Math.abs(b)<.01?'Vous êtes à l’équilibre':esc(member(debtor).name)+' doit '+money(Math.abs(b))+' à '+esc(member(creditor).name))+'</b><small>Solde depuis le '+esc(state.household.referenceDate||'début')+' · répartition réelle de chaque dépense</small></div></div>'+
   '<button type="button" class="primary full" id="addSettlement" style="margin-top:14px">Enregistrer un règlement</button>'+'<button type="button" class="secondary full" id="editTricountOpening" style="margin-top:8px">'+(Number(state.household.sharingOpeningBalance||0)!==0?'Modifier le solde repris de Tricount':'Reprendre le solde de Tricount')+'</button>'+'<div class="empty-note" style="margin-top:9px">Solde initial Tricount : '+(Number(state.household.sharingOpeningBalance||0)>=0?'+':'−')+money(Math.abs(Number(state.household.sharingOpeningBalance||0)))+' (positif = '+esc(shortMemberName('partner'))+' doit à '+esc(shortMemberName('la'))+')</div>'+
-  '<div class="section-head"><h2>Historique partagé</h2></div>'+
+  '<div class="section-head"><h2>Avances aux proches</h2></div>'+
+   '<div class="empty-note">Créances restantes : '+fmtFriends(friendDue)+'. Ces montants sont distincts du solde du couple et ne sont pas des revenus. Les anciennes parts Amis sans prénom restent à attribuer.</div>'+
+   (friends.length?friends.map(friend=>'<details class="trace-list-btn">'+
+    '<summary><span><b>'+esc(friend.name)+'</b><small>Avancées par '+esc(shortMemberName(friend.owner))+
+    ' · '+friend.advances.length+' dépense(s) · remboursé : '+fmtFriends(friend.receivedCAD)+'</small></span>'+
+    '<strong>'+fmtFriends(friend.outstandingCAD)+' restant</strong></summary>'+
+    friend.advances.map(advance=>'<div class="empty-note">'+esc(advance.label)+
+      ' · '+esc(advance.date)+' · avancé : '+fmtFriends(advance.advancedCAD)+
+      ' · remboursé : '+fmtFriends(advance.receivedCAD)+
+      ' · reste : '+fmtFriends(advance.outstandingCAD)+
+      (advance.overpaid?' · écart à vérifier':'')+'</div>').join('')+
+    '</details>').join(''):'<div class="empty-note">Aucune avance aux proches confirmée pour le moment.</div>')+
+   '<div class="section-head"><h2>Historique partagé</h2></div>'+
   (rows.length?rows.map(({t,delta})=>'<div class="trace-list-btn"><span><b>'+esc(t.name||'Opération')+'</b><small>'+esc(t.date)+' · '+(t.type==='transfer'?'Règlement':esc(member(t.payerId||me).name)+' a payé '+money(t.amountCAD))+'</small></span><strong class="'+(delta<0?'trace-positive':'')+'">'+(delta>0?'+':'−')+money(Math.abs(delta))+'</strong></div>').join(''):'<div class="empty-note">Aucun mouvement commun depuis le début de votre suivi.</div>'));
  $('#addSettlement').onclick=()=>openSettlement(null);$('#editTricountOpening').onclick=editTricountOpening;
 }
