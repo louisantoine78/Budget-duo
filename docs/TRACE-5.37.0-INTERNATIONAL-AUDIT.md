@@ -972,3 +972,25 @@ Cet addendum **remplace le caractère incomplet du bilan intermédiaire 415/415*
 - QA : **48/48** scénarios de la suite spécialisée exécutés dans le banc **JavaScript V8 avec modules Node simulés** : les 35 scénarios antérieurs et 13 nouveaux. Aucun test Node CLI réel, CI, navigateur Safari, PWA offline, Supabase ou imports complets n'a été exécuté. Les autres 31 suites n'ont **pas** été rejouées pendant ce lot ; le précédent 633/633 reste une référence historique, et non le bilan nouveau.
 
 **Prochain lot :** auditer et simuler les frais sur relevé différé (séparer frais de la transaction initiale et frais de règlement), puis décider et tester un modèle prudent pour règlements partiels et provenance des paiements importés. Garder l'option `deferred` désactivée.
+
+
+## Phase 1 — frais explicites de carte différée, lot isolé (23 octobre 2026)
+
+**État initial vérifié :** branche `trace-5.37.0-international-accounts-fx`, HEAD `41dc7a7a52fc84552342deb01ee5626b549bc519`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Seule la candidate a reçu des commits `[skip ci]`. Aucun déploiement, workflow, changement d'entrée PWA ou accès aux finances Supabase réelles.
+
+### Modèle délimité (non branché aux écrans)
+
+- Entrée optionnelle `fees` ajoutée au moteur **isolé** `trace-deferred-debit-1.0.0.js` sans changer les appels précédents. Chaque frais est une ligne `type:'card_fee'` explicite avec identifiant, compte carte, devise native, `chargeDate`, `budgetDate`, `dueDate`, statut et montant **total taxes incluses au centime**. Les propriétés inconnues sont rejetées : aucune taxe/commission/change caché ou taux supposé.
+- Un frais **confirmed** constitue **une dépense budgétaire propre** et augmente la dette sur la carte au jour de la facturation, mais ne débite pas le compte courant. Un frais `pending` ne modifie pas les soldes ni les dépenses. Chaque règlement de lot doit référencer explicitement tous les achats ET tous les frais de son échéance (`feeIds`), avec montant exact égal aux achats + frais confirmés − remboursements commerçants confirmés. Un lot composé uniquement de frais est admis, avec ses identifiants explicites.
+- Un règlement bancaire confirmé reste un **transfert interne**, sans créer une deuxième dépense. Les lots incomplets, frais non confirmés, références dupliquées, mauvais compte/devise, frais datés après règlement et montants incohérents échouent sans écriture bancaire.
+- **Non traité et volontairement bloqué :** frais ajoutés au compte courant au moment du règlement, frais de conversion, taxe ventilée de façon ambiguë, frais rétroactifs ou contestés, paiements bancaires partiels, règlements multi-échéances, comparaison automatique avec imports et FX différé.
+- Le drapeau `deferred` reste `disabled` dans `v5-app-5.37.0.js`, sans câblage à la PWA ni au grand livre.
+
+### Vérification
+
+- **65/65 scénarios réussis en harnais JavaScript V8, dépendances Node simulées** : 48 anciens scénarios + 17 scénarios supplémentaires couvrant frais explicites, échéances 100% frais, totaux exacts, remboursements, pending, dates de budget, rejet des frais cachés/incomplets et absence de double dépense.
+- Cette exécution n'est **pas** une CLI Node native sur checkout, ni une CI, ni un navigateur ou Safari/PWA, et n'interroge aucune base de données réelle. Les 31 autres suites n'ont pas été rejouées ; le bilan historique de 633 contrôles reste une référence **antérieure** et ne qualifie pas le nouveau commit.
+
+Commits du code et des tests : `1141b9e915fd1cfb97330d982805b5396a018305`, `f978bc1850433cc068ca6f03ddb113430005f659`. Tous deux `[skip ci]`.
+
+**Prochain chantier borné :** modéliser un règlement bancaire partiel explicite avec allocations prouvables par échéance et statut de confirmation, ou laisser le blocage si les justificatifs sont insuffisants ; ensuite traiter le rapprochement d'une ligne d'import bancaire vers un règlement déjà identifié, sans nouvelle dépense ni confirmation automatique. Les frais du compte courant restent distincts des frais sur carte.
