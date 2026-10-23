@@ -653,8 +653,11 @@ function openManualTransaction(){
   '<div><label class="label2">Part de '+esc(shortMemberName(partner))+' ($)</label><input class="input" id="manualPartnerAmount" type="number" min="0" step=".01" value="0"></div></div></div>'+
   '<div id="manualTargetWrap" class="hidden"><label class="label2">Compte destinataire</label><select class="input" id="manualTarget"></select></div>'+
   '<div id="manualSavingsWrap" class="hidden"><label class="label2">Compte épargne / CELI</label><select class="input" id="manualSavings"></select></div>'+
-  '<div id="manualFriendLink" class="hidden"><label class="label2">Dépense avancée liée (facultatif)</label><select class="input" id="manualRelatedExpense"></select>'+
-  '<small>Le lien sert au suivi du remboursement, sans diminuer à nouveau le budget. Si la dépense n’apparaît pas, répartis d’abord la part des amis sur l’achat initial.</small></div>'+
+  '<div id="manualFriendLink" class="hidden"><label class="label2">Prénom de la personne (facultatif)</label><input class="input" id="manualFriendName" maxlength="45" placeholder="Ex. Camille">'+
+  '<label class="label2">Première avance remboursée (facultatif)</label><select class="input" id="manualRelatedExpense"></select>'+
+  '<label class="label2">Montant attribué (CAD de référence)</label><input class="input" id="manualRelatedAmount" type="number" min=".01" step=".01" inputmode="decimal" placeholder="Montant total si une seule avance">'+
+  '<div id="manualFriendAllocationRows"></div><button type="button" class="secondary" id="manualAddFriendLink">+ Ajouter une autre avance</button>'+
+  '<small>Un même virement rembourse plusieurs avances sans deuxième transaction ni nouveau revenu. Les montants attribués sont en CAD budgétaire, et leur somme doit égaler le remboursement converti.</small></div>'+
   '<div id="manualMovementImpact" class="trace-movement-preview" role="status" aria-live="polite"></div>'+
   '<div id="manualMovementError" class="trace-movement-error" role="alert"></div></div>'+
   '<button class="primary full trace-manual-save" id="saveManualTx" type="button">Enregistrer l’opération</button>'+
@@ -671,13 +674,35 @@ function openManualTransaction(){
   const bank=preferredBankAccount(want);
   if(bank)$m('manualTxAccount').value=bank.id;
  };
+ const extraFriendLines=[];
  const linkOptions=()=>{
-  const sel=$m('manualRelatedExpense'),old=sel.value,amount=Number($m('manualTxAmount').value),date=$m('manualTxDate').value;
-  const rows=Number.isFinite(amount)&&amount>0?friendLinkOptions(date,amount):[];
-  sel.innerHTML='<option value="">Aucun lien pour le moment</option>'+
-   rows.filter(r=>r.allowed).map(r=>'<option value="'+esc(r.id)+'">'+esc(r.label)+' · '+esc(r.date)+' · '+money(r.remaining)+' disponibles</option>').join('');
-  if(rows.some(r=>r.id===old&&r.allowed))sel.value=old;
+  const sel=$m('manualRelatedExpense'),old=sel.value,date=$m('manualTxDate').value;
+  const rows=friendLinkOptions(date,.01);
+  const options='<option value="">Aucun lien pour le moment</option>'+
+   rows.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.label)+' · '+esc(r.date)+' · '+money(r.remaining)+' disponibles</option>').join('');
+  sel.innerHTML=options;
+  if(rows.some(r=>r.id===old))sel.value=old;
+  const wrap=$m('manualFriendAllocationRows');
+  wrap.innerHTML=extraFriendLines.map((entry,i)=>'<div class="formrow trace-edit-friends-grid">'+
+   '<div><label class="label2">Autre avance</label><select class="input" data-friend-link="'+i+'">'+options+'</select></div>'+
+   '<div><label class="label2">Montant (CAD)</label><input class="input" type="number" min=".01" step=".01" inputmode="decimal" data-friend-amount="'+i+'" value="'+esc(entry.amountCAD)+'"></div>'+
+   '<button type="button" class="secondary" data-friend-remove="'+i+'">Retirer</button></div>').join('');
+  wrap.querySelectorAll('[data-friend-link]').forEach(el=>{
+   const i=Number(el.dataset.friendLink);el.value=extraFriendLines[i].expenseId;
+   el.onchange=()=>{extraFriendLines[i].expenseId=el.value;};
+  });
+  wrap.querySelectorAll('[data-friend-amount]').forEach(el=>{
+   el.oninput=()=>{extraFriendLines[Number(el.dataset.friendAmount)].amountCAD=el.value;};
+  });
+  wrap.querySelectorAll('[data-friend-remove]').forEach(el=>{
+   el.onclick=()=>{extraFriendLines.splice(Number(el.dataset.friendRemove),1);linkOptions();};
+  });
  };
+ $m('manualAddFriendLink').onclick=()=>{
+  if(extraFriendLines.length>=12){error.textContent='Maximum de 13 avances par remboursement.';return;}
+  extraFriendLines.push({expenseId:'',amountCAD:''});linkOptions();
+ };
+ 
  function sync(){
   const def=M.get(kind);if(!def)return;
   const from=bankAccounts.find(a=>a.id===$m('manualTxAccount').value),
@@ -777,7 +802,7 @@ function openManualTransaction(){
     (!investmentId||accountType(bankAccount)!=='checking'||!trackedSavingsAccounts(me).some(a=>a.id===investmentId&&isReadySavingsAccount(a)&&date>a.openingDate))){
     error.textContent='Configure ton CELI et son solde initial, puis choisis un mouvement à une date ultérieure.';return;
   }
-  let shares,related,booking,destinationBankAmount;
+  let shares,related,repaymentAllocations=null,booking,destinationBankAmount;
   try{
    const currency=window.TraceInternational.currency(bankAccount),
     input=$m('manualFxRate').value.trim(),userRate=Number(input);
@@ -802,17 +827,29 @@ function openManualTransaction(){
    shares=beneficiary==='custom'?
     traceCustomShares(booking.amountCAD,$m('manualFriendsAmount').value,$m('manualPartnerAmount').value):
     {beneficiary,...traceSplit(beneficiary,booking.amountCAD)};
-   related=validateFriendLink(kind,$m('manualRelatedExpense').value,date,booking.amountCAD);
+   if(kind==='friend_reimbursement'){
+    const first=$m('manualRelatedExpense').value,
+     extra=extraFriendLines.filter(x=>x.expenseId||String(x.amountCAD).trim()!=='');
+    if(first||extra.length){
+     if(!first)throw Error('Choisis la première avance remboursée.');
+     const firstRaw=$m('manualRelatedAmount').value.trim();
+     const firstAmount=firstRaw!==''?Number(firstRaw):extra.length?NaN:booking.amountCAD;
+     repaymentAllocations=M.validateRepaymentAllocations(
+      [{expenseId:first,amountCAD:firstAmount},...extra],
+      state.transactions,state.transactions,me,date,booking.amountCAD);
+     related=repaymentAllocations.length===1?first:null;
+    }
+   }else related=validateFriendLink(kind,$m('manualRelatedExpense').value,date,booking.amountCAD);
   }catch(e){error.textContent=String(e.message||e);return;}
   const item={id:txDocId(),date,name,note:'',merchant:'',type:def.type,transferPurpose:def.purpose||null,
    status:'confirmed',...booking,
    ...(['transfer','card_payment'].includes(kind)?{toBankAmount:destinationBankAmount}:{}),
    categoryId,accountId,payerId:me,...shares,
-   ...(related?{relatedExpenseId:related}:{}),
+   ...(related?{relatedExpenseId:related}:{}),...(repaymentAllocations?{repaymentAllocations}:{}),
    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{}),
    ...(['savings_transfer','savings_withdrawal'].includes(kind)?{investmentAccountId:investmentId}:{}),
    recurring:false,recurrence:{enabled:false,endDate:null,nextDate:null,frequency:null,autoConfirm:false,needsReview:false},
-   counterparty:'',externalAmount:0,externalParticipants:[]};
+   counterparty:kind==='friend_reimbursement'?$m('manualFriendName').value.trim():'',externalAmount:0,externalParticipants:[]};
   const btn=$m('saveManualTx');btn.disabled=true;btn.textContent='Enregistrement…';
   try{await saveDocument('transactions',item);state.transactions.push(item);closeSheet();renderAll();navigate('activity');showTab('transactions');}
   catch(e){btn.disabled=false;btn.textContent='Réessayer';error.textContent='Enregistrement impossible : '+String(e.message||e);}
