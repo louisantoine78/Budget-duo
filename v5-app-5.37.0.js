@@ -2809,6 +2809,11 @@ function openInvestmentOperation(account,original=null){
    $('#traceFeedback').textContent='Saisis le montant bancaire natif réellement débité ou crédité.';return;
   }
   const bankAmountCAD=bankCurrency==='CAD'?Math.round(bankAmount*100)/100:null;
+  const booked=original?.linkedTransactionId?
+   state.transactions.find(t=>t.id===original.linkedTransactionId&&t.status==='confirmed'):null;
+  if(booked&&(original.bankAccountId!==bankAccountId||original.type!==type)){
+   $('#traceFeedback').textContent='Ce versement est lié à une opération confirmée. Vérifie son compte et sa nature dans Activité avant de le déplacer.';return;
+  }
   const linked=original?.linkedTransactionId&&original.bankAccountId===bankAccountId&&original.type===type?
    state.transactions.find(t=>t.id===original.linkedTransactionId&&t.status==='confirmed'):null;
   if(linked){
