@@ -651,3 +651,57 @@ Les **27 suites actuelles** ont été récupérées depuis la branche GitHub et 
 Les 23 nouveaux tests couvrent Mastercard débit courant et crédit carte, retour Camille, nature différente, faux positif de commerçant, compte et devise native (EUR), transferts interdevises réels, absence de conversion fictive, dates, montant exact, statut pending, traçabilité, contrôle de l'éditeur lors de la confirmation et import intégral de deux lignes fictives. Aucune transaction réelle manipulée.
 
 **Limites et sécurité :** le conteneur dispose de Node 22 mais le clone git échoue encore par DNS sur github.com. Aucun test Node réel sur dépôt cloné, GitHub Actions, Safari iPhone, PWA ou Supabase multi-utilisateur n'a été mené. Aucun déploiement Vercel, merge, modification de main, du chargeur 5.36.5, de Supabase ou PickPoint. Les relevés PDF mensuels restent un chantier distinct. La phase 1 n'est pas déclarée achevée et toute publication exige une autorisation séparée.
+
+## Phase 1 — Confirmation CSV périmée et préservation de lignes bancaires identiques (23 octobre 2026)
+
+**Point de départ de ce lot :** `5c0247c393e0ccd2299a5841e0ea4fa5973314b6`, branche `trace-5.37.0-international-accounts-fx` exclusivement.
+
+### Anomalie 1 — Case de confirmation réutilisée après modification des preuves
+
+L'éditeur de la candidate présentait une case à cocher pour confirmer qu'un CSV ressemblant à un mouvement bancaire déjà enregistré était en réalité distinct. Problème **reproduit avant correction** : une case précédemment cochée permettait encore de confirmer après modification du montant, de la ligne bancaire comparée ou de son statut.
+
+**Correctif :** dans `editTransaction`, `csvReviewIdentity` capture une identité en mémoire des détails bancaires examinés : compte, date, montant natif, nature, libellé et détails des mouvements rapprochés (IDs, statut, type, date, comptes et montants). Pour toute écriture CSV confirmée :
+- un changement d'identité ou des correspondances bloque la validation et demande de rouvrir la fiche ;
+- une case antérieurement cochée ne suffit donc plus si la preuve de rapprochement a changé ;
+- un second recalcul a lieu juste avant `saveDocument` pour détecter un changement intervenu au cours d'une opération asynchrone, notamment une nouvelle preuve ajoutée ;
+- un changement de catégorie budgétaire uniquement, sans modification de l'identité bancaire comparée, reste possible.
+
+Ce garde-fou demeure de niveau client : **il ne remplace pas une contrainte transactionnelle Supabase** ni une gestion de concurrence distribuée, qui devra être vérifiée avant une publication publique.
+
+### Anomalie 2 — Lignes CSV véritablement distinctes supprimées de la prévisualisation
+
+L'import CSV utilisait l'empreinte date/type/commerçant/montant/compte pour supprimer implicitement les lignes ayant les mêmes caractéristiques. Deux achats réels du même montant au même commerçant le même jour pouvaient donc être réduits à une seule ligne **avant vérification**.
+
+**Correctif limité au parcours CSV :**
+- chaque ligne comporte un `csvSourceRowIndex` correspondant à sa position physique dans le fichier (en plus de `importFileName`, compte et empreinte) ;
+- une ligne identique provenant d'une **autre position du même fichier** est conservée comme opération `pending`, avec alerte sur la transaction ressemblante ;
+- seule la réimportation de la **même ligne source, depuis le même nom de fichier, sur le même compte et avec la même empreinte** est ignorée pour éviter une réimportation identique ;
+- un fichier renommé ou une transaction similaire enregistrée manuellement reste à examiner, jamais écarté silencieusement ;
+- la fonction historique `csvImportedDuplicate`, utilisée par d'autres parcours, n'a pas été changée. Le comportement plus prudent est limité à l'import CSV.
+
+**Limite connue :** l'identification par nom de fichier + position + empreinte n'est pas un identifiant bancaire universel. Une source ancienne sans `csvSourceRowIndex`, un fichier renommé ou un extrait CSV réordonné peut être reproposé comme `pending` ; l'utilisateur devra le comparer. Aucun doublon n'est supprimé automatiquement.
+
+### Commits candidats enregistrés pour ce lot
+
+- `bfbdb8f9b388cce1e54afecfdc3e21d679f74d6a` — invalidation d'une confirmation devenue périmée ;
+- `c5c7b2f10bb662b8be43cdd958c8a83c547ffa3c` — cinq tests supplémentaires de concurrence simulée et de comparaison périmée (28 contrôles dans la suite CSV bank review) ;
+- `90508a9351519b888d105415f7b1fe0a8bcfe532` — conservation des lignes CSV identiques d'origine différente, idempotence par ligne source ;
+- `0f253afd25684e8152e140a3a0c26df61d99fd30` — nouvelle suite de cinq tests CSV sur vraies fonctions et données fictives ;
+- `eb062cb21d1582e43698fc27cce28d25ccec8fc0` — inscription de la suite dans le workflow futur limité à `main`, sans modifier les déclencheurs ni lancer de CI.
+
+### Campagne actuelle : 531/531 validations V8 isolées
+
+Les fichiers candidats les plus récents ont été récupérés via GitHub, et les **28 suites** ont été réexécutées par lots dans un harnais JavaScript V8 avec simulations de `fs`, `path`, `vm`, `assert`, `process` et éléments DOM :
+
+| Périmètre | Suites | Cas réussis |
+|---|---:|---:|
+| Candidate TRACE 5.37.0 | 21 | 284 |
+| Régressions historiques 5.36.5 | 5 | 232 |
+| Laboratoire fictif et boot simulé | 2 | 15 |
+| **Total observé** | **28** | **531/531** |
+
+Les nouvelles simulations contrôlent que les modifications de montant, de libellé, de statut ou l'apparition d'une preuve bancaire pendant la validation invalident la case cochée. Les mêmes achats bancaires réellement distincts restent des lignes `pending` séparées et la réimportation stricte d'une même ligne source n'en rajoute pas.
+
+**Limitations inchangées :** les suites n'ont pas été exécutées dans un checkout Node natif (clone GitHub bloqué par DNS dans le conteneur) ni dans Safari iPhone ; tests Supabase intégrés, PWA, UX tactile et rapprochement mensuel PDF restent nécessaires. Aucun accès aux données Supabase réelles, migration, fusion, activation, suppression automatique de doublons, déploiement ou réactivation de workflows PickPoint.
+
+**Phase 1 non terminée.** Toute modification de `main` ou publication exige une autorisation expresse ultérieure.
