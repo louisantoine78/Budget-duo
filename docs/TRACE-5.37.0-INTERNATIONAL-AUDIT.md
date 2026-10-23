@@ -902,3 +902,45 @@ Aucun échec observé. Les suites ont été lancées en environnement **JavaScri
 5. **Livraison contrôlée ultérieure :** régressions dans une vraie CLI Node + navigateur, revue de sécurité/concurrence, validation explicite de l'utilisateur avant toute PR, fusion, mise à jour de `index.html`/`sw.js` ou déploiement.
 
 **Décision maintenue :** la 5.37.0 est une candidate en développement, pas un produit complet prêt à lancer. Le nombre de commits ou de contrôles isolés n'est pas un pourcentage d'achèvement fonctionnel. Priorité à la fiabilité, pas à la vitesse de publication.
+
+## Phase 1 — Laboratoire du débit différé, première itération (23 octobre 2026)
+
+**Départ du lot :** `8b2357b3b4f106b6caee4c7f939a5685074da59f`. Branche `trace-5.37.0-international-accounts-fx` uniquement. Aucun changement de `main`, déploiement, GitHub Actions, Supabase réel, service worker, ni activation des cartes différées dans l'application.
+
+### Moteur ajouté, non activé
+
+`trace-deferred-debit-1.0.0.js` est un **moteur de simulation comptable isolé**. Il n'est chargé ni par `index.html` ni par le laboratoire HTML fictif. Les achats d'une carte `type:card`, `paymentMode:deferred` sont associés à un **compte courant de règlement explicite**, de même titulaire, devise et pays. Les achats ont quatre notions séparées : date d'achat, date budgétaire, échéance de débit et date du débit effectivement confirmé.
+
+- Un achat crée **une seule dépense budgétaire** sur la date budgétaire choisie et une dette différée en devise native. Il ne débite pas immédiatement le compte courant.
+- Un règlement `confirmed` et complètement rapproché débite le courant et éteint la dette de la carte, sans **nouvelle dépense ni revenu** ; un règlement `pending` n'altère aucun solde.
+- Plusieurs achats à la même échéance sont regroupés ; cette première version **n'accepte qu'un règlement complet par lot**. Les règlements partiels, les doubles paiements, les mélanges d'échéances, les achats manquants, dates incohérentes et centimes fractionnaires sont rejetés plutôt que devinés.
+- Les remboursements commerçants et les frais ne sont **pas encore traités** dans le moteur ; il rejette explicitement ces entrées plutôt que de les perdre ou de les compter comme achats ou revenus.
+- Pas de taux FX implicite : la simulation est **native au compte** et ne modifie pas les montants CAD des budgets historiques.
+- `asOfDate` permet de distinguer soldes dus, échéances futures, règlements confirmés, paiements en attente et retard de règlement ; calcul **sans écritures bancaires** (`writes:0`, `financialChanges:0`).
+
+Ce chantier est **un prérequis**, pas une fonctionnalité utilisateur : `Carte à débit différé` demeure désactivée dans la création de comptes et le moteur n'est pas branché aux documents financiers réels ou à l'UI iPhone. Avant intégration il faut décider et tester les remboursements, frais, règlements partiels, achats en devises distinctes et rapprochements avec des opérations bancaires réellement importées.
+
+### Commits de ce lot
+
+- `6c63adfa9355f1574c2694b0dc1f1ad12a3bc76e` — simulation isolée des achats, échéances et règlements différés.
+- `da0c7b47d6c24f740a4cebf121f43c70fa161b84` — 30 scénarios initiaux, tous exécutés en V8.
+- `d5568a0ad108555ba5c3631e4be2fc61e7480325` — rejet explicite de catégories inadaptées, frais et remboursements non modélisés.
+- `00cbfbf55bb53b75103e14bacf287d33947480c4` — cinq scénarios supplémentaires, total de **35 tests** isolés réussis.
+- `cf7b6333276da2e748f8085d57995bce731f3482` — inscription de la suite dans le workflow de régression futur, **toujours déclenché sur main uniquement**, sans l'exécuter.
+
+### État exact des vérifications de cette reprise
+
+La nouvelle suite `tests/trace-international-deferred-debit.test.cjs` a été exécutée sur le module réel récupéré depuis GitHub et a réussi **35/35** contrôles dans l'environnement JavaScript V8 simulé. Après correction, les cinq suites historiques TRACE 5.36.5 ont été rejouées **232/232**, ainsi que les dix premières suites International 5.37.0 **148/148**.
+
+**Total vérifié pendant ce lot : 415/415 contrôles ciblés, sur 16 suites.** Une tentative de relecture des 15 suites candidates restantes a été interrompue par la limite d'appels de l'environnement ; les deux suites de laboratoire/boot et les autres suites International **n'ont pas été rejouées dans ce lot**. La dernière campagne complète antérieure à ce lot totalisait **598/598** contrôles simulés sur 31 suites. Il serait prématuré d'annoncer **633/633** tant que les 16 autres suites n'ont pas été relancées.
+
+Ces tests restent des **simulations V8**, pas de vrais tests Node CLI, Safari iPhone/PWA, GitHub Actions ni Supabase fictif intégré.
+
+### Suite technique et critères d'activation
+
+1. Tester le débit différé sur les **16 suites restantes**, puis dans un vrai moteur Node/CI autorisé.
+2. Définir les règles pour remboursements commerçants, frais et règlements partiels ; ne pas masquer ces événements dans le budget.
+3. Raccorder au modèle de transactions et au rapprochement bancaire en **préservant les périodes et budgets existants** ; empêcher la transformation d'un paiement de carte en dépense ou revenu.
+4. Valider de bout en bout avec comptes et données fictifs, puis les écrans Safari iPhone ; garder `main` et la production 5.36.5 intacts jusqu'à autorisation distincte.
+
+**Statut : phase 1 toujours ouverte, non publiable.**
