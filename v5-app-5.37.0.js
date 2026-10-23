@@ -1573,6 +1573,8 @@ function requireCardEvidenceUnlink(t){
 }
 function editTransaction(id,validating=false){
  const t=state.transactions.find(x=>x.id===id);if(!t)return;
+ const csvReview=t.source==='csv'&&t.status!=='confirmed'?
+  csvBankEvidenceMatches(t,state.transactions):[];
  // The card-side statement line is proof, never an editable second payment.
  if(t.type==='card_statement_evidence'){
   const linked=state.transactions.find(x=>x.id===t.linkedTransactionId&&x.type==='transfer');
@@ -1676,6 +1678,11 @@ function editTransaction(id,validating=false){
    '<button type="button" id="txCancel">Annuler</button>'+
    '<button type="button" class="trace-edit-delete" id="txRemove">Supprimer la transaction</button>'+
  '</div>'+
+ (csvReview.length?'<div class="empty-note" role="group" aria-label="Rapprochement bancaire potentiel">'+
+   '<strong>Une opération bancaire semblable existe déjà.</strong><p>Compte, montant natif et sens compatibles, à deux jours près. Vérifie les lignes avant toute validation :</p>'+
+   csvReview.map(x=>'<div>'+esc(x.date)+' · '+esc(x.name||'Opération')+' · '+esc(x.type)+'</div>').join('')+
+   '<label class="label2"><input type="checkbox" id="txCsvDistinctVerified"> J’ai comparé ces opérations et je confirme que cette ligne bancaire est distincte.</label>'+
+   '<small>Sinon, ne valide pas cette ligne comme une nouvelle transaction. Aucune fusion ou suppression automatique.</small></div>':'')+
  '<div class="trace-edit-actions">'+
   '<button class="primary full trace-edit-save" id="txSave" type="button">Enregistrer les modifications</button>'+
   (validating?'<button class="secondary full trace-edit-validate" id="txValidate" type="button">Valider cette opération</button>':'')+
@@ -1800,6 +1807,14 @@ function editTransaction(id,validating=false){
    date=$('#txDate').value,name=$('#txName').value.trim(),categoryId=$('#txCategory').value,
    accountId=$('#txAccount').value,beneficiary=def?.budget==='income'?t.payerId||me:$('#txWho').value;
   const account=state.accounts.find(a=>a.id===accountId);
+  // Cross-nature CSV imports need an explicit human decision before posting.
+  // Re-evaluate after edits: bank account, date or amount may have changed.
+  const csvConflicts=confirm&&t.source==='csv'?
+   csvBankEvidenceMatches({...t,accountId,date,bankAmount:amount,type},state.transactions):[];
+  if(csvConflicts.length&&!$('#txCsvDistinctVerified')?.checked){
+   $('#traceFeedback').textContent='Un paiement, remboursement ou mouvement bancaire ressemble à cette ligne. Compare les opérations existantes, puis confirme qu’il s’agit d’une opération distincte. Si la comparaison n’est pas affichée, rouvre cette fiche après tes modifications.';
+   return;
+  }
   if(accountType(account)==='card'&&window.TraceImportGuide.cardStatementSettlementLabel(name)){
    $('#traceFeedback').textContent='Ce paiement reçu sur la carte doit être rapproché de la sortie du compte courant, pas comptabilisé comme un remboursement. Écarte cette ligne et utilise l’import intelligent pour la rapprocher.';
    return;
@@ -1830,7 +1845,8 @@ function editTransaction(id,validating=false){
      $('#traceFeedback').textContent='Cette dépense possède déjà des remboursements liés. La part des amis ne peut pas devenir inférieure aux remboursements reçus.';return;
    }
    const next={...t,...booking,date,name,type,categoryId,accountId,...sharing,...friendDebtors,
-    natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null};
+    natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null,
+    ...(confirm&&csvConflicts.length?{csvReviewMatchIds:csvConflicts.map(x=>x.id),csvDistinctReviewedAt:new Date().toISOString()}:{} )};
   if(next.importFingerprint&&(amount!==(t.bankAmount??t.amountCAD)||date!==t.date||name!==t.name))next.importFingerprint=null;
   const btn=$(confirm?'#txValidate':'#txSave');btn.disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();navigate('activity');showTab(confirm?'transactions':validating?'review':'transactions');}
