@@ -54,5 +54,6 @@ jobs:
           node tests/trace-international-manual-repayments.test.cjs
           node tests/trace-international-imported-repayments.test.cjs
           node tests/trace-international-friend-ledger-fx.test.cjs
+          node tests/trace-international-friend-sharing-ui.test.cjs
           node tests/trace-international-lab.test.cjs
           node tests/trace-international-preview-boot.test.cjs
