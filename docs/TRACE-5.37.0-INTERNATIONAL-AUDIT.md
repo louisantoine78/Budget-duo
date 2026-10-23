@@ -1040,7 +1040,7 @@ Commits du code et des tests : `1141b9e915fd1cfb97330d982805b5396a018305`, `f978
 - **27/27** scénarios du nouveau fichier `tests/trace-deferred-bank-review.test.cjs` dans le banc **JavaScript V8 avec modules Node simulés**, après relecture du module et des tests sauvegardés sur GitHub.
 - **84/84** scénarios existants du moteur `tests/trace-international-deferred-debit.test.cjs` également rejoués sur les sources GitHub (V8 simulé).
 - **1 scénario composé** des deux modules, avec achat fictif de 40 EUR, règlement partiel de 12,35 EUR, dette restante 27,65 EUR, budget conservé à 40 EUR et état `needs_human_review` sans écritures.
-- Soit **111 contrôles des deux suites** (et 1 scénario composé), tous réussis. Les **30 autres suites** de la campagne d'origine (633/633 avant ce lot) n'ont pas été relancées dans ce lot ; ne pas annoncer une campagne intégrale à jour.
+- Soit **111 contrôles des deux suites** (et 1 scénario composé), tous réussis. Les **31 autres suites** de la campagne d'origine (633/633 avant ce lot) n'ont pas été relancées dans ce lot ; ne pas annoncer une campagne intégrale à jour.
 - `node --version` dans le conteneur : **v22.16.0**, mais `git ls-remote` vers GitHub échoue encore à cause du DNS. Les modules GitHub ont été testés **dans V8 avec `require`, `fs`, `path` et `vm` simulés**, **pas** via `node` sur un vrai checkout. Aucune CI, Safari, PWA offline, base fictive multi-utilisateurs, extraction PDF ou vrai rapprochement bancaire.
 
 ### Enregistrement GitHub
