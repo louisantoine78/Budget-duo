@@ -972,7 +972,9 @@ function editInternationalTransfer(t){
   '<input id="fxSent" class="input" type="number" inputmode="decimal" min=".01" step=".01" value="'+esc(outgoing??'')+'">'+
   '<label class="label2" for="fxReceived">Montant réellement reçu ('+destination+')</label>'+
   '<input id="fxReceived" class="input" type="number" inputmode="decimal" min=".01" step=".01" value="'+esc(incoming??'')+'">'+
-  '<p class="trace-intl-help">Les écarts entre les deux montants incluent éventuellement la conversion et les frais. Ils ne créent pas automatiquement une dépense.</p>'+
+  '<label class="label2" for="fxFee">Frais inclus dans le montant débité ('+source+')</label>'+
+   '<input id="fxFee" class="input" type="number" inputmode="decimal" min="0" step=".01" value="'+esc(t.transferFeeAmount??0)+'">'+
+   '<p class="trace-intl-help">Frais déjà inclus dans le débit. Aucune dépense budgétaire ni second débit.</p>'+
   '<div class="trace-intl-transaction"><div class="formrow"><div>'+
   '<label class="label2" for="fxOriginalCurrency">Devise du montant d’origine</label>'+
   '<select class="input" id="fxOriginalCurrency">'+I.currencies().map(c=>'<option value="'+c+'"'+(c===original?' selected':'')+'>'+c+'</option>').join('')+'</select></div><div>'+
@@ -999,9 +1001,10 @@ function editInternationalTransfer(t){
   $('#fxPreview').textContent=out===null||received===null||!(out>0)||!(received>0)?
    'Renseigne les deux montants exacts des relevés. Un montant inconnu ne vaut pas zéro.':
    'Départ : −'+I.money(out,source)+' · Arrivée : +'+I.money(received,destination)+
-   ' · Budget : 0 CAD · '+(cad===null?'Conversion CAD à vérifier':'Équivalent historique : '+I.money(cad,'CAD'));
+   ' · Frais inclus : '+(value('fxFee')===''?'0':value('fxFee'))+' '+source+
+    ' · Budget : 0 CAD · '+(cad===null?'Conversion CAD à vérifier':'Équivalent historique : '+I.money(cad,'CAD'));
  };
- ['fxSent','fxReceived','fxRate','fxOriginalCurrency','fxOriginalAmount'].forEach(id=>$('#'+id).addEventListener('input',preview));
+ ['fxSent','fxReceived','fxFee','fxRate','fxOriginalCurrency','fxOriginalAmount'].forEach(id=>$('#'+id).addEventListener('input',preview));
  $('#fxCancel').onclick=closeSheet;preview();
  $('#fxSave').onclick=async()=>{
   $('#fxError').textContent='';const btn=$('#fxSave');btn.disabled=true;
@@ -1015,7 +1018,7 @@ function editInternationalTransfer(t){
     await I.getRate(source,t.date);
    const next=I.resolveTransferEdit({transaction:t,from:{...from,type:accountType(from)},
     to:{...to,type:accountType(to)},bankAmount:value('fxSent'),receivedAmount:value('fxReceived'),
-    quote,originalCurrency:value('fxOriginalCurrency'),originalAmount:value('fxOriginalAmount'),name:value('fxName')});
+    quote,originalCurrency:value('fxOriginalCurrency'),originalAmount:value('fxOriginalAmount'),name:value('fxName'),feeAmount:value('fxFee')});
    await saveDocument('transactions',next);Object.assign(t,next);
    closeSheet();renderAll();navigate('activity');showTab('transactions');
   }catch(error){btn.disabled=false;$('#fxError').textContent=String(error.message||error);}
@@ -2748,7 +2751,10 @@ function editInvestmentRate(account){
 }
 
 function openInvestmentOperation(account,original=null){
- const typ=original?.type||'deposit',currency=account.currency||'CAD';
+ const typ=original?.type||'deposit',currency=account.currency||'CAD',
+  I=window.TraceInternational,previousBank=state.accounts.find(b=>b.id===original?.bankAccountId),
+  previousCurrency=previousBank?I.currency(previousBank):null,
+  previousNative=original?.bankAmount??(previousCurrency==='CAD'?original?.bankAmountCAD:null);
  openSheet(original?'Modifier le mouvement':'Ajouter au patrimoine',
   '<div class="empty-note">'+esc(account.name)+' · '+esc(currency)+'. Les versements ne sont jamais comptés comme une performance.</div>'+
   '<label class="label2">Type</label><select class="input" id="invType"><option value="deposit">Versement</option><option value="withdrawal">Retrait</option><option value="buy">Achat</option><option value="sell">Vente</option><option value="dividend">Dividende</option><option value="fee">Frais</option><option value="quote">Mise à jour d’un cours</option></select>'+
@@ -2757,22 +2763,37 @@ function openInvestmentOperation(account,original=null){
   '<div class="formrow trace-op-trade"><div><label class="label2">Quantité</label><input class="input" id="invQty" type="number" inputmode="decimal" min="0.000001" step="any" value="'+Number(original?.quantity||0)+'"></div><div><label class="label2">Prix unitaire ('+esc(currency)+')</label><input class="input" id="invPrice" type="number" inputmode="decimal" min="0" step="any" value="'+Number(original?.unitPrice||0)+'"></div></div>'+
   '<div class="trace-op-quote"><label class="label2">Dernier cours ('+esc(currency)+')</label><input class="input" id="invQuote" type="number" inputmode="decimal" min="0" step="any" value="'+Number(original?.unitPrice||0)+'"></div>'+
   '<div class="trace-op-money"><label class="label2">Montant ('+esc(currency)+')</label><input class="input" id="invAmount" type="number" inputmode="decimal" min="0.01" step="any" value="'+Number(original?.amount||0)+'"></div>'+
-  '<div class="trace-op-fee"><label class="label2">Frais inclus ('+esc(currency)+')</label><input class="input" id="invFee" type="number" inputmode="decimal" min="0" step="any" value="'+Number(original?.fee||0)+'"></div>'+'<div class="trace-op-bank"><label class="label2">Compte bancaire lié (facultatif)</label><select class="input" id="invBank"><option value="">Aucun mouvement bancaire associé</option>'+visibleBankAccounts(account.owner).filter(a=>accountType(a)!=='card').map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('')+'</select><div class="empty-note">Si tu lies un compte, le versement ou retrait y sera calculé automatiquement. Ne l’enregistre pas une seconde fois.</div></div>'+'<div class="trace-op-bank-cad"><label class="label2">Montant réellement débité / crédité en CAD</label><input id="invBankCad" class="input" type="number" min="0.01" step="any" inputmode="decimal" placeholder="Montant en $ CAD" value="'+Number(original?.bankAmountCAD||0||'')+'"><div class="empty-note">Pour une opération en '+esc(currency)+', saisis le montant CAD exact apparaissant sur le compte bancaire.</div></div>'+
-  '<button class="primary full" id="saveInvOp" style="margin-top:16px">Enregistrer le mouvement</button>'+
+  '<div class="trace-op-fee"><label class="label2">Frais inclus ('+esc(currency)+')</label><input class="input" id="invFee" type="number" inputmode="decimal" min="0" step="any" value="'+Number(original?.fee||0)+'"></div>'+'<div class="trace-op-bank"><label class="label2">Compte bancaire lié (facultatif)</label><select class="input" id="invBank"><option value="">Aucun mouvement bancaire associé</option>'+visibleBankAccounts(account.owner).filter(a=>accountType(a)!=='card').map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('')+'</select><div class="empty-note">Si tu lies un compte, le versement ou retrait y sera calculé automatiquement. Ne l’enregistre pas une seconde fois.</div></div>'+'<div class="trace-op-bank-cad"><label class="label2" id="invBankNativeLabel">Montant bancaire réel</label><input id="invBankCad" class="input" type="number" min=".01" step="any" inputmode="decimal" placeholder="Montant exact du relevé" value="'+esc(previousNative??'')+'"><div class="empty-note">Saisis le montant réellement débité ou crédité en devise du compte bancaire. Ne pas inventer de taux.</div><div class="trace-intl-help" id="invNativeImpact" aria-live="polite"></div></div>'+
+   '<button class="primary full" id="saveInvOp" style="margin-top:16px">Enregistrer le mouvement</button>'+
   (original?'<button class="secondary full trace-danger" id="deleteInvOp" style="margin-top:8px">Supprimer ce mouvement</button>':'')+
   '<button class="secondary full" id="cancelInvOp" style="margin-top:8px">Annuler</button>'+traceFeedback());
  $('#invType').value=typ;if(original?.bankAccountId)$('#invBank').value=original.bankAccountId;
+ let lastBankId=original?.bankAccountId||'';
  const refresh=()=>{
-  const t=$('#invType').value,trade=['buy','sell'].includes(t);
+  const t=$('#invType').value,trade=['buy','sell'].includes(t),
+    bankId=$('#invBank').value,
+    selectedBank=visibleBankAccounts(account.owner).find(b=>b.id===bankId),
+    nativeCode=selectedBank?I.currency(selectedBank):'';
+  if(bankId!==lastBankId){
+   const historical=bankId&&bankId===original?.bankAccountId?previousNative:null;
+   $('#invBankCad').value=historical??(selectedBank&&nativeCode===currency?$('#invAmount').value:'');
+   lastBankId=bankId;
+  }
+  $('#invBankNativeLabel').textContent='Montant réellement débité / crédité ('+(nativeCode||'devise du compte')+')';
+  $('#invBankCad').placeholder=nativeCode?'Montant exact en '+nativeCode:'Choisir un compte bancaire';
+  const entered=$('#invBankCad').value.trim(),validAmount=entered!==''&&Number(entered)>0&&Number.isFinite(Number(entered));
+  $('#invNativeImpact').textContent=selectedBank&&validAmount?
+   'Compte bancaire : '+(t==='withdrawal'?'+':'−')+I.money(Number(entered),nativeCode)+' · Aucun revenu ni dépense budgétaire':
+   'Vérifie le montant natif sur le relevé bancaire.';
   $$('.trace-op-trade').forEach(x=>x.classList.toggle('hidden',!trade));
   $$('.trace-op-symbol').forEach(x=>x.classList.toggle('hidden',!['buy','sell','quote'].includes(t)));
   $$('.trace-op-quote').forEach(x=>x.classList.toggle('hidden',t!=='quote'));
   $$('.trace-op-money').forEach(x=>x.classList.toggle('hidden',!['deposit','withdrawal','dividend','fee'].includes(t)));
   $$('.trace-op-fee').forEach(x=>x.classList.toggle('hidden',!trade));
   $$('.trace-op-bank').forEach(x=>x.classList.toggle('hidden',!['deposit','withdrawal'].includes(t)));
-  $$('.trace-op-bank-cad').forEach(x=>x.classList.toggle('hidden',account.currency==='CAD'||!['deposit','withdrawal'].includes(t)||!$('#invBank').value));
+  $$('.trace-op-bank-cad').forEach(x=>x.classList.toggle('hidden',!['deposit','withdrawal'].includes(t)||!selectedBank));
  };
- $('#invType').onchange=refresh;$('#invBank').onchange=refresh;refresh();
+ $('#invType').onchange=refresh;$('#invBank').onchange=refresh;$('#invBankCad').oninput=refresh;refresh();
  $('#cancelInvOp').onclick=()=>openInvestmentAccount(account);
  $('#saveInvOp').onclick=async()=>{
   const type=$('#invType').value,date=$('#invDate').value,amount=Number($('#invAmount').value),fee=Number($('#invFee').value),quantity=Number($('#invQty').value),
@@ -2780,16 +2801,27 @@ function openInvestmentOperation(account,original=null){
   if(!date||(['deposit','withdrawal','dividend','fee'].includes(type)&&!(amount>0))||(['buy','sell'].includes(type)&&!(quantity>0&&unitPrice>0))||(type==='quote'&&!(unitPrice>=0))||(['buy','sell','quote'].includes(type)&&!/^[A-Z0-9._-]{1,16}$/.test(symbol))||!(fee>=0)){
    $('#traceFeedback').textContent='Vérifie la date, le montant, les titres et les frais.';return;
   }
-  const bankAccountId=['deposit','withdrawal'].includes(type)?$('#invBank').value||null:null;
-   if(bankAccountId&&window.TraceInternational.currency(state.accounts.find(a=>a.id===bankAccountId))!=='CAD'){
-    $('#traceFeedback').textContent='Compte en devise étrangère : la liaison bancaire est bloquée tant que ce formulaire ne permet pas de saisir le montant natif réel.';return;
+  const bankAccountId=['deposit','withdrawal'].includes(type)?$('#invBank').value||null:null,
+    bankAccount=bankAccountId?visibleBankAccounts(account.owner).find(b=>b.id===bankAccountId):null,
+    bankCurrency=bankAccount?I.currency(bankAccount):null,
+    bankRaw=$('#invBankCad').value.trim(),bankAmount=bankAccountId&&bankRaw!==''?Number(bankRaw):null;
+  if(bankAccountId&&(!bankAccount||!(bankAmount>0)||!Number.isFinite(bankAmount))){
+   $('#traceFeedback').textContent='Saisis le montant bancaire natif réellement débité ou crédité.';return;
+  }
+  const bankAmountCAD=bankCurrency==='CAD'?Math.round(bankAmount*100)/100:null;
+  const linked=original?.linkedTransactionId&&original.bankAccountId===bankAccountId&&original.type===type?
+   state.transactions.find(t=>t.id===original.linkedTransactionId&&t.status==='confirmed'):null;
+  if(linked){
+   const recorded=I.amountOnAccount(linked,bankAccount,linked.toAccountId===bankAccountId?'destination':'source');
+   if(recorded===null||Math.abs(recorded-bankAmount)>.009){
+    $('#traceFeedback').textContent='Montant différent du mouvement bancaire lié. Vérifie d’abord ce virement dans Activité.';return;
    }
-   const bankAmountCAD=bankAccountId?(account.currency==='CAD'?amount:Number($('#invBankCad').value)):null;
-  if(bankAccountId&&(!(bankAmountCAD>0)||!Number.isFinite(bankAmountCAD))){$('#traceFeedback').textContent='Saisis le montant exact en CAD pour ce mouvement bancaire.';return;}
+  }
   const next={id:original?.id||'op_'+txDocId(),accountId:account.id,type,date,
    symbol:['buy','sell','quote'].includes(type)?symbol:'',quantity:['buy','sell'].includes(type)?quantity:0,
    unitPrice:['buy','sell','quote'].includes(type)?unitPrice:0,amount:['deposit','withdrawal','dividend','fee'].includes(type)?amount:0,
-   fee:['buy','sell'].includes(type)?fee:0,bankAccountId,bankAmountCAD,createdAt:original?.createdAt||new Date().toISOString()};
+   fee:['buy','sell'].includes(type)?fee:0,bankAccountId,bankCurrency,bankAmount,bankAmountCAD,
+   linkedTransactionId:linked?.id||null,createdAt:original?.createdAt||new Date().toISOString()};
   try{portfolioLedger(account,next);}catch(e){$('#traceFeedback').textContent=e.message;return;}
   $('#saveInvOp').disabled=true;
   try{await saveDocument('investment_operations',next);if(original)Object.assign(original,next);else state.investmentOperations.push(next);renderWealth();openInvestmentAccount(account);}
