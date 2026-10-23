@@ -68,6 +68,19 @@ async function main(){
   await h.commit();assert.deepEqual(h.writes.map(x=>x.item.type),['expense','income']);
   assert.deepEqual(h.writes.map(x=>x.item.bankAmount),[75,50]);
  });
+ await test('malformed sign-only bank cell beside a valid credit must be rejected',async()=>{
+  const h=load(['15/10/2026;INVALID;--;50,00']);
+  assert.match(h.preview,/1 ligne\(s\) invalide\(s\)/);
+  await h.commit();assert.equal(h.writes.length,0);
+ });
+ await test('embedded sign must be rejected, while legitimate negative money remains valid',async()=>{
+  const h=load(['15/10/2026;INVALID;1-0;',
+    '15/10/2026;LEGITIMATE;50,00-;',
+    '15/10/2026;NEGATIVE;-25,00;']);
+  assert.match(h.preview,/1 ligne\(s\) invalide\(s\)/);
+  await h.commit();assert.equal(h.writes.length,2);
+  assert.deepEqual(h.writes.map(x=>x.item.bankAmount),[50,25]);
+ });
  await test('mixed rows retain original physical row references',async()=>{
   const h=load(['15/10/2026;BAD;75,00;50,00',
     '15/10/2026;OK;42,50;',
