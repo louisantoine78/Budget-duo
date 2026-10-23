@@ -1050,3 +1050,19 @@ Commits du code et des tests : `1141b9e915fd1cfb97330d982805b5396a018305`, `f978
 - Pas de modification de `index.html`, `sw.js`, `trace-version.json`, de l'interface `v5-app-5.37.0.js` ni des workflows.
 
 **Prochain lot :** (1) examiner l'idempotence et les changements de provenance **à travers plusieurs imports/documents**, y compris falsification ou changement de ligne d'un relevé multi-page ; (2) définir le contrat entre comparateur isolé et `trace-smart-inbox-3.5.0.js` sans le brancher ; (3) vérifier ensuite les scénarios dans Node natif, navigateur et base entièrement fictive avant activation.
+
+
+## Accélération vers une préversion testable : interface du débit différé (23 octobre 2026)
+
+**Choix de déploiement :** suite à la demande explicite de disposer bientôt d'une 5.37.0 fonctionnelle, le **seul** déploiement autorisé pour ce lot est la **préversion Vercel distincte** `trace-v5-preview` (`prj_NvXLdQg1KAmDlcYzdjNhFpYls0Bj`), avec la branche candidate. Le branchement du site réel `main`, des comptes Supabase réels, du manifeste PWA et du service worker restent prohibés tant que les tests fonctionnels/financiers ne sont pas suffisants.
+
+**Travail achevé sur candidate, uniquement :**
+- Nouveau `trace-deferred-lab-ui-1.0.0.js` : parcours **interactif fictif** dans `trace-international-preview.html`, sous **Activité → Importer**, qui utilise directement les moteurs isolés réels `TraceDeferredDebit.simulate` et `TraceDeferredBankReview.compare`. Paiement d'exemple en EUR, champs montant, en attente, frais et remboursement commerçant, soldes et dépense budgétaire nette au centime, état du rapprochement bancaire et indication de revue fictive.
+- La page charge les deux modules de calcul et le module UI **après la fixture fictive**, avec le drapeau de preview, sous CSP `connect-src 'none'`. Ne touche **pas** `index.html`, `v5-app-5.37.0.js`, `sw.js`, `manifest.webmanifest`, Supabase ou les données réelles. La possibilité de **créer une carte différée** reste désactivée dans le parcours utilisateur : la nouvelle carte est un **laboratoire d'essai**, pas une fonctionnalité de tenue du grand livre.
+- Commit UI `96e6a0e48ca53de254368f0fef7d2769d29ca04d`, tests `4b800871ab05445d38408fb555baf64ff3fbf3eb`, intégration HTML preview `820f0058c560216fdd94c003de4adaf338974206`. Tous `[skip ci]`.
+
+**QA ciblée après relecture de GitHub, en JavaScript V8 et modules Node simulés :** tests UI du laboratoire **10/10**, moteur débit différé **84/84**, comparateur bancaire **27/27**, soit **121/121 contrôles ciblés**. Présence des scripts dans le seul HTML de preview, absence de connectivité et déploiement automatique désactivé revérifiés. Aucun test Chrome/Safari réel, aucune CLI Node native sur checkout, aucune suite complète de régression ni synchronisation Supabase. **Ne pas confondre 121 contrôles ciblés avec la campagne 633 globale historique**.
+
+**Préversion déjà créée lors de la reprise, avant la nouvelle interface :** `dpl_B3miyL7HUqp4QdTPj24TWA6SHQs9`, commit `bccbca51c49b524a4fe6e46bd6a0006a7c003de6`, état Vercel `READY`, destination `trace-v5-preview`, target Preview. Elle ne contient **pas** l'interface interactive ajoutée ensuite ; consulter Vercel pour le nouveau déploiement à la suite du présent relais.
+
+**Reste à faire avant production :** raccorder au vrai grand livre via des modèles vérifiés et une base fictive multi-utilisateurs ; terminer la validation des parcours import/réconciliation/OCR/FX et des cinq onglets sur Safari iPhone ; obtenir un vrai test Node CI autorisé ; ne pas lever les verrous financiers ni migrer de données tant que non validé.
