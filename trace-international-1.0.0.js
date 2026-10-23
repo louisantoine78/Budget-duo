@@ -130,6 +130,33 @@
   const promise=fetchDailyRate(code,date,transport).catch(error=>{fxCache.delete(key);throw error;});
   fxCache.set(key,promise);return promise;
  };
+ // Read-only verification before attaching advances to a confirmed foreign
+ // bank receipt. Association edits NEVER recalculate its historical CAD amount.
+ const verifiedForeignFriendRefund=(t,account)=>{
+  if(!t||t.status!=='confirmed'||t.type!=='external_refund'||
+     t.transferPurpose!=='friend_reimbursement'||!account||
+     t.accountId!==account.id||account.type!=='checking')
+    throw Error('Seul un remboursement bancaire confirmé est admissible.');
+  const code=currency(account);
+  if(code==='CAD')throw Error('Utilise le parcours CAD pour ce compte.');
+  if(String(t.bankCurrency||'').toUpperCase()!==code)
+    throw Error('Devise du relevé différente du compte bancaire.');
+  if(t.bankAmount===null||t.bankAmount===undefined||t.bankAmount===''||
+     t.amountCAD===null||t.amountCAD===undefined||t.amountCAD==='')
+    throw Error('Montant natif et contre-valeur CAD historiques obligatoires.');
+  const native=Number(t.bankAmount),cad=Number(t.amountCAD),rate=Number(t.bankRateCad);
+  if(!Number.isFinite(native)||!Number.isFinite(cad)||!Number.isFinite(rate)||
+     !(native>0)||!(cad>0)||!(rate>0))
+    throw Error('Montant natif, contre-valeur CAD et taux vérifié obligatoires.');
+  const day=String(t.date||''),rated=String(t.fxRateDate||''),origin=String(t.fxRateSource||'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||
+     !/^\d{4}-\d{2}-\d{2}$/.test(rated)||rated>day||!origin)
+    throw Error('Date et source du taux historique vérifié obligatoires.');
+  if(Math.abs(round(native*rate)-cad)>.011)
+    throw Error('Contre-valeur CAD incohérente avec le taux bancaire historisé.');
+  return{bankCurrency:code,bankAmount:round(native),amountCAD:round(cad),
+   bankRateCad:rate,fxRateDate:rated,fxRateSource:origin};
+ };
  const resolveBooking=({account,bankAmount,originalAmount=null,originalCurrency=null,quote=null,date}={})=>{
   const bankCurrency=currency(account),native=Number(bankAmount);
   if(originalCurrency!==null&&originalCurrency!==undefined&&String(originalCurrency).trim()!==''&&!valid(originalCurrency))
@@ -191,5 +218,5 @@
   return next;
  };
  root.TraceInternational=Object.freeze({valid,currency,currencies,country,mode,money,amountOnAccount,primary,snapshot,
-  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,investmentBankAmount,fxValue});
+  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,investmentBankAmount,verifiedForeignFriendRefund,fxValue});
 })(typeof window!=='undefined'?window:globalThis);
