@@ -749,3 +749,53 @@ La nouvelle suite couvre la ligne doublement débitée/créditée, débit ou cr�
 **Limites :** impossible de cloner le dépôt par Git à partir du conteneur (erreur DNS `github.com`), même si Node v22.16.0 est disponible. Aucune exécution Node CLI sur checkout natif, aucun test Safari iPhone/PWA, aucune écriture Supabase ni transaction bancaire réelle. Les erreurs concurrentes distribuées exigent toujours de vraies validations de bout en bout et une contrainte serveur avant la publication. Le relevé PDF mensuel demeure destiné à vérifier la couverture des mouvements existants plutôt qu'à les importer à nouveau.
 
 **Phase 1 toujours ouverte.** Aucune modification de `main`, du chargeur PWA stable, des versions, du service worker, du déploiement Vercel ou de PickPoint.
+
+## Phase 1 — Laboratoire de rapprochement mensuel des relevés (23 octobre 2026)
+
+**Point de départ vérifié :** `8674462a46d614473fa09530385a930b970339d5`. Modifications autorisées uniquement sur `trace-5.37.0-international-accounts-fx` ; aucun déploiement, aucune fusion dans `main`, aucune écriture réelle Supabase, aucun workflow GitHub Actions lancé, aucune intervention PickPoint.
+
+### Préparation fonctionnelle volontairement isolée
+
+La lecture PDF n'est **pas encore implémentée ni activée**. Ajout d'un moteur **en lecture seule** `trace-statement-reconcile-1.0.0.js` destiné aux **lignes bancaires préalablement structurées** (date, compte, sens entrée/sortie, montant natif, libellé facultatif). Ce module n'est chargé **ni par `index.html` ni par la candidate active/preview**, ne possède pas d'accès au navigateur, à une base de données ou au budget et n'effectue aucune mutation.
+
+La fonction `TraceStatementReconcile.compare` dépend explicitement de `TraceInternational.amountOnAccount`, déjà existante, pour respecter les montants bancaires natifs et éviter de recréer une règle de conversion. Elle retourne uniquement le rapport de comparaison :
+
+- `matched` : une **seule correspondance plausible** avec une transaction `confirmed`, non partagée avec une autre ligne du relevé. Ce statut reste un résultat **technique indicatif**, et **ne certifie pas** un rapprochement officiel : les noms de commerçant peuvent différer.
+- `pending` : un seul candidat existe mais sa transaction TRACE n'a pas encore été validée.
+- `ambiguous` : plusieurs écritures sont candidates, ou un même mouvement pourrait expliquer plusieurs lignes du relevé. **Aucune ligne n'est automatiquement attribuée deux fois ou effacée** ; examiner manuellement.
+- `missing` : aucune transaction éligible trouvée pour une ligne du relevé, compte/sens/devise native/montant/date conformes.
+- `notOnStatement` : écriture confirmée dans la période qui ne ressemble à aucune ligne du relevé.
+- `invalid` et `outOfPeriod` : lignes rejetées du périmètre de vérification sans modification.
+- Totaux de couverture et indicateurs `writes: 0`, `financialChanges: 0` ; pas de mutation des entrées.
+
+Tolérance par défaut de ±2 jours calendaires (paramétrable de 0 à 4). Contrôle strict des dates et centimes. Exclusion de `card_statement_evidence` afin de ne pas comptabiliser deux fois le paiement d'une carte. Les virements source/destination sont des jambes distinctes ; en CAD→EUR, un montant EUR de destination doit exister effectivement (jamais de substitution implicite de CAD ni taux 1:1). Les remboursements de proches `external_refund` sont traités comme entrées bancaires et non comme revenus de salaire.
+
+**Principe comptable :** le relevé mensuel sert à vérifier la couverture et l'exactitude des mouvements déjà saisis, pas à reconstituer ni réimporter automatiquement ces mouvements.
+
+### Commits réalisés
+
+- `c8565e5347fb2d00824a25c7bb2ce8a70be6b097` — nouveau module isolé de comparaison mensuelle, sans chargement actif.
+- `c20a337bc32806887295b7ef9f820bfadd8f9b91` — **22 tests** fictifs de correspondance, doublons légitimes, anomalies, paiements de carte, avances, EUR/CAD, absence de FX fictif, intégrité lecture seule.
+- `0fd5c888bf995e6d2e1629f01533515645cd046e` — inscription de la suite dans le workflow de régression futur **main-only**, déclencheurs inchangés, sans exécution de CI.
+
+### Campagne de vérification du lot
+
+Les **30 suites actuelles** ont été récupérées via le connecteur GitHub puis exécutées par lots dans un environnement JavaScript V8 avec modules Node et DOM simulés. Il ne s'agit ni d'une exécution native `node tests/...` sur un checkout local ni d'un essai Safari.
+
+| Périmètre | Suites | Résultat V8 isolé |
+|---|---:|---:|
+| Candidate International 5.37.0 | 23 | **317 réussites** |
+| Régressions historiques 5.36.5 | 5 | **232 réussites** |
+| Laboratoire d'application / boot fictif | 2 | **15 réussites** |
+| **Total de cette reprise** | **30** | **564/564** |
+
+Aucun échec lors de cette campagne isolée. Les 22 nouveaux cas testent notamment la stricte relation une-ligne/une-écriture, les montants identiques dans les deux sources, les correspondances ambiguës, les opérations en attente, les mouvements enregistrés mais absents du relevé, la neutralité du paiement Mastercard et du remboursement de proche, les virements CAD↔EUR, les écarts de dates, les entrées erronées et la non-mutation de l'état financier.
+
+### Limites à respecter avant la suite
+
+1. **Aucune extraction PDF réelle** : aucun lecteur de PDF bancaire branché, aucune classification OCR mensuelle et aucune UI de rapprochement final développée à ce stade.
+2. Les correspondances reposent principalement sur compte/sens/montant/date ; un même montant pour deux achats distincts peut être ambigu même avec des libellés différents. Ne pas présenter `matched` comme une certification définitive.
+3. Validation sur vraie CLI Node, parcours PWA/Safari iPhone avec données fictives et contrôle de concurrence multi-utilisateur non effectués. Les contraintes côté serveur Supabase restent à étudier avant publication.
+4. Ne pas créer automatiquement de revenus/dépenses, réécrire les budgets CAD historiques, fusionner des enregistrements, lancer GitHub Actions, activer le module dans `index.html`, modifier `main` ou déployer sans nouvelle autorisation.
+
+**Phase 1 reste ouverte.**
