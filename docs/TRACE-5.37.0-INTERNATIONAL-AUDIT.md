@@ -1021,3 +1021,32 @@ Commits du code et des tests : `1141b9e915fd1cfb97330d982805b5396a018305`, `f978
 - Tous les commits portent `[skip ci]` ; aucune fusion, PR, CI ou activation de `deferred`.
 
 **Prochain lot borné :** rapprochement **en lecture seule** d'une ligne fictive déjà extraite d'un CSV/PDF bancaire avec une fraction `pending` ou `confirmed`, en préservant le sens, le compte, la devise, la provenance (document/ligne) et l'interdiction de confirmer/ajouter automatiquement des opérations. Ajouter les simulations de collisions inter-imports et de changements de ligne après revue. Puis Node natif, base fictive et Safari avant intégration.
+
+
+## Phase 1 — rapprochement fictif en lecture seule des règlements partiels (23 octobre 2026)
+
+**Préconditions vérifiées :** branche candidate `trace-5.37.0-international-accounts-fx`, HEAD initial `a46755d0370d2f62d70cd950ba5c770c4126c119` et `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Désactivation automatique Vercel toujours présente ; `deferred` reste `disabled` dans l'interface candidate. Aucune activation, workflow, déploiement ou lecture/écriture de données Supabase réelles.
+
+### Nouveau module, NON connecté à la PWA
+
+- `trace-deferred-bank-review-1.0.0.js` : comparaison **strictement en lecture seule** entre des fractions déjà identifiées (`settlementMode:'partial'`) et des lignes **déjà structurées** depuis CSV ou PDF extrait. Il ne lit ni octets PDF, ni CSV brut, ni comptes bancaires, ni fichiers réels.
+- Vérifie l'égalité de la provenance de la ligne (`statementId`, `lineId`), du compte courant, de la devise native, du sens `debit`, de la date exacte du débit, du montant au centime et du statut `pending/confirmed`. Un paiement `pending` conserve le résultat `pending_review` et n'est jamais considéré comme confirmé.
+- Rejette toute tentative de rattacher une ligne source à plusieurs fractions, les identifiants de règlement dupliqués, les imports répétés du même document physique (même `sourceId` + ligne), les copies du document dont l'une est incomplète et les lignes introuvables/incohérentes. Les lignes importées non reconnues restent listées pour revue.
+- `reviewSnapshot` attache les **métadonnées complètes du document et toutes ses lignes**, y compris les références de page/texte source, à la fraction exacte : modifier une autre ligne, le contenu, la version de source ou l'allocation de l'échéance périme la revue. `manual_review_current` signifie seulement que le reçu de revue fourni correspond exactement à l'état du simulateur. **Ce n'est ni une preuve bancaire ni une signature cryptographique, et le booléen `complete` demeure déclaratif.** Aucune garantie contre des preuves falsifiées ou des courses concurrentes côté serveur.
+- Sorties exclusivement indicatives : `needs_human_review`, `pending_review`, `mismatched_line`, `duplicate_import`, `conflicting_claim`, `source_incomplete`, `missing_line`, `stale_review`, `manual_review_current`, etc. Les indicateurs `writes:0`, `financialChanges:0` et `createdTransactions:0` restent constants. Aucun lien avec le registre réel, aucune catégorie financière nouvelle, aucun rééquilibrage CAD/FX.
+
+### Contrôles exécutés et leurs limites
+
+- **27/27** scénarios du nouveau fichier `tests/trace-deferred-bank-review.test.cjs` dans le banc **JavaScript V8 avec modules Node simulés**, après relecture du module et des tests sauvegardés sur GitHub.
+- **84/84** scénarios existants du moteur `tests/trace-international-deferred-debit.test.cjs` également rejoués sur les sources GitHub (V8 simulé).
+- **1 scénario composé** des deux modules, avec achat fictif de 40 EUR, règlement partiel de 12,35 EUR, dette restante 27,65 EUR, budget conservé à 40 EUR et état `needs_human_review` sans écritures.
+- Soit **111 contrôles des deux suites** (et 1 scénario composé), tous réussis. Les **30 autres suites** de la campagne d'origine (633/633 avant ce lot) n'ont pas été relancées dans ce lot ; ne pas annoncer une campagne intégrale à jour.
+- `node --version` dans le conteneur : **v22.16.0**, mais `git ls-remote` vers GitHub échoue encore à cause du DNS. Les modules GitHub ont été testés **dans V8 avec `require`, `fs`, `path` et `vm` simulés**, **pas** via `node` sur un vrai checkout. Aucune CI, Safari, PWA offline, base fictive multi-utilisateurs, extraction PDF ou vrai rapprochement bancaire.
+
+### Enregistrement GitHub
+
+- Module : `5b6858360db91c24aba5b907d95a6be095eaf791` (commit `[skip ci]`).
+- Tests : `151d6206c31c04cbfb5a75f173d3eae982a33cf8` (commit `[skip ci]`).
+- Pas de modification de `index.html`, `sw.js`, `trace-version.json`, de l'interface `v5-app-5.37.0.js` ni des workflows.
+
+**Prochain lot :** (1) examiner l'idempotence et les changements de provenance **à travers plusieurs imports/documents**, y compris falsification ou changement de ligne d'un relevé multi-page ; (2) définir le contrat entre comparateur isolé et `trace-smart-inbox-3.5.0.js` sans le brancher ; (3) vérifier ensuite les scénarios dans Node natif, navigateur et base entièrement fictive avant activation.
