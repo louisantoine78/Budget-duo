@@ -1797,7 +1797,7 @@ function editTransaction(id,validating=false){
    $('#traceFeedback').textContent='Choisis une nature compatible avec ce compte.';return;
   }
   if(!(amount>0)||!Number.isFinite(amount)||!date||!name||!categoryId||!accountId){$('#traceFeedback').textContent='Complète tous les champs obligatoires.';return;}
-  let sharing,booking;
+  let sharing,booking,friendDebtors;
   try{
    const currency=window.TraceInternational.currency(account),
     raw=$('#txFxOverride').value.trim(),fx=Number(raw);
@@ -1811,14 +1811,14 @@ function editTransaction(id,validating=false){
     originalCurrency:$('#txOriginalCurrency').value,originalAmount:$('#txOriginalAmount').value||null});
    sharing=beneficiary==='custom'?traceCustomShares(booking.amountCAD,$('#txFriendsAmount').value,$('#txPartnerAmount').value):
     {beneficiary,...traceSplit(beneficiary,booking.amountCAD)};
+   friendDebtors=friendDebtorFields(sharing.splitAmounts?.friends,
+    $('#txFriendDebtorName').value,$('#txFriendDebtorShares').value,t.id);
   }catch(e){$('#traceFeedback').textContent=e.message;return;}
   const received=window.TraceMovement.paidForExpense(state.transactions,t.id);
    if(received>0&&Math.round(Number(sharing.splitAmounts?.friends||0)*100)<received){
      $('#traceFeedback').textContent='Cette dépense possède déjà des remboursements liés. La part des amis ne peut pas devenir inférieure aux remboursements reçus.';return;
    }
-   const next={...t,...booking,date,name,type,categoryId,accountId,...sharing,
-    friendDebtorName:def.budget==='expense'&&beneficiary==='custom'&&Number(sharing.splitAmounts?.friends)>0?
-     $('#txFriendDebtorName').value.trim().replace(/\s+/g,' ').slice(0,45):null,
+   const next={...t,...booking,date,name,type,categoryId,accountId,...sharing,...friendDebtors,
     natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null};
   if(next.importFingerprint&&(amount!==(t.bankAmount??t.amountCAD)||date!==t.date||name!==t.name))next.importFingerprint=null;
   const btn=$(confirm?'#txValidate':'#txSave');btn.disabled=true;
