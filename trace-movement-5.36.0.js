@@ -106,5 +106,34 @@ const match=linkable(expenses,transactions,owner,date,amount,excluding).find(x=>
 if(!match||!match.allowed)throw Error('Le remboursement dépasse la part des amis disponible ou la dépense n’est pas admissible.');
 return id;
 }
-root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,repaymentLines,paidForExpense,validateRepaymentAllocations,linkable,validateLink});
+// Read-only friend receivables. Never infer a person from the label on a
+// bank receipt: historical expenses often have only an aggregate friends share.
+const friendReceivables=(transactions,owner)=>{
+ const groups=new Map();
+ for(const t of transactions||[]){
+  if(t.status!=='confirmed'||!['expense','group_expense'].includes(t.type)||
+     t.beneficiary!=='custom'||t.payerId!==owner)continue;
+  const advanced=cents(t.splitAmounts?.friends);
+  if(!Number.isSafeInteger(advanced)||advanced<=0)continue;
+  const already=paidForExpense(transactions,t.id);
+  if(!Number.isSafeInteger(already)||already<0)continue;
+  const name=String(t.friendDebtorName||'').trim().replace(/\\s+/g,' ').slice(0,45);
+  const key=name?name.toLocaleLowerCase('fr'):'__unassigned__';
+  if(!groups.has(key))groups.set(key,{owner,name:name||'À attribuer',unassigned:!name,
+   advancedCents:0,receivedCents:0,outstandingCents:0,advances:[]});
+  const group=groups.get(key),remaining=Math.max(0,advanced-already);
+  group.advancedCents+=advanced;group.receivedCents+=Math.min(already,advanced);
+  group.outstandingCents+=remaining;
+  group.advances.push({expenseId:t.id,label:t.name||'Dépense avancée',date:t.date,
+   advancedCAD:advanced/100,receivedCAD:Math.min(already,advanced)/100,
+   outstandingCAD:remaining/100,overpaid:already>advanced});
+ }
+ return [...groups.values()].map(g=>({
+  owner:g.owner,name:g.name,unassigned:g.unassigned,
+  advancedCAD:g.advancedCents/100,receivedCAD:g.receivedCents/100,
+  outstandingCAD:g.outstandingCents/100,advances:g.advances
+ })).sort((a,b)=>Number(a.unassigned)-Number(b.unassigned)||b.outstandingCAD-a.outstandingCAD||a.name.localeCompare(b.name,'fr'));
+};
+
+root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,repaymentLines,paidForExpense,validateRepaymentAllocations,linkable,validateLink,friendReceivables});
 })(typeof window!=='undefined'?window:globalThis);
