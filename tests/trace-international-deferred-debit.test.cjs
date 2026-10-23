@@ -183,4 +183,73 @@ test('input source objects remain unchanged and no writes are performed',()=>{
  assert.equal(JSON.stringify({p:arrP,s:arrS}),before);
  assert.equal(r.writes,0);assert.equal(r.financialChanges,0);
 });
+
+const merchantRefund=(id,amount='10.01',options={})=>({id,purchaseId:'p1',
+ cardAccountId:card.id,currency:card.currency,type:'merchant_refund',
+ refundDate:'2026-10-20',budgetDate:'2026-10-20',
+ amount,status:'confirmed',...options});
+const withRefund=(refunds=[],settlements=[],asOfDate='2026-11-05',
+ purchases=[purchase('p1')])=>simulate({card,checking,purchases,refunds,settlements,asOfDate});
+test('merchant refund reduces budget, debt, and exact full net settlement',()=>{
+ const r=withRefund([merchantRefund('r1')],[debit('s1',29.99)]);
+ assert.equal(r.monthlyBudget['2026-10'],29.99);
+ assert.equal(r.checkingBalanceChange,-29.99);
+ assert.equal(r.cardBalanceChange,0);assert.equal(r.liability,0);
+ assert.equal(r.merchantRefunds[0].budgetIncome,false);
+ assert.equal(r.budgetRefunds[0].budgetReduction,true);
+ assert.equal(r.bankTransfers[0].budgetExpense,false);
+});
+test('merchant refund on card never generates a checking debit or salary',()=>{
+ const r=withRefund([merchantRefund('r1')]);
+ assert.equal(r.liability,29.99);assert.equal(r.checkingBalanceChange,0);
+ assert.equal(r.cardBalanceChange,-29.99);assert.equal(r.bankTransfers.length,0);
+ assert.equal(r.merchantRefunds[0].checkingMovement,0);
+});
+test('pending merchant refund does not reduce budget or confirmed liability',()=>{
+ const r=withRefund([merchantRefund('r1',10,{status:'pending'})]);
+ assert.equal(r.liability,40);assert.equal(r.budgetRefunds.length,0);
+ assert.equal(r.monthlyBudget['2026-10'],40);
+});
+test('full confirmed merchant refund clears due batch without transfer',()=>{
+ const r=withRefund([merchantRefund('r1',40)]);
+ assert.equal(r.liability,0);assert.equal(r.batches[0].status,'cleared_by_refund');
+ assert.equal(r.overdue,0);assert.equal(r.bankTransfers.length,0);
+});
+test('refund not yet posted is excluded at earlier asOfDate',()=>{
+ const r=withRefund([merchantRefund('r1')],[],'2026-10-19');
+ assert.equal(r.liability,40);assert.equal(r.monthlyBudget['2026-10'],40);
+});
+test('multiple partial merchant refunds add exactly to original purchase',()=>{
+ const r=withRefund([merchantRefund('r1','9.99'),merchantRefund('r2','30.01')]);
+ assert.equal(r.liability,0);assert.equal(r.monthlyBudget['2026-10'],0);
+});
+test('reject refunds exceeding original purchase and fractional cents',()=>{
+ assert.throws(()=>withRefund([merchantRefund('r1','40.01')]),/supérieurs/);
+ assert.throws(()=>withRefund([merchantRefund('r1','10.005')]),/ambigu/);
+});
+test('reject orphan, wrong currency, fee, and unverified merchant refund',()=>{
+ for(const opt of [{purchaseId:'missing'},{currency:'CAD'},
+  {feeAmount:2},{status:'unverified'},{type:'income'}]){
+  assert.throws(()=>withRefund([merchantRefund('r1',10,opt)]),/ambigu/);
+ }
+});
+test('reject refund date after due date or before original purchase',()=>{
+ assert.throws(()=>withRefund([merchantRefund('r1',10,{refundDate:'2026-11-06'})]),/ambigu/);
+ assert.throws(()=>withRefund([merchantRefund('r1',10,{refundDate:'2026-10-11'})]),/ambigu/);
+});
+test('reject refunds after bank debit rather than guessing a credit account',()=>{
+ assert.throws(()=>withRefund(
+  [merchantRefund('r1',10,{refundDate:'2026-11-01'})],
+  [debit('s1',30,['p1'],{debitDate:'2026-10-28'})]),/postérieur/);
+});
+test('partial settlement without a merchant refund remains blocked',()=>{
+ assert.throws(()=>withRefund([], [debit('s1',29.99)]),/différent/);
+});
+test('unmodeled bank settlement fees remain explicitly blocked',()=>{
+ assert.throws(()=>withRefund([], [debit('s1',40,['p1'],{feeAmount:2})]),/invalide/);
+});
+test('strict Node numeric zero for checking movement without a payment',()=>{
+ const r=withRefund([merchantRefund('r1')]);
+ assert.equal(Object.is(r.checkingBalanceChange,0),true);
+});
 console.log(count+' deferred-debit accounting laboratory scenarios passed');
