@@ -854,3 +854,51 @@ Ces résultats **ne sont pas** des tests natifs Node CLI sur un checkout local, 
 **Appréciation :** le cœur comptable international est largement développé et s'est enrichi de nombreux garde-fous ; les cinq écrans finalisés, le débit différé, l'extraction PDF, la validation en navigateur et la vraie intégration restent des jalons significatifs. Aucun pourcentage de complétion global ne peut être déduit honnêtement du nombre de commits/tests.
 
 **Phase 1 maintenue ouverte.** Aucune autorisation de modification de `main`, de la version de production, du service worker, d'une donnée Supabase réelle ou de déploiement.
+
+## Phase 1 — Intégrité de l'ensemble du relevé préparé (23 octobre 2026)
+
+**Point de départ vérifié :** `9fc9d7d7f49142ae1b749a42526832077a2f3ba2`. Branche candidate `trace-5.37.0-international-accounts-fx` exclusivement. Aucun changement de `main`, de l'entrée 5.36.5, du service worker, de Supabase réel, du déploiement Vercel ou des workflows PickPoint. Tous les commits du lot portent `[skip ci]`.
+
+### Défauts confirmés par reproduction avant correction
+
+Dans le module documentaire **isolé** `trace-statement-evidence-1.0.0.js` :
+1. Après approbation d'une ligne, modifier `staged.accountId`, `staged.currency` et les bornes `fromDate/toDate` ne bloquait pas `reviewedRows`, qui retournait indûment `reviewed` pour un compte/période différent.
+2. Retirer une ligne de `staged.ready` après la préparation d'un relevé de deux lignes permettait encore de valider le relevé comme intégralement revu, alors que `totalRows=2` et qu'une seule ligne restait disponible.
+
+Ces deux défauts de **complétude du contrôle mensuel** ont été observés avec des données fictives avant toute activation du module. Ils n'affectent pas `v5-app-5.36.5.js` en production.
+
+### Correction
+
+- Ajout de `statementIdentity` : empreinte **non cryptographique** prenant en compte le document, compte, devise, période, nombre de lignes, ordre des lignes prêtes, preuves et anomalies signalées. Cette identité est capturée au moment de `stage` ; `reviewedRows` la recalcule et exige l'identité inchangée.
+- Contrôle explicite de `totalRows === ready.length + issues.length` : suppression d'une ligne ou d'une anomalie après staging invalide la validation.
+- Une modification du document, du compte, de la devise, des dates, de la position ou du contenu des opérations, ou de l'ordre des lignes impose de **reprendre la préparation depuis la source** ; aucune vérification « complète » ne peut continuer avec les anciennes approbations.
+- Les dates de période `JJ/MM/AAAA` et `JJ-MM-AAAA` sont converties en ISO au début de `stage`, et comparées en ISO, tout comme les dates des lignes.
+- **Frontière de sécurité :** une empreinte JSON client évite les validations périmées dues aux manipulations ou au changement d'état de l'interface ; elle ne constitue **ni signature de document PDF ni preuve anti-falsification**, ni contrainte transactionnelle serveur. La vérification de la provenance et de l'exhaustivité de l'extraction PDF devra être effectuée indépendamment.
+
+### Commits
+
+- `1489525a9227fd244967546e57d95a768c9e2ac5` — sécurité de l'identité de l'ensemble du relevé et dates normalisées ;
+- `2cbddc89eb8e1ae0260e968f4d2740025cbb7735` — dix tests complémentaires couvrant changements de compte, devise, période, identité du document, nombre de lignes, ordre des lignes, anomalies supprimées et conversion des dates françaises.
+
+### Vérifications après correction
+
+La suite documentaire contient désormais **34 tests**, tous réussis dans le simulateur JavaScript V8. La campagne de régression complète a été rejouée, sur les fichiers candidats récents :
+
+| Périmètre | Suites | Contrôles passés |
+|---|---:|---:|
+| TRACE International 5.37.0 | 24 | **351** |
+| Régressions historiques 5.36.5 | 5 | **232** |
+| Laboratoire fictif et simulation de démarrage | 2 | **15** |
+| **Total** | **31** | **598/598** |
+
+Aucun échec observé. Les suites ont été lancées en environnement **JavaScript V8 avec modules Node/DOM simulés**, et non par la vraie CLI `node` dans un checkout Git local, ni par GitHub Actions. Aucun test réel dans Safari iPhone, PWA hors ligne ou Supabase multi-utilisateur.
+
+### Critères de sortie prioritaires avant toute mise en production
+
+1. **Complétude technique :** terminer et intégrer les parcours internationaux restés partiels (épargne, placements, débit différé, transferts et gestion de toutes les natures de mouvement) tout en préservant les comportements financiers 5.36.5.
+2. **Contrôle documentaire :** extraction de PDF mensuels bancaires fictifs avec provenance fiable, revue humaine de toutes les lignes, traitement explicite des pages absentes, tableaux multi-pages et soldes d'ouverture/clôture. Un match technique montant/date n'est jamais une certification.
+3. **Expérience iPhone :** les cinq onglets Accueil, Budget, +, Activité, Patrimoine dans un vrai navigateur Safari, édition et imports, filtres Moi/Couple, navigation, états d'erreur et PWA offline.
+4. **Comptabilité réelle simulée :** tests end-to-end avec une base **entièrement fictive et isolée**, avec transactions et comptes canadiens/français, rapprochement carte et fonds du foyer sans double comptage ni taux fictif.
+5. **Livraison contrôlée ultérieure :** régressions dans une vraie CLI Node + navigateur, revue de sécurité/concurrence, validation explicite de l'utilisateur avant toute PR, fusion, mise à jour de `index.html`/`sw.js` ou déploiement.
+
+**Décision maintenue :** la 5.37.0 est une candidate en développement, pas un produit complet prêt à lancer. Le nombre de commits ou de contrôles isolés n'est pas un pourcentage d'achèvement fonctionnel. Priorité à la fiabilité, pas à la vitesse de publication.
