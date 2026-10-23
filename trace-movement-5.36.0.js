@@ -117,7 +117,7 @@ const friendReceivables=(transactions,owner)=>{
   if(!Number.isSafeInteger(advanced)||advanced<=0)continue;
   const already=paidForExpense(transactions,t.id);
   if(!Number.isSafeInteger(already)||already<0)continue;
-  const name=String(t.friendDebtorName||'').trim().replace(/\\s+/g,' ').slice(0,45);
+  const name=String(t.friendDebtorName||'').trim().replace(/\s+/g,' ').slice(0,45);
   const key=name?name.toLocaleLowerCase('fr'):'__unassigned__';
   if(!groups.has(key))groups.set(key,{owner,name:name||'À attribuer',unassigned:!name,
    advancedCents:0,receivedCents:0,outstandingCents:0,advances:[]});
