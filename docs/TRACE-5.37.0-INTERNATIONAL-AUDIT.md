@@ -264,3 +264,51 @@ La CLI Node.js existe localement mais le clone du dépôt n'est pas accessible p
 4. Aucune activation de 5.37.0 dans `index.html`, `sw.js` ou `trace-version.json` avant validation expresse distincte.
 
 Pour revenir en arrière, effectuer des reverts contrôlés des commits du lot **sur la branche candidate uniquement** ; aucune réinitialisation Supabase ni force-push.
+
+
+## Phase 1 — Remboursement unique réparti sur plusieurs avances (23 octobre 2026)
+
+**Périmètre :** exclusivement la branche `trace-5.37.0-international-accounts-fx`, hors `main`, production et données réelles. Conservation explicite des règles de budget 5.36.5 et des transactions bancaires sources.
+
+### Fonctionnalités intégrées à la candidate
+
+- `trace-movement-5.36.0.js` reçoit une fonction de lecture rétrocompatible des remboursements `repaymentLines`, un calcul des sommes déjà reçues par avance `paidForExpense` et une validation `validateRepaymentAllocations`.
+- Chaque transaction bancaire de type `external_refund` / `friend_reimbursement` peut désormais contenir `repaymentAllocations: [{expenseId,amountCAD},...]` : **une transaction bancaire unique, plusieurs associations sans revenu budgétaire**. Le champ `relatedExpenseId` des historiques à une seule avance reste compatible, sans migration ni double décompte lorsqu'une nouvelle répartition est présente.
+- Les validations imposent la somme exacte des avances = montant converti CAD de la transaction source, montants positifs au centime, aucun dépassement de créance, aucune avance répétée, propriétaire et date cohérents, et exclusion de la transaction lors de son propre réexamen.
+- `v5-app-5.37.0.js` permet d'associer plusieurs avances depuis la **saisie manuelle** du remboursement, avec prénom facultatif du proche et montants CAD explicites.
+- L'éditeur de mouvements bancaires **déjà importés en CAD** permet également ces associations sur l'opération existante. Il ne crée ni une seconde transaction ni un revenu. L'identifiant original est conservé ; si le compte, la date, le montant bancaire et le libellé restent inchangés, l'empreinte `importFingerprint` est conservée avec la preuve de l'import.
+- Les éditeurs des dépenses avancées et le garde de suppression vérifient aussi désormais les liens multi-avances, empêchant une réduction de part des amis inférieure aux remboursements confirmés ou une suppression silencieuse de la dépense source.
+- **Limites explicites :** le parcours de modification des remboursements importés reste CAD-only à ce stade, car l'éditeur financier importé international n'est pas encore finalisé. La gestion détaillée des personnes, avances, remboursements partiels et listes dans la nouvelle interface Activité → Partage reste prévue en phase 3. Le prénom stocké sur le remboursement ne constitue pas à lui seul un grand livre individuel des proches.
+
+### Commits effectués
+
+- `023bf367b087086d57783bfed22b51e3f68fcfd2` : moteur rétrocompatible de répartitions de remboursement.
+- `357fdc4022f9a05417b43c79e8a1e360bff48e6b` : 14 scénarios unitaires d'avances et remboursements.
+- `82c429370f0d4c4b72796c879b03984d75829fec` : garde-fous des éditeurs et de suppression.
+- `760ce1d961dfba7843d42f16c6012fb0517de3bb` : interface de remboursement manuel multi-avances.
+- `339018cdf59b126e274b3f0f4bcbf72d08084a06` : 3 scénarios d'intégration du parcours manuel.
+- `0f4bcf5fae830e54468cf5ada45d00f3943b0add` : édition des remboursements CAD déjà importés sans duplication.
+- `527f2b961219062d29eeef88cf1d6bb94fbaf150` : conservation de l'empreinte bancaire lorsque seules les associations changent.
+- `9c0a21b477cc2e087d9e5efdddaa9ac89a332b60` : 2 scénarios d'édition d'un remboursement existant.
+- `d47e969ff4fff982c2a96a1c126bea86ff1a6c84` : ajout des nouvelles suites aux régressions futures, sans déclenchement de CI sur cette branche.
+
+### Tests de validation (données fictives uniquement)
+
+Tous les contrôles suivants ont été exécutés sur le code récupéré du dépôt dans un harnais JavaScript V8 simulant une sélection d'API Node. Ils **ne sont pas des tests Node.js natifs, GitHub Actions, Safari iPhone, ni une validation PWA réelle**.
+
+- Candidate 5.37.0 : **167 contrôles réussis**, 13 suites (incluant 14 tests multi-avances, 3 manuels, 2 sur mouvement importé).
+- Régressions de la version stable 5.36.5 : **232 contrôles réussis**, 5 suites.
+- Laboratoire fictif : **15 contrôles réussis**, 2 suites.
+- **Total : 414 contrôles isolés réussis sur 20 suites**, aucun échec observé lors de la dernière exécution.
+- La suite de 14 cas comprend la rétrocompatibilité `relatedExpenseId`, les remboursements partiels, l'absence d'impact des opérations en attente, le refus d'un montant excessif, d'un double lien, d'une date future ou d'un autre propriétaire.
+- Les deux parcours d'interface ont été exercés au moyen de fausses instances DOM et de fausses fonctions de sauvegarde, sans accès Supabase.
+
+### Travaux restants avant fin de phase 1 et phases suivantes
+
+1. Réexécuter sur un checkout Node natif et dans Safari iPhone réel, sur une prévisualisation autorisée avec données fictives.
+2. Compléter les tests d'enchaînement entre la comptabilité de partage, les remboursements groupés, les dépenses individuelles et les cartes, notamment le cas 100 CAD réparti 25 / 25 / 50 puis remboursements.
+3. Finaliser l'édition des entrées en EUR/USD/GBP/CHF déjà importées, puis la gestion complète des noms de proches et du solde individualisé dans Activité → Partage.
+4. Ne pas confondre remboursement de proche avec remboursement commerçant, salaire ou virement interne.
+5. Garder `index.html`, `sw.js`, `trace-version.json`, `main`, le projet PickPoint et les données bancaires de production inchangés jusqu'à validation de publication distincte.
+
+**Retour arrière :** reverts contrôlés sur la seule branche International ; pas de reset, pas de force-push, pas de mutation Supabase.
