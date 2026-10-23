@@ -137,3 +137,13 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 - Accès protégé par **Vercel Authentication/SSO** sur le projet. L'API confirme le build READY mais la navigation externe n'a pas pu charger la page protégée : **aucun test navigateur de cette URL, ne pas annoncer Safari/iPhone validé**. L'utilisateur peut devoir se connecter avec son compte Vercel.
 - Le build inclut l'interface de laboratoire du débit différé. **Aucun déploiement de `main`, aucun domaine de production modifié, aucun accès à Supabase réel**, aucune migration. `deferred` reste désactivé sur le parcours de création réel.
 - **Important :** le(s) commit(s) documentaires enregistrant cette URL peuvent avancer le HEAD candidat au-delà de la SHA du build Vercel ; les seuls changements supplémentaires sont documentaires et ne sont pas déployés automatiquement (branche candidate désactivée dans `vercel.json`).
+
+
+## Nouveau relais — préparation finale préproduction, 23 octobre 2026
+
+- **État des lieux réellement constaté** : le déploiement précédent `trace-v5-preview`, commit `5989f220492d1bd2fa6bf9576cf773129f94e413`, est `READY` sur Vercel. La branche avait avancé à `33366fcbaab07ee827db329047d5b38957c6f198` pour la documentation uniquement, `main` reste `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+- Sur la **branche candidate uniquement**, `v5-app-5.37.0.js` corrige les éditions dangereuses des dépenses en devise étrangère : le nom et la catégorie peuvent être modifiés quand la dépense est confirmée et le compte appartient à l'utilisateur ; tous montants natifs/CAD, dates, taux historiques et répartitions sont préservés, sinon blocage explicite. `deferred` réel toujours désactivé.
+- Commits `[skip ci]` : code `1fa6293ca3f820cc9b157676d8dbcae589bedb73`, tests `649a15ad664a165383abdd0618e592c1260a4bec`, checklist `105a0785d344c8deae88c34aa129df11340a3965`, audit `2eace718de6e9d173d4994555164c6685b08af62`.
+- **Tests V8 à modules Node simulés** exécutés : nouvel éditeur 12/12, câblage 7/7, intégrité labo 8/8, boot application fictive 7/7, invariants financiers 19/19 (**53/53**). Ni tests Node CLI réels ni Safari/CI ni base de données distante ; **ce n'est pas** une certification générale 5.37.0.
+- **NOUVELLE SOURCE DE VÉRITÉ DES BLOQUANTS :** `docs/TRACE-5.37.0-RELEASE-CHECKLIST.md`. Toutes les portes production restent ouvertes : implémentation comptable différée dans grand livre réel, validation FX/import/partage, base de données fictive isolée, tests natifs et navigateur iPhone, SW/manifest/version/rollback, acceptation release.
+- **Préversion à actualiser** manuellement via Vercel sur le HEAD candidat après commit de ce handoff et vérifier READY/commit. Ne pas modifier le domaine de production ni `main`.
