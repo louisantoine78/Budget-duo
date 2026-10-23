@@ -2344,6 +2344,13 @@ async function clearDayAttention(accountId,date){
  window.TraceImportCalendar?.render?.();return next;
 }
 
+// An imported bank amount is evidence, never a value to silently round.
+function smartExactBankAmount(value){
+ if(value===null||value===undefined||String(value).trim()==='')return null;
+ const n=Number(value),cents=Math.round(n*100);
+ return Number.isFinite(n)&&n>0&&n<=1e7&&Number.isSafeInteger(cents)&&
+  Math.abs(n*100-cents)<1e-6?cents/100:null;
+}
 function smartStrictDate(s){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(s)))return false;
  const d=new Date(s+'T12:00:00');
@@ -2395,10 +2402,10 @@ async function smartStageRows(accountId,fileName,rows){
   const r=rows[i],name=String(r.name||'').trim().slice(0,85);
   if(name.length<2)continue;
   const date=smartStrictDate(String(r.date||''))?String(r.date):'';
-  const amount=Number(r.amount);
-  const value=r.amount!==null&&r.amount!==''&&Number.isFinite(amount)&&amount>0&&amount<1e7?Math.round(amount*100)/100:null;
-  const proposed=Number(r.suggestedAmount);
-  const suggestedAmount=r.suggestedAmount!==null&&r.suggestedAmount!==''&&Number.isFinite(proposed)&&proposed>0&&proposed<1e7?Math.round(proposed*100)/100:null;
+  // OCR may return fractional cents. Keep the draft for explicit review;
+  // never invent a bank debit or credit by rounding the source.
+  const value=smartExactBankAmount(r.amount);
+  const suggestedAmount=smartExactBankAmount(r.suggestedAmount);
   const preview=typeof r.sourcePreview==='string'&&r.sourcePreview.startsWith('data:image/jpeg;base64,')&&
    r.sourcePreview.length<105000?r.sourcePreview:null;
   // Improved recognition must reuse earlier pending drafts, even if the
@@ -2591,7 +2598,7 @@ async function smartMatchCardPaymentDraft(id,values,transferId){
   throw Error('Capture de carte inaccessible.');
  if(window.TraceInternational.currency(state.accounts.find(a=>a.id===d.accountId))!=='CAD')
   throw Error('Rapprochement de carte étrangère en préparation. Ne crée pas de deuxième paiement.');
- const date=String(values?.date||''),raw=values?.amount,amount=Number(raw),name=String(values?.name||'').trim().slice(0,85);
+ const date=String(values?.date||''),amount=smartExactBankAmount(values?.amount),name=String(values?.name||'').trim().slice(0,85);
  if(!values?.verified||d.needsAmountReview&&!values.amountChecked)
   throw Error('Vérifie le montant et la date sur la capture.');
  if(!smartStrictDate(date)||!Number.isFinite(amount)||!(amount>0)||name.length<2)
@@ -2604,7 +2611,7 @@ async function smartMatchCardPaymentDraft(id,values,transferId){
  if(!smartCardPaymentMatches(d.accountId,date,amount).some(x=>x.id===transferId))
   throw Error('Ce paiement de carte n’est plus disponible. Rouvre la journée.');
  const next={...d,status:'matched_card_payment',linkedTransactionId:transferId,date,name,
-  amount:Math.round(amount*100)/100,matchedAt:new Date().toISOString(),
+  amount,matchedAt:new Date().toISOString(),
   resolvedAt:new Date().toISOString()};
  await saveDocument('imports',next);Object.assign(d,next);renderAll();
  return{linked:true,additionalTransactions:0,budgetChange:0};
@@ -2616,7 +2623,7 @@ async function smartApproveDraft(id,v){
  if(!v?.verified)throw Error('Vérifie d’abord cette ligne.');
  if(d.needsAmountReview&&!v.amountChecked)throw Error('Le montant OCR est incertain : vérifie-le sur la capture.');
  const date=String(v.date||''),name=String(v.name||'').trim().slice(0,85),
-  amount=Math.round(Number(v.amount)*100)/100,requestedType=String(v.type||''),movement=window.TraceMovement.get(requestedType),type=movement?.type||'',accountId=d.accountId;
+  amount=smartExactBankAmount(v.amount),requestedType=String(v.type||''),movement=window.TraceMovement.get(requestedType),type=movement?.type||'',accountId=d.accountId;
  if(!smartStrictDate(date)||name.length<2||!Number.isFinite(amount)||!(amount>0)||amount>1e7)
   throw Error('Vérifie la date, le libellé et le montant.');
  if(requestedType==='card_payment_received')throw Error('Ce paiement reçu doit être rapproché du virement du compte courant : choisis le paiement correspondant.');
