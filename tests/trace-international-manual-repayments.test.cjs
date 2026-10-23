@@ -38,7 +38,11 @@ function run(){
   }
   return nodes.get(id);
  };
- const deps={window:w,state,me:'la',partner:'partner',$,esc:x=>String(x??''),uiIcon:()=>'',openSheet:()=>{},closeSheet:()=>{},
+ const helperFrom=app.indexOf('function friendDebtorFields('),
+ helperTo=app.indexOf('\nfunction traceCustomShares(',helperFrom);
+ assert.ok(helperFrom>0&&helperTo>helperFrom);
+ const friendDebtorFields=new Function('state','window','return ('+app.slice(helperFrom,helperTo)+');')(state,w);
+ const deps={window:w,state,friendDebtorFields,me:'la',partner:'partner',$,esc:x=>String(x??''),uiIcon:()=>'',openSheet:()=>{},closeSheet:()=>{},
  visibleBankAccounts:()=>[ca],preferredBankAccount:()=>ca,accountType:a=>a?.type,shortAccountLabel:a=>a.name||'',
  shortMemberName:()=> 'Élise',manualCategories:()=>[],localDateISO:()=> '2026-10-12',
  friendLinkOptions:(d,a)=>w.TraceMovement.linkable(state.transactions,state.transactions,'la',d,a),
