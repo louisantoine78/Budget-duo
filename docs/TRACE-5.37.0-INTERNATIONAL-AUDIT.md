@@ -944,3 +944,18 @@ Ces tests restent des **simulations V8**, pas de vrais tests Node CLI, Safari iP
 4. Valider de bout en bout avec comptes et données fictifs, puis les écrans Safari iPhone ; garder `main` et la production 5.36.5 intacts jusqu'à autorisation distincte.
 
 **Statut : phase 1 toujours ouverte, non publiable.**
+
+### Addendum de clôture de la campagne de régression (23 octobre 2026)
+
+Après la consignation du résultat partiel ci-dessus, la limite d'appels initiale a été contournée en exécutant les suites restantes par groupes. **Toutes les 32 suites** ont finalement été rejouées sur la branche candidate avec leurs sources GitHub actuelles, dans le banc JavaScript V8 à dépendances Node/DOM simulées :
+
+| Périmètre | Suites | Contrôles réussis |
+|---|---:|---:|
+| Historique TRACE 5.36.5 | 5 | **232** |
+| TRACE 5.37.0 International, débit différé inclus | 25 | **386** |
+| Laboratoire fictif et simulation du démarrage | 2 | **15** |
+| **TOTAL REJOUÉ** | **32** | **633/633** |
+
+**Détail d'exécution 5.37.0 :** dix suites initiales (148), huit suites avances/carte/partage (91), sept suites import/relevé/débit différé (147). La nouvelle suite débit différé passe **35/35** contrôles.
+
+Cet addendum **remplace le caractère incomplet du bilan intermédiaire 415/415**, sans prétendre qu'une CI GitHub Actions, un checkout natif Node ou un navigateur Safari ont été exécutés. Aucune écriture réelle, aucun déploiement et aucune activation du modèle différé ne sont intervenus. L'interdiction de fusion vers main et la validation séparée de l'intégration UX/iPhone restent en vigueur.
