@@ -312,3 +312,56 @@ Tous les contrôles suivants ont été exécutés sur le code récupéré du dé
 5. Garder `index.html`, `sw.js`, `trace-version.json`, `main`, le projet PickPoint et les données bancaires de production inchangés jusqu'à validation de publication distincte.
 
 **Retour arrière :** reverts contrôlés sur la seule branche International ; pas de reset, pas de force-push, pas de mutation Supabase.
+
+
+## Phase 1 — Créances nominatives et remboursements étrangers vérifiés (23 octobre 2026)
+
+**Branche concernée uniquement :** `trace-5.37.0-international-accounts-fx`. La production 5.36.5, `main`, les données bancaires réelles et Supabase n'ont pas été modifiées. Aucun déploiement, aucune fusion ni activation de la candidate dans `index.html`.
+
+### Implémentation enregistrée
+
+**Créances par proche :**
+- `trace-movement-5.36.0.js` contient `friendReceivables(transactions,owner)`, projection calculée exclusivement à partir des dépenses confirmées dont la part `splitAmounts.friends` est positive, et des remboursements associés confirmés (format ancien `relatedExpenseId` ou nouveau `repaymentAllocations`). Le cumul est cent-exact ; les remboursements non confirmés ne réduisent pas les créances.
+- Une dépense partagée peut porter le champ optionnel `friendDebtorName` seulement quand **une seule personne doit la totalité de la part des amis**. Le champ est présent dans la saisie manuelle et les deux éditeurs des dépenses. Les dettes au même prénom sont regroupées sans tenir compte de la casse ; les créances de propriétaires `la` et `partner` restent distinctes.
+- L'ancienne part Amis sans prénom reste `À attribuer`. Il est interdit de déduire le débiteur de `counterparty` d'un virement bancaire. Les dettes de plusieurs personnes pour une même dépense ne sont **pas encore détaillables** dans ce nouveau champ et restent un travail de la phase Partage.
+- Le panneau historique `Partage du couple` affiche en lecture seule les avances initiales, reçues et restantes, par personne ou dans la catégorie à attribuer, avec détail par opération. Ce suivi est **séparé du solde Tricount entre partenaires** et ne modifie aucun budget.
+
+**Import étranger :**
+- `trace-international-1.0.0.js` ajoute `verifiedForeignFriendRefund` : exige un remboursement étranger confirmé sur compte courant compatible, montants bancaires natifs et CAD strictement positifs, devise bancaire cohérente, taux historique supérieur à zéro, date et provenance du taux, et concordance de `bankAmount * bankRateCad` avec `amountCAD` au centime.
+- Le nouvel éditeur `editForeignFriendRepayment` dans `v5-app-5.37.0.js` n'autorise **que** l'ajustement de `relatedExpenseId`/`repaymentAllocations` et de `counterparty`, après contrôle du FX à l'ouverture **et à l'enregistrement**. Le montant natif, la contre-valeur historique, le taux, ses métadonnées, le compte, la date, l'identifiant, le statut et l'empreinte d'import ne sont pas modifiés.
+- Une référence historique manquante/incohérente produit un écran bloquant plutôt qu'un taux de conversion fictif. Le parcours générique de modification des mouvements étrangers reste verrouillé pour les autres opérations.
+- Les anciennes dépenses, remboursements commerçants, transferts bancaires, paiements de cartes, budgets CAD et paramètres couple ne sont pas réinterprétés.
+
+### Commits du lot (avant cette documentation)
+
+1. `d6fbc8a5ce8e375ecb49f0af44012397e0e22748` : projection des créances par proche.
+2. `36acac3dc312a9a5e31f23a7da93f53aa44ce8d0` : normalisation des prénoms.
+3. `bacce00fd8dee6ce5171a4f620839bf2245bf769` : nom optionnel sur dépense manuelle.
+4. `b5480e4d4212de67e39bf5136117896bdf5271a6` : nom optionnel dans les éditeurs existants.
+5. `9858920420fa45fafc3bc845837b54881a0edee0` : lecture des créances dans le Partage actuel.
+6. `ddedd9a083d4f8bd41cd2b519ba1c7c735bddf12` : vérification historique des montants EUR et de leur taux.
+7. `bf176c9edeca10a51fd7db2362d8e73b89c259f2` : édition de l'association sur un remboursement étranger confirmé, sans mutation bancaire.
+8. `06a7b7faa4f9506d83adb9620d345008a5474377` : 15 tests de créances, FX et remboursement étranger.
+9. `3eb6bea83187940704f4c1d40bafb3bfbf61ffd6` : adaptation du test d'éditeur FX au nouvel ordre des fonctions.
+10. `d87109feee00fa41dd3afe18de70e2cba27fd44a` : suite FX/Partage ajoutée au futur workflow, sans nouveau déclencheur.
+11. `15550bb6f40eb2fecc109a20a1800dccac214f3e` : 4 tests d'affichage du Partage et de ses champs nominaux.
+12. `5d917839f1d70d39507762a6b698d523d189353d` : suite d'interface ajoutée au futur workflow sans déclencheur automatique sur la branche.
+
+### Vérifications
+
+Fichiers lus depuis GitHub et évalués dans un harnais JS V8 qui **émule certaines API Node**, sans accès à Supabase, sans saisie de comptes réels et sans réseau applicatif :
+
+- Candidate TRACE 5.37.0 : **186 contrôles réussis sur 15 suites**.
+- Régressions de la base stable 5.36.5 : **232 contrôles réussis sur 5 suites**.
+- Laboratoire / boot simulé : **15 contrôles réussis sur 2 suites**.
+- **Total : 433 contrôles isolés réussis sur 22 suites**, aucun échec après correction de l'extraction du test d'éditeur FX.
+- Aucun test n'a été exécuté dans un véritable checkout Node, dans GitHub Actions ou dans Safari. **Ces validations restent obligatoires** avant toute publication.
+
+### À traiter ensuite
+
+1. Cas combinés Couplage/Amis/cartes, remboursements commerçants et devises de référence, avec transactions fictives ; détecter les états partiels et incohérences sans supprimer automatiquement les doublons.
+2. Autoriser plusieurs **débiteurs nommés sur une même dépense**, gérer leurs parts individuelles et paiements croisés dans le futur Activité → Partage, sans attribution déduite des historiques.
+3. Réconciliation PDF mensuelle indépendante des imports journaliers ; épargne et patrimoine multi-devises ; débit différé, conformément aux phases futures.
+4. Checkout réel Node et tests Safari iPhone sur environnement isolé autorisé ; ne pas activer ni déployer la candidate avant validation distincte.
+
+**Retour arrière :** reverts ciblés sur la branche International, sans force-push, sans reset ni modification Supabase.
