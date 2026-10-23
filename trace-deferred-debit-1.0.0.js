@@ -7,7 +7,8 @@
  * is a BANK TRANSFER, never another budget expense.
  *
  * Conservative phase-1 rule: one exact settlement per due-date batch; partial
- * settlements/refunds/FX legs are not inferred or auto-booked.
+ * partial settlements/fees/FX legs are not inferred or auto-booked.
+ * Merchant refunds before due date are explicit card credits and budget reversals.
  */
 (function(root){'use strict';
  const allowed=Object.freeze(['CAD','EUR','USD','GBP','CHF']);
@@ -25,7 +26,7 @@
  };
  const month=d=>d.slice(0,7);
  const amount=v=>v/100;
- function simulate({card,checking,purchases=[],settlements=[],asOfDate}={}){
+ function simulate({card,checking,purchases=[],refunds=[],settlements=[],asOfDate}={}){
   if(!card||!checking||card.type!=='card'||card.paymentMode!=='deferred'||
      checking.type!=='checking'||!card.id||!checking.id||
      card.id===checking.id||card.settlementAccountId!==checking.id||
@@ -35,8 +36,8 @@
      String(card.currency).toUpperCase()!==String(checking.currency).toUpperCase())
    throw Error('Carte différée et compte de règlement incompatibles.');
   if(!date(asOfDate))throw Error('Date de situation invalide.');
-  if(!Array.isArray(purchases)||!Array.isArray(settlements)||
-     purchases.length>5000||settlements.length>5000)
+  if(!Array.isArray(purchases)||!Array.isArray(refunds)||!Array.isArray(settlements)||
+     purchases.length>5000||refunds.length>5000||settlements.length>5000)
    throw Error('Nombre de mouvements invalide.');
   const currency=String(card.currency).toUpperCase(),seen=new Set();
   const byId=new Map(),byDue=new Map();
@@ -57,6 +58,32 @@
    if(!byDue.has(p.dueDate))byDue.set(p.dueDate,[]);
    byDue.get(p.dueDate).push(purchase);
   }
+  // Only card credits explicitly tied to purchases and confirmed before due
+  // may reduce the outstanding liability. No checking-account or salary flow.
+  const refundsByPurchase=new Map(),refundRecords=[];
+  for(const r of refunds){
+   const id=String(r?.id??'').trim(),purchaseId=String(r?.purchaseId??'').trim(),
+    minor=cents(r?.amount),when=date(r?.refundDate),budgetDate=date(r?.budgetDate),
+    original=byId.get(purchaseId);
+   if(!id||seen.has('r:'+id)||!original||minor===null||!when||!budgetDate||
+      !['confirmed','pending'].includes(r.status)||
+      r.type!=='merchant_refund'||r.cardAccountId!==card.id||
+      String(r.currency).toUpperCase()!==currency||
+      r.feeAmount!==undefined||r.taxAmount!==undefined||
+      when<original.purchaseDate||when>original.dueDate||
+      budgetDate<original.purchaseDate||budgetDate>original.dueDate)
+    throw Error('Remboursement commerçant différé ambigu : date, devise, statut ou achat.');
+   seen.add('r:'+id);
+   const grouped=refundsByPurchase.get(purchaseId)||[];
+   if(grouped.reduce((n,x)=>n+x.cents,0)+minor>original.cents)
+    throw Error('Remboursements supérieurs à l’achat initial.');
+   const refund={id,purchaseId,refundDate:when,budgetDate,cents:minor,status:r.status};
+   grouped.push(refund);refundsByPurchase.set(purchaseId,grouped);
+   refundRecords.push(refund);
+  }
+  const creditedFor=(p,cutoff)=>(refundsByPurchase.get(p.id)||[])
+   .filter(r=>r.status==='confirmed'&&r.refundDate<=cutoff)
+   .reduce((n,r)=>n+r.cents,0);
   const settlementBatches=new Map(),settlementRecords=[];
   for(const s of settlements){
    const id=String(s?.id??'').trim(),minor=cents(s?.amount),
@@ -80,8 +107,10 @@
    const batch=byDue.get(due);
    if(batch.length!==refs.length||batch.some(x=>!uniqueRefs.has(x.id)))
     throw Error('Un règlement doit couvrir le lot complet de son échéance.');
-   const total=batch.reduce((n,x)=>n+x.cents,0);
-   if(minor!==total)throw Error('Montant du règlement différent des achats à l’échéance.');
+   if(batch.some(p=>(refundsByPurchase.get(p.id)||[]).some(r=>r.refundDate>when)))
+    throw Error('Remboursement postérieur au règlement : rapprochement spécifique requis.');
+   const total=batch.reduce((n,x)=>n+x.cents-creditedFor(x,when),0);
+   if(minor!==total)throw Error('Montant du règlement différent du net des achats à l’échéance.');
    if(settlementBatches.has(due))
     throw Error('Règlement répété sur la même échéance.');
    settlementBatches.set(due,id);
@@ -97,35 +126,51 @@
     budgetDate:p.budgetDate,dueDate:p.dueDate,amount:amount(p.cents),
     currency,budgetExpense:true,checkingMovement:0});
   }
-  let purchasedCents=0,paidCents=0,pendingDueCents=0;
+  let purchasedCents=0,paidCents=0,pendingDueCents=0,refundedCents=0;
+  const budgetRefunds=[];
+  for(const r of refundRecords){
+   const original=byId.get(r.purchaseId);
+   if(r.status!=='confirmed'||r.refundDate>asOfDate||
+      original.purchaseDate>asOfDate)continue;
+   refundedCents+=r.cents;
+   budgetByMonth[month(r.budgetDate)]=(budgetByMonth[month(r.budgetDate)]||0)-r.cents;
+   budgetRefunds.push({id:r.id,purchaseId:r.purchaseId,
+    refundDate:r.refundDate,budgetDate:r.budgetDate,amount:amount(r.cents),
+    currency,budgetReduction:true,budgetIncome:false,checkingMovement:0});
+  }
   for(const p of byId.values())if(p.purchaseDate<=asOfDate)purchasedCents+=p.cents;
   for(const s of settlementRecords)if(s.status==='confirmed'&&s.debitDate<=asOfDate)
    paidCents+=s.cents;
-  if(paidCents>purchasedCents)throw Error('Solde différé impossible : règlement supérieur aux achats.');
+  if(paidCents>purchasedCents-refundedCents)throw Error('Solde différé impossible : règlement supérieur au net des achats.');
   for(const [due,lines] of byDue.entries()){
    const applicable=lines.filter(x=>x.purchaseDate<=asOfDate);
    if(!applicable.length)continue;
-   const total=applicable.reduce((n,x)=>n+x.cents,0),
+   const gross=applicable.reduce((n,x)=>n+x.cents,0),
+    cardCredits=applicable.reduce((n,x)=>n+creditedFor(x,asOfDate),0),
+    total=gross-cardCredits,
     matched=settlementRecords.find(s=>s.dueDate===due),
     settled=!!(matched?.status==='confirmed'&&matched.debitDate<=asOfDate),
-    dueUnpaid=due<=asOfDate&&!settled;
+    dueUnpaid=due<=asOfDate&&!settled&&total>0;
    if(dueUnpaid)pendingDueCents+=total;
-   dueBatches.push({dueDate:due,amount:amount(total),currency,
+   dueBatches.push({dueDate:due,amount:amount(total),grossAmount:amount(gross),
+    confirmedRefunds:amount(cardCredits),currency,
     purchaseIds:applicable.map(x=>x.id),
-    status:settled?'settled':matched?.status==='pending'?'pending_review':
+    status:settled?'settled':!total?'cleared_by_refund':
+     matched?.status==='pending'?'pending_review':
      dueUnpaid?'overdue':'scheduled',
     actualDebitDate:matched?.debitDate??null,
     confirmedSettlementId:settled?matched.id:null});
   }
   dueBatches.sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
   return{cardAccountId:card.id,checkingAccountId:checking.id,currency,asOfDate,
-   budgetExpenses:spendItems,monthlyBudget:Object.fromEntries(
+   budgetExpenses:spendItems,budgetRefunds,monthlyBudget:Object.fromEntries(
     Object.entries(budgetByMonth).map(([key,v])=>[key,amount(v)])),
    batches:dueBatches,
-   liability:amount(purchasedCents-paidCents),
+   liability:amount(purchasedCents-refundedCents-paidCents),
    overdue:amount(pendingDueCents),
-   checkingBalanceChange:amount(-paidCents),
-   cardBalanceChange:amount(-purchasedCents+paidCents),
+   checkingBalanceChange:paidCents?amount(-paidCents):0,
+   cardBalanceChange:amount(-purchasedCents+refundedCents+paidCents),
+   merchantRefunds:budgetRefunds.map(r=>({...r,cardAccountId:card.id,internalTransfer:false})),
    bankTransfers:settlementRecords.filter(s=>s.status==='confirmed'&&s.debitDate<=asOfDate)
     .map(s=>({id:s.id,accountId:checking.id,toAccountId:card.id,
      debitDate:s.debitDate,amount:amount(s.cents),currency,
