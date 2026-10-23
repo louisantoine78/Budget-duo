@@ -374,4 +374,165 @@ test('input card fee objects stay immutable with no bank writes',()=>{
  assert.equal(JSON.stringify(fees),before);
  assert.equal(r.writes,0);assert.equal(r.financialChanges,0);
 });
+
+const bankEvidence=(lineId,amount,debitDate='2026-11-05',options={})=>({
+ statementId:'statement-nov',lineId,accountId:checking.id,
+ currency:card.currency,direction:'debit',amount,debitDate,
+ status:'confirmed',reviewed:true,...options});
+const partial=(id,amount,options={})=>{
+ const opts={settlementMode:'partial',allocationDueDate:'2026-11-05',
+  bankEvidence:bankEvidence('line-'+id,amount),...options};
+ return debit(id,amount,['p1'],opts);
+};
+test('explicit bank-backed partial debit reduces liability, never budget a second time',()=>{
+ const r=calculate([purchase('p1')],[partial('s1','12.35')],'2026-11-05');
+ assert.equal(r.liability,27.65);assert.equal(r.checkingBalanceChange,-12.35);
+ assert.equal(r.monthlyBudget['2026-10'],40);
+ assert.equal(r.batches[0].remainingAmount,27.65);
+ assert.equal(r.batches[0].paidAmount,12.35);
+ assert.equal(r.batches[0].status,'partially_settled');
+ assert.equal(r.overdue,27.65);
+ assert.equal(r.bankTransfers[0].budgetExpense,false);
+ assert.equal(r.bankTransfers[0].budgetIncome,false);
+ assert.equal(r.bankTransfers[0].bankSource.lineId,'line-s1');
+});
+test('two explicitly evidenced payments cover exact cent amount without duplicate expense',()=>{
+ const r=calculate([purchase('p1')],[partial('s1','12.35'),
+  partial('s2','27.65')],'2026-11-05');
+ assert.equal(r.liability,0);assert.equal(r.overdue,0);
+ assert.equal(r.batches[0].status,'settled');
+ assert.equal(r.batches[0].confirmedSettlementIds.length,2);
+ assert.equal(r.batches[0].confirmedSettlementId,null);
+ assert.equal(r.bankTransfers.length,2);
+ assert.equal(r.monthlyBudget['2026-10'],40);
+});
+test('partial payment before due date leaves remainder scheduled not overdue',()=>{
+ const r=calculate([purchase('p1')],
+ [partial('s1','10',{debitDate:'2026-10-20',
+  bankEvidence:bankEvidence('line-s1','10','2026-10-20')})],
+ '2026-10-20');
+ assert.equal(r.overdue,0);assert.equal(r.liability,30);
+ assert.equal(r.batches[0].remainingAmount,30);
+});
+test('pending partial debit cannot reduce debt, current balance, or budget',()=>{
+ const s=partial('s1','12.35',{status:'pending',
+  bankEvidence:bankEvidence('line-s1','12.35','2026-11-05',
+   {status:'pending',reviewed:false})});
+ const r=calculate([purchase('p1')],[s],'2026-11-05');
+ assert.equal(r.liability,40);assert.equal(r.checkingBalanceChange,0);
+ assert.equal(r.batches[0].paidAmount,0);
+ assert.equal(r.batches[0].pendingAmount,12.35);
+ assert.equal(r.batches[0].status,'pending_review');
+ assert.equal(r.overdue,40);
+});
+test('confirmed partial and pending debit remain separate and cannot oversubscribe',()=>{
+ const pending=partial('s2','10',{status:'pending',
+  bankEvidence:bankEvidence('line-s2','10','2026-11-05',
+  {status:'pending',reviewed:false})});
+ const r=calculate([purchase('p1')],[partial('s1','15'),pending],'2026-11-05');
+ assert.equal(r.liability,25);assert.equal(r.checkingBalanceChange,-15);
+ assert.equal(r.batches[0].pendingAmount,10);
+ assert.equal(r.batches[0].status,'partially_settled_pending_review');
+ assert.throws(()=>calculate([purchase('p1')],
+  [partial('s1','35'),pending],'2026-11-05'),/supérieur/);
+});
+test('partial settlement requires reviewed evidence matching native amount/account/date',()=>{
+ const invalid=[
+  {bankEvidence:null},
+  {bankEvidence:bankEvidence('x','10')},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-04')},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-05',{accountId:'other'})},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-05',{currency:'USD'})},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-05',{direction:'credit'})},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-05',{reviewed:false})},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-05',{statementId:''})},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-05',{lineId:''})},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-05',{status:'pending'})},
+  {bankEvidence:bankEvidence('x','12.35','2026-11-05',{fxRate:1})}
+ ];
+ for(const options of invalid)assert.throws(()=>calculate([purchase('p1')],
+ [partial('s1','12.35',options)],'2026-11-05'),/preuve/);
+});
+test('same statement and row cannot settle twice under different ids',()=>{
+ const second=partial('s2','15',{bankEvidence:bankEvidence('line-s1','15')});
+ assert.throws(()=>calculate([purchase('p1')],
+ [partial('s1','12.35'),second],'2026-11-05'),/réutilisée/);
+});
+test('explicit allocation dueDate must match the referenced batch',()=>{
+ assert.throws(()=>calculate([purchase('p1')],
+ [partial('s1','12.35',{allocationDueDate:'2026-12-05'})],'2026-11-05'),/allouée/);
+});
+test('full legacy settlement and partial settlement on same batch cannot coexist',()=>{
+ assert.throws(()=>calculate([purchase('p1')],
+ [debit('full'),partial('partial','10')],'2026-11-05'),/répété|supérieur/);
+ assert.throws(()=>calculate([purchase('p1')],
+ [partial('partial','10'),debit('full')],'2026-11-05'),/répété|supérieur/);
+});
+test('plain unproven partial payment remains forbidden as before',()=>{
+ assert.throws(()=>calculate([purchase('p1')],[debit('s1','15')],'2026-11-05'),/différent/);
+});
+test('partial payments cannot exceed original amount even with different evidence',()=>{
+ assert.throws(()=>calculate([purchase('p1')],
+ [partial('s1','39.99'),partial('s2','0.02')],'2026-11-05'),/supérieur/);
+});
+test('one cent payment and final remainder settle to an exact native cent',()=>{
+ const r=calculate([purchase('p1')],[partial('s1','0.01'),
+  partial('s2','39.99')],'2026-11-05');
+ assert.equal(r.liability,0);assert.equal(r.checkingBalanceChange,-40);
+ assert.equal(r.bankTransfers[0].amount,0.01);
+});
+test('future confirmed partial debit does not move bank account before its date',()=>{
+ const r=calculate([purchase('p1')],[partial('s1','10')],'2026-10-20');
+ assert.equal(r.liability,40);assert.equal(r.checkingBalanceChange,0);
+ assert.equal(r.bankTransfers.length,0);
+ assert.equal(r.batches[0].remainingAmount,40);
+});
+test('partial payments on two due dates remain allocated independently',()=>{
+ const ps=[purchase('p1'),purchase('p2','20',{dueDate:'2026-12-05'})];
+ const second=debit('s2','5',['p2'],{settlementMode:'partial',
+  allocationDueDate:'2026-12-05',
+  debitDate:'2026-12-05',bankEvidence:bankEvidence('l2','5','2026-12-05')});
+ const r=calculate(ps,[partial('s1','12.35'),second],'2026-12-05');
+ assert.equal(r.liability,42.65);
+ assert.equal(r.batches[0].remainingAmount,27.65);
+ assert.equal(r.batches[1].remainingAmount,15);
+ assert.equal(r.overdue,42.65);
+});
+test('partial settlement with explicit card fee and merchant refund is budget neutral',()=>{
+ const r=simulate({card,checking,purchases:[purchase('p1')],fees:[cardFee('f1','2.30')],
+ refunds:[merchantRefund('r1','10.01')],settlements:[
+  partial('s1','10',{feeIds:['f1']}),
+  partial('s2','22.29',{feeIds:['f1']})
+ ],asOfDate:'2026-11-05'});
+ assert.equal(r.liability,0);
+ assert.equal(r.monthlyBudget['2026-10'],32.29);
+ assert.equal(r.checkingBalanceChange,-32.29);
+ assert.equal(r.budgetFees.length,1);
+});
+test('fee-only batch supports evidence-backed partial bank payment',()=>{
+ const p=debit('s1','0.30',[],{feeIds:['f1'],settlementMode:'partial',
+ allocationDueDate:'2026-11-05',
+ bankEvidence:bankEvidence('fline','0.30')});
+ const r=simulate({card,checking,fees:[cardFee('f1','2.30')],
+ purchases:[],settlements:[p],asOfDate:'2026-11-05'});
+ assert.equal(r.liability,2);assert.equal(r.overdue,2);
+ assert.equal(r.monthlyBudget['2026-10'],2.3);
+});
+test('bank evidence without partial mode is rejected, never silently ignored',()=>{
+ assert.throws(()=>calculate([purchase('p1')],[debit('s1','40',['p1'],
+  {bankEvidence:bankEvidence('line1','40')})],'2026-11-05'),/champs partiels/);
+});
+test('partial settlement unknown surcharge is refused as accounting unsafe',()=>{
+ assert.throws(()=>calculate([purchase('p1')],[partial('s1','12.35',
+  {unexplainedFee:'2.3'})],'2026-11-05'),/invalide/);
+});
+test('partial payment does not mutate source and remains read-only',()=>{
+ const p=Object.freeze(purchase('p1')),
+ s=Object.freeze({...partial('s1','12.35'),bankEvidence:
+  Object.freeze(bankEvidence('line-s1','12.35'))});
+ const r=simulate({card,checking,purchases:Object.freeze([p]),
+ settlements:Object.freeze([s]),asOfDate:'2026-11-05'});
+ assert.equal(r.writes,0);assert.equal(r.financialChanges,0);
+ assert.equal(s.bankEvidence.amount,'12.35');
+});
 console.log(count+' deferred-debit accounting laboratory scenarios passed');
