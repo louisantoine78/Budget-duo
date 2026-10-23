@@ -108,6 +108,31 @@ async function main(){
   await ui.elt('#fxSave').onclick();
   assert.equal(ui.writes.length,0);assert.match(ui.elt('#fxError').textContent,/compte courant lié/);
  });
+
+ await test('transfer fee input records included source fee without a new bank document',async()=>{
+  const t={id:'fees',date:'2026-10-12',name:'Virement France',type:'transfer',status:'confirmed',
+   accountId:'ca',toAccountId:'fr',bankAmount:150,toBankAmount:95,amountCAD:150};
+  const ui=setup(t);ui.edit();
+  assert.match(ui.sheet(),/fxFee/);
+  ui.elt('#fxFee').value='4.50';
+  await ui.elt('#fxSave').onclick();
+  assert.equal(ui.writes.length,1);
+  assert.equal(ui.writes[0].item.transferFeeAmount,4.5);
+  assert.equal(ui.writes[0].item.transferFeeCurrency,'CAD');
+  assert.equal(ui.writes[0].item.transferFeeIncludedInDebit,true);
+  assert.equal(ui.writes[0].item.bankAmount,150);
+  assert.equal(ui.writes[0].item.toBankAmount,95);
+ });
+ await test('invalid transfer fee never persists transaction changes',async()=>{
+  const t={id:'invalid-fees',date:'2026-10-12',name:'Virement France',type:'transfer',status:'confirmed',
+   accountId:'ca',toAccountId:'fr',bankAmount:150,toBankAmount:95,amountCAD:150};
+  const before=JSON.stringify(t),ui=setup(t);ui.edit();
+  ui.elt('#fxFee').value='155';
+  await ui.elt('#fxSave').onclick();
+  assert.equal(ui.writes.length,0);
+  assert.equal(JSON.stringify(t),before);
+  assert.match(ui.elt('#fxError').textContent,/Frais de virement invalides/);
+ });
  console.log(count+' international transfer editor interaction scenarios passed');
 }
 main().catch(error=>{console.error('FAIL',error);process.exitCode=1;});
