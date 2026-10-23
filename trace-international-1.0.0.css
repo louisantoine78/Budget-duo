@@ -32,3 +32,19 @@
  #tracePreviewStatus.trace-intl-lab-banner{padding:9px 11px;gap:3px}
  #tracePreviewStatus.trace-intl-lab-banner strong{font-size:12px}
 }
+
+
+/* TRACE 5.37 — iPhone-sized, progressive multi-person friend share editor */
+.trace-friend-debtors{margin:12px 0 6px;min-width:0;display:grid;gap:9px}
+.trace-debtor-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;color:#1d5548;font-size:13px}
+.trace-debtor-add,.trace-debtor-remove{min-height:44px;padding:9px 12px;border-radius:11px;font-size:13px;font-weight:700;touch-action:manipulation}
+.trace-debtor-list{display:grid;gap:9px;min-width:0}
+.trace-debtor-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:9px;padding:12px;border:1px solid #dceae2;border-radius:13px;background:#f8fbf9;min-width:0}
+.trace-debtor-row label{display:grid;gap:5px;min-width:0;color:#49665b;font-size:12px;font-weight:700}
+.trace-debtor-row .input{min-width:0;width:100%;min-height:44px;font-size:16px!important;border-radius:10px}
+.trace-debtor-balance{font-size:12px;line-height:1.5;color:#506f63;margin:0;padding:9px 11px;border:1px solid #e0eae3;border-radius:10px}
+.trace-debtor-complete{background:#edf8ef;border-color:#ccebd3;color:#256044}
+.trace-debtor-warning{background:#fff6ed;border-color:#f0d8bd;color:#8a5b2e}
+.trace-debtor-hint{font-size:12px;line-height:1.55;color:#6f8278;margin:0}
+@media(max-width:480px){.trace-debtor-row{grid-template-columns:1fr 1fr;gap:10px;padding:10px}.trace-debtor-row .trace-debtor-remove{grid-column:1/-1;justify-self:end;min-width:100px}.trace-debtor-heading{align-items:flex-start}.trace-debtor-add{max-width:100%}}
+@media(max-width:350px){.trace-debtor-row{grid-template-columns:minmax(0,1fr)}.trace-debtor-row .trace-debtor-remove{grid-column:1}}
