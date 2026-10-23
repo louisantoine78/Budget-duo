@@ -453,3 +453,39 @@ Les tests ne sont **ni une exécution CLI Node dans un clone du dépôt, ni GitH
 1. Exécuter un vrai parcours de saisie mobile sur Safari iPhone isolé et vérifier la navigation au clavier, les lignes à retirer, les nombres décimaux et les erreurs de répartition.
 2. Poursuivre les scénarios financiers croisés (compte courant, crédit, frais FX, remboursements commerçants, partage et rapprochements), puis préparer l'espace Activité → Partage validé.
 3. Conserver l'interdiction de fusion, déploiement, réinitialisation ou écriture Supabase sans instruction explicite de mise en production.
+
+## Phase 1 — Reprise et renforcement des tests mobiles / comptables (23 octobre 2026)
+
+**Point de départ vérifié :** `1ae6db73042a3bfb6fd478e222a462f678b6cbd1` sur `trace-5.37.0-international-accounts-fx`. Avant les changements, `main` pointait toujours sur `02c70f50e7e51da79b77a91dde96a03c6c719909` (127 commits derrière la candidate, 0 commit manquant de `main`). La protection `vercel.json` est intacte : déploiement automatique interdit pour cette branche.
+
+### Anomalies découvertes et corrections réversibles
+
+1. La première reprise des tests ciblés a produit **15 réussites et 1 échec** : le composant mobile annonçait « Répartition complète » avec deux prénoms identiques et des montants totalisant bien 50 CAD, alors que le validateur comptable rejetait ces doublons. Le nouveau résumé mobile détecte les prénoms en double (insensible à la casse), les noms vides et les montants non valides, sans prétendre qu'une répartition erronée est complète.
+2. L'input de montant des proches est désormais `type="text" inputmode="decimal"`, pour conserver la virgule du clavier décimal iOS et transférer les montants dans le champ de compatibilité sous leur forme entrée. La validation d'aperçu contrôle les centimes et refuse les nombres à plus de deux décimales au lieu de les arrondir silencieusement. Le contrôle comptable `validateFriendDebtorShares` reste l'autorité à l'enregistrement.
+3. Lorsqu'un ancien champ de répartition contient une valeur illisible ou que son décodeur n'est pas disponible, le montage s'interrompt avec un message de contrôle **sans remplacer ni vider la donnée précédente**.
+
+**Commits ciblés :**
+- `cce9d0ab69ea5159c5ca0e72e5cd5ff53b3ee180` : retour utilisateur, doublons, virgule décimale iOS, centimes.
+- `aa826402a4f1317583bc991d550724c0e68df617` : protection contre l'effacement silencieux d'un ancien champ non relisible.
+- `0ccccdc61bd23dc13f85e0f35e54f4a755973b87` : passage de 4 à **15 tests** dans la suite mobile déjà existante.
+- `ce3cabc442485b56c88b71c97f2dff32873cd157` : passage de 8 à **20 tests** dans la suite financière multi-débiteurs déjà existante.
+
+### Tests effectivement exécutés dans cette reprise
+
+Depuis **les versions des fichiers source et des fichiers de tests relues sur GitHub après les commits**, deux suites existantes ont été exécutées dans le harnais **JavaScript V8 isolé** avec API `fs/path/vm/assert` et DOM partiellement simulées :
+
+- `tests/trace-international-friend-rows.test.cjs` : **15/15** réussites (modification, ajout, suppression, 30+20 sur 50, troisième personne, insuffisance et dépassement, doublons, noms vides, précision au centime, saisie à virgule, aller-retour prénom unique/multi, limite 13, réouverture d'historique, conservation des saisies non déchiffrables).
+- `tests/trace-international-multi-debtors.test.cjs` : **20/20** réussites (créances individualisées, remboursement partiel, blocage d'un débiteur incorrect, validation des totaux, dépenses carte partagées, paiement Mastercard neutre, remboursement proche sans revenu, remboursement commerçant comme réduction de dépense, remboursement unique multi-avances, compatibilité `relatedExpenseId`, séparation Moi/Partenaire, remboursement EUR historique vérifié, absence de taux implicite, frais de virements interdevises et destination bancaire manquante).
+- **Total exécuté cette fois : 35/35 réussites dans ces deux suites seulement**, sans échec au dernier passage.
+- Analyse statique complémentaire : syntaxe V8 valide pour les scripts UI et app, trois appels de montage, chargement du module avant la candidate en laboratoire, CSS avec 16px et cibles 44px / règles petites largeurs, `index.html` conservant `v5-app-5.36.5.js`, `trace-version.json` et `sw.js` toujours 5.36.5, `vercel.json` préservé.
+
+**Attention aux chiffres :** les 445 contrôles sur 24 suites sont le **bilan historique documenté avant cette reprise** ; les 23 nouveaux cas ajoutés portent théoriquement l'inventaire à 468, mais **468/468 n'a pas été exécuté ni validé ici**. Les seuls résultats de cette nouvelle session sont **35/35 dans deux suites**, via V8 et des adaptations d'API, pas un checkout Node natif, une vraie PWA, GitHub Actions ou Safari.
+
+### Restrictions et points non validés
+
+- Aucun déploiement, aucune fusion, aucun `main`, aucun compte bancaire réel, aucune écriture Supabase, aucune migration, aucune activation de `index.html`, aucun déclenchement GitHub Actions ni modification PickPoint.
+- La CLI Node.js est disponible dans le conteneur mais le clone GitHub échoue toujours avec `Could not resolve host: github.com`. **Les véritables commandes Node sur un dépôt cloné et toutes les régressions historiques restent à exécuter**.
+- Le comportement physique des claviers décimaux iOS, du zoom Safari, la navigation VoiceOver, les interactions DOM natives et les configurations multi-utilisateurs Supabase **ne sont pas testés**. Le CSS et le HTML ne constituent pas des validations Safari.
+- Les scénarios traversant toutes les couches de l'application (import PDF bancaire, rapprochement intégral, PWA hors ligne, compte crédit, épargne, transactions couplées et régularisation du budget historique) doivent être validés sur données **fictives** dans des environnements autorisés, sans déploiement implicite.
+
+**Phase 1 : en cours, non déclarée terminée.** Reprendre les tests complets et l'intégration réelle sous autorisation, conserver la compatibilité 5.36.5 et contrôler `main`/Vercel après chaque lot. Les quatre commits peuvent être annulés individuellement sans reset ni force-push.
