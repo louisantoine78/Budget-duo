@@ -98,6 +98,24 @@ test('ambiguous transfer description is never offered as simple CSV expense',()=
  assert.match(c.sheets[0].title,/Nature bancaire/);
  assert.equal(c.node('#foreignCsvSave').onclick,null);
 });
+test('mismatched original purchase currency must not be invented from native CSV amount',()=>{
+ const c=build({transaction:{currency:'USD'}});
+ c.review(c.t);
+ assert.match(c.sheets[0].title,/Nature bancaire/);
+ assert.equal(c.node('#foreignCsvSave').onclick,null);
+});
+test('prevalued foreign CSV draft is kept out of native-only fast confirmation',()=>{
+ const c=build({transaction:{amountCAD:64,bankRateCad:1.60}});
+ c.review(c.t);
+ assert.match(c.sheets[0].title,/Nature bancaire/);
+ assert.equal(c.node('#foreignCsvSave').onclick,null);
+});
+test('inconsistent original and bank amount cannot create a false historical booking',()=>{
+ const c=build({transaction:{amountOriginal:50}});
+ c.review(c.t);
+ assert.match(c.sheets[0].title,/Nature bancaire/);
+ assert.equal(c.node('#foreignCsvSave').onclick,null);
+});
 test('foreign CSV validator is routed only for non-confirmed expenses',()=>{
  assert.match(app,/reviewForeignPendingCsvExpense\(t\);return;/);
  assert.match(app,/t\.type==='expense'&&t\.source==='csv'&&t\.status!=='confirmed'/);
