@@ -25,7 +25,7 @@ function build(overrides={}){
  const state={accounts:[account],categories:[{id:'books',name:'Livres',type:'expense'}],transactions:[t]};
  const nodes={},saved=[],sheets=[];
  const node=id=>nodes[id]||(nodes[id]={id,value:'',checked:false,disabled:false,textContent:'',onclick:null});
- const quoteMatches=()=>overrides.matches||[];
+ const quoteMatches=()=>overrides.matchesFn?.()||overrides.matches||[];
  const func=new Function('window','state','me','partner','visibleBankAccounts','accountType',
   'shortAccountLabel','shortMemberName','manualCategories','csvBankEvidenceMatches',
   'openSheet','closeSheet','esc','$','traceImportSplit','legacyImportNatureReady',
@@ -178,4 +178,31 @@ test('pending foreign bank imports cannot bypass individual FX review through bu
   type:'expense',natureReviewed:true}),true);
  assert.equal(gate({accountId:'eur',name:'Coffee',source:'manual',status:'pending',
   type:'expense'}),true);
+});
+
+test('new confirmed matching bank movement appearing during FX lookup blocks approval',async()=>{
+ let c;
+ const matching=[];
+ c=build({matchesFn:()=>matching,getRate:async()=>{
+  matching.push({id:'other',status:'confirmed',type:'expense',
+   accountId:'fr',name:'Librairie',date:'2026-10-08',bankAmount:40});
+  return{currency:'EUR',cadPerUnit:1.6,date:'2026-10-08',source:'Fictitious quote'};
+ }});
+ c.review(c.t);fill(c,{rate:''});
+ await c.node('#foreignCsvSave').onclick();
+ assert.equal(c.saved.length,0);assert.equal(c.t.status,'pending');
+ assert.match(c.node('#foreignCsvError').textContent,/mouvement bancaire semblable a changé/);
+});
+test('pending matching bank movement becoming confirmed during FX lookup requires renewed comparison',async()=>{
+ let c;
+ const match={id:'other',status:'pending',type:'expense',accountId:'fr',
+  name:'Librairie',date:'2026-10-08',bankAmount:40};
+ c=build({matchesFn:()=>[match],getRate:async()=>{
+  match.status='confirmed';
+  return{currency:'EUR',cadPerUnit:1.6,date:'2026-10-08',source:'Fictitious quote'};
+ }});
+ c.review(c.t);fill(c,{rate:''});
+ await c.node('#foreignCsvSave').onclick();
+ assert.equal(c.saved.length,0);assert.equal(c.t.status,'pending');
+ assert.match(c.node('#foreignCsvError').textContent,/mouvement bancaire semblable a changé/);
 });

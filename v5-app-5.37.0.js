@@ -1503,6 +1503,11 @@ function reviewForeignPendingCsvExpense(t){
  }
  const before=JSON.stringify(t),bankBefore=JSON.stringify(bank),cats=manualCategories('expense'),
   similar=csvBankEvidenceMatches(t,state.transactions),
+  // Recheck financial matches after awaited FX resolution: even the status
+  // of an already displayed matching row may change in another tab.
+  evidenceSignature=matches=>JSON.stringify(matches.map(x=>[x.id,x.status,x.type,x.date,
+   x.accountId,x.toAccountId,x.bankAmount,x.toBankAmount,x.amountCAD,x.name])),
+  initiallyCompared=evidenceSignature(similar),
   confirmed=similar.filter(x=>x.status==='confirmed'),
   people=[{id:me,name:'Moi'},{id:partner,name:shortMemberName(partner)},{id:'couple',name:'Nous deux'}];
  openSheet('Valider une dépense étrangère',
@@ -1546,6 +1551,8 @@ function reviewForeignPendingCsvExpense(t){
     await I.getRate(currency,t.date);
    if(JSON.stringify(t)!==before||JSON.stringify(bank)!==bankBefore)
     throw Error('Les données ont changé pendant la recherche du taux. Ferme et rouvre la fiche.');
+   if(evidenceSignature(csvBankEvidenceMatches(t,state.transactions))!==initiallyCompared)
+    throw Error('Un mouvement bancaire semblable a changé pendant la recherche du taux. Compare à nouveau avant de valider.');
    const booked=I.resolveBooking({account:bank,bankAmount:amount,date:t.date,quote,
     originalCurrency:t.currency||currency,originalAmount:t.amountOriginal??amount});
    const sharing=traceImportSplit({beneficiary},{amountCAD:booked.amountCAD});
