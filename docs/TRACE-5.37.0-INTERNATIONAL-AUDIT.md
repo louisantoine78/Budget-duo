@@ -1110,3 +1110,15 @@ Ajout du scanner local `trace-statement-pdf-text-1.0.0.js` : extraction *limité
 
 - La preview fictive charge l'adaptateur en script local. Le bouton de détection mensuelle **privilégiera cet adaptateur seulement si** `window.TracePDFJSLocalEngine.getDocument` est réellement fourni, sinon il utilise **l'ancien scanner local restrictif** et permet la saisie manuelle. Le moteur PDF.js complet **n'est PAS encore copié, présent ni activé** ; ne pas faire croire au support universel des vrais relevés. La CSP bloque toujours les workers (`worker-src 'none'`) : ce point devra être audité, puis autorisé uniquement pour un worker local avant acti
 **Détails dans** docs/TRACE-5.37.0-HANDOFF.md et docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md.
+
+
+## 24 octobre 2026 — sécurité de préparation PDF.js (candidate, non activée)
+
+L'adaptateur de lecture PDF.js demeure un moteur de **propositions de lignes en lecture seule**, pas une extraction exhaustive ni un traitement de grand livre. Le package réel PDF.js n'est toujours **pas embarqué** sur la branche.
+
+Trois commits `[skip ci]` ciblés :
+- `f4e396424d6f80fa05aee3aaf39c2f747c8f0adf` : préparation atomique `vendor/pdfjs` après prévalidation de la version `6.4.299`, des tailles et de la licence Apache-2.0. Aucun écrasement automatique, suppression du staging si échec.
+- `5023d3c941cfe4919fa41b43a46b8f332c9031e7` : nouvel utilitaire de vérification hors ligne des empreintes et de la porte CSP / chargeur non activé.
+- `8a195459b2793ff258032a7e4ed9851dfc22b3b5` : neuf tests natifs Node sur fixtures synthétiques. **9/9 réussis** sur la copie locale avant enregistrement ; contenu GitHub relu ensuite, sans exécution native d'un checkout téléchargé (GitHub DNS indisponible).
+
+Les détails des cas et blocages figurent dans `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md` et la prochaine action dans `docs/TRACE-5.37.0-HANDOFF.md`. Le résultat précédent **198/198 V8 simulés** reste historique et n'a pas été rejoué dans ce lot. **NO-GO production / activation du loader.** Aucun changement de `main`, aucune écriture financière réelle, aucune CI ou nouveau déploiement.
