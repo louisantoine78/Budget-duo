@@ -1,6 +1,6 @@
 /* TRACE 5.37.0 — Local monthly PDF statement review (candidate lab only).
- * No automatic PDF text extraction: the account holder transcribes and checks
- * EVERY bank movement, with page/line and original excerpt. No remote requests,
+ * Limited local PDF text-layer suggestions, never OCR or completeness proof.
+ * The account holder still checks EVERY movement and original excerpt. No remote requests,
  * storage, Supabase writes, automatic transaction creation or implicit approval.
  */
 (function(root){'use strict';
@@ -26,11 +26,11 @@
    typeof amountOnAccount!=='function')return null;
   if(host.dataset.traceStatementMounted==='true')return null;
   host.dataset.traceStatementMounted='true';
-  let file=null,url=null,staged=null,verified=null,report=null;
+  let file=null,url=null,staged=null,verified=null,report=null,extraction=null,scanning=false,scanToken=0;
   const initialMonth=typeof currentMonth==='function'?currentMonth():currentMonth;
   const period=monthBoundaries(initialMonth)||monthBoundaries(new Date().toISOString().slice(0,7));
   host.innerHTML='<div class="trace-statement-heading"><strong>Contrôle mensuel du relevé PDF</strong>'+
-   '<p>Ce laboratoire ne lit pas automatiquement les lignes PDF. Ouvre le relevé localement, retranscris <b>toutes</b> ses opérations, vérifie la page et la ligne, puis compare-les avec TRACE. Aucun mouvement n’est créé.</p></div>'+
+   '<p>TRACE peut détecter certaines lignes dans les PDF à texte simple (sans OCR), mais <b>ne reconnaît pas tous les formats</b>. Vérifie les pages, les opérations et les montants sur ton PDF original avant toute comparaison. Aucun mouvement n’est créé.</p></div>'+
    '<div class="trace-statement-grid">'+
     '<label>Compte du relevé<select class="input" id="traceStatementAccount"></select></label>'+
     '<label>Début de période<input class="input" type="date" id="traceStatementFrom" value="'+period.from+'"></label>'+
@@ -40,6 +40,8 @@
    '<label class="trace-statement-file-label">Relevé mensuel (PDF, 12 Mo maximum)'+
     '<input type="file" class="input" id="traceStatementFile" accept=".pdf,application/pdf"></label>'+
    '<p id="traceStatementLocalFile" class="trace-statement-note" role="status">Aucun document choisi. Le fichier ne sera pas téléversé.</p>'+
+   '<button type="button" class="secondary full" id="traceStatementExtract">Proposer les lignes à partir du texte PDF</button>'+
+   '<div id="traceStatementExtraction" class="trace-statement-extraction" aria-live="polite"></div>'+
    '<div class="trace-statement-rows-head"><strong>Lignes du relevé à vérifier</strong>'+
     '<button type="button" class="secondary" id="traceStatementAdd">+ Une ligne</button></div>'+
    '<div id="traceStatementRows" class="trace-statement-rows"></div>'+
@@ -52,7 +54,8 @@
    countNode=el(host,'traceStatementCount'),fileNode=el(host,'traceStatementFile'),
    rowsNode=el(host,'traceStatementRows'),reviewNode=el(host,'traceStatementReview'),
    reportNode=el(host,'traceStatementResults'),notice=el(host,'traceStatementNotice'),
-   fileInfo=el(host,'traceStatementLocalFile');
+   fileInfo=el(host,'traceStatementLocalFile'),
+   extractionNode=el(host,'traceStatementExtraction');
   const clearReview=()=>{
    staged=null;verified=null;report=null;
    reviewNode.innerHTML='';reportNode.innerHTML='';
@@ -92,6 +95,85 @@
     rawText:f('rawText')};
   });
   const selectedAccount=()=>getAccounts().find(a=>a.id===accountNode.value);
+  function renderExtraction(){
+   if(!extraction){extractionNode.innerHTML='';return;}
+   if(extraction.status!=='review_required'){
+    extractionNode.innerHTML='<div class="trace-statement-extraction-warning"><strong>Extraction non disponible</strong>'+
+     '<p>'+esc(extraction.reason||'Structure PDF non reconnue')+
+     '. Poursuis avec la saisie et la vérification manuelles, sans approximation.</p></div>';
+    return;
+   }
+   extractionNode.innerHTML='<div class="trace-statement-extraction-card">'+
+    '<strong>Texte repéré · '+extraction.pages+' page(s)</strong>'+
+    '<p>'+extraction.proposals.length+' ligne(s) au format bancaire simple · '+
+     extraction.unparsed.length+' ligne(s) non interprétée(s). <b>Aucune ligne n’est approuvée.</b></p>'+
+    (extraction.unparsed.length?
+     '<details class="trace-statement-unparsed"><summary>Consulter les lignes non interprétées</summary>'+
+       extraction.unparsed.slice(0,40).map(x=>'<div><b>Page '+x.page+', ligne '+x.line+
+        '</b> : '+esc(x.rawText)+'</div>').join('')+'</details>':'')+
+    (extraction.proposals.length?
+     '<div class="trace-statement-proposal-list">'+extraction.proposals.slice(0,25).map(x=>
+       '<div>Page '+x.page+', ligne '+x.line+' · '+esc(x.date)+' · '+
+       esc(x.name)+' · '+esc(x.direction==='out'?'Débit':'Crédit')+' '+
+       money(x.amount,selectedAccount()?.currency||'')+'</div>').join('')+'</div>':'')+
+    '<p class="trace-statement-extraction-warning">Les en-têtes et les lignes ignorées peuvent contenir des opérations. Vérifie <b>tout le PDF</b> : cette détection ne prouve pas l’exhaustivité.</p>'+
+    (extraction.proposals.length?
+    '<button type="button" class="secondary full" id="traceStatementUseProposals">Recopier ces propositions dans le formulaire (à vérifier)</button>':
+    '<p>Pas de mouvement clairement reconnu. Utilise le formulaire manuel.</p>')+
+    '</div>';
+   const button=el(host,'traceStatementUseProposals');
+   if(button)button.onclick=adoptSuggestions;
+  }
+  function adoptSuggestions(){
+   if(!file||!extraction||extraction.status!=='review_required'||scanning||
+      !Array.isArray(extraction.proposals)||!extraction.proposals.length||
+      extraction.proposals.length>MAX_ROWS)return;
+   const oldRows=rows();
+   if(oldRows.some(row=>row.rawText||row.date||row.amount||row.name)){
+    if(typeof root.confirm!=='function'||!root.confirm('Remplacer les lignes saisies par les propositions PDF non vérifiées ?'))return;
+   }
+   const from=fromNode.value,to=toNode.value,account=selectedAccount();
+   if(!account||!dateISO(from)||!dateISO(to)||from>to||
+      !extraction.proposals.every(row=>dateISO(row.date)&&row.date>=from&&row.date<=to&&
+       Number.isFinite(row.amount)&&row.amount>0)){
+    say('Le compte ou la période ne correspond pas à toutes les lignes détectées. Corrige les dates manuellement.',true);return;
+   }
+   const unique=new Set(extraction.proposals.map(row=>row.page+':'+row.line));
+   if(unique.size!==extraction.proposals.length){say('Références de pages dupliquées.',true);return;}
+   rowsNode.innerHTML='';
+   extraction.proposals.forEach(row=>{
+    addRow();
+    const last=rowsNode.querySelectorAll('[data-statement-row]');
+    const node=last[last.length-1];
+    for(const field of ['page','line','date','direction','amount','name','rawText']){
+     const input=node.querySelector('[data-field="'+field+'"]');
+     input.value=field==='amount'?Number(row.amount).toFixed(2):row[field];
+    }
+   });
+   countNode.value=String(extraction.proposals.length);
+   clearReview();
+   say('Propositions recopiées, NON validées. Vérifie chaque ligne et complète les lignes manquantes à partir du PDF.');
+  }
+  async function extractLocalPDF(){
+   const picked=file,token=++scanToken;
+   if(!picked||scanning){say('Sélectionne un PDF avant la détection.',true);return;}
+   if(!root.TraceStatementPDFText?.scan){say('Extracteur PDF local absent. Contrôle manuel disponible.',true);return;}
+   scanning=true;extraction=null;renderExtraction();
+   say('Lecture locale de la couche texte simple, aucune donnée transmise…');
+   try{
+    const result=await root.TraceStatementPDFText.scan(picked);
+    if(token!==scanToken||picked!==file)return;
+    extraction=result;renderExtraction();
+    say(result.status==='review_required'?
+     'Propositions détectées. Vérifie les lignes non reconnues et le relevé complet.':
+     'PDF non pris en charge automatiquement. Reprends la vérification manuelle.',
+     result.status!=='review_required');
+   }catch(e){
+    if(token===scanToken){extraction={status:'unsupported',reason:'Extraction interrompue : contrôle manuel requis'};
+     renderExtraction();say('Extraction interrompue. Aucune proposition retenue.',true);}
+   }finally{scanning=false;}
+  }
+
   function renderReview(){
    if(!staged)return;
    reviewNode.innerHTML='<div class="trace-statement-stage"><h3>Vérification des preuves</h3>'+
@@ -216,7 +298,7 @@
    }
   });
   fileNode.onchange=async()=>{
-   clearReview();file=null;
+   ++scanToken;extraction=null;renderExtraction();clearReview();file=null;
    if(url){root.URL?.revokeObjectURL?.(url);url=null;}
    fileInfo.textContent='Vérification du document local…';
    const picked=fileNode.files?.[0];
@@ -238,10 +320,11 @@
     say('Ce PDF ne peut pas être utilisé pour ce contrôle.',true);}
   };
   el(host,'traceStatementPrepare').onclick=prepare;
+  el(host,'traceStatementExtract').onclick=extractLocalPDF;
   syncAccounts();addRow();
-  return Object.freeze({getReport:()=>report,
+  return Object.freeze({getReport:()=>report,getExtraction:()=>extraction,
    dispose(){if(url)root.URL?.revokeObjectURL?.(url);
-    file=null;url=null;clearReview();host.dataset.traceStatementMounted='false';}});
+    ++scanToken;file=null;url=null;extraction=null;clearReview();host.dataset.traceStatementMounted='false';}});
  }
  root.TraceMonthlyStatementUI=Object.freeze({mount,monthBoundaries});
 })(typeof window!=='undefined'?window:globalThis);
