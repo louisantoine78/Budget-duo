@@ -1489,6 +1489,7 @@ function reviewForeignPendingCsvExpense(t){
   currency!=='CAD'&&t.source==='csv'&&t.type==='expense'&&t.status!=='confirmed'&&
   !t.toAccountId&&!t.transferPurpose&&!t.relatedExpenseId&&!t.linkedTransactionId&&
   I.calendarDate(t.date)&&I.exactMoney(amount)!==null&&amount>0&&
+  window.TraceImportGuide.safeForQuickApproval(accountType(bank),'expense',t.name||'')&&
   !window.TraceImportGuide.cardStatementSettlementLabel(t.name||'');
  if(!eligible){
   openSheet('Nature bancaire à vérifier','<p class="empty-note">Ce mouvement exige une vérification spécifique. Aucun montant n’a été modifié.</p><button id="foreignCsvClose" class="secondary full">Fermer</button>');
