@@ -99,7 +99,7 @@ test('budget analysis scope selector responds',()=>{
  renderAnalysis();assert.equal(elem('#traceAnalysisTrend').innerHTML,'trend rendered');
  assert.equal(typeof clicks.get('#analysisScope .seg')[0].onclick,'function');
 });
-const activity=compile('renderActivity','\nfunction showTab(',{
+const activity=compile('renderActivity','\n/* TRACE 5.37 — native Activity/Partage.',{
  ...ctx,activityMonth:activeMonth,activityAccountFilter:'all',tab:'transactions',
  traceActivityControls(){},
  traceActivityRows:()=>state.transactions.filter(t=>String(t.date).startsWith(activeMonth)&&t.status==='confirmed'),
