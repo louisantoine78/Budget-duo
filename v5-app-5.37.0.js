@@ -529,7 +529,7 @@ function openAccountsOverview(){
    '<p class="empty-note">Aucun compte disponible.</p>')+'</div>'+
   '<button type="button" class="secondary full" id="traceAccountManage" style="margin-top:12px">Gérer mes comptes</button>'+
   '<button type="button" class="secondary full" id="traceAccountsClose" style="margin-top:8px">Fermer</button>');
- $('[data-trace-account-open]').forEach(btn=>btn.onclick=()=>openTraceAccountDetail(btn.dataset.traceAccountOpen));
+ $$('[data-trace-account-open]').forEach(btn=>btn.onclick=()=>openTraceAccountDetail(btn.dataset.traceAccountOpen));
  $('#traceAccountManage').onclick=openAccountSettings;
  $('#traceAccountsClose').onclick=closeSheet;
 }
@@ -3993,7 +3993,7 @@ function openAccountSettings(){
   settingsBack());
  $$('[data-bank-scope]').forEach(button=>button.onclick=()=>{bankSettingsScope=button.dataset.bankScope==='couple'?'couple':'mine';openAccountSettings();});
  $$('[data-rename-bank]').forEach(button=>button.onclick=()=>openRenameBankAccount(button.dataset.renameBank));
- $('[data-primary-bank]').forEach(button=>button.onclick=()=>{
+ $$('[data-primary-bank]').forEach(button=>button.onclick=()=>{
   confirmTracePrimaryAccount(button.dataset.primaryBank,openAccountSettings);
  });
  $('#traceAddBankAccount').onclick=()=>openNewBankAccount();
