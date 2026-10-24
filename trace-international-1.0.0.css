@@ -106,3 +106,22 @@
 .trace-account-primary-intro{font-size:16px;line-height:1.55;color:#235342}
 @media(max-width:390px){.trace-account-overview-row{align-items:flex-start;flex-direction:column}.trace-account-overview-values{text-align:left}.trace-account-detail-info>div{gap:8px}}
 @media(prefers-reduced-motion:reduce){.trace-account-overview-row,.trace-account-home-button{transition:none}}
+
+
+/* TRACE International 5.37: journal by day & carefully scoped view filters */
+.trace-activity-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0 10px}
+.trace-activity-filters label{min-width:0;display:grid;align-content:start;gap:5px;color:#476a5a;font-size:11px;font-weight:760;letter-spacing:.01em}
+.trace-activity-filters .input{width:100%;min-width:0;min-height:44px;padding:9px 10px;background:#fffefb;font-size:16px!important;border-radius:12px;border:1px solid #dfeae3;overflow:hidden;text-overflow:ellipsis}
+.trace-activity-filter-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.trace-activity-pending-action{border:1px solid #d8e8dd;background:#e9f5ed;color:#205c44;font-size:12px;font-weight:800;padding:10px 13px;border-radius:22px;min-height:44px}
+.trace-activity-pending-action:focus-visible,.trace-activity-filters .input:focus-visible{outline:3px solid #63ad8e;outline-offset:2px}
+.trace-activity-day{display:grid;gap:1px;min-width:0;padding:7px 0 11px}
+.trace-activity-day+.trace-activity-day{border-top:1px solid #e5eee8;margin-top:4px}
+.trace-activity-day-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 3px 8px}
+.trace-activity-day-heading h3{font-size:13px;font-weight:850;color:#245442;letter-spacing:-.005em;margin:0;text-transform:capitalize;line-height:1.35}
+.trace-activity-day-heading small{font-size:11px;color:#819286;white-space:nowrap}
+.trace-activity-day .tx{min-width:0}
+.trace-activity-pending{border-left:3px solid #dcaa54;background:linear-gradient(90deg,#fffaf0,#fffefb)}
+.trace-activity-pending .tx-amt{font-size:12px;white-space:normal;overflow-wrap:anywhere;max-width:40%;text-align:right}
+@media(max-width:350px){.trace-activity-filters{grid-template-columns:1fr}.trace-activity-day-heading h3{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.trace-activity-pending-action{transition:none}}
