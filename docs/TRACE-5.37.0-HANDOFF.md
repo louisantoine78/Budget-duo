@@ -169,3 +169,16 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 **Ordre de livraison** : conformité visible Accueil/Patrimoine, navigation Compte/Budget → Activité, nouvelle structure Activité/Partage puis intégration financière/imports, tests complets et iPhone. Ne pas réouvrir les choix déjà validés. Les dates, les devises et les calculs historiques doivent rester intacts.
 
 **Sécurité** : aucun code modifié lors de ce seul audit ; ne pas déployer ni toucher à `main`, données Supabase réelles, CI ou PickPoint. À la prochaine reprise, commencer par ce document en plus du présent handoff et de la checklist de release.
+
+
+## Lot candidat livré — premier passage premium Accueil & Patrimoine (23 octobre 2026)
+
+**Nouvelle étape concrète** : le visuel premium a commencé à être développé, pas seulement planifié. **Pas de déploiement**, ni Vercel ni production. L'ancien lien preview Vercel reste sur `2c312f0021d2df92d3fb98e906c169cc76f82698` et ne montre PAS encore ce lot.
+
+- Accueil : premier bloc **Solde estimé**, deuxième **Disponible sur mon budget**, section **Ce mois-ci**, puis **À faire**, **Budget en direct**, **Évolution**, **Partage**, dans cet ordre exact. CSS mobile premium : solde prioritaire, cartes douces, hiérarchie renforcée, typographie montants, boutons focus.
+- Patrimoine : **Épargne**, **Placements**, ensuite **Patrimoine net accessible**, puis **Trésorerie et comptes**. `renderWealth` distribue les comptes épargne/placements dans les grilles correspondantes ; banques et dettes restent en bas. Épargne liée CAD inchangée sur le plan financier, aucune fausse conversion ajoutée ; état incomplet explicite si taux/solde inconnu. Navigation : libellé `Patrimoine` non coupé par règle CSS.
+- Commits `[skip ci]` : `3a3e1c3444ddc24d37d29de6246773fa59541c3c` HTML, `74ef4cbd05b297b03abf9b83d0879be343d3fbc7` CSS, `0cef178a6e8deda9d93995128e70aec7e111fe71` JS, `71dfeed32ef01b79484e2de7c45c9b30d961e7b5` tests, `e7a26786bb9a154dcf99c0cca3056f2a7b6d847c` audit UX.
+- QA **66/66** contrôles des 6 suites ciblées V8 simulées relancés **après persistance GitHub** ; suite UX neuve 13 tests, bootstrap 7, UI 12, lab 8, câblage 7, finance 19. **PAS** Safari/Node natif/CI/régression complète. Main demeure `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+- **Source opérationnelle :** `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md` actualisé ; la structure/UX restante est listée précisément et n'est pas finalisée.
+- **Prochain lot prioritaire** : panneau **Mes comptes** complet depuis Accueil, fiche compte avec 2 transactions récentes et lien vers Activité filtrée, choix du compte principal avec étoile et confirmation explicite ; puis navigation des catégories Budget, structure Activité/Partage, et la finition premium de tous les onglets.
+- **Interdits toujours actifs :** modification `main`, production, migration et données Supabase réelles, CI, PWA de prod, PickPoint ; ne pas déployer automatiquement. Activation débit différé réel toujours bloquée.
