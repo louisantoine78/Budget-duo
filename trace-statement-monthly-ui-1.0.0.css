@@ -75,3 +75,9 @@
 .trace-statement-proposal-list div{padding:8px 10px;border-bottom:1px solid #eff2ec;
  font-size:11px;color:#375d49;line-height:1.55;overflow-wrap:anywhere}
 .trace-statement-proposal-list div:last-child{border-bottom:0}
+
+
+/* Complete (up to the existing 250-line safety limit) accessible PDF proof lists. */
+.trace-statement-unparsed[open]{max-height:270px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.trace-statement-unparsed summary{position:sticky;top:0;background:#fffefa;z-index:1;padding:5px 0}
+.trace-statement-proposal-list{max-height:270px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
