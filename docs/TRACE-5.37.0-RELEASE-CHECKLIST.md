@@ -39,3 +39,25 @@
 - Commits candidat du code `1fa6293ca3f820cc9b157676d8dbcae589bedb73`, tests `649a15ad664a165383abdd0618e592c1260a4bec`, avec `[skip ci]`.
 - **Contrôles exécutés :** 12/12 nouveaux tests d'édition + 7/7 tests de câblage + 8/8 laboratoire + 7/7 démarrage synthétique + 19/19 invariants financiers = **53/53 contrôles ciblés V8 à modules Node simulés** sur les fichiers du commit. Ce n'est ni une CLI Node native ni Safari/CI.
 - **À redéployer en préversion Vercel sur le nouveau HEAD** ; relever URL/commit/état READY séparément dans le handoff. La production 5.36.5 reste inchangée.
+
+
+## Préparation de sortie — point de contrôle du 24 octobre 2026 (sans autorisation de publication)
+
+La date cible de la semaine suivante reste **un objectif**, pas une livraison garantie. `main` et les données réelles ne changent pas. Les maquettes et arbitrages UX déjà validés constituent la référence ; ne pas refaire un redesign. Commits du dernier lot : voir `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md`.
+
+| Test de sortie à documenter sur l'exact HEAD candidat | Exigence | Situation au 24 octobre |
+|---|---|---|
+| Accueil « Solde estimé » et boutons de consultation | CAD/EUR, carte liée, retour principal, aucun effet sur historique, focus tactile Safari | Code candidat + essais Node local/V8 fictifs, **pas Safari** |
+| Accueil Couple | CA seul et CAD/EUR, comptes distincts, pas de sélecteur personnel, devise couple indépendante | Correctif CAD commité, essais V8 fictifs, **pas E2E** |
+| Budget / catégories / réel vs prévu / reprise / 12 mois | Aucun `pending` dans dépenses confirmées, aucun budget historique recalculé | Modèles candidats, **requalification nécessaire** |
+| Activité / Partage Couple & Proches | Navigation 3 sous-sections, deux utilisateurs, avances et remboursements sans duplication | Candidat + tests isolés, **base fictive multi-usagers manquante** |
+| PDF mensuel FR/CA / carte crédit | Affichage de toutes les lignes, preuve page/ligne, relevé complet vérifié manuellement, écarts sans import auto | Visibilité lignes corrigée, **PDF.js réel et Safari manquants** |
+| Débit immédiat, crédit, différé, FX CAD/EUR | Vérification native des débits, dettes, frais, règlements partiels, transferts neutres | Simulateurs en partie isolés, **débit différé bloqué** |
+| Patrimoine, épargne, placements internationaux | Soldes natifs, taux datés, pas de patrimoine fictivement valorisé | **Intégration et essais incomplets** |
+| PWA iPhone Safari | Chargement, clavier, clics, graphiques, caches hors-ligne, retours réseau | **Aucun essai Safari natif validé** |
+| Test natif complet sur checkout exact | Régressions 5.36.5 + suites 5.37.0, exécution Node et navigation | **Bloqué dans ce conteneur : résolution DNS GitHub**, nouveaux tests localement et V8 partiels |
+| Intégrité données + rollback | Sauvegarde/restauration, migration compatible, isolation Supabase fictif et RLS | **À construire et à prouver avant GO** |
+
+**Précision sur la dernière QA :** 9 tests natifs Node de commutation compte sur une copie locale du module (9/9), 11 + 5 + 3 + 6 vérifications V8 ciblées exécutées directement sur les sources GitHub de l'interface et du moteur. Les nouveaux tests Node sauvegardés ne prouvent **pas** une campagne complète sur un checkout, un iPhone Safari ou une base fictive. Ne pas additionner ces chiffres à 198/198 V8 historique en prétendant une campagne unique.
+
+**Critère indispensable** : aucune fusion ni déploiement avant validation explicite après revue de ces preuves de sortie. L'ancien lien Vercel est une préversion antérieure et ne correspond pas au HEAD candidat actuel.
