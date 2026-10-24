@@ -253,3 +253,24 @@ La comparaison réemploie sans modification les moteurs préexistants TraceState
 - **Statut effectif : toujours NO-GO**. Ni les fichiers binaires/modules complets de la distribution PDF.js, ni un manifeste avec hachages de vrais assets, ni les tests Safari/worker/CSP, ni les PDF fictifs représentatifs ne sont présents ou validés. `trace-pdfjs-local-loader-1.0.0.mjs` non ajouté au HTML. `main` 5.36.5 inchangée au point de contrôle initial, aucune action Supabase, Vercel ou GitHub Actions. Le score antérieur **198/198** représente uniquement les suites ciblées V8 simulées du précédent lot, non réexécutées ici.
 
 **Suite prioritaire :** vraie installation et vérification du package versionné dans un environnement isolé, puis PDF fictifs multipages et tests de non-régression. Ne pas autoriser `worker-src 'self'` ni inclure le loader tant que l'audit de sécurité, le hors-ligne, les erreurs et les parcours Safari iPhone ne sont pas prouvés.
+
+
+## 24 octobre 2026 — UX premium solde consultable + fiabilité visuelle de la revue PDF
+
+**Lot candidat uniquement : aucune entrée production, main, service worker, Supabase réel, workflow ni Vercel touché.**
+
+### Accueil / comptes
+
+- Le composant existant `trace-international-ui-1.0.0.js` propose maintenant de petits boutons de consultation rapide pour plusieurs comptes courants personnels. **Sélection éphémère, sans écriture** : ne modifie ni le compte principal enregistré, ni les budgets/taux historiques ; choisir officiellement un autre principal passe toujours par la liste et la confirmation déjà en place. Solde courant, dette des cartes liées et devise native reflètent le compte consulté ; solde inconnu ≠ zéro ; indication de vérification si un avoir carte lié est suspect. Aucune création de compte ou de transaction.
+- Mise en forme premium de `trace-international-1.0.0.css` : boutons arrondis vert profond, défilement horizontal sur iPhone, cible tactile 44 px, focus visible et animations réduites selon préférences.
+- Dans `v5-app-5.37.0.js`, la vue **Couple 100 % CAD** présente désormais les comptes du foyer et non le sélecteur personnel ; les avertissements de carte et le badge de consultation sont raccordés au composant personnel. Les devises mixtes du foyer conservent le calcul du moteur international existant.
+- Commits `[skip ci]` : code sélecteur `04fffeacded887b7dfe014cfaf07fa480bb4732c`, CSS `fd70ff7bdc9f146d082151a79c292e688c09903e`, branchement et Couple `d4f7e2d894a1c77f21e5d51f79cb7591e2e6144c`, tests boutons `b0a7b451c5af1b5c000d4c1ccbbcd7c459ce50c3`, tests Couple `0511a871474b041fdd2d38000be45251ec0d6407`.
+- QA : **9/9 tests Node natifs** sur la copie locale du composant avant commit ; **11 contrôles V8 sur le contenu enregistré GitHub** des composants App/UI/CSS ; **5 contrôles V8 sur le vrai moteur International enregistré sur GitHub**, avec deux comptes CAD/EUR et Mastercard fictive ; **3 contrôles V8 de la branche Couple-CAD exacte**. Les tests Node persistés sur GitHub n'ont pas été rejoués sur un checkout GitHub téléchargé (DNS indisponible) ; ne pas les compter comme exécution intégrale de la branche. Aucun test de rendu/interaction Safari réel.
+
+### Contrôle PDF mensuel
+
+- L'interface `trace-statement-monthly-ui-1.0.0.js` n'escamote plus les lignes au-delà des **25 propositions** et **40 lignes non interprétées** précédemment visibles : tous les éléments renvoyés par l'extracteur, jusqu'au plafond existant de 250 lignes, sont consultables avant reprise volontaire. CSS mobile à défilement dans `trace-statement-monthly-ui-1.0.0.css`. La validation ligne par ligne, l'attestation de complétude et l'absence d'écriture financière restent obligatoires ; ceci ne rend pas l'extraction PDF exhaustive.
+- Commits `[skip ci]` : UI `6a6985e51741cba9d06b6fca9a3abe6a2342e796`, CSS `ce51f643700c36f587ebb9b495ce8c0ca858a985`, nouveaux tests de régression `c021b71f92830fb8c774986f0acedbd4e578f9c8`.
+- QA : **6/6 assertions de rendu de la fonction exacte enregistrée sur GitHub** en faux DOM V8, couvrant 80 propositions et 60 lignes non interprétées, attestation non automatique, bouton volontaire. Le fichier de 5 tests natifs est commité mais non exécuté depuis un checkout intégral. Aucun PDF.js réel, Safari réel ni PDF bancaire de production testé.
+
+**Bloqueurs persistants :** bibliothèque PDF.js réelle toujours non embarquée ; CSP worker `none`, loader non activé ; E2E financiers multi-utilisateurs, débit différé réel, tests natifs de toutes les suites, navigateur iPhone Safari/PWA offline, base fictive isolée et plan de rollback. Préversion distante antérieure non redéployée ; **NO-GO production**.
