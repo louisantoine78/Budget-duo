@@ -182,3 +182,14 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 - **Source opérationnelle :** `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md` actualisé ; la structure/UX restante est listée précisément et n'est pas finalisée.
 - **Prochain lot prioritaire** : panneau **Mes comptes** complet depuis Accueil, fiche compte avec 2 transactions récentes et lien vers Activité filtrée, choix du compte principal avec étoile et confirmation explicite ; puis navigation des catégories Budget, structure Activité/Partage, et la finition premium de tous les onglets.
 - **Interdits toujours actifs :** modification `main`, production, migration et données Supabase réelles, CI, PWA de prod, PickPoint ; ne pas déployer automatiquement. Activation débit différé réel toujours bloquée.
+
+
+## Nouveau relais du 23 octobre — Mes comptes et historique filtré
+
+**Code candidat effectivement commité** : bouton « Comptes et trésorerie » depuis Accueil, panneaux de comptes Moi/Couple et fiches individuelles lisibles (solde natif, CAD indicatif ou indisponible, pays/devise/titulaire, carte liée, dernier rapprochement, 2 opérations). « Voir toutes les opérations » ouvre **Activité avec un filtre Compte et le mois du mouvement le plus récent**. Le principal est étoilé et **toute sélection depuis Accueil ou Profil requiert confirmation explicite**, annulation sans écriture, restauration si sauvegarde échoue. Aucun montant historique/FX/compte ne change automatiquement lors de cette navigation.
+
+**SHAs** : JS `f828e2aa511855c841fb08011076c7c686d757ca`, HTML `081c377f273745ec692061000039fec5bcdccc20`, CSS `2c2ffd0b9c2856eb88468677b18f89e3ceafa9e8`, fix DOM `d76caeef60c1c735d8f544c71e5f01da07083041`, adaptations tests `09f0a416cdf9d7b3c6b8bdd6ac784d60d7ca994e`, `fedb95648e808139820b4c99f0f67cc2598b0ad0`, `73888f6a9b9082473b584d28f437d0ec10c775bd`, tests neufs `33590906ca459f39b9c10f15b895a70765025428`, audit UX `dac52a58c526015ac54b01859b799919614cf03d`. Tous `[skip ci]`.
+
+**Tests relus et rejoués sur les fichiers GitHub après commit : 80/80 en 7 suites V8 à modules Node/DOM simulés**, pas de Node CLI ni Safari, CI ni vraie base. Dernier déploiement Vercel reste l'ancienne candidate `2c312f0021d2df92d3fb98e906c169cc76f82698`; **aucun nouveau déploiement demandé ou exécuté**, la préversion externe ne contient pas encore ces avancées.
+
+**Prochain lot** : développer Activité, historique regroupé par jour et filtres avancés ; lier les détails du Budget aux transactions préfiltrées ; organiser Partage Couple/Proches. État détaillé dans `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md`. Ne pas réactiver cartes différées réelles. Ne pas toucher `main` `02c70f50e7e51da79b77a91dde96a03c6c719909`, Supabase réel, PWA prod, déploiements, CI ou PickPoint.
