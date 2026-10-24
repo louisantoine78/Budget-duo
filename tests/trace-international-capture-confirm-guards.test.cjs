@@ -71,3 +71,30 @@ test('quick bulk approval never revives ignored, received or done entries',async
 test('manual batch screen selects only pending transactions',()=>{
  assert.match(app,/const unresolved=uniq\.map\(id=>state\.transactions\.find\(t=>t\.id===id&&t\.status==='pending'\)\)/);
 });
+
+test('foreign smart-inbox approval button is visibly disabled while CAD remains usable',()=>{
+ const ui=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.5.0.js'),'utf8');
+ const start=ui.indexOf('function applyApprovalConstraints(el){');
+ const end=ui.indexOf('function synchronizeRow(el){',start);
+ assert.ok(start>0&&end>start);
+ const approval=ui.slice(start,end);
+ const bank={id:'bank',currency:'EUR',type:'checking'};
+ const btn={disabled:false,textContent:'',dataset:{duplicateBlocked:'no'}};
+ const inputs={'.smart-approve':btn,'.smart-type':{value:'expense'},
+  '.smart-direction':{value:'out'},'.smart-name':{value:'Café'}};
+ const el={querySelector:key=>inputs[key]};
+ const bridge=()=>({accounts:()=>[bank]});
+ const window={TraceImportGuide:{allowed:()=>true,cardStatementSettlementLabel:()=>false}};
+ const apply=new Function('bridge','account','window',
+  approval+'return applyApprovalConstraints;')(bridge,'bank',window);
+ apply(el);
+ assert.equal(btn.disabled,true);
+ assert.match(btn.textContent,/devise étrangère/);
+ bank.currency='CAD';apply(el);
+ assert.equal(btn.disabled,false);
+ assert.match(btn.textContent,/Confirmer l’opération/);
+});
+test('foreign screenshot editor explains that evidence remains pending',()=>{
+ const ui=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.5.0.js'),'utf8');
+ assert.match(ui,/Devise étrangère : la preuve reste conservée dans À vérifier/);
+});

@@ -234,6 +234,7 @@ function rowForm(d,bank,accounts,known,expanded=false){
   (d.needsAmountReview?'<div class="trace-review-ocr-uncertain"><strong>Montant OCR incertain</strong>'+
    '<p>La lecture automatique n’est pas assez fiable. Compare le montant dans ce formulaire à celui de la capture, puis confirme ta vérification.</p>'+
    '<label class="trace-smart-confirm"><input type="checkbox" class="smart-amount-confirm"> J’ai vérifié ce montant sur la capture</label></div>':'')+
+  ((bank.currency||'CAD').toUpperCase()!=='CAD'?'<p class="trace-intl-help" role="status">Devise étrangère : la preuve reste conservée dans À vérifier. La confirmation bancaire sera proposée après qualification du parcours international. Aucun effet sur tes soldes ou ton budget.</p>':'')+
   '<div class="trace-smart-actions"><button class="primary smart-approve" type="button">Confirmer l’opération</button><button class="secondary smart-ignore" type="button">Écarter</button></div>'+
   '<div class="trace-smart-feedback" role="status"></div></div></article>';
 }
@@ -259,9 +260,11 @@ function applyApprovalConstraints(el){
   dir=el.querySelector('.smart-direction')?.value,name=el.querySelector('.smart-name')?.value;
  if(!btn)return;
  const cardMatch=bank?.type==='card'&&(type==='card_payment_received'||guide.cardStatementSettlementLabel(name)),
-  valid=Boolean(type&&guide.allowed(type,bank?.type,dir));
- btn.disabled=btn.dataset.duplicateBlocked==='yes'||!valid||cardMatch;
+  valid=Boolean(type&&guide.allowed(type,bank?.type,dir)),
+  foreign=(bank?.currency||'CAD').toUpperCase()!=='CAD';
+ btn.disabled=btn.dataset.duplicateBlocked==='yes'||!valid||cardMatch||foreign;
  btn.textContent=btn.dataset.duplicateBlocked==='yes'?'Déjà comptabilisée':
+  foreign?'À vérifier · devise étrangère':
   cardMatch?'Rapproche ce paiement pour éviter un doublon':'Confirmer l’opération';
 }
 function synchronizeRow(el){
