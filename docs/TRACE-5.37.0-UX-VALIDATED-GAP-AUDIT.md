@@ -99,3 +99,30 @@ Organisation **validée** dans le même onglet : journal **par jour**, opératio
 ## Sécurité GitHub et Vercel
 
 Modifications et documentation **uniquement sur `trace-5.37.0-international-accounts-fx`**. Aucun code changé par cet audit. Aucun merge, action CI, déploiement, PWA active ou Supabase réel. `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` inchangée. Nouveaux commits `[skip ci]`. Le dernier déploiement Vercel déclaré READY est une **préversion fictive**, ne pas le présenter comme une livraison finale des cinq onglets.
+
+
+## Avancement du visuel premium validé — lot Accueil / Patrimoine, 23 octobre 2026
+
+**Travail réel sur la candidate :** les améliorations UX ne sont plus seulement décrites, elles sont maintenant inscrites dans le HTML, la CSS et le JS **de la page laboratoire** `trace-international-preview.html` et de `v5-app-5.37.0.js`. Pas de refonte du `index.html` de production.
+
+### Ce qui a réellement avancé
+- **Accueil :** ordre HTML désormais strictement `Solde estimé → Disponible sur mon budget → Ce mois-ci (revenus/dépenses/marge) → À faire → Budget en direct → Évolution → Partage`. Le solde est une carte mise en avant sur toute la largeur, suivie d'une carte budget distincte. Tous les IDs utilisés par les moteurs existants sont conservés.
+- **Patrimoine :** deux sections visibles et distinctes `Épargne` puis `Placements`, suivies de la carte `Patrimoine net accessible` puis `Trésorerie et comptes`. `renderWealth()` classe les comptes d'épargne liés ou de type `CELI/Épargne/Livret/Savings` dans Épargne, les autres comptes de placements dans Placements. Les banques/cartes restent dans Trésorerie ; les anciens handler/fonctions d'ajout, détail et valorisation sont conservés. Un solde/taux manquant conserve `Total incomplet`.
+- **Finition visuelle premium progressive :** cartes à hiérarchie plus affirmée, montants tabulaires, dégradés très discrets, bordures et ombres douces, responsive étroit, `focus-visible`, `prefers-reduced-motion` et règle `white-space:nowrap` pour que **Patrimoine** ne se coupe pas dans le menu du bas. Pas de nouvelles polices.
+- **Les calculs financiers** `bank()`, `portfolioLedger()`, `TraceInternational`, `amountCAD`, taux et conversions n'ont pas été modifiés pour ce lot. Les actifs ne sont pas présentés comme de l'argent immédiatement disponible.
+
+### Tests effectués, limitations, SHAs
+- Après relecture du code GitHub sauvegardé : **13/13** nouveaux scénarios `tests/trace-international-premium-layout.test.cjs` (structure exacte, navigation, aucun doublon d'ID, classement épargne/PEA, montant total, absence de faux taux, focus et CSP), **7/7** tests de démarrage synthétique, **12/12** de l'UI, **8/8** du labo, **7/7** de câblage et **19/19** garde-fous financiers, soit **66/66 dans 6 suites ciblées**.
+- Tests via JavaScript V8 + **modules Node/fs/path/DOM simulés**, **ni vrai navigateur ni Safari iPhone, ni Node CLI sur checkout, ni 32 suites complètes de régression**. Aucun succès navigateur revendiqué.
+- Commits `[skip ci]` : HTML `3a3e1c3444ddc24d37d29de6246773fa59541c3c`, CSS `74ef4cbd05b297b03abf9b83d0879be343d3fbc7`, JS `0cef178a6e8deda9d93995128e70aec7e111fe71`, tests `71dfeed32ef01b79484e2de7c45c9b30d961e7b5`.
+- **Pas de nouveau déploiement Vercel**, conformément à la correction explicite de l'utilisateur (« pas déployer les versions… faire les améliorations »). Le site de démonstration déployé précédemment au commit `2c312f` **n'affiche pas encore ces nouvelles modifications UX**. Elles sont visibles dans les fichiers GitHub candidate seulement.
+
+### Encore NON livré / à tester
+
+- **Accueil :** vrai panneau fiches Comptes (deux dernières opérations + Activité filtrée), étoile et dialogue de confirmation du principal, devise Couple autonome, module `À faire` enrichi et anneau Budget en direct.
+- **Budget :** détail catégorie avec navigation Activité filtrée, finition premium des indicateurs et vue annuelle.
+- **Activité :** journal regroupé par jour, filtres complets, `À valider`, Partage plein écran Couple/Proches, import PDF mensuel en contrôle.
+- **Patrimoine :** finesse de présentation patrimoine net accessible, devises de l'épargne liées non CAD, QA chiffrée des dettes, expérience complète Safari iPhone.
+- **Transversal :** modales premium, tailles touches/typo, zéro saut en bas d'écran, tests Safari réel, données fictives en base isolée et régression exhaustive.
+
+**Suite prioritaire** : détails de comptes et confirmation du principal pour Accueil, puis Activité filtrée et Partage. Ne pas refaire la conception ; poursuivre les décisions validées. **Production : NO-GO**.
