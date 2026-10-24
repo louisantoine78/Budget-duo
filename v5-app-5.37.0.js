@@ -3229,6 +3229,16 @@ async function smartApproveDraft(id,v){
   const from=state.accounts.find(a=>a.id===accountId),to=state.accounts.find(a=>a.id===toAccountId);
   if(accountType(from)!=='checking'||accountType(to)!=='card'||from.owner!==to.owner)
    throw Error('Un paiement de carte va du compte courant vers la carte de crédit du même titulaire.');
+  // A credit-card settlement must not silently use an unrelated account or
+  // a guessed FX destination. For a legacy unlinked card, only a unique
+  // same-currency checking account is unambiguous.
+  const I=window.TraceInternational;
+  const matching=state.accounts.filter(a=>a.owner===from.owner&&!a.archived&&
+   accountType(a)==='checking'&&I.currency(a)===I.currency(to)&&I.country(a)===I.country(to));
+  if(I.currency(from)!==I.currency(to)||I.country(from)!==I.country(to)||
+     (to.settlementAccountId?to.settlementAccountId!==from.id:
+      matching.length!==1||matching[0].id!==from.id))
+   throw Error('Le paiement doit correspondre au compte courant lié à cette carte, dans la même devise. Vérifie les comptes avant validation.');
  }
  const transactionId='t_'+d.id;
  if(state.smartImports.some(other=>other.id!==d.id&&other.kind==='smart_draft'&&other.accountId===accountId&&
