@@ -3317,6 +3317,20 @@ function renderWealth(){
  $('#wealthSub').textContent=bk.needsCardReview?'La carte présente un avoir non vérifié : vérifie ton relevé.':
   !complete?'Total incomplet · '+(missing.length+bankMissing.length)+' compte(s) sans solde ou taux fiable':
   'Comptes bancaires et placements suivis · conversion indicative CAD';
+ const savings=ports.filter(({a})=>a.savingsTracking==='linked'||
+  ['CELI','Épargne','Livret','Savings'].includes(a.type));
+ const placements=ports.filter(({a})=>!savings.some(({a:shown})=>shown.id===a.id));
+ const tile=({a,p})=>'<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'"><span class="a-icon">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
+  (a.savingsTracking==='linked'&&!p.configured?'À configurer':nativeMoney(p.value,a.currency))+'</b><small>'+
+  (a.savingsTracking==='linked'?'Solde estimé depuis tes virements':p.hasFx?money(p.cad)+' CAD':'Conversion CAD à saisir')+' · Détails ›</small></button>';
+ const savingsNode=$('#wealthSavingsGrid'),placementsNode=$('#wealthInvestmentsGrid');
+ if(savingsNode)savingsNode.innerHTML=savings.length?savings.map(tile).join(''):
+  '<div class="trace-wealth-empty">Ajoute un livret, un CELI ou un autre compte d’épargne pour le suivre ici.</div>';
+ if(placementsNode)placementsNode.innerHTML=[
+  ...(placements.length?placements.map(tile):
+   ['<div class="trace-wealth-empty">Tes placements suivis apparaîtront ici, sans modifier tes données existantes.</div>']),
+  '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon">＋</span><span>Ajouter un compte</span><b>Nouveau</b><small>PEA, CELI, REER…</small></button>'
+ ].join('');
  $('#assetGrid').innerHTML=[
  '<button class="asset-card" type="button" id="wealthLiquidityCard"><span class="a-icon">$</span><span>Comptes bancaires</span><b>'+
   (bankMissing.length?'Solde incomplet':money(bankCAD))+'</b><small>Toutes devises, dettes déduites · Configurer ›</small></button>',
@@ -3325,10 +3339,7 @@ function renderWealth(){
   '<span>'+esc(shortAccountLabel(a))+' · '+currency+'</span><b>'+
   (native===null?'Solde à configurer':window.TraceInternational.money(native,currency))+'</b>'+
   '<small>'+(native!==null&&internationalQuotes[currency]?
-    'Équiv. '+money(window.TraceInternational.fxValue(native,currency,internationalQuotes[currency]))+' CAD':'Conversion indisponible')+'</small></button>'),
- ...ports.map(({a,p})=>'<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'"><span class="a-icon">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+(a.savingsTracking==='linked'&&!p.configured?'À configurer':nativeMoney(p.value,a.currency))+'</b><small>'+
- (a.savingsTracking==='linked'?'Solde estimé depuis tes virements':p.hasFx?money(p.cad)+' CAD':'Conversion CAD à saisir')+' · Détails ›</small></button>'),
- '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon">＋</span><span>Ajouter un compte</span><b>Nouveau</b><small>PEA, CELI, REER…</small></button>'
+   'Équiv. '+money(window.TraceInternational.fxValue(native,currency,internationalQuotes[currency]))+' CAD':'Conversion indisponible')+'</small></button>')
  ].join('');
  $('#wealthAddCard').onclick=openInvestmentAccountAdd;$('#wealthLiquidityCard').onclick=openAccountSettings;
  $$('[data-foreign-bank]').forEach(b=>b.onclick=openAccountSettings);
