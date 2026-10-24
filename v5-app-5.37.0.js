@@ -782,7 +782,7 @@ function manualCategories(type){
   return active.filter(c=>c.type==='expense');
 }
 
-function openManualTransaction(){
+function openManualTransaction(preferredKind='expense'){
  const M=window.TraceMovement,Guide=window.TraceImportGuide,U=window.TraceOperationUI;
  let kind='expense',categoryTouched=false;
  const bankAccounts=visibleBankAccounts(me);
@@ -942,7 +942,7 @@ function openManualTransaction(){
   }
  };
  $m('cancelManualTx').onclick=closeSheet;
- choose('expense');
+ choose(typeof preferredKind==='string'&&M.get(preferredKind)?preferredKind:'expense');
  $m('manualPurchaseCurrency').value=window.TraceInternational.currency(bankAccounts.find(a=>a.id===$m('manualTxAccount').value));
  sync();
  $m('saveManualTx').onclick=async()=>{
@@ -3247,12 +3247,98 @@ function renderActivity(){
  window.TraceImportCalendar?.render?.();
  showTab(tab);
 }
+
+/* TRACE 5.37 — native Activity/Partage. All balances come from the existing
+   immutable household/friend ledger: no additional financial movement. */
+function openActivitySharing(){
+ if((state.household.workspaceMembers||[]).length<2){openCoupleSettings();return;}
+ navigate('activity');showTab('sharing');
+}
+function renderActivitySharing(){
+ const root=$('#activitySharing');if(!root)return;
+ const ready=(state.household.workspaceMembers||[]).length>=2,
+  balance=ready?coupleBalance():0,
+  partnerName=shortMemberName('partner'),
+  myName=shortMemberName('la'),
+  history=ready?sharingHistory():[],
+  friends=['la','partner'].flatMap(owner=>
+   window.TraceMovement?.friendReceivables?.(state.transactions,owner)||[]),
+  due=friends.reduce((sum,entry)=>sum+Number(entry.outstandingCAD||0),0),
+  fmt=value=>Number.isFinite(Number(value))?
+   window.TraceInternational.money(Number(value),'CAD'):'Montant à vérifier',
+  party=ready?(Math.abs(balance)<.005?'Vous êtes à l’équilibre':
+   (balance>0?partnerName+' doit '+fmt(Math.abs(balance))+' à '+myName:
+    myName+' doit '+fmt(Math.abs(balance))+' à '+partnerName)):'Inviter votre partenaire',
+  opening=Number(state.household.sharingOpeningBalance||0);
+ root.innerHTML=
+ '<section class="trace-share-group" aria-label="Partage du couple">'+
+ '<div class="section-head"><h2>Couple</h2><small>Votre équilibre commun</small></div>'+
+ '<article class="card trace-share-hero"><div class="eyebrow">Solde entre vous deux</div>'+
+ '<strong id="traceShareBalance">'+esc(party)+'</strong>'+
+ '<p>Depuis '+esc(state.household.referenceDate||'le début du suivi')+
+ ' · répartition et règlements confirmés uniquement</p>'+
+ (ready?
+  '<div class="trace-share-actions"><button type="button" class="primary" id="traceShareSettle">Enregistrer un règlement</button>'+
+  '<button type="button" class="secondary" id="traceShareOpening">Solde initial Tricount</button></div>'+
+  '<div class="trace-share-opening">Solde repris : '+(opening<0?'−':'+')+
+   fmt(Math.abs(opening))+' · hors nouvelles dépenses</div>':
+  '<button type="button" class="primary" id="traceShareInvite">Configurer le partage</button>')+
+ '</article>'+
+ '<div class="section-head"><h3>Historique du couple</h3><small>'+
+ history.length+' mouvement'+(history.length>1?'s':'')+'</small></div>'+
+ (history.length?history.map(({t,delta})=>
+  '<div class="trace-share-history-row"><span><b>'+esc(t.name||'Mouvement partagé')+
+  '</b><small>'+esc(t.date||'Date à vérifier')+' · '+
+  (t.type==='transfer'?'Règlement hors budget':'Partage de dépense ou de remboursement')+
+  '</small></span><strong>'+ (delta>0?'+':'−')+
+  fmt(Math.abs(delta))+'</strong></div>').join(''):
+  '<div class="trace-share-empty">Aucun mouvement partagé confirmé pour le moment.</div>')+
+ '</section>'+
+ '<section class="trace-share-group" aria-label="Avances aux proches">'+
+ '<div class="section-head"><h2>Proches</h2><small>Avances et remboursements</small></div>'+
+ '<article class="card trace-share-hero trace-share-friends-hero"><div class="eyebrow">Encore à recevoir</div>'+
+ '<strong id="traceShareFriendDue">'+fmt(due)+'</strong>'+
+ '<p>Suivi distinct du solde du couple. Un remboursement ne crée ni nouveau revenu ni nouvelle dépense.</p>'+
+ '<div class="trace-share-actions">'+
+ '<button type="button" class="primary" id="traceShareFriendRepay">Enregistrer un remboursement</button>'+
+ '<button type="button" class="secondary" id="traceShareFriendAdvance">Ajouter une avance</button></div></article>'+
+ (friends.length?friends.map(friend=>
+  '<details class="trace-share-friend" '+(friend.unassigned?'data-unassigned="true"':'')+'><summary>'+
+  '<span><b>'+esc(friend.name)+'</b><small>Avancé par '+esc(shortMemberName(friend.owner))+
+  ' · '+friend.advances.length+' avance'+(friend.advances.length>1?'s':'')+
+  '</small></span><strong>'+fmt(friend.outstandingCAD)+' restant</strong></summary>'+
+  '<div class="trace-share-friend-detail">'+
+  '<p>Avancé : '+fmt(friend.advancedCAD)+' · Reçu : '+fmt(friend.receivedCAD)+
+  (friend.unattributedCAD>0?' · Remboursement à attribuer : '+fmt(friend.unattributedCAD):'')+'</p>'+
+  friend.advances.map(advance=>
+   '<div class="trace-share-advance-row"><span><b>'+esc(advance.label)+'</b><small>'+
+   esc(advance.date||'Date à vérifier')+
+   (advance.reviewRequired||advance.overpaid?' · À vérifier':'')+'</small></span>'+
+   '<small>Avancé '+fmt(advance.advancedCAD)+' · Remboursé '+
+   fmt(advance.receivedCAD)+' · Reste '+fmt(advance.outstandingCAD)+'</small></div>'
+  ).join('')+'</div></details>').join(''):
+  '<div class="trace-share-empty">Aucune avance à un proche confirmée pour le moment.</div>')+
+ '<p class="trace-share-disclaimer">Les anciennes avances « Amis » sans prénom restent à attribuer. Les remboursements partiels et multiples sont gérés par l’éditeur d’opérations existant, avec association aux avances.</p>'+
+ '</section>';
+ const settle=$('#traceShareSettle'),openingBtn=$('#traceShareOpening'),
+  invite=$('#traceShareInvite'),repay=$('#traceShareFriendRepay'),advance=$('#traceShareFriendAdvance');
+ if(settle)settle.onclick=()=>openSettlement(null);
+ if(openingBtn)openingBtn.onclick=editTricountOpening;
+ if(invite)invite.onclick=openCoupleSettings;
+ if(repay)repay.onclick=()=>openManualTransaction('friend_reimbursement');
+ if(advance)advance.onclick=()=>openManualTransaction('expense');
+}
+
 function showTab(t){
  if(t==='review')t='import'; // Old deep links now point to the unified import flow.
- tab=t==='transactions'?'transactions':'import';
+ tab=['transactions','import','sharing'].includes(t)?t:'import';
  $$('#activityTabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
  $('#activityTransactions').classList.toggle('hidden',tab!=='transactions');
  $('#activityImport').classList.toggle('hidden',tab!=='import');
+ const sharing=$('#activitySharing');if(sharing)sharing.classList.toggle('hidden',tab!=='sharing');
+ const period=$('#activityPeriodControl');if(period)period.classList.toggle('hidden',tab==='sharing');
+ const label=$('#activityMonthLabel');if(label&&tab==='sharing')label.textContent='Partage · depuis le début';
+ if(tab==='sharing')renderActivitySharing();
 }
 
 /* Portfolio ledger: contributions vs investment performance, native currency first */
@@ -4425,7 +4511,7 @@ function fatal(e){
   openSheet('Trace a rencontré un problème','<div class="empty-note">Une partie de Trace n’a pas pu se charger correctement.</div><button class="primary full" id="traceReloadBtn" type="button" style="margin-top:14px">Recharger Trace</button>');
   $('#traceReloadBtn').onclick=()=>location.reload();
 }
-function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('import');}else navigate(b.dataset.go);});$('#homeAccountsBtn').onclick=event=>{event.stopPropagation();openAccountsOverview();};$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$('#shareOpen').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{emailRedirectTo:new URL('./index.html',window.location.href).href,data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{
+function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('import');}else navigate(b.dataset.go);});$('#homeAccountsBtn').onclick=event=>{event.stopPropagation();openAccountsOverview();};$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=openActivitySharing;$('#shareOpen').onclick=openActivitySharing;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{emailRedirectTo:new URL('./index.html',window.location.href).href,data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{
  e.preventDefault();
  const button=e.currentTarget.querySelector('button[type="submit"]');
  if(button)button.disabled=true;
