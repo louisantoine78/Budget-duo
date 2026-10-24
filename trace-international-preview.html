@@ -136,6 +136,7 @@
           <div class="mini-account"><span>Dette de carte</span><span id="homeCard">—</span></div>
           <p id="homeCardWarning" class="trace-card-balance-warning" role="status" hidden></p>
           <div id="traceIntlHome" class="trace-intl-home" aria-label="Sélection du compte et situation internationale"></div>
+          <button type="button" class="trace-account-home-button" id="homeAccountsBtn">Comptes et trésorerie <span aria-hidden="true">›</span></button>
           <div class="mini-account trace-celi-monthly"><span>Versé aux CELI ce mois</span><span id="homeCELITransfers">—</span></div>
           <div class="scope-label">Solde courant − dette carte · les CELI sont dans Patrimoine</div>
         </article><article class="card hero-card trace-home-available">
@@ -239,6 +240,9 @@
         <button class="tab" data-tab="import">Importer</button>
       </div>
       <div id="activityTransactions">
+        <label class="trace-account-activity-filter" for="activityAccountFilter">Compte affiché
+          <select class="input" id="activityAccountFilter"><option value="all">Tous les comptes</option></select>
+        </label>
         <div class="activity-stats">
           <div class="statbox"><span>Dépenses</span><b id="activityExpenses">—</b></div>
           <div class="statbox"><span>Revenus</span><b id="activityIncome">—</b></div>
