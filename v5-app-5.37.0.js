@@ -1205,7 +1205,7 @@ function manageCategories(){
  const active=state.categories.filter(c=>!c.archived).sort((a,b)=>a.type.localeCompare(b.type)||a.name.localeCompare(b.name,'fr'));
  openSheet('Catégories du budget','<div class="empty-note">Personnalise tes catégories. L’historique est conservé quand une catégorie utilisée est archivée.</div>'+
  '<button class="primary full" id="newCategory" style="margin:14px 0">+ Nouvelle catégorie</button>'+ 
- (!state.categories.length?'<button class="secondary full" type="button" id="traceRestoreStarterCats">Installer les catégories de départ</button>':'')+
+ (STARTER_CATEGORIES.some(([id])=>!state.categories.some(c=>c.id===id))?'<button class="secondary full" type="button" id="traceRestoreStarterCats">Ajouter les catégories de départ manquantes</button>':'')+
  active.map(c=>'<button type="button" class="trace-list-btn" data-edit-category="'+esc(c.id)+'"><span>'+esc(c.name)+'</span><small>'+esc(c.type==='income'?'Revenu':categoryKind(c)==='fixed'?'Fixe':'Variable')+' ›</small></button>').join('')+traceFeedback());
  $('#newCategory').onclick=()=>editCategory();
  $('#traceRestoreStarterCats')?.addEventListener('click',async()=>{const b=$('#traceRestoreStarterCats');b.disabled=true;try{await restoreStarterCategories();manageCategories();}catch(err){b.disabled=false;traceNotice(err);}});
@@ -4219,7 +4219,8 @@ async function seedNewHouseholdCategories(hid){
  }
 }
 async function restoreStarterCategories(){
- if(state.categories.length||state.budgets.length)throw Error('Catégories existantes : aucune initialisation automatique.');
+ // Explicit repair is additive even when some categories or budgets exist.
+ // Never reset an edited category, an archived category, or budget history.
  await seedNewHouseholdCategories(household.id);
  const {data,error}=await client.from('documents')
   .select('item_id,data,revision').eq('household_id',household.id).eq('collection','categories');
