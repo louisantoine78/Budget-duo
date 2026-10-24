@@ -635,6 +635,23 @@ function internationalHome(){
   const all=state.accounts.filter(a=>['la','partner'].includes(a.owner)&&!a.archived&&
    ['checking','card'].includes(accountType(a))).map(a=>({...a,type:accountType(a)}));
   const accounts=[...new Map(all.map(a=>[a.id,a])).values()];
+  // Couple is a collective dashboard even when all accounts use CAD.
+  // Never present the personal primary-account selector for this scope.
+  if(!accounts.some(a=>I.currency(a)!=='CAD')){
+   const host=$('#traceIntlHome');
+   host.onclick=event=>event.stopPropagation();
+   host.innerHTML='<details class="trace-intl-details"><summary>Voir les comptes du foyer · '+
+    accounts.length+' compte(s)</summary><div class="trace-intl-accounts">'+
+    accounts.map(a=>{
+     const native=accountEstimate(a);
+     return '<div class="trace-intl-row"><span>'+esc(shortAccountLabel(a))+
+      ' <small>'+esc(I.currency(a))+'</small></span><b>'+
+      (native===null||!Number.isFinite(Number(native))?'Solde inconnu':
+       esc(I.money(native,I.currency(a))))+'</b></div>';
+    }).join('')+'</div>'+
+    '<p class="trace-intl-foot">Vue du foyer en CAD · épargne et placements dans Patrimoine.</p></details>';
+   return;
+  }
   if(accounts.some(a=>I.currency(a)!=='CAD')){
    const estimates=Object.fromEntries(accounts.map(a=>[a.id,accountEstimate(a)]));
    const snap=I.snapshot({accounts,estimates,fxRates:internationalQuotes});
@@ -679,6 +696,8 @@ function internationalHome(){
   balanceNode:homeScope==='mine'?$('#homeBalance'):null,
   checkingNode:homeScope==='mine'?$('#homeChecking'):null,
   cardNode:homeScope==='mine'?$('#homeCard'):null,
+  warningNode:homeScope==='mine'?$('#homeCardWarning'):null,
+  badgeNode:homeScope==='mine'?$('#reconcileBadge'):null,
   onSelect:id=>{
    if(!accounts.some(a=>a.id===id&&a.type==='checking'))return;
    confirmTracePrimaryAccount(id,()=>{closeSheet();renderHome();});
