@@ -1,63 +1,49 @@
-# TRACE 5.37.0 International — contrôle de mise en production
+# TRACE 5.37.0 — checklist de décision de sortie
 
-> État constaté le 23 octobre 2026. Document de **go/no-go** indépendant des taux de complétion déclaratifs. **NO-GO production** tant que les obstacles bloquants restent ouverts. Le code de la candidate et la démonstration fictive ne prouvent pas encore l'intégration sécurisée avec des données financières réelles.
+**Verdict actuel : NO-GO.** Mission du 24 octobre 2026. Code qualifié localement : `94c613cd4e1c547a38671083c1da773967bded70` ; consolidation documentaire ultérieure. Les empreintes de source permettent de contrôler que les essais correspondent au code présent. Une réussite Node ou Chromium ne vaut pas feu vert production.
 
-## Périmètres strictement distincts
+## Périmètre vérifié
 
-- **Production réelle :** `main`, TRACE 5.36.5, commit de référence `02c70f50e7e51da79b77a91dde96a03c6c719909`. Ne pas modifier sans validation du passage en production.
-- **Développement candidat :** `trace-5.37.0-international-accounts-fx`, code actuel + tests + documentation uniquement. Aucun merge ni PR automatique.
-- **Préproduction fictive :** projet Vercel indépendant `trace-v5-preview` (ID `prj_NvXLdQg1KAmDlcYzdjNhFpYls0Bj`), page `trace-international-preview.html`, CSP `connect-src 'none'`, fixtures et taux déclarés fictifs. La page n'est pas une simulation de la persistance Supabase ou du travail à deux sur vrais comptes.
+- [x] HEAD initial candidate `6eb6c17e5c9eba2d3727ebea404cce5fec0424c6` ; `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` revérifiée sur GitHub.
+- [x] Branche autorisée uniquement, tous les commits `[skip ci]`, aucune fusion, PR ou publication.
+- [x] Entrées production 5.36.5, application stable et workflows inchangés ; déploiement Git automatique de la candidate désactivé.
+- [x] Tests financiers fictifs ; aucune lecture/écriture financière Supabase réelle.
+- [x] 46 fichiers syntaxiques et 54 suites Node natives : 911 scénarios rapportés, zéro fichier en échec.
+- [x] 32 scénarios Chromium réel, cinq onglets et largeurs 320/390/430, formulaires natifs/FX, comptes, patrimoine, CSV et worker PDF local.
+- [x] PDF.js réel 6.4.299, licence, SHA-512 du paquet et SHA-256 des actifs ; extraction locale FR/CA et repli manuel sans enregistrement automatique.
+- [x] Rechargement complet du **laboratoire fictif** hors ligne et extraction PDF sans réseau ; cache statique propre à son périmètre.
+- [x] 17 contrôles PostgreSQL fictifs : persistance disque, isolation inter-foyers, sauvegardes/restaurations, migration 07 et anomalies explicites.
+- [x] 8 contrôles HTTPS publics Valet pour quatre devises sur dates historiques, y compris le week-end. Aucun identifiant financier transmis.
 
-## Fonctions déjà développées mais à qualifier en intégration
+## Portes de sortie restant ouvertes
 
-| Domaine | Confirmé dans le code candidat | Avant feu vert production |
-|---|---|---|
-| Comptes CA/FR et devises CAD/EUR/USD/GBP/CHF | Moteur international, montants natifs, date des taux | Scénarios réels simulés de bout en bout, création, édition, suppressions et rapprochement |
-| Compte principal et vue Moi/Couple | Calculs internationaux et affichage laboratoire | Valider les changements de devise/compte, les filtres et l'historique sans conversion rétroactive |
-| Budgets et patrimoine | Vues héritées 5.36.5 avec adaptations candidates | Valider les 12 mois, la répartition, les graphiques, les comptes multi-devises |
-| Imports CSV, PDF, OCR | Modules isolés, brouillons et comparateurs | Tester les fichiers représentatifs, les doublons inter-imports, erreurs de banque/devise et prévention d'écritures automatiques |
-| Paiement carte et transferts | Transferts internes historiques et résolution internationale | Garantir transfert sans revenu/dépense additionnels et rapprochement côté compte/carte |
-| Débit différé, remboursements et frais | Simulateur isolé, règlement partiel et rapprochement fictif | **Bloquant :** comptabilisation dans le vrai grand livre, règlements multiples réels/fictifs persistés et intégration import ; création de carte toujours désactivée |
-| Édition des dépenses EUR/USD | Libellé + catégorie sécurisés sur dépenses confirmées (candidate) | Test du parcours UI et des permissions multi-utilisateurs ; édition de montants, revenus et retours commerçants encore bloquée |
-| Navigation 5 onglets | Maquette de préversion et bootstrap synthétique | Revue Safari iPhone, raccourcis, ergonomie et navigation depuis comptes/catégories |
-| Données personnelles + couple | Moteur et historique conservés dans code | Tester persistance et règles d'accès sur **base fictive isolée**, jamais sur données réelles de l'utilisateur |
+| Domaine | Code présent | Unitaire | Intégration | Navigateur | Prêt production |
+|---|---|---|---|---|---|
+| Accueil/comptes/principal et archivage | Oui | Réussi | Partiel | Chromium réussi | Non : droits serveur/race/Safari |
+| Budget prévu/réel/trois familles/douze mois | Oui | Réussi | Partiel | Chromium réussi | Non : référence personnelle/Couple incomplète |
+| Immédiat/crédit/paiement/FX/frais | Oui | Réussi | SQL fictif réussi | Scénarios ciblés réussis | Non : parcours cloud/concurrence incomplets |
+| Épargne internationale/valorisation | Oui | Réussi | SQL fictif réussi | Scénarios EUR et inconnus réussis | Non : couverture autres devises/UI/cloud à étendre |
+| PDF mensuel | Oui, actifs réels | Réussi | Extraction réelle réussie | Chromium et hors ligne réussis | Non : Safari et corpus bancaire représentatif |
+| CSV CAD | Oui | Réussi | En mémoire | Téléversement réel réussi | Non : unicité inter-clients/transport cloud |
+| CSV étranger | Import pending oui | Réussi | Partiel | Native EUR sans effet financier vérifiée | **Non : validation finale bloquée** |
+| Captures/OCR/PDF quotidien | Partiel | Partiel | Incomplet | Non qualifié | Non |
+| Débit différé/règlements multiples | Moteur isolé | Réussi | **Pas intégré au journal** | Démo isolée seulement | Non, création désactivée |
+| RLS propriétaires | Migration 07 candidate | N/A | Réussi sur PostgreSQL fictif | UI seule | Non appliquée ; réglages personnels ouverts |
+| Verrou optimiste / conflits | Absent côté serveur | Reproduction de l'échec | Perte de modification démontrée | Non qualifié | Non |
+| Auth/sync à deux utilisateurs | Héritée | Partiel | Pas de Supabase hébergé | Pas de deux sessions réelles | Non |
+| PWA Safari iPhone | Candidate labo | Contrôles statiques | Chromium fictif seulement | **Aucun Safari natif** | Non |
+| Sauvegarde/migration/retour arrière | Outil et procédure | Réussi | Deux restaurations fictives réussies | N/A | Non : sauvegarde réelle et rollback compatible à qualifier |
 
-## Portes de validation obligatoires — toutes ouvertes pour l'instant
+- [ ] Fermer `RLS-PERSONAL-SETTINGS` et `STALE-WRITE` avec contrôles atomiques côté serveur et reprise des conflits.
+- [ ] Qualifier la migration 07 sur un environnement Supabase fictif autorisé, avec Auth, rôles et Realtime réels ; précontrôle des propriétaires sans attribution automatique.
+- [ ] Finaliser l'éditeur/validateur des opérations étrangères en attente et les modèles virement/carte/remboursement associés.
+- [ ] Raccorder le débit différé et les règlements partiels au vrai journal, puis tester persistance et import.
+- [ ] Finaliser les devises de référence personnelles/Couple avec effet prospectif et historique figé.
+- [ ] Qualifier captures, OCR, PDF quotidien et ambiguïtés inter-imports avec corpus fictif FR/CA.
+- [ ] Exécuter la recette sur un vrai iPhone Safari et sur la PWA installée, y compris fermetures/retour réseau/écritures en attente.
+- [ ] Préparer le SW de production : ressources 5.37 complètes, cache nommé, migration des anciens clients et absence de nettoyage global d'autres caches.
+- [ ] Obtenir une sauvegarde réelle fraîche sous autorisation, vérifier l'inventaire indépendant et restaurer en environnement isolé.
+- [ ] Éprouver le gel des écritures et un rollback conservant les écritures FX postérieures à la sauvegarde ; ne pas revenir aveuglément en 5.36.5.
+- [ ] Rejouer les contrôles sur le commit final choisi, examiner les risques puis obtenir l'autorisation explicite de fusion/publication.
 
-- [ ] **QA native complète** : récupérer un véritable checkout, `node --check`, lancer toutes les suites 5.37.0 ainsi que les régressions 5.36.5 sur l'exact commit à publier. Les tests V8 à dépendances simulées ne constituent pas cette validation.
-- [ ] **Parcours authentiques sur navigateur** : iPhone Safari/PWA, ajout/édition/import, hors-ligne/retour réseau, boutons et cinq onglets. Un statut Vercel `READY` n'est pas un test navigateur.
-- [ ] **Intégration des opérations financières** : dépense, paiement carte, frais, remboursement commerçant, avance de proches, débit direct/crédit/différé, taux daté, virement CAD↔EUR, sans double comptage.
-- [ ] **Imports et rapprochement mensuel** : CSV FR/CA, PDF mensuel utilisé pour vérification, brouillons OCR, doublons, statuts et preuves, aucune confirmation automatique dangereuse.
-- [ ] **Persistance sécurisée sur données fictives** : session, couple, séparation, authorization/RLS, migrations et unicité inter-imports, sauvegarde/restauration.
-- [ ] **Plan de sortie** : sauvegarde exportable des données existantes, stratégie de migration réversible, vérification main/SW/manifest/version, commit prêt et rollback explicite.
-- [ ] **Validation finale explicite** : revue des résultats et approbation pour déployer sur le domaine réel. Ne pas traiter un « continue » comme une autorisation automatique de publier en production.
-
-## Lot technique du 23 octobre : édition descriptive des dépenses étrangères
-
-- `v5-app-5.37.0.js` : nouveau chemin `editForeignExpenseMetadata` pour les **dépenses confirmées** sur compte non CAD et appartenant à l'utilisateur. Ne permet de changer que `name` et `categoryId` parmi les catégories de dépenses actives. Réutilise `saveDocument('transactions',next)` et garde intacts `bankAmount`, `amountOriginal`, `amountCAD`, devise, date, `bankRateCad`, `fxRateDate`, source d'import, allocations et bénéficiaires. Fiche invalidée si transaction ou compte a changé dans l'état local. Cela **ne remplace pas** un verrou optimiste en base multi-utilisateurs.
-- Les autres opérations étrangères susceptibles d'emprunter le formulaire CAD sont bloquées ou renvoyées vers leur éditeur international validé. La carte différée reste toujours désactivée sur le formulaire réel.
-- Commits candidat du code `1fa6293ca3f820cc9b157676d8dbcae589bedb73`, tests `649a15ad664a165383abdd0618e592c1260a4bec`, avec `[skip ci]`.
-- **Contrôles exécutés :** 12/12 nouveaux tests d'édition + 7/7 tests de câblage + 8/8 laboratoire + 7/7 démarrage synthétique + 19/19 invariants financiers = **53/53 contrôles ciblés V8 à modules Node simulés** sur les fichiers du commit. Ce n'est ni une CLI Node native ni Safari/CI.
-- **À redéployer en préversion Vercel sur le nouveau HEAD** ; relever URL/commit/état READY séparément dans le handoff. La production 5.36.5 reste inchangée.
-
-
-## Préparation de sortie — point de contrôle du 24 octobre 2026 (sans autorisation de publication)
-
-La date cible de la semaine suivante reste **un objectif**, pas une livraison garantie. `main` et les données réelles ne changent pas. Les maquettes et arbitrages UX déjà validés constituent la référence ; ne pas refaire un redesign. Commits du dernier lot : voir `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md`.
-
-| Test de sortie à documenter sur l'exact HEAD candidat | Exigence | Situation au 24 octobre |
-|---|---|---|
-| Accueil « Solde estimé » et boutons de consultation | CAD/EUR, carte liée, retour principal, aucun effet sur historique, focus tactile Safari | Code candidat + essais Node local/V8 fictifs, **pas Safari** |
-| Accueil Couple | CA seul et CAD/EUR, comptes distincts, pas de sélecteur personnel, devise couple indépendante | Correctif CAD commité, essais V8 fictifs, **pas E2E** |
-| Budget / catégories / réel vs prévu / reprise / 12 mois | Aucun `pending` dans dépenses confirmées, aucun budget historique recalculé | Modèles candidats, **requalification nécessaire** |
-| Activité / Partage Couple & Proches | Navigation 3 sous-sections, deux utilisateurs, avances et remboursements sans duplication | Candidat + tests isolés, **base fictive multi-usagers manquante** |
-| PDF mensuel FR/CA / carte crédit | Affichage de toutes les lignes, preuve page/ligne, relevé complet vérifié manuellement, écarts sans import auto | Visibilité lignes corrigée, **PDF.js réel et Safari manquants** |
-| Débit immédiat, crédit, différé, FX CAD/EUR | Vérification native des débits, dettes, frais, règlements partiels, transferts neutres | Simulateurs en partie isolés, **débit différé bloqué** |
-| Patrimoine, épargne, placements internationaux | Soldes natifs, taux datés, pas de patrimoine fictivement valorisé | **Intégration et essais incomplets** |
-| PWA iPhone Safari | Chargement, clavier, clics, graphiques, caches hors-ligne, retours réseau | **Aucun essai Safari natif validé** |
-| Test natif complet sur checkout exact | Régressions 5.36.5 + suites 5.37.0, exécution Node et navigation | **Bloqué dans ce conteneur : résolution DNS GitHub**, nouveaux tests localement et V8 partiels |
-| Intégrité données + rollback | Sauvegarde/restauration, migration compatible, isolation Supabase fictif et RLS | **À construire et à prouver avant GO** |
-
-**Précision sur la dernière QA :** 9 tests natifs Node de commutation compte sur une copie locale du module (9/9), 11 + 5 + 3 + 6 vérifications V8 ciblées exécutées directement sur les sources GitHub de l'interface et du moteur. Les nouveaux tests Node sauvegardés ne prouvent **pas** une campagne complète sur un checkout, un iPhone Safari ou une base fictive. Ne pas additionner ces chiffres à 198/198 V8 historique en prétendant une campagne unique.
-
-**Critère indispensable** : aucune fusion ni déploiement avant validation explicite après revue de ces preuves de sortie. L'ancien lien Vercel est une préversion antérieure et ne correspond pas au HEAD candidat actuel.
+Le contrôle `node scripts/trace-release-preflight.mjs` est local et en lecture seule. **Code de sortie 2 = NO-GO attendu**, zéro déploiement. Les rapports détaillés, commandes, anomalies et procédure Safari sont dans [WORK-VALIDATION](TRACE-5.37.0-WORK-VALIDATION.md). Ne pas présenter une ancienne URL Vercel comme la version de cette mission.

@@ -1,0 +1,470 @@
+{
+  "runtime": "v24.22.1",
+  "network": "not used",
+  "financialData": "fictional only",
+  "syntax": [
+    {
+      "file": "config.js",
+      "passed": true
+    },
+    {
+      "file": "onboarding-2.0.3.js",
+      "passed": true
+    },
+    {
+      "file": "scripts/build-trace-preview-pwa.mjs",
+      "passed": true
+    },
+    {
+      "file": "scripts/test-trace-native.mjs",
+      "passed": true
+    },
+    {
+      "file": "scripts/trace-release-preflight.mjs",
+      "passed": true
+    },
+    {
+      "file": "scripts/trace-snapshot.mjs",
+      "passed": true
+    },
+    {
+      "file": "scripts/vendor-trace-pdfjs.mjs",
+      "passed": true
+    },
+    {
+      "file": "scripts/verify-trace-pdfjs.mjs",
+      "passed": true
+    },
+    {
+      "file": "sw.js",
+      "passed": true
+    },
+    {
+      "file": "tests/trace-candidate.browser.cjs",
+      "passed": true
+    },
+    {
+      "file": "tests/trace-database.integration.cjs",
+      "passed": true
+    },
+    {
+      "file": "tests/trace-valet-public.integration.cjs",
+      "passed": true
+    },
+    {
+      "file": "trace-bank-doc-1.11.1.js",
+      "passed": true
+    },
+    {
+      "file": "trace-bank-ui-2.8.1.js",
+      "passed": true
+    },
+    {
+      "file": "trace-card-payment-detail-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-deferred-bank-review-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-deferred-debit-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-deferred-lab-ui-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-duplicate-compare-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-email-confirmation-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-friend-debtor-ui-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-household-change-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-import-calendar-2.1.2.js",
+      "passed": true
+    },
+    {
+      "file": "trace-import-guide-1.2.1.js",
+      "passed": true
+    },
+    {
+      "file": "trace-insights-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-install-1.1.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-international-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-international-preview-fixtures-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-international-preview-sw.js",
+      "passed": true
+    },
+    {
+      "file": "trace-international-ui-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-movement-5.36.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-operation-ui-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-pdfjs-local-loader-1.0.0.mjs",
+      "passed": true
+    },
+    {
+      "file": "trace-preview-pwa-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-reminders-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-separation-1.1.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-smart-inbox-3.4.2.js",
+      "passed": true
+    },
+    {
+      "file": "trace-smart-inbox-3.5.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-statement-evidence-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-statement-monthly-ui-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-statement-pdf-text-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-statement-pdfjs-adapter-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-statement-reconcile-1.0.0.js",
+      "passed": true
+    },
+    {
+      "file": "trace-swipe-1.1.0.js",
+      "passed": true
+    },
+    {
+      "file": "v5-app-5.36.5.js",
+      "passed": true
+    },
+    {
+      "file": "v5-app-5.37.0.js",
+      "passed": true
+    }
+  ],
+  "suites": [
+    {
+      "file": "trace-account-lifecycle.test.cjs",
+      "passed": true,
+      "reportedScenarios": 10
+    },
+    {
+      "file": "trace-activity-daily-filters.test.cjs",
+      "passed": true,
+      "reportedScenarios": 6
+    },
+    {
+      "file": "trace-activity-sharing.test.cjs",
+      "passed": true,
+      "reportedScenarios": 14
+    },
+    {
+      "file": "trace-budget-progress-ui.test.cjs",
+      "passed": true,
+      "reportedScenarios": 10
+    },
+    {
+      "file": "trace-card-payment-detail.test.cjs",
+      "passed": true,
+      "reportedScenarios": 14
+    },
+    {
+      "file": "trace-deferred-bank-review.test.cjs",
+      "passed": true,
+      "reportedScenarios": 27
+    },
+    {
+      "file": "trace-deferred-lab-ui.test.cjs",
+      "passed": true,
+      "reportedScenarios": 10
+    },
+    {
+      "file": "trace-duplicate-compare.test.cjs",
+      "passed": true,
+      "reportedScenarios": 12
+    },
+    {
+      "file": "trace-home-account-switch.test.cjs",
+      "passed": true,
+      "reportedScenarios": 9
+    },
+    {
+      "file": "trace-home-couple-cad.test.cjs",
+      "passed": true,
+      "reportedScenarios": 3
+    },
+    {
+      "file": "trace-international-account-details.test.cjs",
+      "passed": true,
+      "reportedScenarios": 14
+    },
+    {
+      "file": "trace-international-bank-investment.test.cjs",
+      "passed": true,
+      "reportedScenarios": 10
+    },
+    {
+      "file": "trace-international-card-friend-cycle.test.cjs",
+      "passed": true,
+      "reportedScenarios": 15
+    },
+    {
+      "file": "trace-international-couple-home.test.cjs",
+      "passed": true,
+      "reportedScenarios": 4
+    },
+    {
+      "file": "trace-international-csv-bank-review.test.cjs",
+      "passed": true,
+      "reportedScenarios": 28
+    },
+    {
+      "file": "trace-international-csv-column-safety.test.cjs",
+      "passed": true,
+      "reportedScenarios": 11
+    },
+    {
+      "file": "trace-international-csv-source-rows.test.cjs",
+      "passed": true,
+      "reportedScenarios": 6
+    },
+    {
+      "file": "trace-international-csv.test.cjs",
+      "passed": true,
+      "reportedScenarios": 6
+    },
+    {
+      "file": "trace-international-deferred-debit.test.cjs",
+      "passed": true,
+      "reportedScenarios": 84
+    },
+    {
+      "file": "trace-international-editor.test.cjs",
+      "passed": true,
+      "reportedScenarios": 8
+    },
+    {
+      "file": "trace-international-financial-guards.test.cjs",
+      "passed": true,
+      "reportedScenarios": 19
+    },
+    {
+      "file": "trace-international-foreign-metadata.test.cjs",
+      "passed": true,
+      "reportedScenarios": 12
+    },
+    {
+      "file": "trace-international-friend-allocations.test.cjs",
+      "passed": true,
+      "reportedScenarios": 17
+    },
+    {
+      "file": "trace-international-friend-ledger-fx.test.cjs",
+      "passed": true,
+      "reportedScenarios": 15
+    },
+    {
+      "file": "trace-international-friend-rows.test.cjs",
+      "passed": true,
+      "reportedScenarios": 15
+    },
+    {
+      "file": "trace-international-friend-sharing-ui.test.cjs",
+      "passed": true,
+      "reportedScenarios": 4
+    },
+    {
+      "file": "trace-international-import-cents.test.cjs",
+      "passed": true,
+      "reportedScenarios": 12
+    },
+    {
+      "file": "trace-international-imported-repayments.test.cjs",
+      "passed": true,
+      "reportedScenarios": 2
+    },
+    {
+      "file": "trace-international-lab.test.cjs",
+      "passed": true,
+      "reportedScenarios": 8
+    },
+    {
+      "file": "trace-international-legacy-ledger.test.cjs",
+      "passed": true,
+      "reportedScenarios": 44
+    },
+    {
+      "file": "trace-international-manual-repayments.test.cjs",
+      "passed": true,
+      "reportedScenarios": 3
+    },
+    {
+      "file": "trace-international-money-integrity.test.cjs",
+      "passed": true,
+      "reportedScenarios": 11
+    },
+    {
+      "file": "trace-international-monthly-pdf-ui.test.cjs",
+      "passed": true,
+      "reportedScenarios": 12
+    },
+    {
+      "file": "trace-international-multi-debtors.test.cjs",
+      "passed": true,
+      "reportedScenarios": 20
+    },
+    {
+      "file": "trace-international-native-flow.test.cjs",
+      "passed": true,
+      "reportedScenarios": 11
+    },
+    {
+      "file": "trace-international-premium-layout.test.cjs",
+      "passed": true,
+      "reportedScenarios": 13
+    },
+    {
+      "file": "trace-international-preview-boot.test.cjs",
+      "passed": true,
+      "reportedScenarios": 7
+    },
+    {
+      "file": "trace-international-savings.test.cjs",
+      "passed": true,
+      "reportedScenarios": 9
+    },
+    {
+      "file": "trace-international-statement-evidence.test.cjs",
+      "passed": true,
+      "reportedScenarios": 34
+    },
+    {
+      "file": "trace-international-statement-reconciliation.test.cjs",
+      "passed": true,
+      "reportedScenarios": 22
+    },
+    {
+      "file": "trace-international-ui-smoke.test.cjs",
+      "passed": true,
+      "reportedScenarios": 12
+    },
+    {
+      "file": "trace-international-wiring.test.cjs",
+      "passed": true,
+      "reportedScenarios": 7
+    },
+    {
+      "file": "trace-international.test.cjs",
+      "passed": true,
+      "reportedScenarios": 27
+    },
+    {
+      "file": "trace-ledger-scenarios.test.cjs",
+      "passed": true,
+      "reportedScenarios": 44
+    },
+    {
+      "file": "trace-pdfjs-real-extraction.test.cjs",
+      "passed": true,
+      "reportedScenarios": 10
+    },
+    {
+      "file": "trace-pdfjs-vendor.test.cjs",
+      "passed": true,
+      "reportedScenarios": 10
+    },
+    {
+      "file": "trace-preview-pwa.test.cjs",
+      "passed": true,
+      "reportedScenarios": 7
+    },
+    {
+      "file": "trace-regression.test.cjs",
+      "passed": true,
+      "reportedScenarios": 150
+    },
+    {
+      "file": "trace-snapshot.test.cjs",
+      "passed": true,
+      "reportedScenarios": 5
+    },
+    {
+      "file": "trace-statement-pdf-proposals-ui.test.cjs",
+      "passed": true,
+      "reportedScenarios": 8
+    },
+    {
+      "file": "trace-statement-pdf-text.test.cjs",
+      "passed": true,
+      "reportedScenarios": 11
+    },
+    {
+      "file": "trace-statement-pdfjs-adapter.test.cjs",
+      "passed": true,
+      "reportedScenarios": 12
+    },
+    {
+      "file": "trace-statement-review-coverage.test.cjs",
+      "passed": true,
+      "reportedScenarios": 5
+    },
+    {
+      "file": "trace-ui-smoke.test.cjs",
+      "passed": true,
+      "reportedScenarios": 12
+    }
+  ],
+  "passed": true,
+  "summary": {
+    "syntaxFiles": 46,
+    "testFiles": 54,
+    "reportedScenarios": 911,
+    "failedFiles": 0
+  }
+}

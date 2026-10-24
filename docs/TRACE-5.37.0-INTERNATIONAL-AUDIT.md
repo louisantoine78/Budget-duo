@@ -1,5 +1,39 @@
 # TRACE 5.37.0 — Audit de développement international (non publié)
 
+## Consolidation prioritaire — mission du 24 octobre 2026
+
+**NO-GO production.** Code qualifié localement : `94c613cd4e1c547a38671083c1da773967bded70`. Le HANDOFF et la checklist sont consolidés. Les sections chronologiques suivantes restent historiques, notamment leurs anciens chiffres V8 et leurs blocages DNS ; ne pas les additionner aux preuves actuelles.
+
+### Progrès effectifs
+
+- Checkout natif et HEAD GitHub obtenus. Quatre échecs initiaux de harnais de test corrigés (collision `module`, bornes d'extraction et objets/tableaux VM) ; vrai runner Node natif ajouté.
+- 54 suites/911 scénarios rapportés et 46 contrôles syntaxiques réussis ; 32 scénarios Chromium réel sur le vrai shell, ses formulaires et son worker local. Les tests avec DOM simulé restent identifiés comme tels.
+- Montants exacts au centime, données absentes distinctes de zéro, devise de chaque jambe vérifiée et taux datés/sourcés ; aucun taux étranger 1 de secours. Comportements vérifiés : 40 EUR, 100 CAD crédit + paiement neutre, 50 USD payé 46,20 EUR, transfert 150 CAD / 95 EUR dont 2 CAD de frais inclus, épargne native et bascule du principal sans réécriture de l'historique.
+- Portefeuille : aucune conversion courante rétroactive des flux historiques ; seules leurs valorisations stockées sont utilisées pour l'analyse. Taux indicatifs datés pour la valeur actuelle, total incomplet si donnée inconnue.
+- Véritables actifs PDF.js locaux, licence et intégrité vérifiées ; extraction réelle de quatre fixtures fictives dont deux multipages et un PDF image. La devise USD dans un libellé n'altère plus la devise EUR de l'en-tête. Course de sélection de fichier et invalidation du compte traitées.
+- PWA strictement fictive, scope propre à sa page et cache de 62 actifs statiques ; rechargement complet et PDF sans réseau réussis dans Chromium. Production inchangée.
+- 17 contrôles PostgreSQL réels embarqués (PGlite/PG17), pas des tableaux simulant la persistance : réouverture disque, RLS inter-foyers, RPC de foyer, données historiques préservées, avance/remboursement partiel, épargne et deux méthodes de restauration dans une autre instance.
+- Migration 07 candidate : restrictions INSERT/UPDATE/DELETE des documents comptes/placements selon le propriétaire, SELECT Couple conservé et autres collections inchangées. Répétabilité et conservation des lignes prouvées localement ; propriétaires absents rejetés, jamais affectés automatiquement. Rien appliqué sur Supabase hébergé.
+- API Valet publique appelée en HTTPS par le moteur réel : quatre devises, jour ouvré 20/06/2025 et week-end 21/06/2025, huit contrôles réussis avec dates/sources. Pas un test CORS mobile ni un cours actuel.
+
+### Anomalies et barrières toujours ouvertes
+
+1. `RLS-PERSONAL-SETTINGS` : le SQL hérité laisse modifier un solde d'ouverture du partenaire dans `households.settings`. Reproduit et annulé sur base fictive. La migration 07 ne protège que les documents de comptes.
+2. `STALE-WRITE` : deux upserts à partir de snapshots clients périmés perdent la première modification. Entrelacement SQL déterministe reproduit ; pas un test de charge ni deux navigateurs cloud. Verrou atomique de version et gestion des conflits manquants.
+3. Imports/édition étrangers incomplets : ingestion CSV native pending prouvée, mais validation finale étrangère encore bloquée ; captures/OCR/PDF quotidien pas qualifiés de bout en bout.
+4. Différé toujours isolé/désactivé dans la création réelle, malgré les tests de son moteur et de ses règlements partiels. Ne pas annoncer son intégration persistante.
+5. Devise budgétaire personnelle et devise Couple paramétrables non finalisées : la trésorerie peut être EUR, le budget et les partages actuels restent CAD.
+6. Aucun Safari iPhone, Supabase hébergé fictif avec Auth/Realtime, concurrence multi-clients et file d'écritures hors ligne qualifiés. Les assertions locales n'inspectent pas les politiques réellement déployées.
+7. `sw.js` stable efface encore tous les autres caches lors de son activation et n'est pas un cache offline complet des scripts : ne pas activer une sortie 5.37 en conservant ce mécanisme sans qualification. Le labo a sa propre stratégie et un hébergement isolé reste nécessaire pour sa recette.
+8. Sauvegarde réelle, inventaire indépendant et rollback après écritures FX non éprouvés. Restaurations fictives réussies = preuve de l'outil, pas sauvegarde de l'utilisateur.
+
+Les références SQL utilisées sont les guides officiels [PostgreSQL CREATE POLICY](https://www.postgresql.org/docs/current/sql-createpolicy.html) et [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security). Le correctif restrictif est limité aux droits déjà validés pour Mes comptes ; les règles de collaboration du reste du journal ne sont pas remplacées implicitement.
+
+Rapports, commandes exactes et procédure de sortie : [WORK-VALIDATION](TRACE-5.37.0-WORK-VALIDATION.md) et [qualification JSON](qa/TRACE-5.37.0-QUALIFICATION.json).
+
+## Historique — observations et campagnes antérieures
+
+
 **Statut : chantier en branche uniquement, non approuvé pour production.**
 
 Base fonctionnelle conservée : `main` / TRACE 5.36.5, commit `02c70f50e7e51da79b77a91dde96a03c6c719909`.

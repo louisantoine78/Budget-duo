@@ -1,0 +1,144 @@
+{
+  "engine": "Chromium",
+  "version": "153.0.8010.0",
+  "safari": false,
+  "data": "entirely fictional; in-memory app persistence",
+  "externalRequests": [],
+  "consoleErrors": [],
+  "workers": [
+    "http://127.0.0.1:33365/vendor/pdfjs/pdf.worker.mjs",
+    "http://127.0.0.1:33365/vendor/pdfjs/pdf.worker.mjs",
+    "http://127.0.0.1:33365/vendor/pdfjs/pdf.worker.mjs"
+  ],
+  "results": [
+    {
+      "name": "real candidate boots with eight fictional operations and zero external requests",
+      "passed": true
+    },
+    {
+      "name": "320, 390 and 430 px layouts keep five tabs, visible budget and unbroken Patrimoine",
+      "passed": true
+    },
+    {
+      "name": "account chips show native EUR without changing the official principal or budget",
+      "passed": true
+    },
+    {
+      "name": "changing principal requires explicit confirmation; cancelling is read-only",
+      "passed": true
+    },
+    {
+      "name": "confirmed EUR principal keeps CAD historical budget and independent Couple totals",
+      "passed": true
+    },
+    {
+      "name": "account detail shows two recent operations and opens filtered Activity",
+      "passed": true
+    },
+    {
+      "name": "Budget preserves three families, twelve months and category-to-Activity navigation",
+      "passed": true
+    },
+    {
+      "name": "pending EUR activity remains separate from confirmed spending",
+      "passed": true
+    },
+    {
+      "name": "sharing lives within Activity with Couple before Proches",
+      "passed": true
+    },
+    {
+      "name": "real local PDF worker rejects a mismatched account currency",
+      "passed": true
+    },
+    {
+      "name": "PDF extraction, adoption, human review and comparator preserve all bank transactions",
+      "passed": true
+    },
+    {
+      "name": "a raster statement without text falls back to manual control without proposals",
+      "passed": true
+    },
+    {
+      "name": "manual fractional-cent EUR input is blocked instead of silently rounding",
+      "passed": true
+    },
+    {
+      "name": "a CAD card cannot be paid from the EUR account",
+      "passed": true
+    },
+    {
+      "name": "100 CAD credit purchase and 100 CAD repayment create one expense and one neutral transfer",
+      "passed": true
+    },
+    {
+      "name": "40 EUR immediate-debit purchase reduces native cash once and records frozen 64 CAD budget impact",
+      "passed": true
+    },
+    {
+      "name": "50 USD purchase paid as 46.20 EUR keeps native debit and historical CAD valuation",
+      "passed": true
+    },
+    {
+      "name": "CAD to EUR transfer preserves actual debit, receipt and included fees with no budget expense",
+      "passed": true
+    },
+    {
+      "name": "a linked EUR savings account is created with native opening balance and dated indicative conversion",
+      "passed": true
+    },
+    {
+      "name": "40 EUR savings deposit moves native cash and savings once with unchanged budget and total wealth",
+      "passed": true
+    },
+    {
+      "name": "150 CAD to EUR savings requires the actual 95 EUR receipt without assuming a 1:1 rate",
+      "passed": true
+    },
+    {
+      "name": "a 15 EUR savings withdrawal is a cash transfer without new budget income",
+      "passed": true
+    },
+    {
+      "name": "unknown CHF opening balance remains unconfigured and makes consolidated wealth incomplete",
+      "passed": true
+    },
+    {
+      "name": "account metadata preserves historical currency and partner accounts remain read-only in settings",
+      "passed": true
+    },
+    {
+      "name": "card reassociation uses one valid CAD settlement account without changing any budget or historical cash",
+      "passed": true
+    },
+    {
+      "name": "archiving requires a different confirmed principal and preserves filtered transaction history",
+      "passed": true
+    },
+    {
+      "name": "restoring an archived account brings back the exact native balance and retained savings links",
+      "passed": true
+    },
+    {
+      "name": "a full offline reload uses the dedicated static PWA and resets only fictional data",
+      "passed": true
+    },
+    {
+      "name": "offline PDF extraction loads the actual cached local engine and worker",
+      "passed": true
+    },
+    {
+      "name": "actual CSV upload shows all rows and bank matches, imports pending only and stays idempotent",
+      "passed": true
+    },
+    {
+      "name": "foreign CSV retains its actual EUR amount while budget and native bank balance remain unchanged pending review",
+      "passed": true
+    },
+    {
+      "name": "the dedicated laboratory worker caches no credentials, financial records or bank statements",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

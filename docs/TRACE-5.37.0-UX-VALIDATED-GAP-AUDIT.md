@@ -1,5 +1,32 @@
 # TRACE 5.37.0 — audit de conformité aux cinq onglets UX/UI validés
 
+## État prioritaire après mission du 24 octobre 2026
+
+**Cette section remplace les diagnostics de présence/absence des audits historiques conservés plus bas. Les choix fonctionnels validés restent la référence. Production : NO-GO.** Code qualifié : `94c613cd4e1c547a38671083c1da773967bded70` ; preuves et limites dans [WORK-VALIDATION](TRACE-5.37.0-WORK-VALIDATION.md).
+
+| Parcours validé | État du code actuel et preuve | Limite restante |
+|---|---|---|
+| Cinq onglets, Patrimoine sur une ligne | Chromium réel à 320/390/430 px, aucun débordement horizontal | Safari iPhone non testé |
+| Ordre Accueil | Solde estimé → Disponible → Ce mois-ci → À faire → Budget en direct → Évolution → Partage, déjà intégré avant cette mission et conservé | Finalisation tactile/animations Safari |
+| Solde estimé premium | Consultation par boutons, devise native, carte liée, principal confirmé, annulation et totaux incomplets vérifiés | Devise budgétaire personnelle/Couple encore CAD |
+| Fiches comptes | Détails, deux opérations, rapprochement, Activité filtrée, édition/archivage/réactivation éprouvés | Autorisation des réglages en base et concurrence |
+| Budget trois familles | Conservées ; anneau et pourcentage consommé, barres, dépassement et mini graphique prévu/réel affinés ; contraste de Disponible corrigé | Pas de référence budgétaire EUR prospective terminée |
+| Mon année en clair | Douze mois et navigation de catégorie → Activité testées dans Chromium | Lisibilité Safari/appareil à valider |
+| Activité | Historique journalier, filtres, statuts, comptes archivés et Partage Couple/Proches conservés et testés | Deux sessions cloud/recette exhaustive non réalisées |
+| Patrimoine | Épargne → Placements → Patrimoine net ; épargne native multi-devises reliée et taux datés, inconnus non valorisés à zéro | Qualification cloud/placements et devises au-delà des scénarios UI EUR |
+| CSV | Toutes les lignes inspectables, opérations ressemblantes détaillées, invalides visibles, aucun effet financier pending | Validation étrangère en attente toujours bloquée |
+| PDF mensuel | Véritable worker local, extraction multipage, propositions et lignes non interprétées, attestation humaine, contrôle sans écriture | Pas de reconnaissance universelle ni Safari ; pas d'OCR raster |
+| Hors ligne | Laboratoire rechargeable hors ligne, PDF local utilisable sans réseau | Aucun stockage financier durable dans ce labo ; PWA financière non qualifiée |
+
+Le formulaire premium supprimait les champs internationaux que le moteur attendait : panne découverte dans le vrai navigateur et corrigée. Les contrôles clavier/focus et champs de saisie à 16 px améliorent le parcours, sans constituer une validation Safari.
+
+**Écarts document/code réconciliés :** les anciennes mentions « pas de checkout natif », « PDF.js réel absent », « pas de confirmation du principal », « archivage absent » et « épargne liée CAD seulement » sont désormais périmées. Les mentions « devise Couple autonome terminée », « imports étrangers terminés », « différé intégré » ou « PWA iPhone validée » resteraient fausses.
+
+## Historique daté des audits UX
+
+Les observations ci-dessous décrivent leurs commits d'époque. Elles expliquent les choix et la chronologie ; leur statut ne doit pas être repris comme diagnostic du HEAD actuel.
+
+
 > **23 octobre 2026 — audit contradictoire conception ↔ code candidat**, depuis le HEAD `ef3fbbd0bc3cc4c71bb0d34364662ab27aea49f9`. Ce document est la source de vérité des écarts UX/UI restant à corriger, **sans rouvrir les choix de conception déjà validés**. L'analyse repose sur le cahier de reprise `TRACE_5_37_0_PROMPT_REPRISE` du 23 octobre et sur `trace-international-preview.html`, `v5-app-5.37.0.js`, `trace-international-ui-1.0.0.js`, `trace-international-1.0.0.css`. **Une fonction présente dans le JS ne signifie pas qu'un parcours utilisateur est fini ni testé sur Safari.**
 
 ## Verdict

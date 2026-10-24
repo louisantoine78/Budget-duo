@@ -1,0 +1,101 @@
+{
+  "engine": "PGlite 0.4.5 / PostgreSQL 17.5 WASM",
+  "hostedSupabase": false,
+  "auth": "fictional auth.uid session claims",
+  "schema": "Repository SQL; only pgcrypto installation omitted (built-in UUID used)",
+  "checks": [
+    {
+      "name": "anonymous role cannot read financial documents or invoke workspace creation",
+      "passed": true
+    },
+    {
+      "name": "repository workspace RPCs create a household and assign its second member",
+      "passed": true
+    },
+    {
+      "name": "a third user cannot join a full couple or self-assign a membership",
+      "passed": true
+    },
+    {
+      "name": "additive V5/import-day SQL preserves stable records and creates a pre-migration backup",
+      "passed": true
+    },
+    {
+      "name": "RLS isolates household reads, inserts, updates and deletes from unrelated users",
+      "passed": true
+    },
+    {
+      "name": "a member cannot spoof updated_by and outsider cannot rotate the invite",
+      "passed": true
+    },
+    {
+      "name": "actual app save helper persists credit, EUR/USD and FX legs without duplicate IDs",
+      "passed": true
+    },
+    {
+      "name": "closing and reopening the disk database preserves native balances and fixed CAD history",
+      "passed": true
+    },
+    {
+      "name": "partial friend reimbursement persists its allocation without a new budget income",
+      "passed": true
+    },
+    {
+      "name": "native EUR savings legs survive SQL persistence and use the real journal calculation",
+      "passed": true
+    },
+    {
+      "name": "a physical backup restores the same fictional database into another instance",
+      "passed": true
+    },
+    {
+      "name": "a checksummed portable export restores complete native JSON rows into a separate fictional PostgreSQL",
+      "passed": true
+    },
+    {
+      "name": "the test explicitly detects household-wide writes instead of claiming partner ownership protection",
+      "passed": true
+    },
+    {
+      "name": "candidate migration 07 is repeatable and preserves every financial row",
+      "passed": true
+    },
+    {
+      "name": "both members can still read household accounts while cross-owner insert, update, delete and reassignment are blocked",
+      "passed": true
+    },
+    {
+      "name": "a missing account owner is rejected instead of silently assigned by migration 07",
+      "passed": true
+    },
+    {
+      "name": "remaining personal-settings authorization and lost-update gaps are exposed with rolled-back fictional probes",
+      "passed": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "RLS-PARTNER-WRITE",
+      "severity": "corrected-in-local-candidate-only",
+      "evidence": "The repository SQL permits a member to update a partner-owned account document within the same household.",
+      "scope": "Local reproduction from repository schema only; actual hosted policies were neither read nor tested.",
+      "required": "Candidate migration 07 is qualified below but is not deployed. Verify against the authorized isolated Supabase environment before any production decision."
+    },
+    {
+      "id": "RLS-PERSONAL-SETTINGS",
+      "severity": "release-blocker",
+      "evidence": "Even after migration 07, baseline household settings let one member alter the other member opening balance.",
+      "scope": "Fictional PostgreSQL only; hosted policies unknown.",
+      "required": "Protect personal settings server-side without preventing validated shared settings updates."
+    },
+    {
+      "id": "STALE-WRITE",
+      "severity": "release-blocker",
+      "evidence": "Two interleaved stale app document upserts lose the first client edit; the repository has no server compare-and-swap guard.",
+      "scope": "Deterministic local SQL interleaving, not an actual concurrent hosted-browser test.",
+      "required": "Implement atomic version checks and retry/conflict UI before multi-client qualification."
+    }
+  ],
+  "testsPassed": true,
+  "productionReady": false
+}
