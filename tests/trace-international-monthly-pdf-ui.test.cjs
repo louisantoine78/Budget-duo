@@ -117,7 +117,9 @@ async function main(){
  await test('monthly UI explicitly prohibits automatic PDF extraction and mutation',()=>{
   const script=read('trace-statement-monthly-ui-1.0.0.js');
   assert.doesNotMatch(script,/fetch\s*\(|\.upsert\s*\(|\.insert\s*\(/);
-  assert.match(script,/No automatic PDF text extraction/);
+  assert.match(script,/Limited local PDF text-layer suggestions/);
+  assert.match(script,/Aucune ligne n’est approuvée/);
+  assert.match(script,/TraceStatementPDFText\?\.scan/);
   assert.match(read('v5-app-5.37.0.js'),/if\(internationalPreviewMode\(\)\)window\.TraceMonthlyStatementUI\?\.mount/);
  });
  console.log(count+' fictional monthly PDF UX scenarios passed');
