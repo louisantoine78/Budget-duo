@@ -1487,6 +1487,12 @@ function reviewForeignPendingCsvExpense(t){
  const currency=bank?I.currency(bank):null,amount=bank?I.amountOnAccount(t,bank):null;
  const eligible=t&&bank&&bank.owner===me&&visibleBankAccounts(me).some(a=>a.id===bank.id)&&
   currency!=='CAD'&&t.source==='csv'&&t.type==='expense'&&t.status!=='confirmed'&&
+  // The simple CSV editor is native-only. Never reinterpret pre-valued FX
+  // or a different purchase currency as if it were the bank's native amount.
+  String(t.bankCurrency||'').toUpperCase()===currency&&
+  String(t.currency||currency).toUpperCase()===currency&&
+  I.exactMoney(t.amountOriginal??amount)===amount&&t.amountCAD==null&&
+  (t.bankRateCad==null||t.bankRateCad==='')&&
   !t.toAccountId&&!t.transferPurpose&&!t.relatedExpenseId&&!t.linkedTransactionId&&
   I.calendarDate(t.date)&&I.exactMoney(amount)!==null&&amount>0&&
   window.TraceImportGuide.safeForQuickApproval(accountType(bank),'expense',t.name||'')&&
