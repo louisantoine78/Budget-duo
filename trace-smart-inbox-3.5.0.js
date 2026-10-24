@@ -264,8 +264,10 @@ function applyApprovalConstraints(el){
  const cardMatch=bank?.type==='card'&&(type==='card_payment_received'||guide.cardStatementSettlementLabel(name)),
   valid=Boolean(type&&guide.allowed(type,bank?.type,dir)),
   foreign=(bank?.currency||'CAD').toUpperCase()!=='CAD',
-  safeForeignPurchase=foreign&&type==='expense'&&bank?.owner===bridge().currentOwner?.()&&
-   guide.safeForQuickApproval(bank?.type,'expense',name),
+  currentOwner=bridge().currentOwner?.(),
+  safeForeignPurchase=foreign&&type==='expense'&&!!bank?.owner&&!!currentOwner&&
+   bank.owner===currentOwner&&typeof guide.safeForQuickApproval==='function'&&
+   guide.safeForQuickApproval(bank.type,'expense',name),
   foreignReviewed=safeForeignPurchase&&!!el.querySelector('.smart-foreign-nature-confirm')?.checked;
  btn.disabled=btn.dataset.duplicateBlocked==='yes'||!valid||cardMatch||(foreign&&!foreignReviewed);
  btn.textContent=btn.dataset.duplicateBlocked==='yes'?'Déjà comptabilisée':

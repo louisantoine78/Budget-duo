@@ -96,5 +96,6 @@ test('foreign smart-inbox approval button is visibly disabled while CAD remains 
 });
 test('foreign screenshot editor explains that evidence remains pending',()=>{
  const ui=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.5.0.js'),'utf8');
- assert.match(ui,/Devise étrangère : la preuve reste conservée dans À vérifier/);
+ assert.match(ui,/Compte en devise étrangère : seuls les achats ordinaires peuvent être confirmés individuellement/);
+ assert.match(ui,/class="smart-foreign-nature-confirm"/);
 });
