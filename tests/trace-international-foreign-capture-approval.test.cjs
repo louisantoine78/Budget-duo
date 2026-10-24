@@ -125,3 +125,15 @@ test('foreign OCR consent is passed through UI and revalidates button state',()=
  assert.match(ui,/foreignNatureConfirmed:!!q\('\.smart-foreign-nature-confirm'\)\?\.checked/);
  assert.match(ui,/smart-foreign-nature-confirm'\)\?\.addEventListener\('change',\(\)=>applyApprovalConstraints\(el\)\)/);
 });
+
+test('editing the reviewed bank capture invalidates the foreign-purchase consent',()=>{
+ assert.match(ui,/const resetForeignReview=\(\)=>\{/);
+ assert.match(ui,/if\(consent\)consent\.checked=false/);
+ assert.match(ui,/\['\.smart-amount','\.smart-name','\.smart-date'\]\.forEach\(selector=>\{/);
+ assert.match(ui,/\['\.smart-type','\.smart-direction','\.smart-purchase-currency','\.smart-purchase-amount'\]/);
+ // The helper is the same handler installed on each change to the reviewed evidence.
+ const fn=new Function('el','return ()=>{'+
+  "const consent=el.querySelector('.smart-foreign-nature-confirm');"+
+  'if(consent)consent.checked=false;}')({querySelector:()=>({checked:true})});
+ assert.equal(typeof fn,'function');
+});

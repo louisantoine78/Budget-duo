@@ -589,7 +589,15 @@ function openDay(accountId,date){
     catch(e){busy=false;btn.disabled=false;btn.textContent='Associer les deux lignes sans nouvelle transaction';el.querySelector('.trace-smart-feedback').textContent=String(e.message||e);}
    });
    el.querySelector('.smart-who').onchange=()=>synchronizeRow(el);
+   const resetForeignReview=()=>{
+    const consent=el.querySelector('.smart-foreign-nature-confirm');
+    if(consent)consent.checked=false;
+   };
    el.querySelector('.smart-foreign-nature-confirm')?.addEventListener('change',()=>applyApprovalConstraints(el));
+   ['.smart-type','.smart-direction','.smart-purchase-currency','.smart-purchase-amount']
+    .forEach(field=>el.querySelector(field)?.addEventListener('change',()=>{
+     resetForeignReview();applyApprovalConstraints(el);
+    }));
    const updateIntlDest=()=>{
     const from=bridge().accounts().find(a=>a.id===account),
      to=bridge().accounts().find(a=>a.id===el.querySelector('.smart-target')?.value),
@@ -605,6 +613,7 @@ function openDay(accountId,date){
    updateDuplicateReview(el);
    ['.smart-amount','.smart-name','.smart-date'].forEach(selector=>{
     el.querySelector(selector)?.addEventListener('input',()=>{
+     resetForeignReview();
      if(selector==='.smart-name')synchronizeRow(el);
      updateDuplicateReview(el);
      if(selector==='.smart-amount'||selector==='.smart-date'||selector==='.smart-name')synchronizeRow(el);
