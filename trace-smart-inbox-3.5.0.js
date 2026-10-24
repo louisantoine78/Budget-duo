@@ -234,7 +234,9 @@ function rowForm(d,bank,accounts,known,expanded=false){
   (d.needsAmountReview?'<div class="trace-review-ocr-uncertain"><strong>Montant OCR incertain</strong>'+
    '<p>La lecture automatique n’est pas assez fiable. Compare le montant dans ce formulaire à celui de la capture, puis confirme ta vérification.</p>'+
    '<label class="trace-smart-confirm"><input type="checkbox" class="smart-amount-confirm"> J’ai vérifié ce montant sur la capture</label></div>':'')+
-  ((bank.currency||'CAD').toUpperCase()!=='CAD'?'<p class="trace-intl-help" role="status">Devise étrangère : la preuve reste conservée dans À vérifier. La confirmation bancaire sera proposée après qualification du parcours international. Aucun effet sur tes soldes ou ton budget.</p>':'')+
+  ((bank.currency||'CAD').toUpperCase()!=='CAD'?
+   '<div class="trace-intl-foreign-review" role="group"><p class="trace-intl-help">Compte en devise étrangère : seuls les achats ordinaires peuvent être confirmés individuellement avec un taux CAD historique daté. Les virements, paiements de carte et remboursements restent en attente.</p>'+
+   '<label class="trace-smart-confirm"><input type="checkbox" class="smart-foreign-nature-confirm"> J’ai vérifié sur mon relevé : cet achat est distinct et ne correspond ni à un virement ni à un paiement de carte.</label></div>':'')+
   '<div class="trace-smart-actions"><button class="primary smart-approve" type="button">Confirmer l’opération</button><button class="secondary smart-ignore" type="button">Écarter</button></div>'+
   '<div class="trace-smart-feedback" role="status"></div></div></article>';
 }
@@ -261,10 +263,13 @@ function applyApprovalConstraints(el){
  if(!btn)return;
  const cardMatch=bank?.type==='card'&&(type==='card_payment_received'||guide.cardStatementSettlementLabel(name)),
   valid=Boolean(type&&guide.allowed(type,bank?.type,dir)),
-  foreign=(bank?.currency||'CAD').toUpperCase()!=='CAD';
- btn.disabled=btn.dataset.duplicateBlocked==='yes'||!valid||cardMatch||foreign;
+  foreign=(bank?.currency||'CAD').toUpperCase()!=='CAD',
+  safeForeignPurchase=foreign&&type==='expense'&&bank?.owner===bridge().currentOwner?.()&&
+   guide.safeForQuickApproval(bank?.type,'expense',name),
+  foreignReviewed=safeForeignPurchase&&!!el.querySelector('.smart-foreign-nature-confirm')?.checked;
+ btn.disabled=btn.dataset.duplicateBlocked==='yes'||!valid||cardMatch||(foreign&&!foreignReviewed);
  btn.textContent=btn.dataset.duplicateBlocked==='yes'?'Déjà comptabilisée':
-  foreign?'À vérifier · devise étrangère':
+  foreign?(safeForeignPurchase?'Confirmer cet achat étranger':'À vérifier · devise étrangère'):
   cardMatch?'Rapproche ce paiement pour éviter un doublon':'Confirmer l’opération';
 }
 function synchronizeRow(el){
@@ -427,6 +432,7 @@ function readRow(el){
   toAccountId:q('.smart-target')?.value||'',investmentAccountId:q('.smart-savings-target')?.value||'',friendsAmount:q('.smart-friends').value,
   partnerAmount:q('.smart-partner').value,allowPossibleDuplicate:!!q('.smart-duplicate-confirm')?.checked,
   amountChecked:!d?.needsAmountReview||!!q('.smart-amount-confirm')?.checked,
+  foreignNatureConfirmed:!!q('.smart-foreign-nature-confirm')?.checked,
   creditChecked:!!q('.smart-credit-confirm')?.checked,verified:true};
 }
 function openUnknown(accountId){openDay(accountId,'');}
@@ -581,6 +587,7 @@ function openDay(accountId,date){
     catch(e){busy=false;btn.disabled=false;btn.textContent='Associer les deux lignes sans nouvelle transaction';el.querySelector('.trace-smart-feedback').textContent=String(e.message||e);}
    });
    el.querySelector('.smart-who').onchange=()=>synchronizeRow(el);
+   el.querySelector('.smart-foreign-nature-confirm')?.addEventListener('change',()=>applyApprovalConstraints(el));
    const updateIntlDest=()=>{
     const from=bridge().accounts().find(a=>a.id===account),
      to=bridge().accounts().find(a=>a.id===el.querySelector('.smart-target')?.value),

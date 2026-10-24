@@ -3200,10 +3200,13 @@ async function smartApproveDraft(id,v){
  if(!['expense','income','refund','transfer','external_transfer','external_refund'].includes(type))
   throw Error('Choisis la nature de ce mouvement.');
  const bankAccount=state.accounts.find(a=>a.id===accountId);
- // Foreign screenshot/OCR confirmation is blocked until a dedicated international review exists.
- // Preserve the original import draft, its native amount and its bank evidence.
- if(window.TraceInternational.currency(bankAccount)!=='CAD')
-  throw Error('Capture en devise étrangère : validation comptable indisponible. Cette ligne reste en attente pour une revue internationale.');
+ const foreignCurrency=window.TraceInternational.currency(bankAccount),foreignCapture=foreignCurrency!=='CAD';
+ // Foreign captures can book only individually reviewed, ordinary purchases.
+ // All special movement types and ambiguous bank descriptions remain pending.
+ if(foreignCapture&&(bankAccount.owner!==me||requestedType!=='expense'||type!=='expense'||
+     v.foreignNatureConfirmed!==true||
+     !window.TraceImportGuide.safeForQuickApproval(accountType(bankAccount),'expense',name)))
+  throw Error('Capture en devise étrangère : seuls les achats explicitement vérifiés peuvent être confirmés. Cette ligne reste en attente.');
  const accountKind=accountType(bankAccount);
  const expectedDirection=window.TraceImportGuide.direction(requestedType,accountKind,name);
  if(!window.TraceImportGuide.allowed(requestedType,accountKind,expectedDirection))
@@ -3260,12 +3263,24 @@ async function smartApproveDraft(id,v){
  if(['transfer','external_transfer','external_refund'].includes(type)&&state.transactions.some(t=>t.accountId===accountId&&t.date===date&&t.type===type&&
   Math.abs(Number(t.bankAmount??t.amountCAD)-amount)<.009&&normalizedMerchant(t.name)===normalizedMerchant(name)))
   throw Error('Ce mouvement semble déjà enregistré.');
- const currency=window.TraceInternational.currency(bankAccount),rateValue=String(v.manualFxRate||'').trim();
+ // The historical quote can be asynchronous. Never approve against evidence
+ // that changed while waiting for an FX rate.
+ const foreignEvidenceSignature=()=>JSON.stringify({
+  bank:bankAccount,draft:d,
+  transactions:state.transactions.map(t=>[t.id,t.status,t.accountId,t.date,t.name,t.type,
+   t.bankAmount,t.bankCurrency,t.amountCAD,t.toAccountId,t.toBankAmount]),
+  drafts:state.smartImports.filter(x=>x.kind==='smart_draft')
+   .map(x=>[x.id,x.status,x.accountId,x.date,x.name,x.amount])
+ });
+ const beforeForeignFx=foreignCapture?foreignEvidenceSignature():null;
+ const currency=foreignCurrency,rateValue=String(v.manualFxRate||'').trim();
  const rate=Number(rateValue);
  if(rateValue!==''&&(!Number.isFinite(rate)||rate<=0))throw Error('Taux de change invalide.');
  const quote=currency==='CAD'?null:rateValue?
   {currency,cadPerUnit:rate,date,source:'Taux saisi manuellement'}:
   await window.TraceInternational.getRate(currency,date);
+ if(foreignCapture&&foreignEvidenceSignature()!==beforeForeignFx)
+  throw Error('Une opération ou un compte a changé pendant la recherche du taux. Rouvre la capture.');
  const booking=window.TraceInternational.resolveBooking({
   account:bankAccount,bankAmount:amount,quote,date,originalCurrency:v.purchaseCurrency,
   originalAmount:v.purchaseAmount||null});
