@@ -1,0 +1,15 @@
+{
+  "id": "./trace-international-preview.html",
+  "name": "TRACE International — Laboratoire fictif",
+  "short_name": "TRACE Lab",
+  "description": "Préversion isolée, données fictives et modifications perdues au rechargement.",
+  "start_url": "./trace-international-preview.html",
+  "scope": "./trace-international-preview.html",
+  "display": "standalone",
+  "background_color": "#F7F5EF",
+  "theme_color": "#10382A",
+  "icons": [
+    {"src": "assets/trace-wallet-v1-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "assets/trace-wallet-v1-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

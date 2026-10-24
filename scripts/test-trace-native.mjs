@@ -9,7 +9,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const reportIndex=process.argv.indexOf('--report');
 const reportPath=reportIndex>=0?process.argv[reportIndex+1]:null;
 if(reportIndex>=0&&!reportPath)throw Error('--report requires an output path');
-const active=new Set(['sw.js','trace-pdfjs-local-loader-1.0.0.mjs']);
+const active=new Set(['sw.js','trace-international-preview-sw.js','trace-pdfjs-local-loader-1.0.0.mjs']);
 for(const entry of ['index.html','trace-international-preview.html']){
  const html=readFileSync(join(root,entry),'utf8');
  for(const m of html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/g)){

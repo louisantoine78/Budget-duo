@@ -14,7 +14,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; connect-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; worker-src 'self'; form-action 'none'; base-uri 'self';">
 <meta name="robots" content="noindex, nofollow">
 <title>TRACE International 5.37.0 | Laboratoire fictif</title>
-<link rel="manifest" href="manifest.webmanifest?v=5.31.2">
+<link rel="manifest" href="trace-international-preview.webmanifest">
 <link rel="icon" type="image/svg+xml" href="assets/trace-wallet-v1.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/trace-wallet-v1-180.png">
 <link rel="stylesheet" href="v5-5.31.17.css">
@@ -110,6 +110,7 @@
   <aside id="tracePreviewStatus" class="trace-intl-lab-banner" role="status">
    <strong>TRACE International 5.37.0 — LABORATOIRE</strong>
    <span>Données entièrement fictives · taux simulés · aucune connexion bancaire ni Supabase · modifications perdues au rechargement.</span>
+   <span id="tracePreviewOfflineStatus" aria-live="polite">Préparation du laboratoire hors connexion…</span>
   </aside>
   <header class="topbar">
     <div class="brand">
@@ -386,6 +387,7 @@
 <div id="traceSmartOverlay" class="trace-smart-overlay hidden"></div>
 
 <script src="trace-international-preview-fixtures-1.0.0.js"></script>
+<script src="trace-preview-pwa-1.0.0.js"></script>
 <script src="trace-deferred-debit-1.0.0.js"></script>
 <script src="trace-deferred-bank-review-1.0.0.js"></script>
 <script src="trace-deferred-lab-ui-1.0.0.js"></script>

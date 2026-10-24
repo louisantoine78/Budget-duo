@@ -437,19 +437,42 @@ let base;
   assert.match(await text('homeBalance'),/1\s*192,60/);await go('wealth');
   assert.match(await page.locator('[data-inv-account="'+euroSavingsId+'"]').innerText(),/320,00.*€/);
  });
- await test('offline navigation works in the loaded session and online reload resets only fictional data',async()=>{
+ await test('a full offline reload uses the dedicated static PWA and resets only fictional data',async()=>{
+  await page.waitForFunction(()=>window.TracePreviewPWA?.ready&&navigator.serviceWorker.controller);
   await context.setOffline(true);await go('home');
   await page.locator('[data-trace-view-account="demo-ca-current"]').click();
   assert.match(await text('homeBalance'),/3\s*270,00/);
   await go('wealth');await go('budget');
-  await context.setOffline(false);await boot();
+  await page.reload();
+  await page.waitForFunction(()=>window.__TRACE_PREVIEW_STATUS__?.boot==='ok');
+  await page.waitForFunction(()=>window.TracePDFJSLocalEngine?.version==='6.4.299');
   assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
   assert.match(await text('homeBalance'),/3\s*670,00/);
  });
- await test('no console exceptions, external requests or production service workers were used',async()=>{
+ await test('offline PDF extraction loads the actual cached local engine and worker',async()=>{
+  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  await page.locator('#traceStatementDrawer>summary').click();
+  await page.locator('#traceStatementAccount').selectOption('demo-fr-current');
+  await page.locator('#traceStatementFile').setInputFiles(path.join(__dirname,'fixtures/statements/fr-eur-multipage.pdf'));
+  await page.locator('#traceStatementExtract').click();
+  await page.locator('#traceStatementUseProposals').waitFor();
+  assert.equal(await page.locator('.trace-statement-proposal-list>div').count(),4);
+  assert.match(await text('traceStatementExtraction'),/Page 2, ligne 5/);
+  await context.setOffline(false);await boot();
+  assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
+ });
+ await test('the dedicated laboratory worker caches no credentials, financial records or bank statements',async()=>{
+  const cached=await page.evaluate(async()=>({
+   registrations:(await navigator.serviceWorker.getRegistrations()).map(r=>({scope:r.scope,script:r.active?.scriptURL})),
+   caches:await Promise.all((await caches.keys()).map(async name=>({name,urls:(await (await caches.open(name)).keys()).map(r=>r.url)})))
+  }));
+  assert.deepEqual(cached.registrations,[{scope:base+'/trace-international-preview.html',script:base+'/trace-international-preview-sw.js'}]);
+  assert.equal(cached.caches.length,1);assert.match(cached.caches[0].name,/^trace-lab-537:/);
+  for(const url of cached.caches[0].urls){
+   assert.ok(url.startsWith(base+'/'));
+   assert.doesNotMatch(url,/(?:config\.js|cloud\.js|index\.html|\/sw\.js|\.pdf$|supabase|fixtures\/statements)/);
+  }
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  assert.equal(await page.evaluate(async()=>
-   navigator.serviceWorker?(await navigator.serviceWorker.getRegistrations()).length:0),0);
  });
  console.log(results.length+' real Chromium candidate scenarios passed (not Safari or Supabase)');
 })().catch(error=>{results.push({name:'first failing boundary',passed:false,error:error.message});

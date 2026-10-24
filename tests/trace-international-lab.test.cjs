@@ -28,11 +28,13 @@ test('lab loads the actual versioned application and international modules in or
  assert.ok(names.indexOf('trace-international-ui-1.0.0.js')<names.indexOf('v5-app-5.37.0.js'));
  assert.ok(names.indexOf('trace-international-preview-fixtures-1.0.0.js')<names.indexOf('v5-app-5.37.0.js'));
 });
-test('lab does not import credentials, real Supabase SDK or a service worker',()=>{
+test('lab imports neither credentials, real Supabase SDK nor the production service worker',()=>{
  assert.doesNotMatch(html,/<script[^>]+src="(?:https?:\/\/|config\.js)/i);
  assert.doesNotMatch(html,/navigator\.serviceWorker\.register/);
  assert.doesNotMatch(html,/supabase\.min\.js/);
  assert.doesNotMatch(html,/trace-launch-v2\.html/);
+ assert.match(html,/href="trace-international-preview\.webmanifest"/);
+ assert.match(html,/src="trace-preview-pwa-1\.0\.0\.js"/);
  assert.match(html,/connect-src 'none'/);
  assert.match(html,/worker-src 'self';/);
  assert.match(html,/<script type="module" src="trace-pdfjs-local-loader-1\.0\.0\.mjs"/);
