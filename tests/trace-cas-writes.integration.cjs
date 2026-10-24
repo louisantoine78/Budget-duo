@@ -76,6 +76,18 @@ async function run(){
    await assert.rejects(rpcDelete(1,'accounts','partner',0),/TRACE_WRITE_CONFLICT/);
    assert.equal((await readDoc('accounts','partner')).data.owner,'partner');
   });
+  await check('arbitrary collections cannot be written by privileged RPC',async()=>{
+   await assert.rejects(rpcSave(1,'unknown_settings','intruder',
+    {id:'intruder',amountCAD:9000},null),/TRACE_WRITE_INVALID/);
+   const rows=(await db.query("select count(*)::integer as count from public.documents where collection='unknown_settings'")).rows;
+   assert.equal(rows[0].count,0);
+  });
+  await check('bank and investment accounts cannot be physically deleted',async()=>{
+   await assert.rejects(rpcDelete(1,'accounts','la',0),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcDelete(2,'accounts','partner',0),/TRACE_WRITE_FORBIDDEN/);
+   assert.equal((await readDoc('accounts','la')).data.owner,'la');
+   assert.equal((await readDoc('accounts','partner')).data.owner,'partner');
+  });
   await check('shared transactions remain editable by either authenticated member',async()=>{
    const data={id:'shared',amountCAD:10,type:'transfer',status:'pending'};
    await rpcSave(1,'transactions','shared',data,null);
