@@ -95,3 +95,20 @@ test('malformed persisted category does not enter financial client state',async(
  await assert.rejects(f.api.restoreStarterCategories(),/incohérent/);
  assert.equal(f.state.categories.length,0);
 });
+
+test('partial category recovery is additive even with existing budgets and archived rows',async()=>{
+ const archived={item_id:'transport',revision:3,data:{id:'transport',name:'Transport',archived:true}};
+ const f=fixture({existing:[existing,archived]});
+ f.state.categories=[existing.data,archived.data];
+ f.state.budgets=[{id:'october-budget',categoryId:'groceries',amount:250}];
+ await f.api.restoreStarterCategories();
+ assert.equal(f.state.categories.length,3);
+ assert.equal(f.rows.get('groceries').data.name,'Personnalisée');
+ assert.equal(f.rows.get('transport').data.archived,true);
+ assert.equal(f.state.budgets[0].amount,250);
+ assert.deepEqual(f.calls,['restaurants']);
+});
+test('manual additive repair is offered on an incomplete starter catalog',()=>{
+ assert.match(app,/STARTER_CATEGORIES\.some\(\(\[id\]\)=>!state\.categories\.some/);
+ assert.match(app,/Ajouter les catégories de départ manquantes/);
+});
