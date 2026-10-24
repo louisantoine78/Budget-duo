@@ -44,7 +44,7 @@ create or replace function public.trace_cas_save_document(
 )
 returns bigint
 language plpgsql security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $cas$
 declare actor_slot text; current_revision bigint;
 begin
@@ -104,7 +104,7 @@ create or replace function public.trace_cas_delete_document(
 )
 returns boolean
 language plpgsql security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $cas$
 declare actor_slot text; deleted_id text;
 begin
@@ -142,7 +142,7 @@ create or replace function public.trace_cas_save_household_settings(
 )
 returns bigint
 language plpgsql security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $cas$
 declare current_revision bigint;
 begin
