@@ -18,9 +18,10 @@ declare
   after_map jsonb;
   account_owner text;
 begin
-  -- Background migrations run as a privileged database role, not as a member.
-  -- The public authenticated role must never be able to bypass this check.
-  if current_user <> 'authenticated' then
+  -- SQL maintenance without an authenticated JWT may bypass this trigger,
+  -- but a SECURITY DEFINER RPC still carries auth.uid() and MUST be checked.
+  -- A direct authenticated request without a JWT fails closed.
+  if auth.uid() is null and current_user <> 'authenticated' then
     return new;
   end if;
 
