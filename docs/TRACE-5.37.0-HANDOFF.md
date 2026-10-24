@@ -1,3 +1,20 @@
+## Reprise suivante — protection FX, paiements carte et transfert bancaire natif (24 octobre 2026)
+
+**Statut : NO-GO.** Les correctifs suivants ont été enregistrés sur `trace-5.37.0-international-accounts-fx`, avec `[skip ci]`, après le HEAD documentaire `0d6295d1d7b6bce1ddb6bfe4251e98589b192424` :
+
+- `070b8e76d64ad978937b6e23e154dd37024a4e7b` : dans la validation individuelle CSV étrangère, nouvelle comparaison complète des mouvements bancaires similaires après l'attente d'une cotation FX. Une opération qui apparaît ou change de montant/statut pendant l'attente interdit la confirmation. **18/18 scénarios V8 fictifs** dans la suite CSV.
+- `bfb38d3a03bc270e94d8e313b9a353bdd2ae0350` : les captures d'un compte source CAD qui représentent un virement vers un autre compte conservent `toBankAmount` ET `toBankCurrency` du destinataire. Montant crédité à centimes exacts pour une devise différente, jamais un montant reconstruit depuis `amountCAD`. Refus de saisies fractionnaires ou manquantes, sans écriture financière.
+- `0c957b0a3c10ac58252caa18ed4af5b159d7511a` : paiement de carte par capture limité au courant correspondant à la carte, de même devise et pays. Si la carte historique n'est pas explicitement liée, le compte courant de règlement doit être unique ; plusieurs comptes plausibles sont bloqués. Cela empêche les remboursements imputés à une mauvaise dette sans empêcher le cas CAD historique non ambigu.
+- `bc7f5e738457d33e430e25a1599d0d766083566b` : tests des transferts et paiements de carte raccordés au vrai module `trace-movement-5.36.0.js` (source extraite sous V8), conservant `card_repayment` et aucun impact revenu/dépense.
+
+**Preuve globale réexécutée sur le HEAD de code `bc7f5e7` : 33/33 tests V8 fictifs, zéro échec** — 18 scénarios CSV étranger, 7 capture/statut/interface, 8 virements/paiements de carte. Les suites testent le code candidat et les modules FX/mouvements réels avec DOM, transport et modules Node simulés. Ceci n'est **PAS** une exécution Node CLI, PGlite/PostgreSQL, Chromium, Safari, Supabase hébergé ni un test à deux clients. Les suites Node 911 / Chromium 32 / SQL 17 antérieures ne sont pas réattribuées à ces commits.
+
+Les fichiers de production `index.html`, `sw.js`, `manifest.webmanifest`, `trace-version.json`, `v5-app-5.36.5.js` et les workflows sont inchangés. Aucune lecture/écriture des données Supabase réelles, aucun déploiement ni CI. `main` connu stable `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+
+**Prochaine porte bloquante :** retrouver un checkout isolé avec Node, PGlite 0.4.5, exécuter et corriger réellement migrations SQL 07/08/09 et suites natives ; reconstruire le SW laboratoire avec son script puis `--check`, qualifier Chromium/hors ligne et Safari iPhone. Fermer ensuite les flux étrangers restants, devises personnelles/Couple, différé connecté et préproduction sous sauvegarde/restore/rollback autorisés. Les captures de compte source non-CAD restent explicitement en attente : cette protection n'est pas leur finalisation. Ne proposer aucun GO.
+
+---
+
 ## Lot suivant — captures internationales en attente et statut de validation strict (24 octobre 2026)
 
 **NO-GO conservé.** Commits de code : `274414664eb480f73666b9a409437cee67dce54a` et `6bca9ab80caf1c7dfb1255db4f6285587c0dda5c` ; base : `104e2c6854f0873a2f6416b8c848bcbd209d22c9`. Seule la branche `trace-5.37.0-international-accounts-fx` a été modifiée, commits `[skip ci]`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` inchangée. Aucune CI, fusion, PR, deployment ou donnée Supabase réelle.

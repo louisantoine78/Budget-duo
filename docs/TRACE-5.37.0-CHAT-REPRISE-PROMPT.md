@@ -1,3 +1,19 @@
+# ADDENDUM PRIORITAIRE — NOUVEAUX LOTS FX ET CARTES (24 OCTOBRE 2026)
+
+Résous d'abord le véritable HEAD GitHub de `trace-5.37.0-international-accounts-fx` ; **dernier HEAD de code** précédant cet addendum : `bc7f5e738457d33e430e25a1599d0d766083566b`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` reste absolument interdite de modification.
+
+Nouveaux commits après `0d6295d1d7b6bce1ddb6bfe4251e98589b192424` :
+1. `070b8e76d64ad978937b6e23e154dd37024a4e7b` : contrôle des ressemblances bancaires refait après recherche asynchrone du taux FX sur validation CSV étrangère ; nouveaux tests de concurrence pendant l'attente.
+2. `bfb38d3a03bc270e94d8e313b9a353bdd2ae0350` : `toBankCurrency` conservée sur virement depuis un compte CAD vers compte étranger ; montant reçu exact, rejet subcentime et absence de montant.
+3. `0c957b0a3c10ac58252caa18ed4af5b159d7511a` : carte liée ou source courante unique si héritage, pays et devise identiques pour paiement de carte, pas de dette attribuée au mauvais compte.
+4. `bc7f5e738457d33e430e25a1599d0d766083566b` : tests de paiement carte avec véritable module `TraceMovement`.
+
+`tests/trace-international-foreign-csv-confirm.test.cjs` 18/18, `tests/trace-international-capture-confirm-guards.test.cjs` 7/7, `tests/trace-smart-cross-currency-transfer-guards.test.cjs` 8/8 : **33/33 scénarios réellement réexécutés sous V8 avec modules Node et cloud simulés** sur ce HEAD. **Aucun nouveau test Node CLI, PostgreSQL/PGlite, Chromium/Safari ou hébergé.** Aucun SQL/migration réel, aucune lecture/écriture financière Supabase, aucun déploiement, aucune modification de `main` ou des fichiers d'entrée production.
+
+Le prochain chantier obligatoire reste : checkout fictif et dépendances → tests Node + migrations 07/08/09 réels → correction → reconstruction du SW laboratoire via script → navigateur/QA authentique → flux étrangers restants, différé, devise Couple, sauvegarde/restauration/rollback sous autorisation. **NO-GO** jusqu'aux preuves et autorisation explicite. Le HANDOFF et la RELEASE-CHECKLIST en tête du dépôt détaillent les limites.
+
+---
+
 # ADDENDUM DE REPRISE LE PLUS RÉCENT — CAPTURES BANCAIRES / STATUTS (24 OCTOBRE 2026)
 
 **À lire avant le reste.** Toujours résoudre le HEAD réel de `trace-5.37.0-international-accounts-fx`, sans se fier aux anciennes valeurs. Dernier HEAD **de code** contrôlé avant cet addendum : `6bca9ab80caf1c7dfb1255db4f6285587c0dda5c`. `main` 5.36.5 doit rester à `02c70f50e7e51da79b77a91dde96a03c6c719909`.

@@ -1,3 +1,18 @@
+## Portes sécurité ajoutées — cotation FX et virements/cartes (24 octobre 2026)
+
+**NO-GO.** Les commits `070b8e7`, `bfb38d3`, `0c957b0`, `bc7f5e7` concernent uniquement la branche internationale.
+
+- [x] Attente de la cotation CAD : comparaison des mouvements ressemblants refaite avant approbation CSV étrangère.
+- [x] Capture source CAD → autre devise : conservation explicite du montant réellement reçu et de sa devise native ; centimes exacts, aucune conversion fictive.
+- [x] Paiement de carte : source liée ou unique et non ambiguë, même devise/pays que la carte ; garde contre imputation à une autre carte ou source.
+- [x] Contrôle croisé du code courant : **33/33 scénarios V8 fictifs réussis** (18 CSV, 7 capture, 8 transferts), y compris vrai moteur FX et vrai référentiel `TraceMovement`. Ce n'est pas un test Node CLI ou PostgreSQL.
+- [ ] Rejouer sur un checkout natif et vérifier SQL 07/08/09 dans PGlite/PostgreSQL fictif et multi-session ; toujours pas de preuve hébergée.
+- [ ] Régénérer le SW laboratoire par constructeur (l'asset actuel est périmé), vérifier hors ligne, Chromium, puis vrai Safari.
+- [ ] Implémenter les autres natures internationales, différé, devise Couple et scénario d'écriture concurrente.
+- [ ] Autorisation explicite avant sauvegarde de données réelles, migrations, cutover, rollback et déploiement.
+
+---
+
 ## Portes additionnelles — captures étrangères et lots (24 octobre 2026)
 
 **NO-GO maintenu.** Les deux commits `274414664eb480f73666b9a409437cee67dce54a` et `6bca9ab80caf1c7dfb1255db4f6285587c0dda5c` ne touchent que le laboratoire candidat et ses tests, jamais `main`, Supabase réel ou le déploiement.
