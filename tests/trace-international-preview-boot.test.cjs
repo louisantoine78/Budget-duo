@@ -71,7 +71,12 @@ async function main(){
  });
  await test('switch primary account to French EUR changes only fictional view',async()=>{
   const select=element('#traceIntlPrimary');assert.equal(typeof select.onchange,'function');
+  const before=element('#homeBalance').textContent;
   select.value='demo-fr-current';await select.onchange();
+  assert.equal(element('#homeBalance').textContent,before,'Selection awaits explicit confirmation');
+  assert.equal(element('#sheetTitle').textContent,'Changer le compte principal');
+  assert.equal(typeof element('#tracePrimaryConfirm').onclick,'function');
+  await element('#tracePrimaryConfirm').onclick();
   assert.match(element('#homeBalance').textContent,/1[\s\u00a0\u202f]?208/);
   assert.match(element('#homeBalance').textContent,/€/);
   assert.equal(externalRequests,0);
