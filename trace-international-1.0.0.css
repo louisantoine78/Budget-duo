@@ -226,3 +226,28 @@
 .trace-csv-comparison{display:grid;gap:6px;background:#f5f7f2;border-radius:10px;margin:9px 12px;padding:12px;font-size:13px;overflow-wrap:anywhere}
 .trace-csv-comparison>small{color:#65766b;line-height:1.5}
 .trace-csv-invalid{border:1px solid #ead3bd;border-radius:12px;padding:12px;margin-top:12px;font-size:13px}
+
+
+/* Candidate 5.37 — actionable, accessible write-conflict notice. */
+.trace-conflict-alert {
+  position: fixed;
+  z-index: 1400;
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  max-width: 520px;
+  margin-inline: auto;
+  padding: 17px 18px;
+  border: 1px solid #b77d4f;
+  border-radius: 19px;
+  background: #fffaf1;
+  box-shadow: 0 12px 36px rgba(28, 42, 33, .18);
+  color: #24372e;
+}
+.trace-conflict-alert strong { display: block; font-size: 15px; line-height: 1.35; }
+.trace-conflict-alert p { margin: 8px 0 14px; font-size: 13px; line-height: 1.5; }
+.trace-conflict-alert .primary { width: 100%; min-height: 44px; }
+@media (max-width: 350px) {
+ .trace-conflict-alert { left: 8px; right: 8px; padding: 13px; }
+ .trace-conflict-alert strong { font-size: 14px; }
+}
