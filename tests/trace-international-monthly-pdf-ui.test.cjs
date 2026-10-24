@@ -111,7 +111,7 @@ async function main(){
   assert.equal(JSON.stringify(x.transactions),snapshot);
  });
  await test('month end calculator handles February leap years',()=>{
-  assert.deepEqual(root.TraceMonthlyStatementUI.monthBoundaries('2028-02'),
+  assert.deepEqual({...root.TraceMonthlyStatementUI.monthBoundaries('2028-02')},
    {from:'2028-02-01',to:'2028-02-29'});
  });
  await test('monthly UI explicitly prohibits automatic PDF extraction and mutation',()=>{

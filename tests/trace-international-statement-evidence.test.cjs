@@ -35,8 +35,9 @@ test('US and FR thousands separators are correctly normalized without rounding',
   line(1,3,'14/10/2026',{amount:'12.30',direction:'out'})
  ]});
  assert.equal(s.issues.length,0);
- assert.deepEqual(s.ready.map(x=>x.amount),[1234.56,1234.56,12.3]);
- assert.deepEqual(s.ready.map(x=>x.direction),['out','in','out']);
+ // Copy primitive values into this Node realm; the engine runs in node:vm.
+ assert.deepEqual(Array.from(s.ready,x=>x.amount),[1234.56,1234.56,12.3]);
+ assert.deepEqual(Array.from(s.ready,x=>x.direction),['out','in','out']);
 });
 test('both debit and credit amounts reject invented bank movement',()=>{
  const s=single({debit:'42,50',credit:'20,00'});

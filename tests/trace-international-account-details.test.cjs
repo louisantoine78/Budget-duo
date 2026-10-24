@@ -6,7 +6,7 @@ const app=read('v5-app-5.37.0.js'),html=read('trace-international-preview.html')
 const i=app.indexOf('/* TRACE 5.37 UX — read-only account overview and detail'),
  j=app.indexOf('\nfunction internationalHome(){',i);
 assert.ok(i>0&&j>i);
-const module=app.slice(i,j);
+const accountModule=app.slice(i,j);
 function fixture(opts={}){
  const state={accounts:[
   {id:'ca',owner:'la',name:'Compte CA',type:'checking',currency:'CAD'},
@@ -38,7 +38,7 @@ function fixture(opts={}){
   showTab(){},traceNotice(){},
   saveHouseholdSettings:async()=>{calls.save++;if(opts.fail)throw Error('failure')}
  };
- const fn=new Function(...Object.keys(deps),module+
+ const fn=new Function(...Object.keys(deps),accountModule+
  '\nreturn {openAccountsOverview,openTraceAccountDetail,openTraceAccountActivity,'+
  'confirmTracePrimaryAccount,traceAccountNative,traceAccountCAD,traceAccountOperations,'+
  'getFilter:()=>activityAccountFilter,getMonth:()=>activityMonth};');
