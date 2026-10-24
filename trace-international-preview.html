@@ -240,9 +240,17 @@
         <button class="tab" data-tab="import">Importer</button>
       </div>
       <div id="activityTransactions">
-        <label class="trace-account-activity-filter" for="activityAccountFilter">Compte affiché
-          <select class="input" id="activityAccountFilter"><option value="all">Tous les comptes</option></select>
-        </label>
+        <div class="trace-activity-filters" aria-label="Filtres de l'historique">
+          <label for="activityAccountFilter">Compte<select class="input" id="activityAccountFilter"><option value="all">Tous les comptes</option></select></label>
+          <label for="activityCategoryFilter">Catégorie<select class="input" id="activityCategoryFilter"><option value="all">Toutes les catégories</option></select></label>
+          <label for="activityNatureFilter">Nature<select class="input" id="activityNatureFilter"><option value="all">Toutes les natures</option></select></label>
+          <label for="activityCurrencyFilter">Devise du compte<select class="input" id="activityCurrencyFilter"><option value="all">Toutes les devises</option></select></label>
+          <label for="activityStatusFilter">Statut<select class="input" id="activityStatusFilter"><option value="confirmed">Confirmées</option></select></label>
+        </div>
+        <div class="trace-activity-filter-actions">
+          <button type="button" class="trace-activity-pending-action" id="activityShowPending">À valider</button>
+          <button type="button" class="linkbtn" id="activityResetFilters">Réinitialiser</button>
+        </div>
         <div class="activity-stats">
           <div class="statbox"><span>Dépenses</span><b id="activityExpenses">—</b></div>
           <div class="statbox"><span>Revenus</span><b id="activityIncome">—</b></div>
