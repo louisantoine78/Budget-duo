@@ -163,3 +163,15 @@
 .trace-share-disclaimer{padding:4px 2px}
 @media(max-width:375px){.trace-share-history-row strong{white-space:normal;text-align:right}.trace-share-friend>summary{padding:11px}.trace-share-hero{padding:14px}.trace-share-advance-row{flex-direction:column}.trace-share-advance-row>small{max-width:100%;text-align:left}}
 @media(prefers-reduced-motion:reduce){.trace-share-friend,.trace-share-hero{scroll-behavior:auto}}
+
+
+/* TRACE 5.37 premium one-tap account viewing, Safari-friendly and read-only. */
+.trace-intl-view-group{display:grid;gap:7px;min-width:0;margin:13px 0 8px}
+.trace-intl-view-label{font-size:11px;font-weight:800;color:#285c49;letter-spacing:.025em}
+.trace-intl-switch{display:flex;gap:7px;min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:2px 1px 6px;-webkit-overflow-scrolling:touch}
+.trace-intl-chip{flex:0 0 auto;min-height:44px;max-width:190px;padding:9px 13px;background:#fff;color:#365b4b;border:1px solid #d6e6dc;border-radius:999px;box-shadow:0 2px 8px rgba(26,73,49,.045);font-size:12px;font-weight:770;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;touch-action:manipulation;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}
+.trace-intl-chip.is-active,.trace-intl-chip[aria-pressed="true"]{background:#205742;border-color:#205742;color:#fff;box-shadow:0 5px 13px rgba(24,76,52,.16)}
+.trace-intl-chip:focus-visible{outline:3px solid #6eb093;outline-offset:2px}
+.trace-intl-view-note{font-size:11px;line-height:1.4;color:#758c7e;margin:0}
+@media(max-width:390px){.trace-intl-chip{max-width:148px;font-size:11px;padding:9px 11px}}
+@media(prefers-reduced-motion:reduce){.trace-intl-chip{transition:none}}
