@@ -150,3 +150,32 @@ test('a draft changing during FX lookup cannot be overwritten by approval',async
  assert.equal(c.t.amountOriginal,50);
  assert.match(c.node('#foreignCsvError').textContent,/données ont changé/);
 });
+
+test('pending foreign bank imports cannot bypass individual FX review through bulk approval',()=>{
+ const start=app.indexOf('function legacyImportNatureReady(t){');
+ const end=app.indexOf('async function validatePendingAll(){',start);
+ assert.ok(start>0&&end>start);
+ const accounts=[{id:'eur',currency:'EUR',type:'checking'},
+  {id:'cad',currency:'CAD',type:'checking'}];
+ const fakeWindow={
+  TraceMovement:{fromStored:()=> 'expense',get:()=>({id:'expense',direction:-1})},
+  TraceImportGuide:{allowed:()=>true,cardStatementSettlementLabel:()=>false,
+   safeForQuickApproval:()=>true},
+  TraceInternational:{currency:bank=>bank.currency}
+ };
+ const gate=new Function('state','window','accountType',
+  app.slice(start,end)+'return legacyImportNatureReady;')(
+  {accounts},fakeWindow,bank=>bank.type);
+ for(const source of ['csv','image','ocr','pdf']){
+  for(const natureReviewed of [false,true]){
+   assert.equal(gate({accountId:'eur',name:'Coffee',source,status:'pending',
+    type:'expense',natureReviewed}),false);
+  }
+ }
+ assert.equal(gate({accountId:'cad',name:'Coffee',source:'csv',status:'pending',
+  type:'expense'}),true);
+ assert.equal(gate({accountId:'eur',name:'Coffee',source:'csv',status:'confirmed',
+  type:'expense',natureReviewed:true}),true);
+ assert.equal(gate({accountId:'eur',name:'Coffee',source:'manual',status:'pending',
+  type:'expense'}),true);
+});

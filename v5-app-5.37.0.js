@@ -2816,6 +2816,9 @@ function legacyImportNatureReady(t){
     String(t.date||'')<=target.openingDate)return false;
  }
  if(!['image','ocr','pdf','csv'].includes(t.source))return true;
+ // A bank import in a foreign currency requires individual review, never bulk booking.
+ // Individually reviewed and confirmed entries retain compatibility.
+ if(window.TraceInternational.currency(bank)!=='CAD'&&t.status==='pending')return false;
  if(accountType(bank)==='card'&&window.TraceImportGuide.cardStatementSettlementLabel(t.name))return false;
  return t.natureReviewed===true||window.TraceImportGuide.safeForQuickApproval(accountType(bank),t.type,t.name);
 }
