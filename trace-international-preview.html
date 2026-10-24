@@ -128,15 +128,7 @@
         <div><div class="eyebrow" id="homeMonthLabel">Novembre 2026</div><h1 class="title" id="homeGreeting">Bonjour</h1></div>
         <div class="segment" id="homeScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
       </div>
-      <div class="grid grid-2">
-        <article class="card hero-card">
-          <div class="label">Disponible sur le budget</div>
-          <div class="big" id="homeBudgetAvailable">—</div>
-          <div class="sub" id="homeBudgetSub">Chargement…</div>
-          <div class="progress"><i id="homeBudgetProgress" style="width:0%"></i></div>
-          <div class="progress-row"><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
-        </article>
-        <article class="card liquid clickable" id="balanceCard">
+      <div class="trace-home-priority" aria-label="Synthèse financière"><article class="card liquid clickable" id="balanceCard">
           <div class="eyebrow">Solde estimé</div>
           <div class="money" id="homeBalance">—</div>
           <span class="badge" id="reconcileBadge">À rapprocher</span>
@@ -146,9 +138,14 @@
           <div id="traceIntlHome" class="trace-intl-home" aria-label="Sélection du compte et situation internationale"></div>
           <div class="mini-account trace-celi-monthly"><span>Versé aux CELI ce mois</span><span id="homeCELITransfers">—</span></div>
           <div class="scope-label">Solde courant − dette carte · les CELI sont dans Patrimoine</div>
-        </article>
-      </div>
-
+        </article><article class="card hero-card trace-home-available">
+          <div class="label">Disponible sur mon budget</div>
+          <div class="big" id="homeBudgetAvailable">—</div>
+          <div class="sub" id="homeBudgetSub">Chargement…</div>
+          <div class="progress"><i id="homeBudgetProgress" style="width:0%"></i></div>
+          <div class="progress-row"><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
+        </article></div>
+      <div class="section-head trace-home-month-head"><h2>Ce mois-ci</h2><small>Revenus · dépenses · marge</small></div>
       <div class="grid grid-3" style="margin-top:14px">
         <button class="card kpi clickable" data-kpi="income"><div class="k-label">Revenus</div><div class="k-value" id="homeIncome">—</div><div class="k-note" id="homeIncomeNote">Voir le détail</div></button>
         <button class="card kpi clickable" data-kpi="spending"><div class="k-label">Dépenses</div><div class="k-value" id="homeSpending">—</div><div class="k-note" id="homeSpendingNote">Voir le détail</div></button>
@@ -292,9 +289,20 @@
         <div><div class="eyebrow">Patrimoine</div><h1 class="title">Mes actifs</h1></div>
         <div class="segment" id="wealthScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
       </div>
-      <article class="card hero-card" style="min-height:160px"><div class="label">Patrimoine suivi</div><div class="big" id="wealthTotal">—</div><div class="sub" id="wealthSub">Liquidités, épargne et investissements</div></article>
-      <div class="section-head"><h2>Comptes</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
-      <div class="portfolio-grid" id="assetGrid"></div>
+      <section class="trace-wealth-section" aria-label="Épargne">
+        <div class="section-head trace-wealth-section-head"><h2>Épargne</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
+        <div class="portfolio-grid trace-wealth-grid" id="wealthSavingsGrid"></div>
+      </section>
+      <section class="trace-wealth-section" aria-label="Placements">
+        <div class="section-head trace-wealth-section-head"><h2>Placements</h2></div>
+        <div class="portfolio-grid trace-wealth-grid" id="wealthInvestmentsGrid"></div>
+      </section>
+      <section class="trace-wealth-net-section" aria-label="Patrimoine net accessible">
+        <div class="section-head trace-wealth-section-head"><h2>Patrimoine net accessible</h2></div>
+        <article class="card hero-card trace-wealth-net-card"><div class="label">Valorisation indicative</div><div class="big" id="wealthTotal">—</div><div class="sub" id="wealthSub">Liquidités, épargne, placements et dettes</div><p class="trace-wealth-note">Le patrimoine n'est pas nécessairement disponible immédiatement. Un solde ou un taux manquant reste à vérifier.</p></article>
+        <div class="section-head trace-wealth-section-head"><h2>Trésorerie et comptes</h2></div>
+        <div class="portfolio-grid trace-wealth-grid" id="assetGrid"></div>
+      </section>
       <div class="section-head"><h2>Comprendre mon patrimoine</h2><button class="linkbtn" id="wealthAnalysis">Détails</button></div>
       <article class="card clickable" id="wealthChart"><div class="chart" id="wealthTrend"></div><div class="legend"><span><i class="dot dark"></i>Patrimoine</span></div></article>
     </section>
