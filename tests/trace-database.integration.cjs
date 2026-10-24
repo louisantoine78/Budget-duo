@@ -221,12 +221,69 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
    await tx.exec('rollback to savepoint ownership_probe');
   });
   assert.equal(digest(await rows()),before);
-  findings.push({id:'RLS-PARTNER-WRITE',severity:'release-blocker',
+  findings.push({id:'RLS-PARTNER-WRITE',severity:'corrected-in-local-candidate-only',
    evidence:'The repository SQL permits a member to update a partner-owned account document within the same household.',
    scope:'Local reproduction from repository schema only; actual hosted policies were neither read nor tested.',
-   required:'Qualify and enforce the validated per-owner write rules before production.'});
+   required:'Candidate migration 07 is qualified below but is not deployed. Verify against the authorized isolated Supabase environment before any production decision.'});
  });
- console.log(checks.length+' PostgreSQL integration checks passed; '+findings.length+' release-blocking finding');
+ await test('candidate migration 07 is repeatable and preserves every financial row',async()=>{
+  const before=digest(await rows()),sql=await fs.readFile(path.join(root,'migrations/07-trace-account-owner-write-guard.sql'),'utf8');
+  await db.exec(sql);await db.exec(sql);assert.equal(digest(await rows()),before);
+ });
+ await test('both members can still read household accounts while cross-owner insert, update, delete and reassignment are blocked',async()=>{
+  for(const user of [uid(1),uid(2)])assert.equal((await asUser(user,tx=>tx.query("select item_id from public.documents where household_id=$1 and collection='accounts'",[householdA.household_id]))).rows.length,4);
+  for(const [user,target] of [[uid(1),'partner'],[uid(2),'ca']]){
+   assert.equal((await asUser(user,tx=>tx.query("update public.documents set data=data||'{\"name\":\"DENIED\"}'::jsonb,updated_by=$1 where household_id=$2 and collection='accounts' and item_id=$3 returning item_id",[user,householdA.household_id,target]))).rows.length,0);
+   assert.equal((await asUser(user,tx=>tx.query("delete from public.documents where household_id=$1 and collection='accounts' and item_id=$2 returning item_id",[householdA.household_id,target]))).rows.length,0);
+  }
+  await assert.rejects(asUser(uid(1),tx=>put(tx,'accounts',{id:'forged-owner',owner:'partner',currency:'CAD'},uid(1))),/row-level security/);
+  await assert.rejects(asUser(uid(1),tx=>put(tx,'investment_accounts',{id:'forged-savings',owner:'partner',currency:'EUR'},uid(1))),/row-level security/);
+  const own={...accounts[0],name:'Own account permitted'};
+  await asUser(uid(1),tx=>put(tx,'accounts',own,uid(1)));
+  await assert.rejects(asUser(uid(1),tx=>put(tx,'accounts',{...own,owner:'partner'},uid(1))),/row-level security/);
+  const partner={...accounts[3],name:'Partner own account permitted'};
+  await asUser(uid(2),tx=>put(tx,'accounts',partner,uid(2)));
+  assert.equal((await rows()).find(x=>x.item_id==='partner').data.name,partner.name);
+  // Existing shared settlement documents remain compatible with baseline RLS.
+  await asUser(uid(2),tx=>put(tx,'transactions',{id:'shared-settlement',type:'transfer',status:'pending'},uid(2)));
+ });
+ await test('a missing account owner is rejected instead of silently assigned by migration 07',async()=>{
+  const sql=await fs.readFile(path.join(root,'migrations/07-trace-account-owner-write-guard.sql'),'utf8');
+  const probe=new PGlite();
+  try{
+   await probe.exec(`create table public.documents(collection text,data jsonb);
+    insert into public.documents values('accounts','{"id":"unowned"}');`);
+   await assert.rejects(probe.exec(sql),/Account ownership is incomplete/);
+  }finally{await probe.close();}
+ });
+ await test('remaining personal-settings authorization and lost-update gaps are exposed with rolled-back fictional probes',async()=>{
+  const before=(await db.query('select settings from public.households where id=$1',[householdA.household_id])).rows[0].settings;
+  await asUser(uid(1),async tx=>{
+   await tx.exec('savepoint settings_probe');
+   const changed=await tx.query("update public.households set settings=jsonb_set(settings,'{accountOpeningBalances,partner}','9999'::jsonb,true),updated_by=$1 where id=$2 returning settings",[uid(1),householdA.household_id]);
+   assert.equal(changed.rows[0].settings.accountOpeningBalances.partner,9999);
+   await tx.exec('rollback to savepoint settings_probe');
+  });
+  assert.deepEqual((await db.query('select settings from public.households where id=$1',[householdA.household_id])).rows[0].settings,before);
+  // Explicit deterministic interleaving of two stale client snapshots, not a
+  // load/concurrency stress test and not a hosted Supabase transport test.
+  await asUser(uid(1),async tx=>{
+   await tx.exec('savepoint stale_probe');
+   const a=(await tx.query("select data from public.documents where household_id=$1 and collection='accounts' and item_id='ca'",[householdA.household_id])).rows[0].data;
+   const b={...a};await put(tx,'accounts',{...a,name:'CLIENT A'},uid(1));
+   await put(tx,'accounts',{...b,country:'US'},uid(1));
+   const saved=(await tx.query("select data from public.documents where household_id=$1 and collection='accounts' and item_id='ca'",[householdA.household_id])).rows[0].data;
+   assert.equal(saved.name,b.name);assert.equal(saved.country,'US');
+   await tx.exec('rollback to savepoint stale_probe');
+  });
+  findings.push({id:'RLS-PERSONAL-SETTINGS',severity:'release-blocker',
+   evidence:'Even after migration 07, baseline household settings let one member alter the other member opening balance.',
+   scope:'Fictional PostgreSQL only; hosted policies unknown.',required:'Protect personal settings server-side without preventing validated shared settings updates.'});
+  findings.push({id:'STALE-WRITE',severity:'release-blocker',
+   evidence:'Two interleaved stale app document upserts lose the first client edit; the repository has no server compare-and-swap guard.',
+   scope:'Deterministic local SQL interleaving, not an actual concurrent hosted-browser test.',required:'Implement atomic version checks and retry/conflict UI before multi-client qualification.'});
+ });
+ console.log(checks.length+' PostgreSQL integration checks passed; '+findings.filter(f=>f.severity==='release-blocker').length+' remaining release-blocking findings');
 })().catch(error=>{checks.push({name:'first failing SQL boundary',passed:false,error:error.message});console.error(error.message);process.exitCode=1;
 }).finally(async()=>{
  const index=process.argv.indexOf('--report');
