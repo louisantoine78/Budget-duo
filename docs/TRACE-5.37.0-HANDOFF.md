@@ -158,3 +158,14 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 - **Série QA du lot** : 53/53 contrôles V8 simulés ciblant édition, câblage, boot de la preview et garde-fous financiers. Les 121 tests ciblés précédents sont historiques au commit précédent et ne remplacent pas une campagne complète sur HEAD.
 - **Prochain point de reprise impératif :** la checklist `docs/TRACE-5.37.0-RELEASE-CHECKLIST.md`. Priorités : intégrer sans régression le débit différé et les imports au vrai modèle de transactions **sur données fictives isolées**, puis faire les tests Node natifs et un vrai parcours Safari iPhone, avant de demander l'accord pour la production.
 - **Remarque :** ce commit documentaire fait avancer HEAD après le déploiement confirmé `2c312f` mais **ne change aucun JavaScript ni le HTML déployé** ; ne pas confondre un décalage SHA documentaire avec une différence fonctionnelle.
+
+
+## Référentiel validé des 5 onglets — audit de parité UX (23 octobre 2026)
+
+**IMPORTANT :** après confrontation du cahier de reprise validé aux fichiers de la candidate/preview, **l'UX 5.37.0 n'est PAS entièrement intégrée**. Arrêter d'annoncer « cinq onglets finalisés » ou de considérer le succès des tests du moteur comme une validation du rendu. La **source opérationnelle d'acceptation** et de l'ordre des changements visuels est désormais **`docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md`** (créée au commit `dc00ae40e8aa43c2203ee3e1a96ffda0393e511e`).
+
+**Écarts concrets :** Accueil commence par Disponible puis Solde en grille au lieu de Solde puis Disponible ; vrai panneau Comptes et confirmation/étoile du principal incomplets. Budget conserve correctement 3 familles + année, mais accès Activité filtrée et présentation à finir. Activité affiche seulement Transactions/Importer, journal non groupé par jour, partage complet encore dans une modale depuis Accueil, filtres et PDF mensuel intégrés incomplets. Patrimoine commence par Patrimoine suivi/Comptes, pas Épargne/Placements puis net ; épargne liée encore limitée à CAD. Navigation a 5 onglets, mais Safari n'est pas validé et Patrimoine ne doit jamais se couper.
+
+**Ordre de livraison** : conformité visible Accueil/Patrimoine, navigation Compte/Budget → Activité, nouvelle structure Activité/Partage puis intégration financière/imports, tests complets et iPhone. Ne pas réouvrir les choix déjà validés. Les dates, les devises et les calculs historiques doivent rester intacts.
+
+**Sécurité** : aucun code modifié lors de ce seul audit ; ne pas déployer ni toucher à `main`, données Supabase réelles, CI ou PickPoint. À la prochaine reprise, commencer par ce document en plus du présent handoff et de la checklist de release.
