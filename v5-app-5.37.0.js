@@ -449,7 +449,7 @@ function insightCategoryDrilldown(month,scopeValue,categoryId){
   '<div class="trace-insight-sheet-intro"><strong>'+money(Math.max(0,amount))+'</strong><small>'+esc(monthLabel(month))+' · ta part selon le filtre sélectionné</small></div>'+
   (expenses.length?expenses.map(txRow).join(''):'<div class="empty-note">Aucune opération confirmée dans cette catégorie.</div>')+
   '<div class="trace-insights-foot">Les virements et paiements de carte sont exclus des dépenses de consommation.</div>'+  '<button type="button" class="primary full" id="traceBudgetToActivity" style="margin-top:12px">Voir dans Activité ›</button>');
- $('[data-tx-open]').forEach(el=>el.onclick=()=>editTransaction(el.dataset.txOpen));
+ $$('[data-tx-open]').forEach(el=>el.onclick=()=>editTransaction(el.dataset.txOpen));
  $('#traceBudgetToActivity').onclick=()=>openActivityCategory(month,categoryId);
 }
 function insightWealthData(scopeValue,bankResult,ports,missing){
