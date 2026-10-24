@@ -163,7 +163,14 @@
    scanning=true;extraction=null;renderExtraction();
    say('Lecture locale de la couche texte simple, aucune donnée transmise…');
    try{
-    const result=await root.TraceStatementPDFText.scan(picked);
+    // PDF.js is used ONLY after a locally vendored/audited engine is present.
+    // Without it, retain the existing narrow parser and manual fallback.
+    const pdfjs=root.TracePDFJSLocalEngine;
+    const rich=pdfjs&&typeof pdfjs.getDocument==='function'&&
+     root.TraceStatementPDFJS?.scan;
+    const result=rich?
+     await root.TraceStatementPDFJS.scan(picked,{engine:pdfjs}):
+     await root.TraceStatementPDFText.scan(picked);
     if(token!==scanToken||picked!==file)return;
     extraction=result;renderExtraction();
     say(result.status==='review_required'?
