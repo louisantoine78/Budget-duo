@@ -48,3 +48,30 @@
 .trace-debtor-hint{font-size:12px;line-height:1.55;color:#6f8278;margin:0}
 @media(max-width:480px){.trace-debtor-row{grid-template-columns:1fr 1fr;gap:10px;padding:10px}.trace-debtor-row .trace-debtor-remove{grid-column:1/-1;justify-self:end;min-width:100px}.trace-debtor-heading{align-items:flex-start}.trace-debtor-add{max-width:100%}}
 @media(max-width:350px){.trace-debtor-row{grid-template-columns:minmax(0,1fr)}.trace-debtor-row .trace-debtor-remove{grid-column:1}}
+
+
+/* TRACE International 5.37 — approved premium home and wealth hierarchy. */
+.trace-home-priority{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:13px}
+.trace-home-priority>*{min-width:0}
+.trace-home-priority #balanceCard{position:relative;overflow:hidden;background:linear-gradient(145deg,#fffdf9 5%,#eef7f0 100%);border:1px solid rgba(34,93,69,.14);border-radius:21px;box-shadow:0 10px 30px rgba(20,69,53,.08),0 2px 5px rgba(20,69,53,.025);padding:20px 18px}
+.trace-home-priority #balanceCard .money{color:#123f38;font-size:clamp(30px,7.4vw,44px);line-height:1.1;letter-spacing:-.035em;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.trace-home-priority #balanceCard .eyebrow{color:#55796a;font-weight:750;letter-spacing:.06em}
+.trace-home-priority .trace-home-available{min-height:unset;border-radius:19px;border:1px solid rgba(24,82,59,.08);background:#fffefb;box-shadow:0 6px 19px rgba(21,66,50,.035)}
+.trace-home-priority .trace-home-available .big{font-variant-numeric:tabular-nums;letter-spacing:-.027em}
+.trace-home-month-head{margin-top:19px!important}
+.trace-home-month-head h2,.trace-wealth-section-head h2{font-weight:800;letter-spacing:-.02em}
+.trace-wealth-section{min-width:0;margin-top:17px}
+.trace-wealth-section+.trace-wealth-section{margin-top:11px}
+.trace-wealth-section-head{margin-top:0}
+.trace-wealth-grid{min-width:0;margin-bottom:5px}
+.trace-wealth-grid .asset-card{min-width:0;border-radius:17px;border:1px solid rgba(20,80,54,.1);box-shadow:0 4px 16px rgba(20,66,50,.035);transition:transform .15s ease,box-shadow .15s ease}
+.trace-wealth-grid .asset-card:focus-visible{outline:3px solid #418e73;outline-offset:2px}
+.trace-wealth-grid .asset-card:hover{box-shadow:0 7px 23px rgba(20,66,50,.075)}
+.trace-wealth-empty{border:1px dashed #c7d9cf;background:linear-gradient(140deg,#fbfdfa,#f4f9f5);border-radius:17px;color:#537363;font-size:13px;line-height:1.55;padding:16px}
+.trace-wealth-net-section{margin-top:22px;padding-top:4px}
+.trace-wealth-net-card{border:1px solid rgba(24,77,56,.1);background:linear-gradient(145deg,#f4f9f3,#ffffff);border-radius:20px;box-shadow:0 9px 25px rgba(18,61,48,.05)}
+.trace-wealth-net-card .big{font-variant-numeric:tabular-nums;letter-spacing:-.03em;color:#12483a}
+.trace-wealth-note{font-size:12px;color:#6b8276;line-height:1.5;margin:10px 0 0}
+.navbtn>span:last-child{white-space:nowrap;overflow-wrap:normal;word-break:normal;max-width:100%;font-size:clamp(8px,2.35vw,10px);letter-spacing:-.01em}
+@media(max-width:420px){.trace-home-priority{gap:12px}.trace-home-priority #balanceCard{padding:19px 15px}.trace-wealth-section{margin-top:15px}.trace-wealth-net-section{margin-top:19px}}
+@media(prefers-reduced-motion:reduce){.trace-wealth-grid .asset-card{transition:none}}
