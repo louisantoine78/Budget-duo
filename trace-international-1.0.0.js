@@ -131,6 +131,49 @@
   const selected=account.fxAutoUpdate===false?stored:liveQuotes[code]||stored;
   return verifiedQuote(selected,code)?selected:null;
  };
+ const resolveAccountEdit=({account,owner,accounts=[],transactions=[],reconciliations=[],investmentOperations=[],openingBalances={},input={}}={})=>{
+  if(!account||account.owner!==owner||!['checking','card'].includes(account.type)||account.archived)
+   throw Error('Seuls tes comptes actifs peuvent être modifiés.');
+  const name=String(input.name??account.name??'').trim(),code=String(input.currency??currency(account)).toUpperCase(),
+   bankCountry=String(input.country??country(account)).toUpperCase();
+  if(name.length<2||name.length>70||!valid(code)||!['CA','FR','OTHER'].includes(bankCountry))
+   throw Error('Vérifie le nom, le pays et la devise du compte.');
+  if(accounts.some(a=>a.id!==account.id&&a.owner===owner&&!a.archived&&
+   String(a.name||'').trim().toLocaleLowerCase('fr')===name.toLocaleLowerCase('fr')))
+   throw Error('Un compte actif porte déjà ce nom.');
+  const hasHistory=transactions.some(t=>t.accountId===account.id||t.toAccountId===account.id)||
+   reconciliations.some(r=>r.accountId===account.id)||investmentOperations.some(o=>o.bankAccountId===account.id)||
+   exactMoney(openingBalances[account.id])!==null;
+  if(code!==currency(account)&&hasHistory)
+   throw Error('La devise est verrouillée pour préserver les montants natifs et l’historique. Crée un autre compte.');
+  const next={...account,name,currency:code,country:bankCountry};
+  if(account.type==='card'){
+   const linked=input.settlementAccountId===undefined?account.settlementAccountId:input.settlementAccountId;
+   const bank=accounts.find(a=>a.id===linked&&!a.archived&&a.owner===owner&&a.type==='checking'&&
+    currency(a)===code&&country(a)===bankCountry);
+   if(!bank&&!( !linked&&!account.settlementAccountId&&code===currency(account)&&bankCountry===country(account)))
+    throw Error('La carte doit être associée à ton compte courant actif de même pays et même devise.');
+   next.settlementAccountId=bank?.id||null;
+  }else if(accounts.some(a=>a.type==='card'&&!a.archived&&a.settlementAccountId===account.id&&
+   (currency(a)!==code||country(a)!==bankCountry)))
+   throw Error('Réassocie les cartes liées avant de changer le pays ou la devise de ce compte.');
+  return next;
+ };
+ const resolveAccountArchive=({account,accounts=[],owner,primaryId,archived=true,date}={})=>{
+  if(!account||account.owner!==owner||!['checking','card'].includes(account.type)||!calendarDate(date))
+   throw Error('Action non autorisée sur ce compte.');
+  if(archived){
+   const main=primary(accounts,owner,primaryId);
+   if(main?.type==='checking'&&main.id===account.id)
+    throw Error('Choisis et confirme un autre compte principal avant cet archivage.');
+   if(accounts.some(a=>a.type==='card'&&!a.archived&&a.settlementAccountId===account.id))
+    throw Error('Réassocie ou archive d’abord les cartes liées à ce compte.');
+  }else if(account.type==='card'&&account.settlementAccountId&&
+   !accounts.some(a=>a.id===account.settlementAccountId&&!a.archived&&a.owner===owner&&a.type==='checking'&&
+    currency(a)===currency(account)&&country(a)===country(account)))
+   throw Error('Réactive d’abord le compte courant de règlement de cette carte.');
+  return{...account,archived:Boolean(archived),archivedAt:archived?date:null};
+ };
  const fetchDailyRate=async(code,date,transport)=>{
   const c=String(code||'').toUpperCase();
   if(!valid(c))throw Error('Devise non prise en charge');
@@ -252,5 +295,6 @@
   return next;
  };
  root.TraceInternational=Object.freeze({valid,currency,currencies,country,mode,money,exactMoney,calendarDate,amountOnAccount,primary,snapshot,
-  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,investmentBankAmount,amountOnInvestment,valuationQuote,verifiedForeignFriendRefund,fxValue});
+  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,investmentBankAmount,amountOnInvestment,valuationQuote,
+  resolveAccountEdit,resolveAccountArchive,verifiedForeignFriendRefund,fxValue});
 })(typeof window!=='undefined'?window:globalThis);

@@ -538,10 +538,10 @@ function openAccountsOverview(){
  $('#traceAccountManage').onclick=openAccountSettings;
  $('#traceAccountsClose').onclick=closeSheet;
 }
-function openTraceAccountDetail(id){
+function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
  const a=state.accounts.find(x=>x.id===id&&['la','partner'].includes(x.owner)&&
-  ['checking','card'].includes(accountType(x))&&!x.archived&&
-  (homeScope==='couple'||x.owner===me));
+  ['checking','card'].includes(accountType(x))&&
+  (householdView||homeScope==='couple'||x.owner===me));
  if(!a){openAccountsOverview();return;}
  const currency=window.TraceInternational.currency(a);
  const related=state.accounts.filter(x=>x.id!==a.id&&!x.archived&&
@@ -563,7 +563,7 @@ function openTraceAccountDetail(id){
  };
  openSheet(shortAccountLabel(a),
   '<div class="trace-account-detail-hero"><span class="trace-account-detail-kicker">'+
-  esc(traceAccountTitle(a))+' · '+esc(currency)+' · '+esc(a.country||'Pays à définir')+'</span>'+
+  esc(traceAccountTitle(a))+' · '+esc(currency)+' · '+esc(a.country||'Pays à définir')+(a.archived?' · Archivé':'')+'</span>'+
   '<strong>'+esc(traceAccountNative(a))+'</strong><small>'+traceAccountCAD(a)+'</small></div>'+
   '<div class="trace-account-detail-info">'+
   '<div><span>Compte</span><b>'+esc(shortAccountLabel(a))+'</b></div>'+
@@ -574,7 +574,7 @@ function openTraceAccountDetail(id){
     related.map(x=>shortAccountLabel(x)).join(', '):'Aucun lien indiqué')+'</b></div>'+
   '<div><span>Dernier rapprochement</span><b>'+esc(reconcile?.date||'À effectuer')+'</b></div>'+
   '</div>'+
-  (a.owner===me&&accountType(a)==='checking'?
+  (a.owner===me&&!a.archived&&accountType(a)==='checking'?
   '<button type="button" class="trace-intl-set-primary" id="traceAccountSelectPrimary">'+
   (state.household.primaryBankAccountByOwner?.[me]===a.id?'★ Compte principal':'☆ Définir comme principal')+'</button>':'')+
   '<div class="section-head"><h2>Deux dernières opérations</h2></div>'+
@@ -582,18 +582,18 @@ function openTraceAccountDetail(id){
     '<p class="empty-note">Aucune opération enregistrée sur ce compte.</p>')+'</div>'+
   '<button type="button" class="primary full" id="traceAccountAllTx" style="margin-top:12px">Voir toutes les opérations</button>'+
   '<button type="button" class="secondary full" id="traceAccountDetailBack" style="margin-top:8px">Retour aux comptes</button>');
- $('#traceAccountDetailBack').onclick=openAccountsOverview;
+ $('#traceAccountDetailBack').onclick=typeof onBack==='function'?onBack:openAccountsOverview;
  $('#traceAccountAllTx').onclick=()=>openTraceAccountActivity(a.id);
  const primary=$('#traceAccountSelectPrimary');
- if(primary)primary.onclick=()=>confirmTracePrimaryAccount(a.id,()=>openTraceAccountDetail(a.id));
+ if(primary)primary.onclick=()=>confirmTracePrimaryAccount(a.id,()=>openTraceAccountDetail(a.id,{householdView,onBack}));
 }
 function openTraceAccountActivity(id){
- const account=state.accounts.find(a=>a.id===id&&!a.archived&&
+ const account=state.accounts.find(a=>a.id===id&&
   ['la','partner'].includes(a.owner)&&['checking','card'].includes(accountType(a)));
  if(!account)return;
  const latest=traceAccountOperations(id).find(t=>/^\d{4}-\d\d-\d\d$/.test(String(t.date||'')));
  activityAccountFilter=id;
- activityFilters={category:'all',nature:'all',currency:'all',status:'confirmed'};
+ activityFilters={category:'all',nature:'all',currency:'all',status:'all'};
  if(latest)activityMonth=latest.date.slice(0,7);
  closeSheet();navigate('activity');renderActivity();showTab('transactions');
 }
@@ -3252,12 +3252,12 @@ function traceActivitySelect(id,items,value,onChange){
  node.onchange=()=>{onChange(node.value);renderActivity();};
 }
 function traceActivityControls(){
- const accounts=state.accounts.filter(a=>!a.archived&&['la','partner'].includes(a.owner)&&
+ const accounts=state.accounts.filter(a=>['la','partner'].includes(a.owner)&&
   ['checking','card'].includes(accountType(a)));
  if(activityAccountFilter!=='all'&&!accounts.some(a=>a.id===activityAccountFilter))
   activityAccountFilter='all';
  traceActivitySelect('activityAccountFilter',[['all','Tous les comptes'],
-  ...accounts.map(a=>[a.id,shortAccountLabel(a)+' · '+window.TraceInternational.currency(a)])],
+  ...accounts.map(a=>[a.id,shortAccountLabel(a)+' · '+window.TraceInternational.currency(a)+(a.archived?' · Archivé':'')])],
   activityAccountFilter,v=>{activityAccountFilter=v;});
  const categories=state.categories.filter(c=>!c.archived||
   state.transactions.some(t=>t.categoryId===c.id)).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
@@ -4221,10 +4221,83 @@ function openRenameBankAccount(id){
   }
  };
 }
+function openBankMetadata(id){
+ const account=state.accounts.find(a=>a.id===id&&a.owner===me&&!a.archived);
+ if(!account)return;
+ const I=window.TraceInternational,before=JSON.stringify(account),
+  history=state.transactions.some(t=>t.accountId===id||t.toAccountId===id)||
+   state.reconciliations.some(r=>r.accountId===id)||state.investmentOperations.some(o=>o.bankAccountId===id)||
+   I.exactMoney(state.household.accountOpeningBalances?.[id])!==null;
+ openSheet('Paramètres du compte',
+  '<p class="trace-intl-help">Les modifications de nom ou de rattachement ne recalculent aucune opération passée. Les montants natifs et les budgets historiques sont conservés.</p>'+
+  '<label class="label2">Nom du compte<input class="input" id="traceBankMetaName" maxlength="70" value="'+esc(account.name||'')+'"></label>'+
+  '<div class="formrow"><label class="label2">Pays<select class="input" id="traceBankMetaCountry"><option value="CA">Canada</option><option value="FR">France</option><option value="OTHER">Autre pays</option></select></label>'+
+  '<label class="label2">Devise native<select class="input" id="traceBankMetaCurrency"'+(history?' disabled':'')+'>'+I.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></label></div>'+
+  (history?'<p class="trace-intl-help">La devise est verrouillée car ce compte possède un solde ou un historique. Pour une autre devise, ajoute un autre compte.</p>':'')+
+  '<div class="setting-summary"><span>Modèle bancaire</span><b>'+esc(accountType(account)==='card'?(account.paymentMode==='deferred'?'Débit différé · activation bloquée':'Carte de crédit'):'Débit immédiat')+'</b></div>'+
+  (accountType(account)==='card'?'<label class="label2">Compte de règlement<select class="input" id="traceBankMetaSettlement"></select></label>':'')+
+  '<p id="traceBankMetaError" class="trace-bank-setup-error" role="alert"></p>'+
+  '<button type="button" class="primary full" id="traceBankMetaSave">Confirmer les modifications</button>'+
+  '<button type="button" class="secondary full" id="traceBankMetaArchive" style="margin-top:8px">Archiver ce compte</button>'+
+  '<button type="button" class="secondary full" id="traceBankMetaBack" style="margin-top:8px">Retour à mes comptes</button>');
+ $('#traceBankMetaCountry').value=I.country(account);$('#traceBankMetaCurrency').value=I.currency(account);
+ const links=()=>{
+  const node=$('#traceBankMetaSettlement');if(!node)return;
+  const old=node.value||account.settlementAccountId;
+  const possible=visibleBankAccounts(me).filter(a=>accountType(a)==='checking'&&
+   I.currency(a)===$('#traceBankMetaCurrency').value&&I.country(a)===$('#traceBankMetaCountry').value);
+  node.innerHTML='<option value="">À associer</option>'+possible.map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
+  if(possible.some(a=>a.id===old))node.value=old;
+ };
+ $('#traceBankMetaCountry').onchange=links;$('#traceBankMetaCurrency').onchange=links;links();
+ $('#traceBankMetaBack').onclick=openAccountSettings;
+ $('#traceBankMetaArchive').onclick=()=>confirmBankArchive(id,true);
+ $('#traceBankMetaSave').onclick=async()=>{
+  const button=$('#traceBankMetaSave');button.disabled=true;
+  try{
+   if(state.accounts.find(a=>a.id===id)!==account||JSON.stringify(account)!==before)
+    throw Error('Le compte a changé. Rouvre ses paramètres avant de continuer.');
+   const next=I.resolveAccountEdit({account,owner:me,accounts:state.accounts,transactions:state.transactions,
+    reconciliations:state.reconciliations,investmentOperations:state.investmentOperations,
+    openingBalances:state.household.accountOpeningBalances||{},input:{
+     name:$('#traceBankMetaName').value,country:$('#traceBankMetaCountry').value,currency:$('#traceBankMetaCurrency').value,
+     ...(accountType(account)==='card'?{settlementAccountId:$('#traceBankMetaSettlement').value}:{} )}});
+   await saveDocument('accounts',next);Object.assign(account,next);renderAll();openAccountSettings();
+  }catch(error){button.disabled=false;$('#traceBankMetaError').textContent=error.message||'Modification impossible.';}
+ };
+}
+function confirmBankArchive(id,archived=true){
+ const account=state.accounts.find(a=>a.id===id&&a.owner===me);if(!account)return;
+ const I=window.TraceInternational,before=JSON.stringify(account);
+ const prepare=()=>I.resolveAccountArchive({account,owner:me,accounts:state.accounts,
+  primaryId:state.household.primaryBankAccountByOwner?.[me],archived,date:localDateISO()});
+ try{prepare();}catch(error){
+  openSheet('Compte à conserver actif','<p class="trace-intl-help">'+esc(error.message)+'</p><button type="button" class="primary full" id="traceArchiveBack">Retour à mes comptes</button>');
+  $('#traceArchiveBack').onclick=openAccountSettings;return;
+ }
+ openSheet(archived?'Archiver le compte':'Réactiver le compte',
+  '<p>Confirmer '+(archived?'l’archivage':'la réactivation')+' de <b>'+esc(account.name)+'</b> ?</p>'+
+  '<p class="trace-intl-help">'+(archived?'Il sera retiré de la trésorerie active et des nouveaux imports.':'Il sera à nouveau proposé pour les imports et la trésorerie.')+
+  ' Ses opérations, ses soldes de référence et ses budgets historiques sont conservés. Aucun mouvement financier n’est créé.</p>'+
+  '<p id="traceArchiveError" role="alert" class="trace-bank-setup-error"></p>'+
+  '<button type="button" class="primary full" id="traceArchiveConfirm">Confirmer</button>'+
+  '<button type="button" class="secondary full" id="traceArchiveCancel" style="margin-top:8px">Annuler</button>');
+ $('#traceArchiveCancel').onclick=openAccountSettings;
+ $('#traceArchiveConfirm').onclick=async()=>{
+  const button=$('#traceArchiveConfirm');button.disabled=true;
+  try{
+   if(state.accounts.find(a=>a.id===id)!==account||JSON.stringify(account)!==before)
+    throw Error('Le compte a changé. Recommence depuis Mes comptes.');
+   const next=prepare();await saveDocument('accounts',next);Object.assign(account,next);renderAll();openAccountSettings();
+  }catch(error){button.disabled=false;$('#traceArchiveError').textContent=error.message||'Action impossible.';}
+ };
+}
 function openAccountSettings(){
  const all=state.accounts.filter(a=>a.id!=='cash'&&a.type!=='cash'&&!a.archived&&['la','partner'].includes(a.owner));
  const accounts=bankSettingsScope==='couple'?all:all.filter(a=>a.owner===me);
  const mine=accounts.filter(a=>a.owner===me);
+ const archived=state.accounts.filter(a=>a.archived&&['la','partner'].includes(a.owner)&&
+  (bankSettingsScope==='couple'||a.owner===me)&&['checking','card'].includes(accountType(a)));
  const balances=state.household.accountOpeningBalances||{};
  const dates=state.household.accountOpeningBalanceDates||{};
  const modes=state.household.accountOpeningBalanceModes||{};
@@ -4253,18 +4326,26 @@ function openAccountSettings(){
      '<label class="label2">Moment du solde</label><select class="input account-mode" data-id="'+esc(a.id)+'">'+
      '<option value="start"'+(modes[a.id]!=='end'?' selected':'')+'>Début de la journée (jour inclus)</option>'+
      '<option value="end"'+(modes[a.id]==='end'?' selected':'')+'>Fin de la journée (jour exclu)</option></select>':
-     '<div class="trace-bank-partner-balance"><span>Solde estimé</span><b>'+
-      (estimate===null?'À configurer':accountType(a)==='card'?
-        (estimate<=0?money(Math.abs(estimate))+' de dette':'Avoir estimé '+money(estimate)):bankMoney(estimate))+
+     '<div class="trace-bank-partner-balance"><span>Solde estimé</span><b>'+esc(traceAccountNative(a))+
       '</b></div>')+
-    '</div>';
+    '<div class="trace-account-settings-actions"><button type="button" class="secondary" data-details-bank="'+esc(a.id)+'">Détails et opérations</button>'+
+    (editable?'<button type="button" class="secondary" data-config-bank="'+esc(a.id)+'">Paramètres</button>':'')+'</div></div>';
   }).join(''):'<div class="empty-note">Aucun compte bancaire n’est encore configuré pour cette vue.</div>')+
   (mine.length?'<button class="primary full" id="saveAccountSettings" style="margin-top:16px">Enregistrer mes soldes</button>':'')+
   '<button class="secondary full" id="traceAddBankAccount" type="button" style="margin-top:9px">+ Ajouter un de mes comptes</button>'+
+  (archived.length?'<details class="trace-archived-accounts"><summary>Comptes archivés · '+archived.length+'</summary>'+
+   archived.map(a=>'<div class="trace-archived-account"><span><b>'+esc(shortAccountLabel(a))+'</b><small>'+window.TraceInternational.currency(a)+' · Historique conservé</small></span>'+
+    '<button type="button" class="secondary" data-archive-history="'+esc(a.id)+'">Historique</button>'+
+    (a.owner===me?'<button type="button" class="secondary" data-restore-bank="'+esc(a.id)+'">Réactiver</button>':'')+'</div>').join('')+'</details>':'')+
   '<p class="trace-bank-setup-footer">Compte courant : revenus et virements. Carte de crédit : achats du quotidien ; son paiement depuis le courant n’est pas une deuxième dépense.</p>'+
   settingsBack());
  $$('[data-bank-scope]').forEach(button=>button.onclick=()=>{bankSettingsScope=button.dataset.bankScope==='couple'?'couple':'mine';openAccountSettings();});
  $$('[data-rename-bank]').forEach(button=>button.onclick=()=>openRenameBankAccount(button.dataset.renameBank));
+ $$('[data-config-bank]').forEach(button=>button.onclick=()=>openBankMetadata(button.dataset.configBank));
+ $$('[data-details-bank]').forEach(button=>button.onclick=()=>openTraceAccountDetail(button.dataset.detailsBank,
+  {householdView:bankSettingsScope==='couple',onBack:openAccountSettings}));
+ $$('[data-archive-history]').forEach(button=>button.onclick=()=>openTraceAccountActivity(button.dataset.archiveHistory));
+ $$('[data-restore-bank]').forEach(button=>button.onclick=()=>confirmBankArchive(button.dataset.restoreBank,false));
  $$('[data-primary-bank]').forEach(button=>button.onclick=()=>{
   confirmTracePrimaryAccount(button.dataset.primaryBank,openAccountSettings);
  });

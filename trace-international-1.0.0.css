@@ -208,3 +208,10 @@
 .trace-trend-bars>span{align-self:center;color:#819188;font-size:14px}
 .trace-trend-col>small{font-size:10px;text-transform:capitalize;color:#526c5b}
 .trace-trend-col>b{font-size:10px;font-weight:650;color:#214d3e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trace-account-settings-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.trace-account-settings-actions button,.trace-archived-account button{min-height:44px;font-size:12px}
+.trace-archived-accounts{margin-top:16px;border:1px solid #dce8df;border-radius:14px;padding:10px 12px;background:#f7faf6}
+.trace-archived-accounts>summary{min-height:44px;display:list-item;font-size:13px;font-weight:750;color:#295b47;cursor:pointer}
+.trace-archived-account{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 0;border-top:1px solid #e1e9e2}
+.trace-archived-account>span{display:grid;gap:4px;flex:1 1 130px;min-width:0;font-size:13px;overflow-wrap:anywhere}
+.trace-archived-account small{font-size:11px;color:#536e60}

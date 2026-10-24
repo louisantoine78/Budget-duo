@@ -11,12 +11,16 @@ const root=path.resolve(__dirname,'..'),results=[],external=[],errors=[],workers
 const reportIndex=process.argv.indexOf('--report'),reportPath=reportIndex<0?null:process.argv[reportIndex+1];
 let browser,server,page,context;
 let euroSavingsId;
+let backupBankId;
 const test=async(name,fn)=>{await fn();results.push({name,passed:true});console.log('PASS '+name)};
 const text=id=>page.locator('#'+id).innerText();
 const selectPrimary=async id=>{
  const control=page.locator('.trace-intl-primary-control');
  if(!await control.evaluate(el=>el.open))await control.locator('summary').click();
  await page.locator('#traceIntlPrimary').selectOption(id);
+};
+const accountSettings=async()=>{
+ await page.locator('#profileBtn').click();await page.locator('#settingsAccounts').click();
 };
 const go=async name=>{await page.locator('[data-nav="'+name+'"]').click();
  await page.locator('.page[data-page="'+name+'"]').waitFor({state:'visible'})};
@@ -370,6 +374,68 @@ let base;
   const tile=page.locator('#wealthSavingsGrid [data-inv-account]').filter({hasText:'CHF sans solde fictif'});
   assert.match(await tile.innerText(),/À configurer/);assert.doesNotMatch(await tile.innerText(),/0,00/);
   assert.equal(await text('wealthTotal'),'Total incomplet');
+ });
+ await test('account metadata preserves historical currency and partner accounts remain read-only in settings',async()=>{
+  await accountSettings();
+  await page.locator('[data-config-bank="demo-fr-current"]').click();
+  assert.equal(await page.locator('#traceBankMetaCurrency').isDisabled(),true);
+  await page.locator('#traceBankMetaName').fill('France · compte EUR validé');
+  await page.locator('#traceBankMetaSave').click();
+  await page.locator('[data-bank-scope="couple"]').click();
+  assert.equal(await page.locator('[data-config-bank="demo-partner-current"]').count(),0);
+  await page.locator('[data-details-bank="demo-partner-current"]').click();
+  assert.equal(await page.locator('#traceAccountSelectPrimary').count(),0);
+  assert.match(await text('sheetBody'),/Titulaire/);
+  await page.locator('#closeSheet').click();
+ });
+ await test('card reassociation uses one valid CAD settlement account without changing any budget or historical cash',async()=>{
+  await accountSettings();await page.locator('[data-bank-scope="mine"]').click();
+  await page.locator('#traceAddBankAccount').click();
+  await page.locator('#traceNewBankName').fill('CAD règlement de secours');
+  await page.locator('#traceNewBankAmount').fill('1000');
+  await page.locator('#traceNewBankDate').fill('2026-10-01');
+  await page.locator('#traceNewBankMode').selectOption('start');
+  await page.locator('#traceSaveNewBank').click();
+  backupBankId=await page.locator('.trace-bank-account').filter({hasText:'CAD règlement de secours'}).locator('[data-config-bank]').getAttribute('data-config-bank');
+  await page.locator('[data-config-bank="demo-ca-card"]').click();
+  await page.locator('#traceBankMetaSettlement').selectOption(backupBankId);
+  await page.locator('#traceBankMetaSave').click();await page.locator('#closeSheet').click();
+  await go('home');const budget=await text('homeBudgetAvailable');
+  await page.locator('[data-trace-view-account="'+backupBankId+'"]').click();
+  assert.match(await text('homeBalance'),/570,00/);
+  await page.locator('[data-trace-view-account="demo-ca-current"]').click();
+  assert.match(await text('homeBalance'),/3\s*700/);
+  await accountSettings();await page.locator('[data-config-bank="demo-ca-card"]').click();
+  await page.locator('#traceBankMetaSettlement').selectOption('demo-ca-current');
+  await page.locator('#traceBankMetaSave').click();await page.locator('#closeSheet').click();
+  assert.match(await text('homeBalance'),/3\s*270/);assert.equal(await text('homeBudgetAvailable'),budget);
+ });
+ await test('archiving requires a different confirmed principal and preserves filtered transaction history',async()=>{
+  const budget=await text('homeBudgetAvailable');await accountSettings();
+  await page.locator('[data-config-bank="demo-fr-current"]').click();
+  await page.locator('#traceBankMetaArchive').click();
+  assert.match(await text('sheetBody'),/autre compte principal/);
+  await page.locator('#traceArchiveBack').click();
+  await page.locator('[data-primary-bank="demo-ca-current"]').click();
+  await page.locator('#tracePrimaryConfirm').click();
+  await page.locator('[data-config-bank="demo-fr-current"]').click();
+  await page.locator('#traceBankMetaArchive').click();await page.locator('#traceArchiveConfirm').click();
+  assert.equal(await page.locator('[data-config-bank="demo-fr-current"]').count(),0);
+  await page.locator('.trace-archived-accounts>summary').click();
+  await page.locator('[data-archive-history="demo-fr-current"]').click();
+  assert.equal(await page.locator('#activityAccountFilter').inputValue(),'demo-fr-current');
+  assert.match(await page.locator('#activityAccountFilter option:checked').innerText(),/Archivé/);
+  assert.match(await text('transactionList'),/Boulangerie/);
+  await go('home');assert.equal(await text('homeBudgetAvailable'),budget);
+ });
+ await test('restoring an archived account brings back the exact native balance and retained savings links',async()=>{
+  await accountSettings();await page.locator('.trace-archived-accounts>summary').click();
+  await page.locator('[data-restore-bank="demo-fr-current"]').click();await page.locator('#traceArchiveConfirm').click();
+  assert.equal(await page.locator('[data-config-bank="demo-fr-current"]').count(),1);
+  await page.locator('#closeSheet').click();await go('home');
+  await page.locator('[data-trace-view-account="demo-fr-current"]').click();
+  assert.match(await text('homeBalance'),/1\s*192,60/);await go('wealth');
+  assert.match(await page.locator('[data-inv-account="'+euroSavingsId+'"]').innerText(),/320,00.*€/);
  });
  await test('offline navigation works in the loaded session and online reload resets only fictional data',async()=>{
   await context.setOffline(true);await go('home');
