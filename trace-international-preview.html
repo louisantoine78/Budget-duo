@@ -33,6 +33,7 @@
 <link rel="stylesheet" href="trace-insights-1.0.0.css">
 <link rel="stylesheet" href="trace-card-payment-detail-1.0.0.css">
 <link rel="stylesheet" href="trace-international-1.0.0.css">
+<link rel="stylesheet" href="trace-statement-monthly-ui-1.0.0.css">
 <link rel="stylesheet" href="trace-duplicate-compare-1.0.0.css">
 <link rel="stylesheet" href="onboarding-2.0.0.css">
 <link rel="stylesheet" href="trace-install-1.1.0.css">
@@ -266,9 +267,15 @@
         <details class="trace-import-secondary" id="importDrop">
           <summary><span class="trace-import-secondary-icon">▤</span><span><strong>Contrôle mensuel ou import CSV</strong><small>Relevé PDF, CSV ou import sans journée prédéfinie</small></span><span class="trace-import-secondary-chevron">⌄</span></summary>
           <div class="trace-import-secondary-content">
-            <p>À la fin du mois, importe ton relevé bancaire pour repérer les opérations éventuellement manquantes. Les captures quotidiennes se font depuis le calendrier ci-dessus.</p>
+            <p>Les captures quotidiennes se font depuis le calendrier. Le bouton ci-dessous importe actuellement des fichiers CSV : la lecture automatique fiable des PDF n’est pas encore disponible.</p>
             
             <button class="secondary full" type="button" id="chooseImport">Choisir un document</button>
+          </div>
+        </details>
+        <details class="trace-import-secondary trace-statement-drawer" id="traceStatementDrawer">
+          <summary><span class="trace-import-secondary-icon">▤</span><span><strong>Contrôle mensuel PDF · revue manuelle sécurisée</strong><small>Compare les opérations sans modifier ton budget</small></span><span class="trace-import-secondary-chevron">⌄</span></summary>
+          <div class="trace-import-secondary-content">
+            <div id="traceStatementControl" aria-label="Revue de relevé PDF mensuel"></div>
           </div>
         </details>
         <div id="importResult" style="margin-top:14px"></div>
@@ -384,6 +391,9 @@
 <script src="trace-deferred-lab-ui-1.0.0.js"></script>
 <script src="trace-international-1.0.0.js"></script>
 <script src="trace-international-ui-1.0.0.js"></script>
+<script src="trace-statement-reconcile-1.0.0.js"></script>
+<script src="trace-statement-evidence-1.0.0.js"></script>
+<script src="trace-statement-monthly-ui-1.0.0.js"></script>
 <script src="trace-email-confirmation-1.0.0.js"></script>
 <script src="trace-movement-5.36.0.js"></script>
 <script src="trace-import-guide-1.2.1.js"></script>
