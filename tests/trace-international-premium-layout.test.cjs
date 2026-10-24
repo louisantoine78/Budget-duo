@@ -1,0 +1,116 @@
+'use strict';
+// TRACE 5.37 UX design contract: deterministic DOM/content checks + rendered wealth.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const get=n=>fs.readFileSync(path.join(__dirname,'..',n),'utf8');
+const shell=get('trace-international-preview.html'),
+ css=get('trace-international-1.0.0.css'),
+ app=get('v5-app-5.37.0.js'),
+ stable=get('index.html');
+const home=shell.slice(shell.indexOf('<section class="page active" data-page="home">'),
+ shell.indexOf('<section class="page" data-page="budget">'));
+const wealth=shell.slice(shell.indexOf('<section class="page" data-page="wealth">'),
+ shell.indexOf('</main>'));
+let count=0;function test(name,fn){fn();count++;console.log('PASS '+name);}
+const ordered=(source,terms)=>{
+ const indices=terms.map(term=>source.indexOf(term));
+ assert.ok(indices.every((value,index)=>value>=0&&(index===0||value>indices[index-1])),
+ 'Expected visual source order: '+terms.join(' → '));
+};
+test('all seven approved Home sections occur in source order',()=>ordered(home,[
+ 'id="homeBalance"','id="homeBudgetAvailable"','id="homeIncome"',
+ 'id="pendingCountBadge"','id="homeBudgetCategories"','id="homeTrend"','id="shareCard"']));
+test('Home lead card is estimated balance, not budget availability',()=>{
+ assert.ok(home.indexOf('id="balanceCard"')<home.indexOf('id="homeBudgetAvailable"'));
+ assert.match(home,/Disponible sur mon budget/);
+ assert.match(home,/<h2>Ce mois-ci<\/h2>/);
+});
+test('Home existing live IDs survive and are unique',()=>{
+ for(const id of ['homeBalance','homeBudgetAvailable','homeChecking','homeCard',
+  'traceIntlHome','reconcileBadge','homeBudgetProgress','homeBudgetCategories',
+  'homeReviewAccounts','homeTrendCard','shareCard'])
+  assert.equal((home.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
+});
+test('Savings then Investments then net patrimonio then liquidity appear in order',()=>ordered(wealth,[
+ 'id="wealthSavingsGrid"','id="wealthInvestmentsGrid"',
+ 'id="wealthTotal"','id="assetGrid"']));
+test('Savings and investments have distinct card hosts, without lost actions',()=>{
+ for(const id of ['wealthSavingsGrid','wealthInvestmentsGrid','assetGrid',
+  'wealthTotal','wealthSub','wealthTrend','addAsset'])
+  assert.equal((wealth.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
+ assert.match(wealth,/<h2>Épargne<\/h2>/);assert.match(wealth,/<h2>Placements<\/h2>/);
+ assert.match(wealth,/<h2>Patrimoine net accessible<\/h2>/);
+});
+test('heritage link remains visible and non-claims cash immediately accessible',()=>{
+ assert.match(wealth,/n'est pas nécessairement disponible immédiatement/);
+ assert.match(wealth,/taux manquant reste à vérifier/);
+});
+test('premium CSS uses layout, subtle elevation, focus and reduced motion',()=>{
+ for(const v of ['.trace-home-priority','.trace-wealth-grid','.trace-wealth-net-card',
+  ':focus-visible','prefers-reduced-motion'])assert.ok(css.includes(v),v);
+});
+test('Patrimoine bottom nav label stays whole on iPhone sized widths',()=>{
+ assert.match(css,/\.navbtn>span:last-child\{[^}]*white-space:nowrap/);
+ assert.match(shell,/data-nav="wealth" aria-label="Patrimoine"/);
+});
+test('original five-tab navigation and central add-operation action preserved',()=>{
+ const nav=shell.slice(shell.indexOf('<nav class="nav"'),shell.indexOf('</nav>'));
+ ordered(nav,['data-nav="home"','data-nav="budget"','id="quickAdd"',
+  'data-nav="activity"','data-nav="wealth"']);
+ assert.match(nav,/aria-label="Ajouter une opération"/);
+});
+test('only protected lab is changed: CSP and production shell preserved',()=>{
+ assert.match(shell,/connect-src 'none'/);
+ assert.match(shell,/trace-international-preview-fixtures-1\.0\.0\.js/);
+ assert.match(stable,/<meta name="trace-build" content="5\.36\.5">/);
+ assert.doesNotMatch(stable,/trace-international-preview-fixtures/);
+});
+function makeWealth({missingFx=false,noPortfolio=false}={}){
+ const accounts=noPortfolio?[]:[{id:'celi',owner:'la',type:'CELI',
+  savingsTracking:'linked',name:'CELI test',currency:'CAD'},
+  {id:'pea',owner:'la',type:'PEA',name:'PEA test',currency:'EUR'}];
+ const bank=[{id:'ca',type:'checking',owner:'la',currency:'CAD'},
+  {id:'credit',type:'card',owner:'la',currency:'CAD'},
+  ...(missingFx?[{id:'fr',type:'checking',owner:'la',currency:'EUR'}]:[])];
+ const nodes=new Map(),el=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',innerHTML:'',onclick:null});return nodes.get(id)};
+ const state={investmentAccounts:accounts,accounts:bank},before=JSON.stringify(state);
+ const i=app.indexOf('function renderWealth(){'),j=app.indexOf('\nfunction renderAll(){',i);
+ assert.ok(i>=0&&j>i);
+ const ctx={state,wealthScope:'mine',scope:()=> 'la',bank:()=>({needsCardReview:false}),
+  portfolioLedger:acc=>({hasFx:acc.id!=='pea'||!missingFx,
+   configured:true,cad:acc.id==='celi'?200:300,value:acc.id==='celi'?200:300}),
+  accountEstimate:acc=>acc.id==='ca'?1000:acc.id==='credit'?-50:100,
+  accountType:acc=>acc.type,internationalQuotes:{CAD:{}},
+  window:{TraceInternational:{currency:acc=>acc.currency,
+   fxValue:(n,c,rate)=>c==='CAD'?n:rate?n:null,
+   money:(n,c)=>n+' '+c},TraceInsights:{renderWealth(){}}},
+  money:n=>n+' CAD',nativeMoney:(n,c)=>n+' '+c,
+  esc:x=>String(x),shortAccountLabel:acc=>acc.id,
+  $:el,$$:()=>[],openInvestmentAccountAdd(){},openAccountSettings(){},
+  openInvestmentAccount(){},insightWealthData:()=>[],updateSegments(){}};
+ const fn=new Function(...Object.keys(ctx),'return ('+app.slice(i,j)+');')(...Object.values(ctx));
+ fn();assert.equal(JSON.stringify(state),before,'renderer mutated user data');
+ return{el};
+}
+test('real renderer splits CELI into savings, PEA into investments',()=>{
+ const {el}=makeWealth();
+ assert.match(el('#wealthSavingsGrid').innerHTML,/CELI test/);
+ assert.doesNotMatch(el('#wealthSavingsGrid').innerHTML,/PEA test/);
+ assert.match(el('#wealthInvestmentsGrid').innerHTML,/PEA test/);
+ assert.match(el('#wealthInvestmentsGrid').innerHTML,/id="wealthAddCard"/);
+ assert.match(el('#assetGrid').innerHTML,/wealthLiquidityCard/);
+ assert.doesNotMatch(el('#assetGrid').innerHTML,/PEA test/);
+ assert.match(el('#wealthTotal').textContent,/1450/);
+});
+test('unknown foreign conversion keeps net visibly incomplete',()=>{
+ const {el}=makeWealth({missingFx:true});
+ assert.equal(el('#wealthTotal').textContent,'Total incomplet');
+ assert.match(el('#assetGrid').innerHTML,/100 EUR/);
+ assert.match(el('#assetGrid').innerHTML,/Conversion indisponible/);
+});
+test('empty saving/investment grids remain helpful and add action exists',()=>{
+ const {el}=makeWealth({noPortfolio:true});
+ assert.match(el('#wealthSavingsGrid').innerHTML,/Ajoute un livret/);
+ assert.match(el('#wealthInvestmentsGrid').innerHTML,/wealthAddCard/);
+ assert.match(el('#wealthTotal').textContent,/950/);
+});
+console.log(count+' approved premium home/wealth scenarios passed');
