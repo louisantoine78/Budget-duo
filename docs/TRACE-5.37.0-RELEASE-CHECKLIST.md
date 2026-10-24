@@ -1,3 +1,19 @@
+## Contrôles ajoutés après la reprise catégorie/CAS/CSV (24 octobre 2026)
+
+**NO-GO conservé.** Aucun nouveau test PostgreSQL, Chromium ou Safari natif n'a été exécuté.
+
+- [x] Code de reprise additive des catégories, cache révision par ID, conservation des catégories personnalisées/archivées et des budgets présents ; **8/8 tests isolés V8 avec RPC fictif**.
+- [x] RPC CAS candidate restreinte aux neuf collections connues, suppression physique refusée pour comptes et patrimoine ; **tests SQL ajoutés mais NON exécutés**.
+- [x] Contrôle CSV étranger plus strict (montant initial natif et devises cohérentes, CAD encore absent, pas de FX déjà valorisée) ; **12/12 tests V8 avec moteur financier TRACE et faux DOM**, pas de test Node CLI.
+- [ ] Exécuter les nouvelles suites avec **vrai Node** et les migrations 07/08/09 en PostgreSQL local fictif ; corriger les échecs.
+- [ ] Vérifier les privilèges, RLS, contraintes et verrouillages CAS à deux sessions PostgreSQL/PostgREST isolées ; interdire les direct writes après une transition 5.36.5 autorisée.
+- [ ] Régénérer et tester le SW laboratoire (actuellement périmé après changements JS/CSS), puis Chromium hors ligne/retour réseau et Safari iPhone authentique.
+- [ ] Tests complets de catégories, budgets, comptes, transactions, imports et débits différés. Garder NO-GO jusqu'aux preuves et à la migration/rollback autorisés.
+
+Détails et commits dans `docs/TRACE-5.37.0-HANDOFF.md`. Ne pas confondre « code présent », « test V8 avec faux transport », « intégration SQL » et « prêt pour production ».
+
+---
+
 ## Contrôle de sortie après raccordement client CAS — 24 octobre 2026
 
 **Statut actuel : NO-GO.** Le client 5.37.0 a maintenant le mécanisme de révisions et une UI de conflit ; l'ancienne ligne « raccorder le client » ci-dessous doit être interprétée comme **code présent mais non qualifié en PostgreSQL/Cloud**. Les RPC SQL 09 conservent temporairement les droits d'écriture directe par compatibilité, ce qui rend toujours le contournement possible.
