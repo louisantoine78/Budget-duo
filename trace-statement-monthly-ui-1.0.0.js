@@ -108,11 +108,11 @@
     '<p>'+extraction.proposals.length+' ligne(s) au format bancaire simple · '+
      extraction.unparsed.length+' ligne(s) non interprétée(s). <b>Aucune ligne n’est approuvée.</b></p>'+
     (extraction.unparsed.length?
-     '<details class="trace-statement-unparsed"><summary>Consulter les lignes non interprétées</summary>'+
-       extraction.unparsed.slice(0,40).map(x=>'<div><b>Page '+x.page+', ligne '+x.line+
+     '<details class="trace-statement-unparsed"><summary>Consulter toutes les lignes non interprétées · '+extraction.unparsed.length+'</summary>'+
+       extraction.unparsed.map(x=>'<div><b>Page '+x.page+', ligne '+x.line+
         '</b> : '+esc(x.rawText)+'</div>').join('')+'</details>':'')+
     (extraction.proposals.length?
-     '<div class="trace-statement-proposal-list">'+extraction.proposals.slice(0,25).map(x=>
+     '<div class="trace-statement-proposal-list">'+extraction.proposals.map(x=>
        '<div>Page '+x.page+', ligne '+x.line+' · '+esc(x.date)+' · '+
        esc(x.name)+' · '+esc(x.direction==='out'?'Débit':'Crédit')+' '+
        money(x.amount,selectedAccount()?.currency||'')+'</div>').join('')+'</div>':'')+
