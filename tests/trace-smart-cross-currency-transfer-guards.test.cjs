@@ -5,6 +5,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'..','v5-app-5.37.0.js'),'utf8');
 const engine=fs.readFileSync(path.join(__dirname,'..','trace-international-1.0.0.js'),'utf8');
+const movement=fs.readFileSync(path.join(__dirname,'..','trace-movement-5.36.0.js'),'utf8');
 const start=source.indexOf('async function smartApproveDraft(id,v){');
 const end=source.indexOf('async function smartResetDay(',start);
 assert.ok(start>=0&&end>start,'Smart bank-approval source unavailable');
@@ -20,9 +21,9 @@ function create({toCurrency='EUR',receivedAmount='63.75',kind='transfer',linkCar
   ...(extraChecking?[{id:'other-ca',owner:'la',currency:'CAD',country:'CA',type:'checking'}]:[])],
   transactions:[],investmentAccounts:[],importDays:[{accountId:'bank-ca',date:'2026-10-15'}]};
  const writes=[],window={TraceImportGuide:{direction:()=> 'out',allowed:()=>true,
-   cardStatementSettlementLabel:()=>false},TraceMovement:{get:t=>({id:t,type:'transfer',budget:'none',
-     direction:-1,purpose:null})}};
+   cardStatementSettlementLabel:()=>false}};
  new Function('window',engine)(window);
+ new Function('window',movement)(window);
  const vars={
   state,me:'la',partner:'partner',visibleBankAccounts:()=>[bank,destination],
   smartStrictDate:date=>date==='2026-10-15',
@@ -89,7 +90,7 @@ test('card settlement to linked CAD card stays outside new income and expense',a
  await c.approve('d1',c.input);
  const tx=c.writes[0].item;
  assert.equal(tx.type,'transfer');
- assert.equal(tx.transferPurpose,undefined);
+ assert.equal(tx.transferPurpose,'card_repayment');
  assert.equal(tx.bankAmount,100);assert.equal(tx.toBankAmount,100);
  assert.equal(tx.toBankCurrency,'CAD');
 });
