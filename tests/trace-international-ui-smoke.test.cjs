@@ -100,12 +100,13 @@ test('budget analysis scope selector responds',()=>{
  assert.equal(typeof clicks.get('#analysisScope .seg')[0].onclick,'function');
 });
 const activity=compile('renderActivity','\nfunction showTab(',{
- ...ctx,activityMonth:activeMonth,tab:'transactions',
+ ...ctx,activityMonth:activeMonth,activityAccountFilter:'all',tab:'transactions',
+ accountType:a=>a.type,
  isFinancialPeriod:()=>true,visibleBankAccounts:()=>[{id:'checking'}],
  shortAccountLabel:a=>a?.name||'Courant',
  txRow:t=>'<button data-tx-open="'+t.id+'"></button>',
  editTransaction(){},showTab(t){elem('#activityTabCurrent').textContent=t;},
- window:{...ctx.window,TraceImportCalendar:{render(){elem('#calendarRendered').textContent='yes';}}}
+ window:{...ctx.window,TraceInternational:{currency:a=>a?.currency||'CAD'},TraceImportCalendar:{render(){elem('#calendarRendered').textContent='yes';}}}
 });
 test('Activity renders existing confirmed expense and income',()=>{
  state.accounts=[{id:'checking',name:'Courant',owner:'la',type:'checking'}];
