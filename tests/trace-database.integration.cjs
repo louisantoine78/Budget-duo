@@ -174,6 +174,44 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
    assert.equal(digest(after),digest(before));
   }finally{await restored.close();}
  });
+ await test('a checksummed portable export restores complete native JSON rows into a separate fictional PostgreSQL',async()=>{
+  const {createSnapshot,verifySnapshot,unpackSnapshot}=await import('../scripts/trace-snapshot.mjs');
+  const payload={
+   household:(await db.query('select * from public.households where id=$1',[householdA.household_id])).rows[0],
+   household_members:(await db.query('select * from public.household_members where household_id=$1 order by slot',[householdA.household_id])).rows,
+   documents:(await db.query('select * from public.documents where household_id=$1 order by collection,item_id',[householdA.household_id])).rows
+  };
+  // PostgreSQL timestamps returned as Date are normalized by the ordinary JSON
+  // export step, before constructing the portable snapshot. Financial data is JSONB.
+  const raw=JSON.parse(JSON.stringify(payload)),snapshot=createSnapshot(raw);
+  verifySnapshot(snapshot,{expectedDocuments:raw.documents.length});
+  const backup=unpackSnapshot(JSON.parse(JSON.stringify(snapshot)));
+  const restored=new PGlite();
+  try{
+   // A separate database, not the working fictional DB or a remote service.
+   await restored.exec(`create role anon; create role authenticated;
+    create schema auth; create table auth.users(id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as
+    $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+    grant usage on schema auth to authenticated;`);
+   for(const user of [uid(1),uid(2),uid(3),uid(4)])await restored.query('insert into auth.users values($1)',[user]);
+   await restored.exec(original.replace('create extension if not exists pgcrypto;',''));
+   for(const migration of ['05-trace-v5-foundation.sql','06-trace-import-day-states.sql'])
+    await restored.exec(await fs.readFile(path.join(root,'migrations',migration),'utf8'));
+   const insert=async(table,row)=>{
+    const keys=Object.keys(row);assert.ok(keys.every(k=>/^[a-z_]+$/.test(k)));
+    await restored.query('insert into public.'+table+' ('+keys.join(',')+') values ('+
+     keys.map((_,i)=>'$'+(i+1)).join(',')+')',keys.map(k=>row[k]&&typeof row[k]==='object'?JSON.stringify(row[k]):row[k]));
+   };
+   await insert('households',backup.household);
+   for(const member of backup.household_members)await insert('household_members',member);
+   for(const row of backup.documents)await insert('documents',row);
+   const after=(await restored.query('select collection,item_id,data from public.documents where household_id=$1 order by collection,item_id',[householdA.household_id])).rows;
+   assert.equal(digest(after),digest(await rows()));
+   assert.deepEqual((await restored.query('select settings from public.households where id=$1',[householdA.household_id])).rows[0].settings,raw.household.settings);
+   assert.equal((await restored.query('select count(*)::int as n from public.household_members')).rows[0].n,2);
+  }finally{await restored.close();}
+ });
  await test('the test explicitly detects household-wide writes instead of claiming partner ownership protection',async()=>{
   const before=digest(await rows());
   await asUser(uid(1),async tx=>{

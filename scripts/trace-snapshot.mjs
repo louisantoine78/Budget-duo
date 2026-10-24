@@ -1,0 +1,95 @@
+#!/usr/bin/env node
+/* Portable local JSON backup, not a database client or a production restore.
+ * create raw-export.json snapshot.json [--source-commit SHA]
+ * verify snapshot.json [--expected-documents N]
+ * unpack snapshot.json restored-export.json
+ * Inputs are supplied explicitly; no credentials, network, deletion or overwrite.
+ */
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+const FORMAT='trace-snapshot/1';
+const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+function canonical(value){
+ if(value===null||typeof value==='string'||typeof value==='boolean')return JSON.stringify(value);
+ if(typeof value==='number'&&Number.isFinite(value))return JSON.stringify(value);
+ if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
+ if(value&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype)
+  return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
+ throw Error('Export non JSON : valeur non finie, absente ou objet spécial');
+}
+const checksum=value=>createHash('sha256').update(canonical(value)).digest('hex');
+function inventory(payload){
+ if(!payload||typeof payload!=='object'||!payload.household||!UUID.test(payload.household.id)||
+    !Array.isArray(payload.household_members)||!Array.isArray(payload.documents))
+  throw Error('Export attendu : household, household_members et documents complets');
+ if(Object.keys(payload).sort().join(',')!=='documents,household,household_members')
+  throw Error('Tables supplémentaires : les exporter et vérifier séparément, sans les ignorer');
+ const householdId=payload.household.id,memberIds=new Set(),slots=new Set(),ids=new Set(),collections=new Map();
+ if(payload.household_members.length<1||payload.household_members.length>2)throw Error('Inventaire des membres incohérent');
+ for(const member of payload.household_members){
+  if(member.household_id!==householdId||!UUID.test(member.user_id)||
+     !['la','partner'].includes(member.slot)||memberIds.has(member.user_id)||slots.has(member.slot))
+   throw Error('Membre invalide, autre foyer ou doublon');
+  memberIds.add(member.user_id);slots.add(member.slot);
+ }
+ for(const row of payload.documents){
+  if(!row||row.household_id!==householdId||typeof row.collection!=='string'||!row.collection||
+     typeof row.item_id!=='string'||!row.item_id||!row.data||typeof row.data!=='object'||Array.isArray(row.data))
+   throw Error('Document invalide ou issu d’un autre foyer');
+  const key=JSON.stringify([row.collection,row.item_id]);
+  if(ids.has(key))throw Error('Clé de document dupliquée');ids.add(key);
+  collections.set(row.collection,(collections.get(row.collection)||0)+1);
+ }
+ canonical(payload); // Reject lossy JSON serialization before calculating totals.
+ return{householdId,members:memberIds.size,documents:ids.size,
+  collections:Object.fromEntries([...collections].sort(([a],[b])=>a.localeCompare(b)))};
+}
+export function createSnapshot(payload,{createdAt=new Date().toISOString(),sourceCommit=null}={}){
+ const counts=inventory(payload);
+ if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(createdAt)||
+    !Number.isFinite(Date.parse(createdAt))||new Date(createdAt).toISOString()!==createdAt)
+  throw Error('Date de sauvegarde invalide');
+ if(sourceCommit!==null&&!/^[a-f0-9]{40}$/.test(sourceCommit))throw Error('Commit source invalide');
+ const content={format:FORMAT,createdAt,sourceCommit,
+  completeness:'source-export-not-independently-verified',inventory:counts,
+  payload:JSON.parse(canonical(payload))};
+ return{...content,sha256:checksum(content)};
+}
+export function verifySnapshot(snapshot,{expectedDocuments}={}){
+ if(!snapshot||snapshot.format!==FORMAT||!/^[a-f0-9]{64}$/.test(snapshot.sha256||''))
+  throw Error('Format ou empreinte de sauvegarde invalide');
+ const {sha256,...content}=snapshot;
+ if(checksum(content)!==sha256)throw Error('Empreinte SHA-256 différente : sauvegarde altérée');
+ const actual=inventory(snapshot.payload);
+ if(canonical(actual)!==canonical(snapshot.inventory))throw Error('Inventaire de sauvegarde incohérent');
+ // This also checks dates, source reference and the honest completeness label.
+ if(checksum(createSnapshot(snapshot.payload,{createdAt:snapshot.createdAt,sourceCommit:snapshot.sourceCommit}))!==checksum(snapshot))
+  throw Error('Métadonnées de sauvegarde incohérentes');
+ if(expectedDocuments!==undefined&&(!Number.isSafeInteger(expectedDocuments)||expectedDocuments<0||actual.documents!==expectedDocuments))
+  throw Error('Nombre de documents différent du comptage indépendant attendu');
+ return{...actual,sha256,integrityVerified:true,completenessVerified:false};
+}
+export function unpackSnapshot(snapshot){verifySnapshot(snapshot);return JSON.parse(canonical(snapshot.payload));}
+async function main(args){
+ const [action,input,output]=args;
+ if(!['create','verify','unpack'].includes(action)||!input||action!=='verify'&&!output)
+  throw Error('Usage : trace-snapshot.mjs create|verify|unpack entrée.json [sortie.json] [options]');
+ const json=JSON.parse(await readFile(resolve(input),'utf8'));
+ const option=name=>{const i=args.indexOf(name);if(i<0)return undefined;
+  if(!args[i+1])throw Error('Valeur manquante : '+name);return args[i+1];};
+ if(action==='verify'){
+  const expected=option('--expected-documents');
+  if(expected!==undefined&&!/^\d+$/.test(expected))throw Error('Comptage attendu invalide');
+  console.log(JSON.stringify(verifySnapshot(json,{expectedDocuments:expected===undefined?undefined:Number(expected)})));
+ }else{
+  const result=action==='create'?createSnapshot(json,{sourceCommit:option('--source-commit')||null}):unpackSnapshot(json);
+  await writeFile(resolve(output),JSON.stringify(result,null,2)+'\n',{flag:'wx',mode:0o600});
+  console.log(action==='create'?'Sauvegarde locale créée. Exhaustivité de l’export source à vérifier séparément.':
+   'Export restaurable extrait. Aucune base modifiée.');
+ }
+}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main(process.argv.slice(2)).catch(error=>{
+ console.error(error.message);process.exitCode=1;
+});
