@@ -58,7 +58,14 @@ begin
     raise exception 'TRACE_WRITE_FORBIDDEN: not a member'
       using errcode = '42501';
   end if;
-  if p_collection is null or p_item_id is null or p_item_id = ''
+  if p_collection is null or p_collection not in (
+    'accounts','categories','budgets','transactions','investment_accounts',
+    'investment_operations','reconciliations','import_days','imports'
+  ) then
+    raise exception 'TRACE_WRITE_INVALID: unsupported document collection'
+      using errcode = '22023';
+  end if;
+  if p_item_id is null or p_item_id = ''
     or p_data is null or jsonb_typeof(p_data) <> 'object'
     or p_data->>'id' is distinct from p_item_id then
     raise exception 'TRACE_WRITE_INVALID: document ID or JSON payload'
@@ -118,8 +125,15 @@ begin
     raise exception 'TRACE_WRITE_FORBIDDEN: not a member'
       using errcode = '42501';
   end if;
-  if p_expected_revision is null or p_expected_revision < 0 then
-    raise exception 'TRACE_WRITE_INVALID: deletion requires a revision'
+  if p_collection is null or p_collection not in (
+    'categories','budgets','transactions','investment_operations'
+  ) then
+    raise exception 'TRACE_WRITE_FORBIDDEN: collection must be archived or retained'
+      using errcode = '42501';
+  end if;
+  if p_item_id is null or p_item_id = ''
+    or p_expected_revision is null or p_expected_revision < 0 then
+    raise exception 'TRACE_WRITE_INVALID: deletion requires an ID and revision'
       using errcode = '22023';
   end if;
 
