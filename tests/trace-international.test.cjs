@@ -29,17 +29,17 @@ test('foreign amount without verified rate is blocked',()=>{
  assert.throws(()=>I.resolveBooking({account:EUR,bankAmount:46,date:'2026-10-01'}),/Taux CAD requis/);
 });
 test('negative or zero manual rate rejected',()=>{
- assert.throws(()=>I.resolveBooking({account:EUR,bankAmount:3,quote:{currency:'EUR',cadPerUnit:-1}}),/Taux CAD requis/);
+ assert.throws(()=>I.resolveBooking({account:EUR,bankAmount:3,date:'2026-10-01',quote:{currency:'EUR',cadPerUnit:-1,source:'FICTITIOUS TEST QUOTE'}}),/Taux CAD requis/);
 });
 test('card and checking are linked and card debt lowers CAD net',()=>{
  const out=I.snapshot({owner:'la',accounts:[CAD,CARD,EUR],estimates:{checkingCAD:1700,cardCAD:-424,checkingEUR:1000},mainId:'checkingCAD',
- fxRates:{EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-01'}}});
+ fxRates:{EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-01',source:'FICTITIOUS TEST QUOTE'}}});
  assert.equal(out.currency,'CAD');assert.equal(out.net,1276);assert.equal(out.globalCAD,2876);
 });
 test('French main EUR only includes its linked deferred card',()=>{
  const out=I.snapshot({owner:'la',accounts:[CAD,CARD,EUR,DEFERRED],
  estimates:{checkingCAD:1700,cardCAD:-424,checkingEUR:2000,deferredEUR:-140},
- mainId:'checkingEUR',fxRates:{EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-01'}}});
+ mainId:'checkingEUR',fxRates:{EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-01',source:'FICTITIOUS TEST QUOTE'}}});
  assert.equal(out.currency,'EUR');assert.equal(out.net,1860);assert.equal(out.globalCAD,4252);
 });
 test('missing exchange rate yields incomplete global total rather than mixing currencies',()=>{
@@ -81,11 +81,11 @@ test('unlinked cards across multiple same-currency current accounts require mapp
 });
 test('cannot invent original purchase amount when purchase currency differs',()=>{
  assert.throws(()=>I.resolveBooking({account:EUR,bankAmount:46.20,originalCurrency:'USD',
-  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-01'},date:'2026-10-01'}),/Prix d’achat d’origine requis/);
+  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-01',source:'FICTITIOUS TEST QUOTE'},date:'2026-10-01'}),/Prix d’achat d’origine requis/);
 });
 test('dated rate cannot be taken from a future date',()=>{
  assert.throws(()=>I.resolveBooking({account:EUR,bankAmount:100,date:'2026-10-01',
-  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-02'}}),/Date du taux/);
+  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-02',source:'FICTITIOUS TEST QUOTE'}}),/Date du taux/);
 });
 test('currency choices include European and North American bank currencies',()=>{
  assert.deepEqual([...I.currencies()],['CAD','EUR','USD','GBP','CHF']);
@@ -115,7 +115,7 @@ test('edit EUR to CAD transfer preserves both native legs and dated rate without
 test('edit transfer with original purchase currency preserves original price and source bank debit',()=>{
  const tx={type:'transfer',status:'confirmed',accountId:EUR.id,toAccountId:CAD.id,date:'2026-10-05',name:'Dollar settlement'};
  const next=I.resolveTransferEdit({transaction:tx,from:EUR,to:CAD,bankAmount:46.2,receivedAmount:70,
-  originalCurrency:'USD',originalAmount:50,quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-03'}});
+  originalCurrency:'USD',originalAmount:50,quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-03',source:'FICTITIOUS TEST QUOTE'}});
  assert.equal(next.currency,'USD');assert.equal(next.amountOriginal,50);
  assert.equal(next.bankCurrency,'EUR');assert.equal(next.bankAmount,46.2);assert.equal(next.toBankAmount,70);
  assert.equal(next.amountCAD,73.92);
@@ -134,7 +134,7 @@ test('transfer editor forbids changing account pair or editing unconfirmed movem
 test('transfer into a card respects its linked settlement account',()=>{
  const tx={type:'transfer',status:'confirmed',accountId:EUR.id,toAccountId:CARD.id,date:'2026-10-05',name:'Paiement'};
  assert.throws(()=>I.resolveTransferEdit({transaction:tx,from:EUR,to:CARD,bankAmount:100,receivedAmount:160,
-  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-05'}}),/compte courant lié/);
+  quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-05',source:'FICTITIOUS TEST QUOTE'}}),/compte courant lié/);
 });
 
 test('unverified positive card credit must not be reported as cash or global wealth',()=>{
@@ -148,7 +148,7 @@ test('foreign card credit blocks worldwide wealth even if primary CAD account is
  const foreignCard={...CARD,id:'foreignCard',currency:'EUR',country:'FR',settlementAccountId:EUR.id};
  const snap=I.snapshot({owner:'la',accounts:[CAD,EUR,foreignCard],mainId:CAD.id,
   estimates:{checkingCAD:1500,checkingEUR:500,foreignCard:50},
-  fxRates:{EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-12'}}});
+  fxRates:{EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-12',source:'FICTITIOUS TEST QUOTE'}}});
  assert.equal(snap.net,1500);assert.equal(snap.globalCAD,null);
  assert.equal(snap.complete,false);assert.equal(snap.cardsToReview.length,1);
 });
@@ -156,7 +156,7 @@ test('credit card linked to primary checking in another currency cannot be subtr
  const cardUSD={...CARD,currency:'USD',country:'CA'};
  const out=I.snapshot({owner:'la',accounts:[CAD,cardUSD],mainId:CAD.id,
   estimates:{checkingCAD:1000,cardCAD:-100},
-  fxRates:{USD:{currency:'USD',cadPerUnit:1.4,date:'2026-10-20'}}});
+  fxRates:{USD:{currency:'USD',cadPerUnit:1.4,date:'2026-10-20',source:'FICTITIOUS TEST QUOTE'}}});
  assert.equal(out.net,null);
  assert.equal(out.card,null);
  assert.equal(out.mixedLinkedCurrencies.length,1);

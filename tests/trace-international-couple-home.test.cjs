@@ -26,7 +26,7 @@ function view(accounts,balances,quotes={}){
 }
 test('two countries and linked debt produce one CAD household net',()=>{
  const a=view([ca,fr,card,partner],{ca:1000,fr:1000,card:-200,partner:300},
-  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20',requestedDate:'2026-10-20'}});
+  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20',requestedDate:'2026-10-20',source:'FICTITIOUS TEST QUOTE'}});
  assert.equal(a.$('#homeBalance').textContent,I.money(2700,'CAD'));
  assert.equal(a.$('#homeChecking').textContent,I.money(2900,'CAD'));
  assert.equal(a.$('#homeCard').textContent,I.money(200,'CAD')+' de dette');
@@ -43,14 +43,14 @@ test('missing EUR exchange rate never reports incomplete household as CAD only',
 });
 test('missing French opening balance remains unknown, not zero',()=>{
  const a=view([ca,fr],{ca:1000,fr:null},
-  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20'}});
+  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20',source:'FICTITIOUS TEST QUOTE'}});
  assert.equal(a.$('#homeBalance').textContent,'Situation à vérifier');
  assert.match(a.$('#traceIntlHome').innerHTML,/Solde inconnu/);
 });
 test('positive card estimate is never included in combined net',()=>{
  const a=view([ca,fr,{...card,currency:'EUR',settlementAccountId:'fr'}],
   {ca:1000,fr:500,card:60},
-  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20'}});
+  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20',source:'FICTITIOUS TEST QUOTE'}});
  assert.equal(a.$('#homeBalance').textContent,'Situation à vérifier');
  assert.equal(a.$('#homeCard').textContent,'À vérifier');
  assert.match(a.$('#homeCardWarning').textContent,/avoir de carte/);

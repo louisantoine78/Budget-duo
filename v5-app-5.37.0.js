@@ -177,20 +177,19 @@ function accountType(a){
  return'other';
 }
 function accountEstimate(a){
+ const I=window.TraceInternational,code=I.currency(a);
  const r=state.reconciliations.filter(x=>x.accountId===a.id&&
    (!x.status||['confirmed','complete','matched'].includes(x.status))&&x.confirmed!==false&&
-   /^\d{4}-\d{2}-\d{2}$/.test(String(x.date||''))&&
-   x.actualBalance!==null&&x.actualBalance!==undefined&&x.actualBalance!==''&&
-   Number.isFinite(Number(x.actualBalance))).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
+   I.calendarDate(x.date)&&String(x.currency||'CAD').toUpperCase()===code&&
+   I.exactMoney(x.actualBalance)!==null).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
  const b=state.household.accountOpeningBalances||{},d=state.household.accountOpeningBalanceDates||{};
- const rawBase=r?Number(r.actualBalance):
-   (b[a.id]===undefined||b[a.id]===null||b[a.id]===''?null:Number(b[a.id]));
+ const rawBase=I.exactMoney(r?r.actualBalance:b[a.id]);
  // Card statements normally show a positive DEBT. TRACE stores a negative
  // financial balance; older settings/reconciliations sometimes stored debt as positive.
  // Interpret those historical amounts without rewriting the user's stored records.
  const base=rawBase===null?null:accountType(a)==='card'&&r?.cardBalanceKind!=='credit'?-Math.abs(rawBase):rawBase;
  const boundary=r?{date:r.date,mode:'end'}:openingBoundary(a.id);
- if(base===null||!boundary.date)return null;
+ if(base===null||!I.calendarDate(boundary.date))return null;
  const movement=state.transactions.filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
   if(t.type==='card_statement_evidence')return x;
   const v=window.TraceInternational.amountOnAccount(t,a,t.toAccountId===a.id?'destination':'source');
@@ -205,7 +204,8 @@ function accountEstimate(a){
   }
   return x;
  },0);
- const investMovement=state.investmentOperations.filter(o=>o.bankAccountId===a.id&&afterBoundary(o.date,boundary)).reduce((v,o)=>{
+ const investMovement=state.investmentOperations.filter(o=>o.bankAccountId===a.id&&
+   (!o.status||o.status==='confirmed')&&afterBoundary(o.date,boundary)).reduce((v,o)=>{
     if(!['deposit','withdrawal'].includes(o.type))return v;
     if(o.linkedTransactionId&&state.transactions.some(t=>t.id===o.linkedTransactionId&&
      t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)))return v;
@@ -216,9 +216,13 @@ function accountEstimate(a){
 }
 function bank(s){
  const owners=s==='couple'?['la','partner']:[s];
- let checking=0,card=0,cardDebt=0,cardCredit=0,hc=false,hv=false;
+ let checking=0,card=0,cardDebt=0,cardCredit=0,hc=false,hv=false,missingChecking=false,missingCard=false;
  state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&window.TraceInternational.currency(a)==='CAD').forEach(a=>{
-  const v=accountEstimate(a);if(v===null)return;
+  const v=accountEstimate(a);if(v===null){
+   if(accountType(a)==='checking')missingChecking=true;
+   if(accountType(a)==='card')missingCard=true;
+   return;
+  }
   if(accountType(a)==='checking'){checking+=v;hc=true;}
   if(accountType(a)==='card'){
    card+=v;cardDebt+=Math.max(0,-v);cardCredit+=Math.max(0,v);hv=true;
@@ -226,10 +230,10 @@ function bank(s){
  });
  // The card balance is signed internally: negative = debt, positive = credit.
  // Never add an unverified apparent card credit to current-account liquidity.
- return {checking:hc?checking:null,card:hv?card:null,
-  cardDebt:hv?cardDebt:null,cardCredit:hv?cardCredit:null,
+ return {checking:hc&&!missingChecking?checking:null,card:hv&&!missingCard?card:null,
+  cardDebt:hv&&!missingCard?cardDebt:null,cardCredit:hv&&!missingCard?cardCredit:null,
   needsCardReview:hv&&cardCredit>.005,
-  net:hc?checking-cardDebt:null};
+  net:hc&&!missingChecking&&!missingCard?checking-cardDebt:null};
 }
 
 /* Share: one settlement = one transfer; the same document drives balances and account movements */
@@ -805,6 +809,18 @@ function openManualTransaction(preferredKind='expense'){
  const M=window.TraceMovement,Guide=window.TraceImportGuide,U=window.TraceOperationUI;
  let kind='expense',categoryTouched=false;
  const bankAccounts=visibleBankAccounts(me);
+ const validCardTarget=(from,to)=>{
+  if(!from||!to||accountType(from)!=='checking'||accountType(to)!=='card'||from.owner!==to.owner||
+   window.TraceInternational.currency(from)!==window.TraceInternational.currency(to)||
+   window.TraceInternational.country(from)!==window.TraceInternational.country(to))return false;
+  if(to.settlementAccountId)return to.settlementAccountId===from.id;
+  // Preserve a historical unlinked card only when there is one unambiguous
+  // same-currency/country current account. Never guess between two accounts.
+  const possible=bankAccounts.filter(a=>accountType(a)==='checking'&&
+   window.TraceInternational.currency(a)===window.TraceInternational.currency(to)&&
+   window.TraceInternational.country(a)===window.TraceInternational.country(to));
+  return possible.length===1&&possible[0].id===from.id;
+ };
  if(!bankAccounts.length){
   openSheet('Ajouter une opération','<p class="empty-note">Configure d’abord un compte bancaire dans Profil → Mes comptes.</p>');return;
  }
@@ -893,6 +909,8 @@ function openManualTransaction(preferredKind='expense'){
   const from=bankAccounts.find(a=>a.id===$m('manualTxAccount').value),
    fromCurrency=window.TraceInternational.currency(from);
   $m('manualBankCurrencyNote').textContent='Montant réellement prélevé / crédité · '+fromCurrency;
+  const currencyBadge=$m('manualTxAmount').closest?.('.trace-edit-money-control')?.querySelector?.('.trace-edit-currency');
+  if(currencyBadge)currencyBadge.textContent=fromCurrency;
   $m('manualFxRateLabel').hidden=fromCurrency==='CAD';
   $m('manualFxRate').hidden=fromCurrency==='CAD';
   const budget=def.budget!=='none',expense=def.budget==='expense'||def.budget==='refund';
@@ -906,7 +924,7 @@ function openManualTransaction(preferredKind='expense'){
   $m('manualFriendLink').classList.toggle('hidden',kind!=='friend_reimbursement');
   const previousTarget=$m('manualTarget').value,previousSavings=$m('manualSavings').value;
   $m('manualTarget').innerHTML=bankAccounts.filter(a=>a.id!==$m('manualTxAccount').value&&
-   (kind!=='card_payment'||accountType(a)==='card')).map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
+   (kind!=='card_payment'||validCardTarget(from,a))).map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
   if([...$m('manualTarget').options].some(o=>o.value===previousTarget))$m('manualTarget').value=previousTarget;
   const destination=bankAccounts.find(a=>a.id===$m('manualTarget').value),
    distinct=destination&&window.TraceInternational.currency(destination)!==fromCurrency;
@@ -966,13 +984,13 @@ function openManualTransaction(preferredKind='expense'){
  sync();
  $m('saveManualTx').onclick=async()=>{
   error.textContent='';
-  const def=M.get(kind),amount=Math.round(Number($m('manualTxAmount').value)*100)/100,
+  const def=M.get(kind),amount=window.TraceInternational.exactMoney($m('manualTxAmount').value),
    date=$m('manualTxDate').value,name=$m('manualTxName').value.trim()||def.label,
    accountId=$m('manualTxAccount').value,bankAccount=bankAccounts.find(a=>a.id===accountId),
    targetId=$m('manualTarget').value,investmentId=$m('manualSavings').value,
    budget=def.budget!=='none',categoryId=budget?$m('manualTxCategory').value:'',
    beneficiary=budget&&def.budget!=='income'?$m('manualTxBeneficiary').value:me;
-  if(!(amount>0)||!Number.isFinite(amount)||!date||!accountId||!bankAccount||budget&&!categoryId){error.textContent='Vérifie le montant, le compte et la catégorie éventuelle.';return;}
+  if(!(amount>0)||!Number.isFinite(amount)||!date||!accountId||!bankAccount||budget&&!categoryId){error.textContent='Vérifie le montant au centime, le compte et la catégorie éventuelle.';return;}
   if(def.legacyOnly||!Guide.allowed(kind,accountType(bankAccount),def.direction===1?'in':'out')){
    error.textContent='Cette nature ne correspond pas au compte bancaire choisi.';return;
   }
@@ -1002,11 +1020,13 @@ function openManualTransaction(preferredKind='expense'){
     originalAmount:$m('manualPurchaseAmount').value||null});
    const destination=bankAccounts.find(a=>a.id===targetId);
    if(['transfer','card_payment'].includes(kind)){
+    if(accountType(destination)==='card'&&!validCardTarget(bankAccount,destination))
+     throw Error('Cette carte doit être réglée depuis son compte courant lié, dans sa devise.');
     const targetCurrency=window.TraceInternational.currency(destination),v=$m('manualDestAmount').value.trim();
     if(targetCurrency!==currency){
-     destinationBankAmount=Number(v);
-     if(v===''||!Number.isFinite(destinationBankAmount)||!(destinationBankAmount>0))
-      throw Error('Renseigne le montant effectivement reçu sur le compte destinataire.');
+     destinationBankAmount=window.TraceInternational.exactMoney(v);
+     if(destinationBankAmount===null||!(destinationBankAmount>0))
+      throw Error('Renseigne le montant effectivement reçu au centime sur le compte destinataire.');
     }else destinationBankAmount=amount;
    }
    shares=beneficiary==='custom'?
@@ -1030,7 +1050,8 @@ function openManualTransaction(preferredKind='expense'){
   }catch(e){error.textContent=String(e.message||e);return;}
   const item={id:txDocId(),date,name,note:'',merchant:'',type:def.type,transferPurpose:def.purpose||null,
    status:'confirmed',...booking,
-   ...(['transfer','card_payment'].includes(kind)?{toBankAmount:destinationBankAmount}:{}),
+   ...(['transfer','card_payment'].includes(kind)?{toBankAmount:destinationBankAmount,
+    toBankCurrency:window.TraceInternational.currency(bankAccounts.find(a=>a.id===targetId))}:{}),
    categoryId,accountId,payerId:me,...shares,...friendDebtors,
    ...(related?{relatedExpenseId:related}:{}),...(repaymentAllocations?{repaymentAllocations}:{}),
    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{}),
@@ -3392,7 +3413,8 @@ function savingsLedger(account){
 }
 function portfolioLedger(account,override=null,removeId=null,cutoff=null){
  if(account.savingsTracking==='linked')return savingsLedger(account);
- const ops=state.investmentOperations.filter(o=>o.accountId===account.id&&o.id!==removeId&&(!override||o.id!==override.id));
+ const ops=state.investmentOperations.filter(o=>o.accountId===account.id&&
+  (!o.status||o.status==='confirmed')&&o.id!==removeId&&(!override||o.id!==override.id));
  if(override)ops.push(override);
  ops.sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.createdAt||a.id).localeCompare(String(b.createdAt||b.id)));
  const pos=new Map();let cash=0,contributions=0,dividends=0,fees=0,realized=0;
@@ -4060,7 +4082,7 @@ function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
  $('#traceCancelNewBank').onclick=back;
  $('#traceSaveNewBank').onclick=async()=>{
   const label=name.value.trim(),accountKind=type.value,raw=$('#traceNewBankAmount').value.trim(),
-   n=raw===''?null:Number(raw),date=$('#traceNewBankDate').value,mode=$('#traceNewBankMode').value,
+   n=raw===''?null:window.TraceInternational.exactMoney(raw),date=$('#traceNewBankDate').value,mode=$('#traceNewBankMode').value,
    currencyCode=currency.value,countryCode=country.value,
    linkedId=accountKind==='card'?$('#traceNewBankLinked').value:null,
    linkedAccount=visibleBankAccounts(me).find(a=>a.id===linkedId&&accountType(a)==='checking'&&
@@ -4068,7 +4090,7 @@ function openNewBankAccount(preset='',returnTo='settings',presetCountry='CA'){
   if(!label||label.length>70||!['checking','card'].includes(accountKind)||
    !window.TraceInternational.valid(currencyCode)||!['CA','FR','OTHER'].includes(countryCode)||
     (accountKind==='card'&&(payment.value!=='credit'||!linkedAccount))||
-   !/^\d{4}-\d\d-\d\d$/.test(date)||(n!==null&&(!Number.isFinite(n)||Math.abs(n)>1e9))||
+   !window.TraceInternational.calendarDate(date)||(raw!==''&&(n===null||Math.abs(n)>1e9))||
    (accountKind==='card'&&n!==null&&n<0)){
    $('#traceBankSetupError').textContent='Vérifie le nom, la date et le montant. La dette de carte doit être saisie en positif.';
    return;
@@ -4203,7 +4225,9 @@ function openAccountSettings(){
   const newBalances={...oldBalances},newDates={...oldDates},newModes={...oldModes};
   for(const input of $$('.account-opening')){
    if(!visibleBankAccounts(me).some(a=>a.id===input.dataset.id))continue;
-   if(input.value.trim()!==''&&!Number.isFinite(Number(input.value)))return;
+   if(input.value.trim()!==''&&window.TraceInternational.exactMoney(input.value)===null){
+    traceNotice(Error('Vérifie les soldes de référence : montants au centime requis.'));return;
+   }
    if(input.value.trim()==='')delete newBalances[input.dataset.id];
    else{
     const account=state.accounts.find(a=>a.id===input.dataset.id);
@@ -4263,7 +4287,8 @@ function openSingleReconcile(id){
   $('#saveReconciliation').onclick=async()=>{
     const input=$('#reconcileActual').value;
     const raw=Number(input),cardKind=isCard?$('#reconcileCardKind').value:null;
-    if(!input.trim()||!Number.isFinite(raw)||(isCard&&raw<0)||!$('#reconcileDate').value){
+    if(window.TraceInternational.exactMoney(input)===null||(isCard&&raw<0)||
+     !window.TraceInternational.calendarDate($('#reconcileDate').value)){
      traceNotice(Error('Vérifie le montant et la date du relevé.'));return;
     }
     const actual=isCard?(cardKind==='credit'?Math.abs(raw):-Math.abs(raw)):raw;

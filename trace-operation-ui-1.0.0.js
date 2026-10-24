@@ -156,6 +156,10 @@
   const help=doc.getElementById('manualKindHelp');if(help)oneBody.appendChild(help);
   fieldPair('manualTxName',twoBody,names.description);
   const moneyRow=fields.querySelector('.manual-money-row');if(moneyRow)twoBody.appendChild(moneyRow);
+  // The international fields belong to the actual amount form. Preserve the
+  // whole group before removing its old container, including destination legs.
+  const international=fields.querySelector('.trace-intl-transaction');
+  if(international)twoBody.appendChild(international);
   const named=[['manualCategoryWrap'],['manualWhoWrap'],['manualFriendsGroup'],['manualTargetWrap'],['manualSavingsWrap'],['manualFriendLink']];
   named.forEach(([id])=>{const el=doc.getElementById(id);if(el)threeBody.appendChild(el)});
   const whoLabel=doc.querySelector('#manualWhoWrap label');if(whoLabel)whoLabel.textContent=names.allocation;

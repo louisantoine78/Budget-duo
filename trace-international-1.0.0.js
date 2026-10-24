@@ -5,6 +5,16 @@
  const codes=Object.freeze(['CAD','EUR','USD','GBP','CHF']);
  const locales={CAD:'fr-CA',EUR:'fr-FR',USD:'en-US',GBP:'en-GB',CHF:'fr-CH'};
  const valid=c=>codes.includes(String(c||'').toUpperCase());
+ const numeric=value=>(typeof value==='number'||typeof value==='string'&&
+  /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim()))&&Number.isFinite(Number(value));
+ const exactMoney=value=>numeric(value)&&
+  Math.abs(Number(value)*100-Math.round(Number(value)*100))<1e-5?Number(value):null;
+ const calendarDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))&&
+  Number.isFinite(+new Date(value+'T12:00:00Z'))&&
+  new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;
+ const verifiedQuote=(quote,code)=>quote&&quote.currency===code&&
+  numeric(quote.cadPerUnit)&&Number(quote.cadPerUnit)>0&&calendarDate(quote.date)&&
+  typeof quote.source==='string'&&quote.source.trim().length>0;
  const currency=a=>{
   const declared=a?.currency;
   if(declared===undefined||declared===null||String(declared).trim()==='')return 'CAD'; // Historical accounts.
@@ -16,7 +26,7 @@
   const requested=code===undefined||code===null||code===''?'CAD':String(code).toUpperCase();
    if(!valid(requested))return '—';
    const c=requested;
-  if(value===null||value===undefined||value===''||!Number.isFinite(Number(value)))return '—';
+  if(!numeric(value))return '—';
   return new Intl.NumberFormat(locales[c],{style:'currency',currency:c,minimumFractionDigits:decimals,maximumFractionDigits:decimals}).format(Number(value));
  };
  const round=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
@@ -27,22 +37,23 @@
   if(!a)return null;
   const code=currency(a);
   if(leg==='destination'){
-   if(t.toBankAmount!==null&&t.toBankAmount!==undefined&&t.toBankAmount!==''&&Number.isFinite(Number(t.toBankAmount)))return Number(t.toBankAmount);
+   if(t.toBankCurrency&&String(t.toBankCurrency).toUpperCase()!==code)return null;
+   if(t.toBankAmount!==null&&t.toBankAmount!==undefined&&t.toBankAmount!=='')return exactMoney(t.toBankAmount);
    // Legacy CAD -> CAD documents only. CAD as destination of EUR/USD/etc
    // must never inherit the CAD budget valuation as a bank receipt.
    if(code==='CAD'&&(!t.bankCurrency||String(t.bankCurrency).toUpperCase()==='CAD')){
     const legacy=t.amountCAD;
-    return legacy!==null&&legacy!==undefined&&legacy!==''&&Number.isFinite(Number(legacy))?Number(legacy):null;
+    return exactMoney(legacy);
    }
    // All international destination legs need an explicit booked amount.
    return null;
   }
-  if(t.bankAmount!==null&&t.bankAmount!==undefined&&t.bankAmount!==''&&Number.isFinite(Number(t.bankAmount)))return Number(t.bankAmount);
-  return code==='CAD'&&t.amountCAD!==null&&t.amountCAD!==undefined&&t.amountCAD!==''&&
-   Number.isFinite(Number(t.amountCAD))?Number(t.amountCAD):null;
+  if(t.bankCurrency&&String(t.bankCurrency).toUpperCase()!==code)return null;
+  if(t.bankAmount!==null&&t.bankAmount!==undefined&&t.bankAmount!=='')return exactMoney(t.bankAmount);
+  return code==='CAD'?exactMoney(t.amountCAD):null;
  };
- const fxValue=(native,code,quote)=>code==='CAD'?round(native):
-  quote&&quote.currency===code&&Number.isFinite(Number(quote.cadPerUnit))&&Number(quote.cadPerUnit)>0?
+ const fxValue=(native,code,quote)=>!numeric(native)||!valid(code)?null:code==='CAD'?round(native):
+  verifiedQuote(quote,code)?
    round(native*Number(quote.cadPerUnit)):null;
  const primary=(accounts,owner,primaryId)=>{
   const list=(accounts||[]).filter(a=>(!owner||a.owner===owner)&&!a.archived&&['checking','card'].includes(a.type));
@@ -52,6 +63,8 @@
  };
  const snapshot=({accounts=[],owner,estimates={},mainId,fxRates={}}={})=>{
   const active=accounts.filter(a=>(!owner||a.owner===owner)&&!a.archived&&['checking','card'].includes(a.type));
+  // Missing, nonfinite and sub-cent estimates are unknown; none become zero.
+  estimates=Object.fromEntries(active.map(a=>[a.id,exactMoney(estimates[a.id])]));
   const main=primary(active,owner,mainId);
   // A legacy unlinked card may be attributed automatically only where
   // there is exactly one plausible current account for its currency/country.
@@ -94,13 +107,13 @@
     amount=op.bankAmountCAD??op.amount;
   }
   if(amount===null||amount===undefined||amount==='')return null;
-  const n=Number(amount);
-  return Number.isFinite(n)&&n>0?round(n):null;
+  const n=exactMoney(amount);
+  return n!==null&&n>0?n:null;
  };
  const fetchDailyRate=async(code,date,transport)=>{
   const c=String(code||'').toUpperCase();
   if(!valid(c))throw Error('Devise non prise en charge');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))throw Error('Date du taux invalide');
+  if(!calendarDate(date))throw Error('Date du taux invalide');
   if(c==='CAD')return{currency:c,cadPerUnit:1,date,source:'identité',kind:'exact'};
   const end=new Date(date+'T12:00:00Z'),start=new Date(end);start.setUTCDate(start.getUTCDate()-8);
   const iso=x=>x.toISOString().slice(0,10),series='FX'+c+'CAD';
@@ -110,7 +123,8 @@
   const response=await get(url);
   if(!response?.ok)throw Error('Taux de référence indisponible');
   const raw=await response.json();
-  const obs=(raw?.observations||[]).filter(o=>String(o.d||'')<=date&&Number.isFinite(Number(o?.[series]?.v))&&Number(o[series].v)>0);
+  const obs=(raw?.observations||[]).filter(o=>calendarDate(o.d)&&o.d>=iso(start)&&o.d<=date&&
+   numeric(o?.[series]?.v)&&Number(o[series].v)>0);
   if(!obs.length)throw Error('Aucun taux de référence disponible avant cette date');
   obs.sort((a,b)=>String(b.d).localeCompare(String(a.d)));
   return{currency:c,cadPerUnit:Number(obs[0][series].v),date:obs[0].d,requestedDate:date,
@@ -144,13 +158,12 @@
   if(t.bankAmount===null||t.bankAmount===undefined||t.bankAmount===''||
      t.amountCAD===null||t.amountCAD===undefined||t.amountCAD==='')
     throw Error('Montant natif et contre-valeur CAD historiques obligatoires.');
-  const native=Number(t.bankAmount),cad=Number(t.amountCAD),rate=Number(t.bankRateCad);
-  if(!Number.isFinite(native)||!Number.isFinite(cad)||!Number.isFinite(rate)||
+  const native=exactMoney(t.bankAmount),cad=exactMoney(t.amountCAD),rate=Number(t.bankRateCad);
+  if(native===null||cad===null||!numeric(t.bankRateCad)||
      !(native>0)||!(cad>0)||!(rate>0))
     throw Error('Montant natif, contre-valeur CAD et taux vérifié obligatoires.');
   const day=String(t.date||''),rated=String(t.fxRateDate||''),origin=String(t.fxRateSource||'').trim();
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||
-     !/^\d{4}-\d{2}-\d{2}$/.test(rated)||rated>day||!origin)
+  if(!calendarDate(day)||!calendarDate(rated)||rated>day||!origin)
     throw Error('Date et source du taux historique vérifié obligatoires.');
   if(Math.abs(round(native*rate)-cad)>.011)
     throw Error('Contre-valeur CAD incohérente avec le taux bancaire historisé.');
@@ -158,25 +171,25 @@
    bankRateCad:rate,fxRateDate:rated,fxRateSource:origin};
  };
  const resolveBooking=({account,bankAmount,originalAmount=null,originalCurrency=null,quote=null,date}={})=>{
-  const bankCurrency=currency(account),native=Number(bankAmount);
+  const bankCurrency=currency(account),native=exactMoney(bankAmount);
   if(originalCurrency!==null&&originalCurrency!==undefined&&String(originalCurrency).trim()!==''&&!valid(originalCurrency))
    throw Error('Devise d’achat d’origine non prise en charge');
   const purchaseCurrency=valid(originalCurrency)?String(originalCurrency).toUpperCase():bankCurrency;
-  if(!Number.isFinite(native)||native<=0)throw Error('Montant bancaire invalide');
+  if(native===null||native<=0)throw Error('Montant bancaire invalide : centimes exacts requis');
   const originProvided=originalAmount!==null&&originalAmount!==undefined&&originalAmount!=='';
   if(purchaseCurrency!==bankCurrency&&!originProvided)
    throw Error('Prix d’achat d’origine requis lorsque sa devise diffère du compte');
-  const origin=originProvided?Number(originalAmount):native;
-  if(!Number.isFinite(origin)||origin<=0)throw Error('Montant d’achat invalide');
+  const origin=originProvided?exactMoney(originalAmount):native;
+  if(origin===null||origin<=0)throw Error('Montant d’achat invalide : centimes exacts requis');
+  if(!calendarDate(date))throw Error('Date de l’opération invalide');
+  if(bankCurrency!=='CAD'&&quote&&numeric(quote.cadPerUnit)&&Number(quote.cadPerUnit)>0&&
+     (!calendarDate(quote.date)||quote.date>date))throw Error('Date du taux de change invalide');
   const cad=fxValue(native,bankCurrency,quote);
-  if(cad===null)throw Error('Taux CAD requis pour la date de cette opération');
-  if(bankCurrency!=='CAD'&&quote&&(!/^\d{4}-\d{2}-\d{2}$/.test(String(quote.date||''))||
-     (date&&quote.date>date)))
-   throw Error('Date du taux de change invalide');
+  if(cad===null)throw Error('Taux CAD requis avec date et source pour cette opération');
   return{currency:purchaseCurrency,amountOriginal:round(origin),bankCurrency,bankAmount:round(native),
-   amountCAD:cad,rate:purchaseCurrency===bankCurrency?quote?.cadPerUnit||1:null,
+   amountCAD:cad,rate:purchaseCurrency===bankCurrency?(bankCurrency==='CAD'?1:Number(quote.cadPerUnit)):null,
    bankRateCad:bankCurrency==='CAD'?1:Number(quote.cadPerUnit),fxRateDate:quote?.date||date||'',
-   fxRateSource:bankCurrency==='CAD'?'identité':quote?.source||'saisi manuellement'};
+   fxRateSource:bankCurrency==='CAD'?'identité':quote.source.trim()};
  };
  // Prepare an edit of ONE already-recorded international transfer. The one
  // ledger document remains the sole source of both bank legs; budget is neutral.
@@ -193,8 +206,8 @@
    throw Error('Cette carte doit être remboursée depuis son compte courant lié');
   if(String(bankAmount??'').trim()===''||String(receivedAmount??'').trim()==='')
    throw Error('Les deux montants bancaires réels sont obligatoires');
-  const received=Number(receivedAmount);
-  if(!Number.isFinite(received)||received<=0)throw Error('Montant reçu invalide');
+  const received=exactMoney(receivedAmount);
+  if(received===null||received<=0)throw Error('Montant reçu invalide : centimes exacts requis');
   const bankCode=currency(from),originalCode=originalCurrency||transaction.currency||bankCode;
   const original=originalAmount===null||originalAmount===undefined||originalAmount===''?
    (originalCode===bankCode?bankAmount:null):originalAmount;
@@ -203,12 +216,12 @@
   // Optional documented bank fee is INCLUDED in the actual amount debited,
    // never a second bank movement or a consumption-budget expense.
    const feeInput=feeAmount===null?(transaction.transferFeeAmount??0):feeAmount;
-   const fee=feeInput===''?0:Number(feeInput);
-   if(!Number.isFinite(fee)||fee<0||fee>booking.bankAmount)
+   const fee=feeInput===''?0:exactMoney(feeInput);
+   if(fee===null||fee<0||fee>booking.bankAmount)
     throw Error('Frais de virement invalides : ils sont inclus dans le montant débité');
    const nextName=name===null?String(transaction.name||''):String(name||'').trim();
   if(nextName.length<2||nextName.length>85)throw Error('Libellé bancaire invalide');
-  const next={...transaction,...booking,name:nextName,toBankAmount:round(received),
+  const next={...transaction,...booking,name:nextName,toBankAmount:received,toBankCurrency:currency(to),
     transferFeeAmount:round(fee),transferFeeCurrency:bankCode,transferFeeIncludedInDebit:true};
   // The same transfer is never a new expense or income. Preserve historical
   // link IDs and all user allocations; only change native legs and FX metadata.
@@ -217,6 +230,6 @@
      transaction.name!==nextName)next.importFingerprint=null;
   return next;
  };
- root.TraceInternational=Object.freeze({valid,currency,currencies,country,mode,money,amountOnAccount,primary,snapshot,
+ root.TraceInternational=Object.freeze({valid,currency,currencies,country,mode,money,exactMoney,calendarDate,amountOnAccount,primary,snapshot,
   fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,investmentBankAmount,verifiedForeignFriendRefund,fxValue});
 })(typeof window!=='undefined'?window:globalThis);
