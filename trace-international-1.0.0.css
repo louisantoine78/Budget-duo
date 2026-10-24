@@ -125,3 +125,41 @@
 .trace-activity-pending .tx-amt{font-size:12px;white-space:normal;overflow-wrap:anywhere;max-width:40%;text-align:right}
 @media(max-width:350px){.trace-activity-filters{grid-template-columns:1fr}.trace-activity-day-heading h3{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.trace-activity-pending-action{transition:none}}
+
+
+/* TRACE 5.37 — premium Couple & Proches inside Activité, no sixth main tab. */
+.trace-activity-three-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.trace-activity-three-tabs .tab{min-width:0;white-space:nowrap;font-size:clamp(11px,2.9vw,13px);padding-left:5px;padding-right:5px}
+#activitySharing{min-width:0;padding-bottom:8px}
+.trace-share-group{display:grid;gap:11px;min-width:0;margin-top:17px}
+.trace-share-group+.trace-share-group{border-top:1px solid #dfeae3;padding-top:17px;margin-top:20px}
+.trace-share-group>.section-head{margin-top:0}
+.trace-share-group .section-head h3{font-size:14px;color:#234c3f;margin:0}
+.trace-share-hero{border:1px solid #e1ece4;background:linear-gradient(148deg,#f4faf5,#fffefa);border-radius:20px;padding:17px 16px;box-shadow:0 7px 20px rgba(20,64,49,.045)}
+.trace-share-hero .eyebrow{color:#688879;letter-spacing:.055em;font-size:10px;font-weight:750}
+.trace-share-hero>strong{display:block;font-size:clamp(19px,5.3vw,29px);font-weight:850;color:#184c3d;line-height:1.2;letter-spacing:-.023em;margin:8px 0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.trace-share-hero p,.trace-share-disclaimer{font-size:12px;color:#718577;line-height:1.5;margin:6px 0 12px}
+.trace-share-actions{display:flex;gap:9px;align-items:stretch;flex-wrap:wrap;margin-top:14px}
+.trace-share-actions button{flex:1 1 150px;min-height:44px;font-size:12px;padding:10px}
+.trace-share-opening{font-size:11px;color:#698373;margin-top:12px}
+.trace-share-history-row,.trace-share-advance-row{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:12px 10px;border:1px solid #e5eee8;background:#fffefa;border-radius:12px;min-width:0}
+.trace-share-history-row>span,.trace-share-advance-row>span{display:grid;gap:5px;min-width:0;flex:1}
+.trace-share-history-row b,.trace-share-advance-row b{color:#254c40;font-size:12px;overflow-wrap:anywhere}
+.trace-share-history-row small,.trace-share-advance-row small{color:#7c9082;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.trace-share-history-row strong{font-size:12px;color:#27614b;white-space:nowrap;font-variant-numeric:tabular-nums}
+.trace-share-friends-hero{background:linear-gradient(145deg,#f8fbf8,#fff)}
+.trace-share-friend{border:1px solid #e1ece5;border-radius:15px;min-width:0;background:#fffefa;overflow:hidden}
+.trace-share-friend>summary{cursor:pointer;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:52px;list-style:none}
+.trace-share-friend>summary::-webkit-details-marker{display:none}
+.trace-share-friend>summary span{min-width:0;display:grid;gap:4px;flex:1}
+.trace-share-friend>summary b{font-size:13px;color:#285341;overflow-wrap:anywhere}
+.trace-share-friend>summary small{font-size:11px;color:#829389;line-height:1.4}
+.trace-share-friend>summary strong{font-size:12px;color:#1c5843;white-space:normal;text-align:right;font-variant-numeric:tabular-nums}
+.trace-share-friend-detail{display:grid;gap:7px;padding:0 12px 12px}
+.trace-share-friend-detail>p{font-size:12px;color:#667d70;margin:0 0 5px}
+.trace-share-advance-row{border-color:#edf2ed;background:#fbfdfb}
+.trace-share-advance-row>small{max-width:44%;text-align:right}
+.trace-share-empty{font-size:12px;color:#809286;line-height:1.6;padding:13px 14px;border:1px dashed #d5e5d9;border-radius:14px}
+.trace-share-disclaimer{padding:4px 2px}
+@media(max-width:375px){.trace-share-history-row strong{white-space:normal;text-align:right}.trace-share-friend>summary{padding:11px}.trace-share-hero{padding:14px}.trace-share-advance-row{flex-direction:column}.trace-share-advance-row>small{max-width:100%;text-align:left}}
+@media(prefers-reduced-motion:reduce){.trace-share-friend,.trace-share-hero{scroll-behavior:auto}}
