@@ -4180,20 +4180,52 @@ function starterCategoryDocs(hid,uid){
 }
 async function seedNewHouseholdCategories(hid){
  if(!session?.user?.id||!hid)throw Error('Session nécessaire pour initialiser le budget.');
- const docs=starterCategoryDocs(hid,session.user.id);
- for(const doc of docs){
-  const {error}=await client.rpc('trace_cas_save_document',{
+ // Retrying after a partial bootstrap is safe: a present category is NEVER
+ // overwritten. CAS create-only protects concurrent new members as well.
+ const {data:existing,error:readError}=await client.from('documents')
+  .select('item_id,revision').eq('household_id',hid).eq('collection','categories');
+ if(readError)throw readError;
+ const seen=new Set();
+ for(const row of existing||[]){
+  if(!row||typeof row.item_id!=='string')throw Error('Référentiel des catégories incomplet.');
+  seen.add(row.item_id);
+  traceDocRevisions.set(traceWriteKey('categories',row.item_id),traceRevision(row.revision));
+ }
+ for(const doc of starterCategoryDocs(hid,session.user.id)){
+  if(seen.has(doc.item_id))continue;
+  const {data:revision,error}=await client.rpc('trace_cas_save_document',{
    p_household_id:hid,p_collection:'categories',p_item_id:doc.item_id,
    p_data:doc.data,p_expected_revision:null});
-  if(error)throw traceSaveFailure(error);
+  if(error){
+   if(!/TRACE_WRITE_CONFLICT/.test(String(error.message||'')))throw traceSaveFailure(error);
+   // Another member may have created the same starter key concurrently.
+   // Verify a real row exists; never swallow an unrelated CAS failure.
+   const {data:already, error:lookupError}=await client.from('documents')
+    .select('item_id,revision').eq('household_id',hid)
+    .eq('collection','categories').eq('item_id',doc.item_id).maybeSingle();
+   if(lookupError)throw lookupError;
+   if(!already||already.item_id!==doc.item_id)
+    throw traceSaveFailure(error);
+   traceDocRevisions.set(traceWriteKey('categories',doc.item_id),traceRevision(already.revision));
+   continue;
+  }
+  traceDocRevisions.set(traceWriteKey('categories',doc.item_id),traceRevision(revision));
  }
 }
 async function restoreStarterCategories(){
  if(state.categories.length||state.budgets.length)throw Error('Catégories existantes : aucune initialisation automatique.');
  await seedNewHouseholdCategories(household.id);
- const {data,error}=await client.from('documents').select('data').eq('household_id',household.id).eq('collection','categories');
+ const {data,error}=await client.from('documents')
+  .select('item_id,data,revision').eq('household_id',household.id).eq('collection','categories');
  if(error)throw error;
- state.categories=(data||[]).map(d=>d.data).filter(Boolean);
+ const fresh=[];
+ for(const doc of data||[]){
+  if(!doc?.data||doc.data.id!==doc.item_id)
+   throw Error('Référentiel des catégories incohérent : recharge TRACE.');
+  traceDocRevisions.set(traceWriteKey('categories',doc.item_id),traceRevision(doc.revision));
+  fresh.push(doc.data);
+ }
+ state.categories=fresh;
  renderAll();
 }
 let initialBankSetupShown=false;
