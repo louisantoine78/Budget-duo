@@ -193,3 +193,14 @@ Dernier commit du lot précédent : `d6f350a197b35df25076c478256b98f6ee6dc97f`. 
 **Tests relus et rejoués sur les fichiers GitHub après commit : 80/80 en 7 suites V8 à modules Node/DOM simulés**, pas de Node CLI ni Safari, CI ni vraie base. Dernier déploiement Vercel reste l'ancienne candidate `2c312f0021d2df92d3fb98e906c169cc76f82698`; **aucun nouveau déploiement demandé ou exécuté**, la préversion externe ne contient pas encore ces avancées.
 
 **Prochain lot** : développer Activité, historique regroupé par jour et filtres avancés ; lier les détails du Budget aux transactions préfiltrées ; organiser Partage Couple/Proches. État détaillé dans `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md`. Ne pas réactiver cartes différées réelles. Ne pas toucher `main` `02c70f50e7e51da79b77a91dde96a03c6c719909`, Supabase réel, PWA prod, déploiements, CI ou PickPoint.
+
+
+## Relais vérifié — Activité/Partage, 24 octobre 2026
+
+**Développement réel 5.37 candidat :** Activité possède désormais **Transactions / Importer / Partage**. Transactions : journal groupé par journée, filtres Compte/Catégorie/Nature/Devise native/Statut avec « À valider », navigation depuis les catégories Budget. Partage : **Couple puis Proches**, solde et règlement du couple réutilisant `coupleBalance`, `sharingHistory` et les éditeurs existants, avances/remboursements partiels et multiples exposés via `TraceMovement.friendReceivables` ; lancement d'un remboursement/avance dans le formulaire manuel existant préconfiguré (aucune validation automatique). Raccourcis Accueil → Activité/Partage ; période mensuelle cachée pour le solde cumulatif. Aucun sixième onglet principal ni changement de formule financière.
+
+**SHAs vérifiés :** JS journal `1e169108`, HTML journal `15902fae`, CSS journal `76be5d14`, fix `fc35b651`, test journal `ddc8194e` ; JS Partage `efa749eb`, HTML `0924529d`, CSS `a6697fb7`, fix ancien smoke `bdd1ba1c`, tests Partage `b9864358`. Commits `[skip ci]`.
+
+**QA rejouée après persistance GitHub** : **100/100 scénarios, 9 suites ciblées**, avec shims Node/DOM V8 ; **pas Safari réel, Node CLI natif ni E2E multi-user**. La preview externe Vercel **est ancienne** (`2c312f`) et non redéployée. Main `02c70f50e7e51da79b77a91dde96a03c6c719909` intacte ; interdit de toucher Supabase réel, prod, CI, PickPoint. **NO-GO production**.
+
+Voir `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md` actualisé pour les limites et la prochaine tranche. Priorités : contrôle PDF mensuel sûr puis débit différé raccordé à la comptabilité de la candidate sur fixtures, finition/QA iPhone. Ne pas rouvrir les choix UX validés.
