@@ -99,8 +99,8 @@
    ' erreur(s). Vérifie une par une les dates, montants, sens, pages et extraits.</p>'+
    (staged.issues.length?staged.issues.map(x=>'<p class="trace-statement-issue">Ligne '+
     (x.index+1)+' : '+esc(x.reason)+'</p>').join(''):'')+
-   staged.ready.map(x=>
-    '<label class="trace-statement-confirm"><input type="checkbox" data-statement-approve="'+x.index+'">'+
+   staged.ready.map((x,index)=>
+    '<label class="trace-statement-confirm"><input type="checkbox" data-statement-approve="'+index+'">'+
     '<span><b>Page '+x.page+', ligne '+x.line+' · '+esc(x.date)+
     ' · '+esc(x.direction==='in'?'Crédit':'Débit')+' '+money(x.amount,staged.currency)+
     '</b><small>'+esc(x.name||'Sans libellé')+' — '+esc(x.rawText)+'</small></span></label>'
@@ -177,10 +177,10 @@
    }
    const E=root.TraceStatementEvidence,C=root.TraceStatementReconcile;
    if(!E||!C){say('Moteur de comparaison indisponible.',true);return;}
-   const approvals=staged.ready.map(row=>({
+   const approvals=staged.ready.map((row,index)=>({
     id:row.id,evidenceKey:row.evidenceKey,
     confirmed:el(host,'traceStatementReview').querySelector(
-     '[data-statement-approve="'+row.index+'"]')?.checked===true
+     '[data-statement-approve="'+index+'"]')?.checked===true
    }));
    try{
     verified=E.compareReviewed({staged,approvals,account:{
