@@ -86,7 +86,7 @@ function makeWealth({missingFx=false,noPortfolio=false}={}){
   money:n=>n+' CAD',nativeMoney:(n,c)=>n+' '+c,
   esc:x=>String(x),shortAccountLabel:acc=>acc.id,
   $:el,$$:()=>[],openInvestmentAccountAdd(){},openAccountSettings(){},
-  openInvestmentAccount(){},insightWealthData:()=>[],updateSegments(){}};
+  openInvestmentAccount(){},insightWealthData:()=>[],updateSegments(){},requestInternationalRates(){}};
  const fn=new Function(...Object.keys(ctx),'return ('+app.slice(i,j)+');')(...Object.values(ctx));
  fn();assert.equal(JSON.stringify(state),before,'renderer mutated user data');
  return{el};

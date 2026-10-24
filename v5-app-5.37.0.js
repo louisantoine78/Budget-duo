@@ -468,11 +468,10 @@ function insightWealthData(scopeValue,bankResult,ports,missing){
     if(Number.isFinite(amount)&&amount>0)flows.push({month:String(t.date||'').slice(0,7),kind:deposit?'deposit':'withdrawal',amount});
    });
   }else{
-   const fx=a.currency==='CAD'?1:Number(a.fxCadPerUnit||0);
-   if(!(fx>0))return;
    state.investmentOperations.filter(o=>o.accountId===a.id&&['deposit','withdrawal'].includes(o.type)).forEach(o=>{
-    const amount=Number(o.amount||0)*fx;
-    if(Number.isFinite(amount)&&amount>0)flows.push({month:String(o.date||'').slice(0,7),kind:o.type,amount});
+    // Historical contribution flows must not be revalued at today's FX rate.
+    const amount=window.TraceInternational.exactMoney(a.currency==='CAD'?o.amount:o.bankAmountCAD);
+    if(amount!==null&&amount>0)flows.push({month:String(o.date||'').slice(0,7),kind:o.type,amount});
    });
   }
  });
@@ -722,6 +721,7 @@ function requestInternationalRates(currencies){
   results.forEach((result,i)=>{if(result.status==='fulfilled')internationalQuotes[wanted[i]]=result.value;});
   internationalFxBusy=false;
   if($('#traceIntlHome'))renderHome();
+  if($('#wealthTotal'))renderWealth();
  });
 }
 
@@ -807,7 +807,7 @@ function manualCategories(type){
 
 function openManualTransaction(preferredKind='expense'){
  const M=window.TraceMovement,Guide=window.TraceImportGuide,U=window.TraceOperationUI;
- let kind='expense',categoryTouched=false;
+ let kind='expense',categoryTouched=false,previewToken=0;
  const bankAccounts=visibleBankAccounts(me);
  const validCardTarget=(from,to)=>{
   if(!from||!to||accountType(from)!=='checking'||accountType(to)!=='card'||from.owner!==to.owner||
@@ -928,19 +928,41 @@ function openManualTransaction(preferredKind='expense'){
   $m('manualTarget').innerHTML=bankAccounts.filter(a=>a.id!==$m('manualTxAccount').value&&
    (kind!=='card_payment'||validCardTarget(from,a))).map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
   if([...$m('manualTarget').options].some(o=>o.value===previousTarget))$m('manualTarget').value=previousTarget;
-  const destination=bankAccounts.find(a=>a.id===$m('manualTarget').value),
-   distinct=destination&&window.TraceInternational.currency(destination)!==fromCurrency;
-  $m('manualDestAmountWrap').hidden=!distinct||!['card_payment','transfer'].includes(kind);
-  if(distinct)$m('manualDestAmountLabel').textContent='Montant reçu dans le compte destinataire ('+
-   window.TraceInternational.currency(destination)+') · obligatoire';
   const eligible=trackedSavingsAccounts(me).filter(x=>isReadySavingsAccount(x));
   $m('manualSavings').innerHTML='<option value="">Choisir un compte d’épargne</option>'+
    eligible.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>').join('');
   if([...$m('manualSavings').options].some(o=>o.value===previousSavings))$m('manualSavings').value=previousSavings;
+  const savingsMovement=['savings_transfer','savings_withdrawal'].includes(kind),
+   destination=savingsMovement?eligible.find(a=>a.id===$m('manualSavings').value):bankAccounts.find(a=>a.id===$m('manualTarget').value),
+   distinct=destination&&window.TraceInternational.currency(destination)!==fromCurrency;
+  $m('manualDestAmountWrap').hidden=!distinct||!['card_payment','transfer','savings_transfer','savings_withdrawal'].includes(kind);
+  if(distinct)$m('manualDestAmountLabel').textContent=(kind==='savings_withdrawal'?'Montant réellement sorti du compte d’épargne (':'Montant réellement reçu sur le compte destinataire (')+
+   window.TraceInternational.currency(destination)+') · obligatoire';
   if(kind==='friend_reimbursement')linkOptions();
-  const amount=Number($m('manualTxAmount').value);
-  $m('manualMovementImpact').textContent=movementImpactText(kind,amount,budget&&expense?$m('manualTxBeneficiary').value:me,
-   Number($m('manualFriendsAmount').value||0),Number($m('manualPartnerAmount').value||0));
+  const amount=window.TraceInternational.exactMoney($m('manualTxAmount').value),
+   preview=$m('manualMovementImpact'),token=++previewToken,
+   who=budget&&expense?$m('manualTxBeneficiary').value:me,
+   friends=Number($m('manualFriendsAmount').value||0),otherPart=Number($m('manualPartnerAmount').value||0),
+   selectedKind=kind;
+  if(fromCurrency==='CAD'){
+   preview.textContent=movementImpactText(kind,amount||0,who,friends,otherPart);
+  }else if(amount===null||!(amount>0)){
+   preview.textContent='Montant bancaire au centime à compléter · '+fromCurrency;
+  }else{
+   const I=window.TraceInternational,date=$m('manualTxDate').value,manual=$m('manualFxRate').value.trim();
+   const nativeLabel='Montant bancaire réel : '+I.money(amount,fromCurrency)+'. ';
+   preview.textContent=nativeLabel+'Contre-valeur CAD en cours de vérification…';
+   const pending=manual?Promise.resolve({currency:fromCurrency,cadPerUnit:Number(manual),date,source:'Taux saisi manuellement'}):I.getRate(fromCurrency,date);
+   Promise.resolve(pending).then(quote=>{
+    if(token!==previewToken||preview.isConnected===false)return;
+    const booking=I.resolveBooking({account:from,bankAmount:amount,date,quote});
+    preview.textContent=nativeLabel+'Référence historique : '+I.money(booking.amountCAD,'CAD')+
+     ' · taux du '+quote.date+'. '+movementImpactText(selectedKind,booking.amountCAD,who,friends,otherPart);
+   }).catch(()=>{
+    if(token!==previewToken||preview.isConnected===false)return;
+    preview.textContent=nativeLabel+'Conversion CAD indisponible. Un taux daté et sourcé est nécessaire avant enregistrement.';
+   });
+  }
  }
  function choose(value,keepBank=false){
   if(!M.get(value))return;
@@ -970,7 +992,10 @@ function openManualTransaction(preferredKind='expense'){
  };
  $m('manualTxDate').onchange=sync;
  $m('manualTarget').onchange=sync;
+ $m('manualSavings').onchange=sync;
  $m('manualTxAmount').oninput=sync;
+ $m('manualFxRate').oninput=sync;
+ $m('manualDestAmount').oninput=sync;
  $m('manualFriendsAmount').oninput=sync;
  $m('manualPartnerAmount').oninput=sync;
  $m('manualTxCategory').onchange=()=>{categoryTouched=true;};
@@ -1007,7 +1032,7 @@ function openManualTransaction(preferredKind='expense'){
     (!investmentId||accountType(bankAccount)!=='checking'||!trackedSavingsAccounts(me).some(a=>a.id===investmentId&&isReadySavingsAccount(a)&&date>a.openingDate))){
     error.textContent='Configure ton CELI et son solde initial, puis choisis un mouvement à une date ultérieure.';return;
   }
-  let shares,related,repaymentAllocations=null,booking,destinationBankAmount,friendDebtors,transferFees={};
+  let shares,related,repaymentAllocations=null,booking,destinationBankAmount,friendDebtors,transferFees={},savingsLeg={};
   try{
    const currency=window.TraceInternational.currency(bankAccount),
     input=$m('manualFxRate').value.trim(),userRate=Number(input);
@@ -1021,6 +1046,13 @@ function openManualTransaction(preferredKind='expense'){
     originalCurrency:$m('manualPurchaseCurrency').value,
     originalAmount:$m('manualPurchaseAmount').value||null});
    const destination=bankAccounts.find(a=>a.id===targetId);
+   if(['savings_transfer','savings_withdrawal'].includes(kind)){
+    const investment=trackedSavingsAccounts(me).find(a=>a.id===investmentId),
+     investmentCurrency=window.TraceInternational.currency(investment),
+     native=investmentCurrency===currency?amount:window.TraceInternational.exactMoney($m('manualDestAmount').value);
+    if(native===null||!(native>0))throw Error('Indique le montant réel au centime dans la devise du compte d’épargne.');
+    savingsLeg={investmentAmount:native,investmentCurrency};
+   }
    if(kind==='transfer'&&$m('manualTransferFee').value.trim()!==''){
     const fee=window.TraceInternational.exactMoney($m('manualTransferFee').value);
     if(fee===null||fee<0||fee>amount)throw Error('Les frais doivent être au centime et compris dans le débit total.');
@@ -1056,7 +1088,7 @@ function openManualTransaction(preferredKind='expense'){
    }else related=validateFriendLink(kind,$m('manualRelatedExpense').value,date,booking.amountCAD);
   }catch(e){error.textContent=String(e.message||e);return;}
   const item={id:txDocId(),date,name,note:'',merchant:'',type:def.type,transferPurpose:def.purpose||null,
-   status:'confirmed',...booking,...transferFees,
+   status:'confirmed',...booking,...transferFees,...savingsLeg,
    ...(['transfer','card_payment'].includes(kind)?{toBankAmount:destinationBankAmount,
     toBankCurrency:window.TraceInternational.currency(bankAccounts.find(a=>a.id===targetId))}:{}),
    categoryId,accountId,payerId:me,...shares,...friendDebtors,
@@ -1075,29 +1107,30 @@ function openInvestmentAccountAdd(){
   openSheet('Ajouter un compte',
     '<div class="settings-hero"><span class="pico large">'+uiIcon('chart')+'</span><div><b>Nouveau compte de patrimoine</b><small>Ajoute le compte maintenant ; les opérations et la valorisation viendront ensuite.</small></div></div>'+
     '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. PEA Boursorama, CELI">'+
-    '<div class="formrow"><div><label class="label2">Type</label><select class="input" id="investmentAccountType"><option value="CELI">CELI</option><option value="Épargne">Épargne</option><option value="PEA">PEA</option><option value="REER">REER</option><option value="Courtage">Courtage</option><option value="Autre">Autre</option></select></div>'+
+    '<div class="formrow"><div><label class="label2">Type</label><select class="input" id="investmentAccountType"><option value="CELI">CELI</option><option value="Épargne">Épargne</option><option value="Livret">Livret</option><option value="PEA">PEA</option><option value="REER">REER</option><option value="Courtage">Courtage</option><option value="Autre">Autre</option></select></div>'+
     '<div><label class="label2">Devise</label><select class="input" id="investmentAccountCurrency"><option value="CAD">CAD</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="CHF">CHF</option></select></div></div>'+
-    '<div id="newSavingsReference" class="trace-savings-reference"><div class="empty-note">Les transferts du compte courant alimenteront ce CELI. Pour commencer à calculer son solde, indique sa référence bancaire.</div>'+
+    '<div id="newSavingsReference" class="trace-savings-reference"><div class="empty-note">Les transferts confirmés alimenteront ce compte d’épargne. Pour commencer à calculer son solde, indique sa référence bancaire.</div>'+
     '<label class="label2">Date du solde initial</label><input id="newSavingsDate" class="input" type="date" value="'+localDateISO()+'">'+
-    '<label class="label2">Solde réel à cette date ($ CAD)</label><input id="newSavingsAmount" class="input" type="number" step=".01" min="0" inputmode="decimal" placeholder="Tu peux le compléter plus tard"></div>'+
+    '<label class="label2" id="newSavingsAmountLabel">Solde réel à cette date (CAD)</label><input id="newSavingsAmount" class="input" type="number" step=".01" min="0" inputmode="decimal" placeholder="Tu peux le compléter plus tard"></div>'+
     '<div id="newSavingsError" class="trace-savings-error" role="status"></div>'+
     '<button class="primary full" id="saveInvestmentAccount" type="button" style="margin-top:18px">Ajouter le compte</button>'+
     '<button class="secondary full" id="cancelInvestmentAccount" type="button" style="margin-top:8px">Annuler</button>'
   );
   $('#cancelInvestmentAccount').onclick=closeSheet;
   const refreshSavings=()=>{
-   const saving=['CELI','Épargne'].includes($('#investmentAccountType').value)&&$('#investmentAccountCurrency').value==='CAD';
+   const saving=['CELI','Épargne','Livret'].includes($('#investmentAccountType').value);
    $('#newSavingsReference').classList.toggle('hidden',!saving);
+   $('#newSavingsAmountLabel').textContent='Solde réel à cette date ('+$('#investmentAccountCurrency').value+')';
   };
   $('#investmentAccountType').onchange=refreshSavings;
   $('#investmentAccountCurrency').onchange=refreshSavings;refreshSavings();
   $('#saveInvestmentAccount').onclick=async()=>{
     const name=$('#investmentAccountName').value.trim(),type=$('#investmentAccountType').value,currency=$('#investmentAccountCurrency').value,
-      savings=['CELI','Épargne'].includes(type)&&currency==='CAD',
+      savings=['CELI','Épargne','Livret'].includes(type),
       openingRaw=$('#newSavingsAmount').value.trim(),openingDate=$('#newSavingsDate').value,
-      openingAmount=openingRaw!==''?Number(openingRaw):null;
+      openingAmount=openingRaw!==''?window.TraceInternational.exactMoney(openingRaw):null;
     if(!name||name.length>60||savings&&openingRaw!==''&&
-      (!smartStrictDate(openingDate)||!Number.isFinite(openingAmount)||openingAmount<0||openingAmount>1e10)){
+      (!smartStrictDate(openingDate)||openingAmount===null||openingAmount<0||openingAmount>1e10)){
      $('#newSavingsError').textContent='Vérifie le nom, la date et le solde de référence.';return;
     }
     if(savings&&state.investmentAccounts.some(a=>a.owner===me&&a.name.trim().toLowerCase()===name.toLowerCase())){
@@ -3391,30 +3424,34 @@ function showTab(t){
 /* Portfolio ledger: contributions vs investment performance, native currency first */
 function trackedSavingsAccounts(owner=me){
  return state.investmentAccounts.filter(a=>a.owner===owner&&a.savingsTracking==='linked'&&
-   a.currency==='CAD'&&['CELI','Épargne'].includes(a.type));
+   !a.archived&&window.TraceInternational.valid(a.currency||'CAD')&&['CELI','Épargne','Livret','Savings'].includes(a.type));
 }
 function isReadySavingsAccount(a){
- return Boolean(a&&['la','partner'].includes(a.owner)&&a.savingsTracking==='linked'&&a.currency==='CAD'&&
+ return Boolean(a&&['la','partner'].includes(a.owner)&&a.savingsTracking==='linked'&&
+   window.TraceInternational.valid(a.currency||'CAD')&&
    smartStrictDate(String(a.openingDate||''))&&
-   a.openingBalance!==null&&a.openingBalance!==''&&Number.isFinite(Number(a.openingBalance))&&Number(a.openingBalance)>=0);
+   window.TraceInternational.exactMoney(a.openingBalance)!==null&&Number(a.openingBalance)>=0);
 }
 function linkedSavingsMovements(account){
  if(!isReadySavingsAccount(account))return[];
  return state.transactions.filter(t=>t.status==='confirmed'&&
   t.investmentAccountId===account.id&&t.date>account.openingDate&&
-  t.accountId&&(state.accounts.find(a=>a.id===t.accountId)?.owner===account.owner)&&
-  accountType(state.accounts.find(a=>a.id===t.accountId))==='checking'&&
   ((t.type==='external_transfer'&&t.transferPurpose==='savings')||
    (t.type==='external_refund'&&t.transferPurpose==='savings_withdrawal')));
 }
 function savingsLedger(account){
- const configured=isReadySavingsAccount(account);
- const base=configured?Math.round(Number(account.openingBalance)*100)/100:null;
+ const I=window.TraceInternational,code=I.currency(account),configured=isReadySavingsAccount(account);
+ const base=configured?I.exactMoney(account.openingBalance):null;
  const movements=linkedSavingsMovements(account);
- const net=movements.reduce((n,t)=>n+(t.type==='external_transfer'?Number(t.amountCAD):-Number(t.amountCAD)),0);
- const value=configured?Math.round((base+net)*100)/100:null;
- return {configured,base,movements,net,value,hasFx:true,fx:1,cad:value,
-  contributions:configured?Math.round(net*100)/100:0,
+ const native=movements.map(t=>I.amountOnInvestment(t,account,state.accounts.find(a=>a.id===t.accountId)));
+ const complete=configured&&native.every(n=>n!==null),
+  net=complete?movements.reduce((n,t,i)=>n+(t.type==='external_transfer'?1:-1)*Math.round(native[i]*100),0)/100:null,
+  value=complete?(Math.round(base*100)+Math.round(net*100))/100:null,
+  quote=I.valuationQuote(account,typeof internationalQuotes==='undefined'?{}:internationalQuotes),
+  cad=value===null?null:I.fxValue(value,code,quote);
+ return {configured,base,movements,net,value,hasFx:cad!==null,fx:code==='CAD'?1:quote?.cadPerUnit??null,cad,
+  fxDate:quote?.date||null,fxSource:quote?.source||null,reviewRequired:configured&&!complete,
+  contributions:net,
   cash:value,securities:0,positions:[],dividends:0,fees:0,realized:0,
   performance:0,estimated:true};
 }
@@ -3453,45 +3490,57 @@ function portfolioLedger(account,override=null,removeId=null,cutoff=null){
  }
  const positions=[...pos.values()].filter(p=>p.quantity>.0000001).map(p=>({...p,value:p.quantity*p.price,unrealized:p.quantity*p.price-p.cost}));
  const securities=positions.reduce((sum,p)=>sum+p.value,0),value=cash+securities;
- const fx=account.currency==='CAD'?1:Number(account.fxCadPerUnit||0);
- return{cash,contributions,dividends,fees,realized,positions,securities,value,performance:value-contributions,fx,hasFx:fx>0,cad:fx>0?value*fx:null};
+ const I=window.TraceInternational,code=I.currency(account),
+  quote=I.valuationQuote(account,typeof internationalQuotes==='undefined'?{}:internationalQuotes),
+  cad=I.fxValue(value,code,quote),fx=code==='CAD'?1:quote?.cadPerUnit??null;
+ return{cash,contributions,dividends,fees,realized,positions,securities,value,performance:value-contributions,fx,hasFx:cad!==null,cad,
+  fxDate:quote?.date||null,fxSource:quote?.source||null};
 }
-const nativeMoney=(v,currency)=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:window.TraceInternational.valid(currency)?currency:'CAD',maximumFractionDigits:2}).format(Number(v||0));
+const nativeMoney=(v,currency)=>window.TraceInternational.money(v,currency);
 function openSavingsAccount(account){
- const ledger=savingsLedger(account),ready=ledger.configured,opList=ledger.movements.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ const ledger=savingsLedger(account),ready=ledger.configured,currency=window.TraceInternational.currency(account),
+  editable=account.owner===me,opList=ledger.movements.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
  openSheet(esc(account.name),
   '<div class="settings-hero"><span class="pico large">'+uiIcon('chart')+'</span><div><b>'+
-   (ready?nativeMoney(ledger.value,'CAD'):'Solde à configurer')+'</b>'+
+   (ledger.reviewRequired?'Mouvement à vérifier':ready?nativeMoney(ledger.value,currency):'Solde à configurer')+'</b>'+
    '<small>'+esc(account.type)+' · '+(ready?'Estimation depuis '+esc(account.openingDate):'Date et solde de référence nécessaires')+'</small></div></div>'+
   '<div class="empty-note">Le solde estimé évolue uniquement avec les virements confirmés depuis ton compte courant. Les rendements, intérêts et frais éventuels ne sont pas connus automatiquement.</div>'+
-  (ready?'<div class="trace-stat-grid"><div><small>Solde initial</small><b>'+nativeMoney(ledger.base,'CAD')+'</b></div>'+
-   '<div><small>Virements nets</small><b>'+nativeMoney(ledger.net,'CAD')+'</b></div></div>':'')+
-  '<button class="primary full" id="savingsReferenceEdit">'+(ready?'Modifier le solde de référence':'Configurer le solde initial')+'</button>'+
+  (ready?'<div class="trace-stat-grid"><div><small>Solde initial</small><b>'+nativeMoney(ledger.base,currency)+'</b></div>'+
+   '<div><small>Virements nets</small><b>'+nativeMoney(ledger.net,currency)+'</b></div></div>':'')+
+  (currency!=='CAD'?'<p class="trace-intl-help">'+(ledger.hasFx?
+   'Équivalent indicatif '+nativeMoney(ledger.cad,'CAD')+' · taux du '+esc(ledger.fxDate||''):
+   'Conversion CAD indisponible : aucun taux daté et sourcé utilisable.')+'</p>':'')+
+  (editable?'<button class="primary full" id="savingsReferenceEdit">'+(ready?'Modifier le solde de référence':'Configurer le solde initial')+'</button>':
+   '<p class="trace-intl-help">Compte du partenaire · consultation seule</p>')+
+  (editable&&currency!=='CAD'?'<button class="secondary full" id="savingsExchangeRate" style="margin-top:8px">Taux indicatif · '+currency+' / CAD</button>':'')+
   '<div class="section-head"><h2>Virements liés</h2></div>'+
-  (opList.length?opList.map(t=>'<button type="button" class="trace-list-btn" data-savings-link="'+esc(t.id)+'"><span><b>'+
+  (opList.length?opList.map(t=>'<button type="button" class="trace-list-btn" '+(!editable?'disabled ':'')+'data-savings-link="'+esc(t.id)+'"><span><b>'+
    esc(t.name)+'</b><small>'+esc(t.date)+' · '+esc(shortAccountLabel(state.accounts.find(a=>a.id===t.accountId)))+
-   ' · Voir l’opération</small></span><b>'+esc(t.type==='external_transfer'?'+':'−')+money(t.amountCAD)+'</b></button>').join(''):
-   '<div class="empty-note">Aucun virement lié après le solde de référence. Pour un virement déjà enregistré, ouvre-le dans Activité et sélectionne ce CELI.</div>')+
+   ' · Voir l’opération</small></span><b>'+esc(t.type==='external_transfer'?'+':'−')+
+   nativeMoney(window.TraceInternational.amountOnInvestment(t,account,state.accounts.find(a=>a.id===t.accountId)),currency)+'</b></button>').join(''):
+   '<div class="empty-note">Aucun virement lié après le solde de référence. Pour un virement déjà enregistré, ouvre-le dans Activité et sélectionne ce compte d’épargne.</div>')+
   '<button class="secondary full" id="savingsReturn">Fermer</button>'+traceFeedback());
- $('#savingsReferenceEdit').onclick=()=>editSavingsReference(account);
+ if(editable)$('#savingsReferenceEdit').onclick=()=>editSavingsReference(account);
+ if(editable&&currency!=='CAD')$('#savingsExchangeRate').onclick=()=>editInvestmentRate(account);
  $('#savingsReturn').onclick=closeSheet;
- $$('[data-savings-link]').forEach(x=>x.onclick=()=>editTransaction(x.dataset.savingsLink));
+ if(editable)$$('[data-savings-link]').forEach(x=>x.onclick=()=>editTransaction(x.dataset.savingsLink));
 }
 function editSavingsReference(account){
+ if(account.owner!==me)return;
  const ready=isReadySavingsAccount(account);
  openSheet('Solde de référence · '+esc(account.name),
   '<div class="empty-note">Indique le solde réel à la fin d’une date choisie. Les virements des jours suivants viendront s’ajouter ou se soustraire automatiquement.</div>'+
   '<label class="label2">Date du solde</label><input class="input" type="date" id="savingsOpeningDate" value="'+esc(account.openingDate||localDateISO())+'">'+
-  '<label class="label2">Solde à cette date (CAD)</label><input class="input" inputmode="decimal" type="number" step=".01" min="0" id="savingsOpeningAmount" value="'+(ready?Number(account.openingBalance).toFixed(2):'')+'" placeholder="0,00">'+
+  '<label class="label2">Solde à cette date ('+window.TraceInternational.currency(account)+')</label><input class="input" inputmode="decimal" type="number" step=".01" min="0" id="savingsOpeningAmount" value="'+(ready?Number(account.openingBalance).toFixed(2):'')+'" placeholder="0,00">'+
   '<button class="primary full" id="savingsOpeningSave">Enregistrer la référence</button>'+
   '<button class="secondary full" id="savingsOpeningCancel">Annuler</button>'+traceFeedback());
  $('#savingsOpeningCancel').onclick=()=>openSavingsAccount(account);
  $('#savingsOpeningSave').onclick=async()=>{
-  const date=$('#savingsOpeningDate').value,raw=$('#savingsOpeningAmount').value,amount=Number(raw);
-  if(!smartStrictDate(date)||raw.trim()===''||!Number.isFinite(amount)||amount<0||amount>1e10){
+  const date=$('#savingsOpeningDate').value,raw=$('#savingsOpeningAmount').value,amount=window.TraceInternational.exactMoney(raw);
+  if(!smartStrictDate(date)||amount===null||amount<0||amount>1e10){
    $('#traceFeedback').textContent='Vérifie le solde et la date.';return;
   }
-  const next={...account,openingDate:date,openingBalance:Math.round(amount*100)/100};
+  const next={...account,openingDate:date,openingBalance:amount};
   $('#savingsOpeningSave').disabled=true;
   try{await saveDocument('investment_accounts',next);Object.assign(account,next);renderWealth();openSavingsAccount(account);}
   catch(e){$('#savingsOpeningSave').disabled=false;traceNotice(e);}
@@ -3518,25 +3567,15 @@ function openInvestmentAccount(account){
 }
 
 /* Public FX rate: last banking-day reference, not real-time market execution */
-const fxQuoteCache=new Map();
 async function fetchPublicCadRate(currency){
- const cur=String(currency||'').toUpperCase();
- if(cur==='CAD')return{rate:1,date:localDateISO(),source:'CAD'};
- if(!['EUR','USD'].includes(cur))throw new Error('Devise non prise en charge.');
- if(fxQuoteCache.has(cur))return fxQuoteCache.get(cur);
- const response=await fetch('https://api.frankfurter.dev/v1/latest?base='+encodeURIComponent(cur)+'&symbols=CAD',{cache:'no-store'});
- if(!response.ok)throw new Error('Service de change momentanément indisponible');
- const data=await response.json(),rate=Number(data?.rates?.CAD),date=String(data?.date||'');
- if(!(rate>.2&&rate<10)||!/^20\d{2}-\d\d-\d\d$/.test(date))throw new Error('Réponse du service de change invalide');
- const quote={rate,date,source:'Frankfurter · taux de référence du dernier jour ouvré'};
- fxQuoteCache.set(cur,quote);
- return quote;
+ const q=await window.TraceInternational.getRate(String(currency||'').toUpperCase(),localDateISO());
+ return{rate:q.cadPerUnit,date:q.date,source:q.source};
 }
 let fxSyncPromise=null;
 async function refreshPublicPortfolioRates(force=false){
  if(fxSyncPromise&&!force)return fxSyncPromise;
  const task=async()=>{
-  const eligible=state.investmentAccounts.filter(a=>['EUR','USD'].includes(a.currency)&&a.fxAutoUpdate!==false);
+  const eligible=state.investmentAccounts.filter(a=>a.owner===me&&!a.archived&&window.TraceInternational.valid(a.currency)&&a.currency!=='CAD'&&a.fxAutoUpdate!==false);
   const rates={};
   for(const c of [...new Set(eligible.map(a=>a.currency))]){
    try{rates[c]=await fetchPublicCadRate(c);}catch(e){console.info('Trace FX '+c+' : '+e.message);}
@@ -3558,7 +3597,7 @@ function editInvestmentRate(account){
  '<div class="empty-note">1 '+esc(c)+' = '+(account.fxCadPerUnit?' '+Number(account.fxCadPerUnit).toFixed(5):'—')+' CAD. '+(account.fxRateDate?'Cours daté du '+esc(account.fxRateDate)+'. ':'')+'Les cours publics sont actualisés à chaque jour ouvré, pas en continu. Les opérations historiques conservent leur montant bancaire réel.</div>'+
  '<div class="setting-summary"><span>Mode actuel</span><b>'+(!auto?'Manuel':'Automatique')+'</b></div>'+
  (c!=='CAD'?'<button class="primary full" id="refreshFxPublic" style="margin-top:14px">Actualiser le cours public</button>':'')+
- '<div class="empty-note" style="margin-top:10px">Source : Frankfurter (banques centrales). En cas de panne, le dernier taux enregistré reste utilisé.</div>'+
+ '<div class="empty-note" style="margin-top:10px">Référence publique : Banque du Canada · Valet. En cas de panne, seul un taux enregistré avec sa date et sa source reste utilisable.</div>'+
  '<label class="label2">Taux CAD manuel</label><input class="input" id="manualFxValue" type="number" inputmode="decimal" min="0.000001" step="0.000001" value="'+(account.fxCadPerUnit||'')+'">'+
  '<button class="secondary full" id="saveManualFx" style="margin-top:12px">Utiliser ce taux manuel</button>'+
  '<button class="secondary full" id="cancelFx" style="margin-top:8px">Retour au portefeuille</button>'+traceFeedback());
@@ -3689,16 +3728,16 @@ function openPortfolioAnalysis(){
 
 function renderWealth(){
  const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
+ requestInternationalRates(accounts.map(a=>window.TraceInternational.currency(a)));
  const ports=accounts.map(a=>({a,p:portfolioLedger(a)}));
  const missing=ports.filter(x=>!x.p.hasFx||x.a.savingsTracking==='linked'&&!x.p.configured);
  const investments=ports.reduce((sum,x)=>sum+(x.p.cad||0),0),
   banks=state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&['checking','card'].includes(accountType(a))),
-  bankValues=banks.map(a=>({a,native:accountEstimate(a),currency:window.TraceInternational.currency(a)})),
-  bankMissing=bankValues.filter(x=>x.native===null||
-    x.currency!=='CAD'&&!internationalQuotes[x.currency]||
+  bankValues=banks.map(a=>{const native=accountEstimate(a),currency=window.TraceInternational.currency(a);
+   return{a,native,currency,cad:native===null?null:window.TraceInternational.fxValue(native,currency,internationalQuotes[currency])};}),
+  bankMissing=bankValues.filter(x=>x.native===null||x.cad===null||
     accountType(x.a)==='card'&&Number(x.native)>0),
-  bankCAD=bankValues.reduce((n,x)=>n+(x.native===null?0:
-   window.TraceInternational.fxValue(x.native,x.currency,internationalQuotes[x.currency])||0),0),
+  bankCAD=bankValues.reduce((n,x)=>n+(x.cad??0),0),
   total=bankCAD+investments,complete=!bankMissing.length&&!missing.length;
  $('#wealthTotal').textContent=complete&&!bk.needsCardReview?money(total):'Total incomplet';
  $('#wealthSub').textContent=bk.needsCardReview?'La carte présente un avoir non vérifié : vérifie ton relevé.':
@@ -3708,8 +3747,9 @@ function renderWealth(){
   ['CELI','Épargne','Livret','Savings'].includes(a.type));
  const placements=ports.filter(({a})=>!savings.some(({a:shown})=>shown.id===a.id));
  const tile=({a,p})=>'<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'"><span class="a-icon">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
-  (a.savingsTracking==='linked'&&!p.configured?'À configurer':nativeMoney(p.value,a.currency))+'</b><small>'+
-  (a.savingsTracking==='linked'?'Solde estimé depuis tes virements':p.hasFx?money(p.cad)+' CAD':'Conversion CAD à saisir')+' · Détails ›</small></button>';
+  (p.reviewRequired?'Mouvement à vérifier':a.savingsTracking==='linked'&&!p.configured?'À configurer':nativeMoney(p.value,a.currency))+'</b><small>'+
+  (p.hasFx?(a.savingsTracking==='linked'?'Solde estimé · ':'')+money(p.cad)+' CAD'+(p.fxDate?' · '+esc(p.fxDate):''):
+    'Conversion CAD indisponible')+' · Détails ›</small></button>';
  const savingsNode=$('#wealthSavingsGrid'),placementsNode=$('#wealthInvestmentsGrid');
  if(savingsNode)savingsNode.innerHTML=savings.length?savings.map(tile).join(''):
   '<div class="trace-wealth-empty">Ajoute un livret, un CELI ou un autre compte d’épargne pour le suivre ici.</div>';
@@ -3721,17 +3761,21 @@ function renderWealth(){
  $('#assetGrid').innerHTML=[
  '<button class="asset-card" type="button" id="wealthLiquidityCard"><span class="a-icon">$</span><span>Comptes bancaires</span><b>'+
   (bankMissing.length?'Solde incomplet':money(bankCAD))+'</b><small>Toutes devises, dettes déduites · Configurer ›</small></button>',
- ...bankValues.filter(x=>x.currency!=='CAD').map(({a,native,currency})=>
+ ...bankValues.filter(x=>x.currency!=='CAD').map(({a,native,currency,cad})=>
   '<button class="asset-card" type="button" data-foreign-bank="'+esc(a.id)+'"><span class="a-icon">◇</span>'+
   '<span>'+esc(shortAccountLabel(a))+' · '+currency+'</span><b>'+
   (native===null?'Solde à configurer':window.TraceInternational.money(native,currency))+'</b>'+
-  '<small>'+(native!==null&&internationalQuotes[currency]?
-   'Équiv. '+money(window.TraceInternational.fxValue(native,currency,internationalQuotes[currency]))+' CAD':'Conversion indisponible')+'</small></button>')
+  '<small>'+(cad!==null?'Équiv. '+money(cad)+' CAD':'Conversion indisponible')+'</small></button>')
  ].join('');
  $('#wealthAddCard').onclick=openInvestmentAccountAdd;$('#wealthLiquidityCard').onclick=openAccountSettings;
  $$('[data-foreign-bank]').forEach(b=>b.onclick=openAccountSettings);
  $$('[data-inv-account]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.invAccount)));
- window.TraceInsights.renderWealth($('#wealthTrend'),insightWealthData(sId,bk,ports,missing));
+ const cashValues=bankValues.filter(x=>accountType(x.a)==='checking'),
+  cardValues=bankValues.filter(x=>accountType(x.a)==='card'),
+  bankSummary={checking:cashValues.length&&cashValues.every(x=>x.cad!==null)?cashValues.reduce((n,x)=>n+x.cad,0):null,
+   cardDebt:cardValues.every(x=>x.cad!==null&&Number(x.native)<=0)?cardValues.reduce((n,x)=>n+Math.max(0,-x.cad),0):null,
+   net:bankMissing.length?null:bankCAD,needsCardReview:cardValues.some(x=>Number(x.native)>0)};
+ window.TraceInsights.renderWealth($('#wealthTrend'),insightWealthData(sId,bankSummary,ports,missing));
  updateSegments();
 }
 function renderAll(){renderHome();renderBudget();renderActivity();renderWealth();if(!internationalPreviewMode()&&session?.user?.id&&household)window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});}
@@ -4486,7 +4530,7 @@ async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Charg
    setTimeout(welcome,1350);
   }
  }
- if(state.investmentAccounts.some(a=>['EUR','USD'].includes(a.currency)&&a.fxAutoUpdate!==false))setTimeout(()=>refreshPublicPortfolioRates().catch(console.error),350);}
+ if(state.investmentAccounts.some(a=>a.owner===me&&window.TraceInternational.valid(a.currency)&&a.currency!=='CAD'&&a.fxAutoUpdate!==false))setTimeout(()=>refreshPublicPortfolioRates().catch(console.error),350);}
 async function ensureWorkspace(s){
   if(!s)return;
   session=s;

@@ -110,6 +110,27 @@
   const n=exactMoney(amount);
   return n!==null&&n>0?n:null;
  };
+ const amountOnInvestment=(movement,investment,bank)=>{
+  if(!movement||!investment||!bank||bank.type!=='checking'||bank.owner!==investment.owner)return null;
+  const code=currency(investment);
+  if(movement.investmentCurrency&&String(movement.investmentCurrency).toUpperCase()!==code)return null;
+  if(movement.investmentAmount!==null&&movement.investmentAmount!==undefined&&movement.investmentAmount!==''){
+   const amount=exactMoney(movement.investmentAmount);return amount!==null&&amount>0?amount:null;
+  }
+  // The same-currency bank amount is an actual booked savings leg. An FX
+  // budget valuation can never stand in for an unknown foreign receipt.
+  if(currency(bank)!==code)return null;
+  const amount=amountOnAccount(movement,bank);
+  return amount!==null&&amount>0?amount:null;
+ };
+ const valuationQuote=(account,liveQuotes={})=>{
+  const code=currency(account);
+  if(code==='CAD')return null;
+  const stored={currency:code,cadPerUnit:account.fxCadPerUnit,
+   date:account.fxRateDate,source:account.fxRateProvider};
+  const selected=account.fxAutoUpdate===false?stored:liveQuotes[code]||stored;
+  return verifiedQuote(selected,code)?selected:null;
+ };
  const fetchDailyRate=async(code,date,transport)=>{
   const c=String(code||'').toUpperCase();
   if(!valid(c))throw Error('Devise non prise en charge');
@@ -231,5 +252,5 @@
   return next;
  };
  root.TraceInternational=Object.freeze({valid,currency,currencies,country,mode,money,exactMoney,calendarDate,amountOnAccount,primary,snapshot,
-  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,investmentBankAmount,verifiedForeignFriendRefund,fxValue});
+  fetchDailyRate,getRate,resolveBooking,resolveTransferEdit,investmentBankAmount,amountOnInvestment,valuationQuote,verifiedForeignFriendRefund,fxValue});
 })(typeof window!=='undefined'?window:globalThis);

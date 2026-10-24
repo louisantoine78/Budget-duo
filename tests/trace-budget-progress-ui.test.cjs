@@ -53,3 +53,15 @@ test('compact trend empty state never fabricates history or a comparison',()=>{
  assert.match(target.innerHTML,/Pas encore de mois renseigné/);
  assert.doesNotMatch(target.innerHTML,/par rapport|0 \$/);
 });
+test('wealth insights never turn unknown cash, FX or card debt into numeric zero',()=>{
+ const target={innerHTML:''};
+ I.renderWealth(target,{checking:null,cardDebt:null,investments:[{name:'Unknown FX',ready:false,cad:null}],hasIncomplete:true});
+ assert.match(target.innerHTML,/Total incomplet/);assert.match(target.innerHTML,/À vérifier/);
+ assert.doesNotMatch(target.innerHTML,/Dettes de carte connues<\/small><b>0/);
+});
+test('wealth insights retain known overdrafts and explicit zero card debt',()=>{
+ const target={innerHTML:''};
+ I.renderWealth(target,{checking:-50,cardDebt:0,investments:[{name:'Savings',ready:true,cad:200}]});
+ assert.match(target.innerHTML,/Comptes et placements suivis<\/small><b>150/);
+ assert.match(target.innerHTML,/Dettes de carte connues<\/small><b>0/);
+});

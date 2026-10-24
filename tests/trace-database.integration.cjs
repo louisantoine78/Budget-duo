@@ -149,6 +149,23 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
   assert.equal(M.friendReceivables(saved,'la').find(x=>x.name==='Camille').outstandingCAD,40);
   assert.equal(saved.filter(x=>x.type==='income').length,0);
  });
+ await test('native EUR savings legs survive SQL persistence and use the real journal calculation',async()=>{
+  const saving={id:'eur-save',owner:'la',currency:'EUR',type:'Livret',savingsTracking:'linked',openingDate:'2026-10-01',openingBalance:200};
+  await save('investment_accounts',saving);
+  await save('transactions',{...common,id:'save-in',date:'2026-10-14',accountId:'ca',type:'external_transfer',
+   transferPurpose:'savings',investmentAccountId:saving.id,bankAmount:150,bankCurrency:'CAD',amountCAD:150,
+   investmentAmount:95,investmentCurrency:'EUR'});
+  await save('transactions',{...common,id:'save-out',date:'2026-10-15',accountId:'fr',type:'external_refund',
+   transferPurpose:'savings_withdrawal',investmentAccountId:saving.id,bankAmount:20,bankCurrency:'EUR',amountCAD:32,
+   investmentAmount:20,investmentCurrency:'EUR'});
+  const state={accounts,investmentAccounts:[saving],transactions:(await rows()).filter(x=>x.collection==='transactions').map(x=>x.data)};
+  const compile=(name,next,deps)=>new Function(...Object.keys(deps),'return ('+source(name,next)+');')(...Object.values(deps));
+  const deps={state,window:{TraceInternational:I},smartStrictDate:I.calendarDate};
+  const ready=compile('isReadySavingsAccount','linkedSavingsMovements',deps);
+  const linked=compile('linkedSavingsMovements','savingsLedger',{...deps,isReadySavingsAccount:ready});
+  const ledger=compile('savingsLedger','portfolioLedger',{...deps,isReadySavingsAccount:ready,linkedSavingsMovements:linked,internationalQuotes:{EUR:q}})(saving);
+  assert.equal(ledger.value,275);assert.equal(ledger.net,75);assert.equal(ledger.cad,440);
+ });
  await test('a physical backup restores the same fictional database into another instance',async()=>{
   const before=await rows(),archive=await db.dumpDataDir('gzip');
   const restored=new PGlite({loadDataDir:archive});

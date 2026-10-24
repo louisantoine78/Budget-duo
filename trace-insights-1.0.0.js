@@ -103,14 +103,16 @@ function renderAnnual(target,{months=[],year=''}={}){
 }
 function renderWealth(target,{checking=null,cardDebt=null,investments=[],flows=[],hasIncomplete=false}={}){
  if(!target)return;
- const known=investments.filter(x=>x.ready!==false),investTotal=round(known.reduce((n,x)=>n+(x.cad||0),0));
+ const knownMoney=n=>typeof n==='number'&&Number.isFinite(n),
+  known=investments.filter(x=>x.ready!==false&&knownMoney(x.cad)),investTotal=round(known.reduce((n,x)=>n+x.cad,0)),
+  complete=!hasIncomplete&&knownMoney(checking)&&known.length===investments.length;
  const deposits=round(flows.filter(f=>f.kind==='deposit').reduce((n,f)=>n+f.amount,0));
  const withdrawals=round(flows.filter(f=>f.kind==='withdrawal').reduce((n,f)=>n+f.amount,0));
  const months=[...new Set(flows.map(f=>f.month).filter(Boolean))].sort().reverse().slice(0,5);
  let html='<div class="trace-insights-head"><div><strong>Comprendre mon patrimoine</strong><small>Valeurs actuelles et mouvements réellement enregistrés</small></div></div>'+
  '<div class="trace-insight-statpair">'+
- '<div><small>Comptes et placements suivis</small><b>'+fmt(Math.max(0,Number(checking)||0)+investTotal)+'</b></div>'+
- '<div><small>Dettes de carte connues</small><b>'+fmt(cardDebt||0)+'</b></div></div>'+
+ '<div><small>Comptes et placements suivis</small><b>'+(complete?fmt(checking+investTotal):'Total incomplet')+'</b></div>'+
+ '<div><small>Dettes de carte connues</small><b>'+(knownMoney(cardDebt)?fmt(cardDebt):'À vérifier')+'</b></div></div>'+
  '<p class="trace-insights-explain">Un virement vers le CELI déplace ton argent, il ne crée pas un enrichissement. Les rendements ne sont pas déduits des versements.</p>';
  html+='<div class="trace-insight-wealthaccounts">'+known.map(x=>
  '<div class="trace-insight-wealthrow"><span><strong>'+esc(x.name)+'</strong><small>'+(x.linked?'Estimation basée sur tes virements':'Valorisation selon les cours enregistrés')+'</small></span><b>'+fmt(x.cad)+'</b></div>').join('')+'</div>';
@@ -121,7 +123,7 @@ function renderWealth(target,{checking=null,cardDebt=null,investments=[],flows=[
   const lines=flows.filter(f=>f.month===m);
   const total=round(lines.reduce((n,f)=>n+(f.kind==='deposit'?f.amount:-f.amount),0));
   return '<div class="trace-insight-flowrow"><span>'+esc(monthName(m))+'</span><b>'+(total>0?'+':total<0?'−':'')+fmt(Math.abs(total))+'</b></div>';
- }).join('')+'</div>':'<div class="trace-insights-empty">Aucun versement ou retrait daté encore disponible pour documenter une évolution.</div>';
+ }).join('')+'</div>':'<div class="trace-insights-empty">Aucun versement ou retrait daté avec montant CAD historique pour documenter une évolution.</div>';
  html+='<p class="trace-insights-foot">Ce tableau montre les flux documentés, pas une courbe de performance historique. Pour mesurer les gains mois par mois, TRACE aura besoin de valorisations datées. '+(hasIncomplete?'Certains comptes n’ont pas de solde initial ou de conversion CAD.':'')+'</p>';
  target.innerHTML=html;
 }
