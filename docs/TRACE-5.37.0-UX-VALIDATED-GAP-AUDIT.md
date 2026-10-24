@@ -126,3 +126,30 @@ Modifications et documentation **uniquement sur `trace-5.37.0-international-acco
 - **Transversal :** modales premium, tailles touches/typo, zéro saut en bas d'écran, tests Safari réel, données fictives en base isolée et régression exhaustive.
 
 **Suite prioritaire** : détails de comptes et confirmation du principal pour Accueil, puis Activité filtrée et Partage. Ne pas refaire la conception ; poursuivre les décisions validées. **Production : NO-GO**.
+
+
+## Lot Mes comptes réellement intégré (23 octobre 2026) — candidate seulement
+
+**Portée :** `v5-app-5.37.0.js`, `trace-international-preview.html`, `trace-international-1.0.0.css`, tests correspondants. **Aucun déploiement**, aucune modification de `index.html`, PWA, `main`, Supabase réel ou CI.
+
+### Fonctionnalités implémentées
+- **Accueil → Comptes et trésorerie** : bouton ajouté dans la carte Solde estimé. Ouvre une vue **lecture seule** des comptes pertinents (Moi ou foyer selon filtre), soldes en devise native et contre-valeur CAD **indicative** ; absence de solde ou de taux = « à vérifier »/« conversion indisponible », jamais taux 1 ni zéro fabriqué.
+- **Fiche Compte** : type bancaire, pays, devise, titulaire, étoile du principal, carte liée/compte de règlement, dernier rapprochement marqué confirmé, **deux dernières opérations** (confirmées ou à vérifier avec statut) et bouton **Voir toutes les opérations**.
+- **Activité filtrée** : un select « Compte affiché » permet de choisir un compte ou Tous les comptes ; arrivée depuis la fiche préselectionne le compte et affiche le mois de sa transaction la plus récente. Les revenus/dépenses récapitulatifs sont calculés sur le périmètre sélectionné, **sans écrire ni reclassement**.
+- **Compte principal** : depuis Accueil **ou** Profil → Mes comptes, le choix passe par **une modale de confirmation explicite** avant `saveHouseholdSettings()`. Annuler = zéro modification ; erreur de sauvegarde = restauration de l'ancienne sélection en mémoire ; sélection périmée, carte, compte partenaire ou inexistant refusés. Texte explicite sur le changement de devise personnelle, **sans changer la devise Couple ou les budgets historiques**. Le principal est représenté par une **étoile**.
+- CSS iPhone premium ciblée : carte de compte, fiche et opérations avec hiérarchie typographique, montants tabulaires, contraste vert, actions tactiles, largeur étroite, focus et états inconnus lisibles. Aucun design réinitialisé.
+
+### Tests et commits vérifiés après persistance
+- Commits `[skip ci]` : JS `f828e2aa511855c841fb08011076c7c686d757ca`, HTML `081c377f273745ec692061000039fec5bcdccc20`, CSS `2c2ffd0b9c2856eb88468677b18f89e3ceafa9e8` ; correctif réel du mauvais appel `$('selector').forEach` → `$$('selector').forEach` dans JS `d76caeef60c1c735d8f544c71e5f01da07083041`.
+- Tests existants mis à jour pour imposer la confirmation `09f0a416cdf9d7b3c6b8bdd6ac784d60d7ca994e`, reborner extraction smoke `fedb95648e808139820b4c99f0f67cc2598b0ad0`, mocks du filtre `73888f6a9b9082473b584d28f437d0ec10c775bd`.
+- Nouveaux tests `tests/trace-international-account-details.test.cjs` commit `33590906ca459f39b9c10f15b895a70765025428` : **14/14** cas fictifs couvrant accessibilité des comptes Moi/Couple, partenaire en lecture seule, fiche, opérations récentes, carte liée, solde/taux inconnus, navigation Activité, annulation/confirmation/échec/stale du compte principal.
+- Après nouvelle lecture de GitHub : **80/80 contrôles V8 simulés** sur **7 suites** (détail 14 ; bootstrap preview 7 ; UI 12 ; ordre premium 13 ; labo 8 ; wiring 7 ; invariants financiers 19). **Pas de navigateur Safari réel, pas de Node CLI natif, ni de campagne exhaustive multi-suites**.
+
+### Restant non finalisé
+- Le panneau Comptes est **nouveau** ; validation vraie Safari/iPhone, hauteurs, scroll, accès clavier, lecteurs d'écran et états avec quantité importante d'opérations restent requis.
+- Activité a **seulement** un filtre Compte + Mois fonctionnel à ce stade ; catégorie/nature/statut/devise et historique par jour **restent à faire**.
+- Budget → Activité filtrée par catégorie, Partage plein écran Couple/Proches, confirmation de change sur multi-device et verrou optimiste Supabase inter-utilisateurs, devise Couple indépendante, et archivage de compte restent à faire.
+- Le compte principal est protégé contre les changements en mémoire entre ouverture/confirmation, **mais pas contre une écriture concurrente distante**. Ne pas annoncer un verrou en base.
+- Relevé PDF mensuel, débit différé réel, intégration bancaire et QA release générale sont toujours bloquants.
+
+**Prochaine priorité** : regroupement journalier et filtres d'Activité (compte, période, catégorie, nature, devise, statut) + navigation depuis les catégories Budget ; ensuite Partage Couple/Proches dans Activité. Toujours uniquement sur candidate avec tests fictifs.
