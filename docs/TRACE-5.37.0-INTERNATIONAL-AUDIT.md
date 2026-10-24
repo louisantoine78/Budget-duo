@@ -1090,3 +1090,7 @@ Commits du code et des tests : `1141b9e915fd1cfb97330d982805b5396a018305`, `f978
 ## UX premium — lot effectivement développé (23 octobre 2026)
 
 Voir `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md` mis à jour au commit `e7a26786bb9a154dcf99c0cca3056f2a7b6d847c`. Candidat uniquement : ordre complet des 7 modules d'Accueil, dissociation épargne / placements / net / trésorerie dans Patrimoine, styles responsive premium et nav Patrimoine non replié. Commits HTML `3a3e1c3`, CSS `74ef4cb`, JS `0cef178`, tests `71dfeed` ; **66/66 tests ciblés V8 simulés après relecture GitHub**, pas de Safari, CI, Node natif, vérification visuelle de navigateur ni base Supabase. Aucun déploiement effectué ; le précédent site Vercel `2c312f` ne contient pas ces changements. `main` inchangée et production NO-GO.
+
+## Parcours Mes comptes / Activité (23 octobre 2026)
+
+**Version candidate uniquement** : détail et liste Comptes + CTA depuis Solde estimé, filtre de compte dans Activité, dernières opérations et dernier rapprochement, confirmation explicite de changement du principal avec rollback mémoire en cas d'échec, aucun recalcul budgétaire/FX. Voir l'audit UX `dac52a58c526015ac54b01859b799919614cf03d` et le handoff `1ec6f238cdce395b31a7ce4ad1781595d37e355b`. **80/80 contrôles ciblés V8 simulés relancés après sauvegarde GitHub ; Safari/Node natif/CI et validation DB non faits.** Vercel preview **non actualisée**, pas de production. 
