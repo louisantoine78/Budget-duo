@@ -17,7 +17,7 @@ function build(overrides={}){
    !/PAIEMENT CARTE|VIREMENT|INTERAC/i.test(name)
  }};
  new Function('window',engine)(window);
- window.TraceInternational={...window.TraceInternational,getRate:async()=>{throw Error('Historical FX service unavailable')}};
+ window.TraceInternational={...window.TraceInternational,getRate:overrides.getRate||(async()=>{throw Error('Historical FX service unavailable')})};
  const account={id:'fr',name:'Compte EUR fictif',owner:'la',type:'checking',currency:'EUR'};
  const t={id:'eur-40',accountId:'fr',name:'Librairie',date:'2026-10-08',
   type:'expense',source:'csv',status:'pending',bankCurrency:'EUR',currency:'EUR',
@@ -116,7 +116,37 @@ test('inconsistent original and bank amount cannot create a false historical boo
  assert.match(c.sheets[0].title,/Nature bancaire/);
  assert.equal(c.node('#foreignCsvSave').onclick,null);
 });
-test('foreign CSV validator is routed only for non-confirmed expenses',()=>{
+test('foreign CSV validator is routed only for pending expenses',()=>{
  assert.match(app,/reviewForeignPendingCsvExpense\(t\);return;/);
- assert.match(app,/t\.type==='expense'&&t\.source==='csv'&&t\.status!=='confirmed'/);
+ assert.match(app,/t\.type==='expense'&&t\.source==='csv'&&t\.status==='pending'/);
+ assert.doesNotMatch(app,/t\.type==='expense'&&t\.source==='csv'&&t\.status!=='confirmed'/);
+});
+test('ignored or completed CSV entries cannot be approved as new purchases',()=>{
+ for(const status of ['ignored','received','done']){
+  const c=build({transaction:{status}});
+  c.review(c.t);
+  assert.match(c.sheets[0].title,/Nature bancaire/);
+  assert.equal(c.node('#foreignCsvSave').onclick,null);
+ }
+});
+test('a native account changing during FX lookup cannot confirm a stale expense',async()=>{
+ let c;
+ c=build({getRate:async()=>{c.account.currency='USD';return{
+  currency:'EUR',cadPerUnit:1.6,date:'2026-10-08',source:'Fictitious quote'};}});
+ c.review(c.t);fill(c,{rate:''});
+ await c.node('#foreignCsvSave').onclick();
+ assert.equal(c.saved.length,0);
+ assert.equal(c.t.status,'pending');
+ assert.match(c.node('#foreignCsvError').textContent,/données ont changé/);
+});
+test('a draft changing during FX lookup cannot be overwritten by approval',async()=>{
+ let c;
+ c=build({getRate:async()=>{c.t.amountOriginal=50;return{
+  currency:'EUR',cadPerUnit:1.6,date:'2026-10-08',source:'Fictitious quote'};}});
+ c.review(c.t);fill(c,{rate:''});
+ await c.node('#foreignCsvSave').onclick();
+ assert.equal(c.saved.length,0);
+ assert.equal(c.t.status,'pending');
+ assert.equal(c.t.amountOriginal,50);
+ assert.match(c.node('#foreignCsvError').textContent,/données ont changé/);
 });

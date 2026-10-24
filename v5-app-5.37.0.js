@@ -1486,7 +1486,7 @@ function reviewForeignPendingCsvExpense(t){
  const I=window.TraceInternational,bank=state.accounts.find(a=>a.id===t?.accountId);
  const currency=bank?I.currency(bank):null,amount=bank?I.amountOnAccount(t,bank):null;
  const eligible=t&&bank&&bank.owner===me&&visibleBankAccounts(me).some(a=>a.id===bank.id)&&
-  currency!=='CAD'&&t.source==='csv'&&t.type==='expense'&&t.status!=='confirmed'&&
+  currency!=='CAD'&&t.source==='csv'&&t.type==='expense'&&t.status==='pending'&&
   // The simple CSV editor is native-only. Never reinterpret pre-valued FX
   // or a different purchase currency as if it were the bank's native amount.
   String(t.bankCurrency||'').toUpperCase()===currency&&
@@ -1501,7 +1501,7 @@ function reviewForeignPendingCsvExpense(t){
   openSheet('Nature bancaire à vérifier','<p class="empty-note">Ce mouvement exige une vérification spécifique. Aucun montant n’a été modifié.</p><button id="foreignCsvClose" class="secondary full">Fermer</button>');
   $('#foreignCsvClose').onclick=closeSheet;return;
  }
- const before=JSON.stringify(t),cats=manualCategories('expense'),
+ const before=JSON.stringify(t),bankBefore=JSON.stringify(bank),cats=manualCategories('expense'),
   similar=csvBankEvidenceMatches(t,state.transactions),
   confirmed=similar.filter(x=>x.status==='confirmed'),
   people=[{id:me,name:'Moi'},{id:partner,name:shortMemberName(partner)},{id:'couple',name:'Nous deux'}];
@@ -1530,7 +1530,7 @@ function reviewForeignPendingCsvExpense(t){
    if(!$('#foreignCsvNature').checked)throw Error('Confirme la nature bancaire de cet achat.');
    if(confirmed.length&&!$('#foreignCsvDistinct').checked)throw Error('Compare les opérations déjà confirmées.');
    if(state.transactions.find(x=>x.id===t.id)!==t||JSON.stringify(t)!==before||
-      state.accounts.find(a=>a.id===bank.id)!==bank)
+      state.accounts.find(a=>a.id===bank.id)!==bank||JSON.stringify(bank)!==bankBefore)
     throw Error('Les données ont changé. Ferme et rouvre la fiche.');
    if(csvBankEvidenceMatches(t,state.transactions).some(x=>x.status==='confirmed'&&!confirmed.some(y=>y.id===x.id)))
     throw Error('Nouvelle ressemblance bancaire : réouvre la fiche pour comparer.');
@@ -1544,6 +1544,8 @@ function reviewForeignPendingCsvExpense(t){
    const quote=rateText!==''?
     {currency,cadPerUnit:rate,date:t.date,source:'Taux saisi manuellement par le membre'}:
     await I.getRate(currency,t.date);
+   if(JSON.stringify(t)!==before||JSON.stringify(bank)!==bankBefore)
+    throw Error('Les données ont changé pendant la recherche du taux. Ferme et rouvre la fiche.');
    const booked=I.resolveBooking({account:bank,bankAmount:amount,date:t.date,quote,
     originalCurrency:t.currency||currency,originalAmount:t.amountOriginal??amount});
    const sharing=traceImportSplit({beneficiary},{amountCAD:booked.amountCAD});
@@ -2027,7 +2029,7 @@ function editTransaction(id,validating=false){
  const foreignAccount=state.accounts.find(a=>a.id===t.accountId);
  if(foreignAccount&&window.TraceInternational.currency(foreignAccount)!=='CAD'&&
     ['expense','income','refund'].includes(t.type)){
-  if(t.type==='expense'&&t.source==='csv'&&t.status!=='confirmed'&&foreignAccount.owner===me){
+  if(t.type==='expense'&&t.source==='csv'&&t.status==='pending'&&foreignAccount.owner===me){
    reviewForeignPendingCsvExpense(t);return;
   }
   if(t.type==='expense'&&t.status==='confirmed'&&
