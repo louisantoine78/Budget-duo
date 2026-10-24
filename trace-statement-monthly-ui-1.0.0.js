@@ -237,7 +237,6 @@
    }catch(e){fileInfo.textContent='Lecture ou signature du PDF non prise en charge.';
     say('Ce PDF ne peut pas être utilisé pour ce contrôle.',true);}
   };
-  el(host,'traceStatementAdd').onclick=()=>addRow();
   el(host,'traceStatementPrepare').onclick=prepare;
   syncAccounts();addRow();
   return Object.freeze({getReport:()=>report,
