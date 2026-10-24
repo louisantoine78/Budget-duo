@@ -1094,3 +1094,7 @@ Voir `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md` mis à jour au commit `e7a267
 ## Parcours Mes comptes / Activité (23 octobre 2026)
 
 **Version candidate uniquement** : détail et liste Comptes + CTA depuis Solde estimé, filtre de compte dans Activité, dernières opérations et dernier rapprochement, confirmation explicite de changement du principal avec rollback mémoire en cas d'échec, aucun recalcul budgétaire/FX. Voir l'audit UX `dac52a58c526015ac54b01859b799919614cf03d` et le handoff `1ec6f238cdce395b31a7ce4ad1781595d37e355b`. **80/80 contrôles ciblés V8 simulés relancés après sauvegarde GitHub ; Safari/Node natif/CI et validation DB non faits.** Vercel preview **non actualisée**, pas de production. 
+
+
+## Changement contrôlé — relevés PDF mensuels, 24 octobre 2026
+La candidate 5.37 dispose désormais d'une revue mensuelle **manuelle et locale** avec fichier PDF signé et lignes retranscrites/attestées, comparaison native via les moteurs TraceStatementEvidence/TraceStatementReconcile ; aucune écriture comptable ni réseau. Pas de parseur PDF automatique, aucune preuve d'exhaustivité de la totalité du relevé, aucune mise en production. **167/167 contrôles ciblés V8 simulés** après sauvegarde sur GitHub (dont 11 nouveaux tests UI et 56 de moteur). Safari réel, vrais PDF fictifs de différentes banques, Node CI et validation E2E à effectuer. Voir docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md pour tous les commits/risques.
