@@ -15,6 +15,7 @@ const initialBudgetMonth=new URLSearchParams(location.search).get('month');
 let client,session,household,workspaceLoadPromise=null,me='la',partner='partner',homeScope='mine',budgetScope='mine',budgetMonth=/^\d{4}-\d{2}$/.test(initialBudgetMonth||'')?initialBudgetMonth:CM,wealthScope='mine',analysisScope='mine',tab='transactions',activityMonth=CM;
 let internationalQuotes={},internationalQuoteAttempt=new Set(),internationalFxBusy=false;
 let activityAccountFilter='all';
+let activityFilters={category:'all',nature:'all',currency:'all',status:'confirmed'};
 function internationalPreviewMode(){
  return window.__TRACE_INTERNATIONAL_PREVIEW__===true&&
   String(location.pathname||'').split('/').pop()==='trace-international-preview.html'&&
@@ -447,8 +448,9 @@ function insightCategoryDrilldown(month,scopeValue,categoryId){
  openSheet('Dépenses · '+esc(category?.name||'Autres'),
   '<div class="trace-insight-sheet-intro"><strong>'+money(Math.max(0,amount))+'</strong><small>'+esc(monthLabel(month))+' · ta part selon le filtre sélectionné</small></div>'+
   (expenses.length?expenses.map(txRow).join(''):'<div class="empty-note">Aucune opération confirmée dans cette catégorie.</div>')+
-  '<div class="trace-insights-foot">Les virements et paiements de carte sont exclus des dépenses de consommation.</div>');
- $$('[data-tx-open]').forEach(el=>el.onclick=()=>editTransaction(el.dataset.txOpen));
+  '<div class="trace-insights-foot">Les virements et paiements de carte sont exclus des dépenses de consommation.</div>'+  '<button type="button" class="primary full" id="traceBudgetToActivity" style="margin-top:12px">Voir dans Activité ›</button>');
+ $('[data-tx-open]').forEach(el=>el.onclick=()=>editTransaction(el.dataset.txOpen));
+ $('#traceBudgetToActivity').onclick=()=>openActivityCategory(month,categoryId);
 }
 function insightWealthData(scopeValue,bankResult,ports,missing){
  const owners=scopeValue==='couple'?['la','partner']:[scopeValue],accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
@@ -588,6 +590,7 @@ function openTraceAccountActivity(id){
  if(!account)return;
  const latest=traceAccountOperations(id).find(t=>/^\d{4}-\d\d-\d\d$/.test(String(t.date||'')));
  activityAccountFilter=id;
+ activityFilters={category:'all',nature:'all',currency:'all',status:'confirmed'};
  if(latest)activityMonth=latest.date.slice(0,7);
  closeSheet();navigate('activity');renderActivity();showTab('transactions');
 }
@@ -3109,28 +3112,119 @@ function reviewAccountLabel(id){
  const a=state.accounts.find(x=>x.id===id);
  return a?shortAccountLabel(a):'Compte non identifié';
 }
-function renderActivity(){
- const ts=state.transactions.filter(t=>String(t.date||'').startsWith(activityMonth)&&
-  t.status==='confirmed'&&
-  (activityAccountFilter==='all'||t.accountId===activityAccountFilter||
-   t.toAccountId===activityAccountFilter))
-  .sort((a,b)=>String(b.date).localeCompare(String(a.date)));
- const counted=ts.filter(isFinancialPeriod);
- const expenses=counted.filter(t=>['expense','group_expense','person_payment'].includes(t.type)).reduce((v,t)=>v+Number(t.amountCAD||0),0),refunds=counted.filter(t=>t.type==='refund').reduce((v,t)=>v+Number(t.amountCAD||0),0),inc=counted.filter(t=>t.type==='income').reduce((v,t)=>v+Number(t.amountCAD||0),0),exp=Math.max(0,expenses-refunds);
- const accountSelect=$('#activityAccountFilter');
- if(accountSelect){
-  const available=state.accounts.filter(a=>!a.archived&&['la','partner'].includes(a.owner)&&
-   ['checking','card'].includes(accountType(a)));
-  if(activityAccountFilter!=='all'&&!available.some(a=>a.id===activityAccountFilter))
-   activityAccountFilter='all';
-  accountSelect.innerHTML='<option value="all">Tous les comptes</option>'+
-   available.map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+
-    ' · '+window.TraceInternational.currency(a)+'</option>').join('');
-  accountSelect.value=activityAccountFilter;
-  accountSelect.onchange=()=>{activityAccountFilter=accountSelect.value;renderActivity();};
+/* TRACE 5.37 — filter and journal display are read-only views, not financial bookings. */
+function traceActivityNatureLabel(kind){
+ return ({expense:'Dépense',group_expense:'Dépense partagée',person_payment:'Avance',
+  income:'Revenu',refund:'Remboursement commerçant',transfer:'Virement interne',
+  external_transfer:'Virement sortant',external_refund:'Virement entrant',
+  card_statement_evidence:'Justificatif de carte'})[kind]||String(kind||'Autre');
+}
+function traceActivityRows(){
+ return state.transactions.filter(t=>{
+  if(!String(t.date||'').startsWith(activityMonth))return false;
+  if(activityAccountFilter!=='all'&&t.accountId!==activityAccountFilter&&
+     t.toAccountId!==activityAccountFilter)return false;
+  if(activityFilters.category!=='all'&&t.categoryId!==activityFilters.category)return false;
+  if(activityFilters.nature!=='all'&&t.type!==activityFilters.nature)return false;
+  if(activityFilters.status==='confirmed'&&t.status!=='confirmed')return false;
+  if(activityFilters.status==='pending'&&t.status==='confirmed')return false;
+  if(activityFilters.currency!=='all'){
+   const account=state.accounts.find(a=>a.id===t.accountId);
+   if(!account||window.TraceInternational.currency(account)!==activityFilters.currency)return false;
+  }
+  return true;
+ }).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||
+  String(b.id||'').localeCompare(String(a.id||'')));
+}
+function traceActivityPendingRow(t){
+ const a=state.accounts.find(x=>x.id===t.accountId),
+  cur=a?window.TraceInternational.currency(a):null;
+ const amount=a?window.TraceInternational.amountOnAccount(t,a,'source'):null;
+ const amountLabel=amount===null||!Number.isFinite(Number(amount))?
+  'Montant bancaire à vérifier':window.TraceInternational.money(Math.abs(Number(amount)),cur);
+ return '<button type="button" class="tx trace-tx-link trace-activity-pending" data-tx-open="'+esc(t.id)+'">'+
+ '<span class="tx-icon">!</span><span class="tx-main"><b>'+esc(t.name||'Opération à vérifier')+
+ '</b><small>'+esc(traceActivityNatureLabel(t.type))+' · '+esc(t.date||'Date à vérifier')+
+ ' · À valider</small></span><span class="tx-amt">'+esc(amountLabel)+'</span></button>';
+}
+function traceActivityDayLabel(date){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return'Date à vérifier';
+ const value=new Date(date+'T12:00:00Z');
+ if(!Number.isFinite(value.getTime())||value.toISOString().slice(0,10)!==date)
+  return'Date à vérifier';
+ return new Intl.DateTimeFormat('fr-CA',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'}).format(value);
+}
+function traceActivityGroupHTML(rows){
+ if(!rows.length)return '<div class="empty-note">Aucune opération pour ces filtres. Modifie la sélection ou réinitialise les filtres.</div>';
+ const days=new Map();
+ rows.forEach(t=>{const key=String(t.date||'');if(!days.has(key))days.set(key,[]);days.get(key).push(t);});
+ return [...days].map(([date,list])=>
+  '<section class="trace-activity-day" aria-label="'+esc(traceActivityDayLabel(date))+'">'+
+  '<div class="trace-activity-day-heading"><h3>'+esc(traceActivityDayLabel(date))+
+  '</h3><small>'+list.length+' opération'+(list.length>1?'s':'')+'</small></div>'+
+  list.map(t=>t.status==='confirmed'?txRow(t):traceActivityPendingRow(t)).join('')+
+  '</section>').join('');
+}
+function traceActivitySelect(id,items,value,onChange){
+ const node=$('#'+id);if(!node)return;
+ node.innerHTML=items.map(([v,label])=>'<option value="'+esc(v)+'">'+esc(label)+'</option>').join('');
+ node.value=value;
+ node.onchange=()=>{onChange(node.value);renderActivity();};
+}
+function traceActivityControls(){
+ const accounts=state.accounts.filter(a=>!a.archived&&['la','partner'].includes(a.owner)&&
+  ['checking','card'].includes(accountType(a)));
+ if(activityAccountFilter!=='all'&&!accounts.some(a=>a.id===activityAccountFilter))
+  activityAccountFilter='all';
+ traceActivitySelect('activityAccountFilter',[['all','Tous les comptes'],
+  ...accounts.map(a=>[a.id,shortAccountLabel(a)+' · '+window.TraceInternational.currency(a)])],
+  activityAccountFilter,v=>{activityAccountFilter=v;});
+ const categories=state.categories.filter(c=>!c.archived||
+  state.transactions.some(t=>t.categoryId===c.id)).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+ traceActivitySelect('activityCategoryFilter',[['all','Toutes les catégories'],
+  ...categories.map(c=>[c.id,c.name])],
+  activityFilters.category,v=>{activityFilters.category=v;});
+ const natures=[...new Set(state.transactions.map(t=>t.type).filter(Boolean))].sort((a,b)=>
+  traceActivityNatureLabel(a).localeCompare(traceActivityNatureLabel(b),'fr'));
+ traceActivitySelect('activityNatureFilter',[['all','Toutes les natures'],
+  ...natures.map(k=>[k,traceActivityNatureLabel(k)])],
+  activityFilters.nature,v=>{activityFilters.nature=v;});
+ const currencies=[...new Set(accounts.map(a=>window.TraceInternational.currency(a)))].sort();
+ traceActivitySelect('activityCurrencyFilter',[['all','Toutes les devises'],
+  ...currencies.map(c=>[c,c])],
+  activityFilters.currency,v=>{activityFilters.currency=v;});
+ traceActivitySelect('activityStatusFilter',[['confirmed','Confirmées'],
+  ['pending','À valider'],['all','Tous les statuts']],
+  activityFilters.status,v=>{activityFilters.status=v;});
+ const reset=$('#activityResetFilters');
+ if(reset)reset.onclick=()=>{
+  activityAccountFilter='all';activityFilters={category:'all',nature:'all',currency:'all',status:'confirmed'};
+  renderActivity();
+ };
+ const pendingBtn=$('#activityShowPending');
+ if(pendingBtn){
+  const total=state.transactions.filter(t=>t.status!=='confirmed'&&
+   String(t.date||'').startsWith(activityMonth)).length;
+  pendingBtn.textContent='À valider · '+total;
+  pendingBtn.onclick=()=>{activityFilters.status='pending';renderActivity();};
  }
+}
+function openActivityCategory(month,categoryId){
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month||'')))return;
+ if(categoryId&&!state.categories.some(c=>c.id===categoryId))return;
+ activityMonth=month;activityAccountFilter='all';
+ activityFilters={category:categoryId||'all',nature:'all',currency:'all',status:'confirmed'};
+ closeSheet();navigate('activity');renderActivity();showTab('transactions');
+}
+
+function renderActivity(){
+ traceActivityControls();
+ const ts=traceActivityRows();
+ const confirmed=ts.filter(t=>t.status==='confirmed');
+ const counted=confirmed.filter(isFinancialPeriod);
+ const expenses=counted.filter(t=>['expense','group_expense','person_payment'].includes(t.type)).reduce((v,t)=>v+Number(t.amountCAD||0),0),refunds=counted.filter(t=>t.type==='refund').reduce((v,t)=>v+Number(t.amountCAD||0),0),inc=counted.filter(t=>t.type==='income').reduce((v,t)=>v+Number(t.amountCAD||0),0),exp=Math.max(0,expenses-refunds);
  $('#activityMonthLabel').textContent=monthLabel(activityMonth);$('#activityExpenses').textContent=money(exp);$('#activityIncome').textContent=money(inc);$('#activityNet').textContent=money(inc-exp);
- $('#transactionList').innerHTML=ts.length?ts.map(txRow).join(''):'<div class="empty-note">Aucune opération confirmée ce mois-ci.</div>';
+ $('#transactionList').innerHTML=traceActivityGroupHTML(ts);
  $$('[data-tx-open]').forEach(btn=>btn.onclick=()=>editTransaction(btn.dataset.txOpen));
  const remaining=state.transactions.filter(t=>t.status!=='confirmed'&&visibleBankAccounts(me).some(a=>a.id===t.accountId));
  const legacy=$('#importPendingTransactions');
