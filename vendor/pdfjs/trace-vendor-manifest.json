@@ -19,5 +19,5 @@
       "bytes": 10174
     }
   },
-  "activation": "NOT ENABLED - requires manual CSP, offline and Safari QA"
+  "activation": "FICTIONAL CANDIDATE ONLY - local Chromium worker and offline extraction validated; production disabled; native Safari QA pending"
 }
