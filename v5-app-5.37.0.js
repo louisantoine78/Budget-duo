@@ -14,6 +14,45 @@ const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).joi
 const initialBudgetMonth=new URLSearchParams(location.search).get('month');
 let client,session,household,workspaceLoadPromise=null,me='la',partner='partner',homeScope='mine',budgetScope='mine',budgetMonth=/^\d{4}-\d{2}$/.test(initialBudgetMonth||'')?initialBudgetMonth:CM,wealthScope='mine',analysisScope='mine',tab='transactions',activityMonth=CM;
 let internationalQuotes={},internationalQuoteAttempt=new Set(),internationalFxBusy=false;
+// 5.37 candidate: revisions are server-owned; never fall back to unchecked writes.
+const traceDocRevisions=new Map(),traceWriteQueues=new Map();
+let traceSettingsRevision=null,traceWritesBlocked=false;
+const traceWriteKey=(collection,id)=>JSON.stringify([String(collection),String(id)]);
+function traceRevision(value){
+ const n=Number(value);
+ if(value===null||value===undefined||value===''||!Number.isSafeInteger(n)||n<0)
+  throw Error('Révision serveur absente : TRACE refuse une écriture sans protection.');
+ return n;
+}
+async function traceSerialWrite(key,task){
+ const prior=traceWriteQueues.get(key)||Promise.resolve();
+ const next=prior.catch(()=>{}).then(task);
+ traceWriteQueues.set(key,next);
+ try{return await next;}finally{if(traceWriteQueues.get(key)===next)traceWriteQueues.delete(key);}
+}
+function traceConflictNotice(){
+ traceWritesBlocked=true;
+ const host=document.querySelector('#app')||document.body;
+ let node=document.querySelector('#traceWriteConflict');
+ if(!node){
+  node=document.createElement('section');node.id='traceWriteConflict';
+  node.className='trace-conflict-alert card';node.setAttribute('role','alert');
+  const title=document.createElement('strong');
+  title.textContent='Un autre appareil a modifié ces données.';
+  const detail=document.createElement('p');
+  detail.textContent='La sauvegarde a été refusée pour protéger les dernières écritures. Copie toute saisie importante avant de recharger TRACE.';
+  const button=document.createElement('button');button.type='button';
+  button.className='primary';button.textContent='Recharger les données récentes';
+  button.onclick=()=>{if(window.confirm('Les changements non enregistrés sur cet appareil seront perdus. Recharger TRACE ?'))location.reload();};
+  node.append(title,detail,button);host.prepend(node);
+ }
+ sync('error','Conflit de données — rechargement nécessaire');
+}
+function traceSaveFailure(error){
+ if(/TRACE_WRITE_CONFLICT/.test(String(error?.message||'')))traceConflictNotice();
+ else sync('error');
+ return error;
+}
 let activityAccountFilter='all';
 let activityFilters={category:'all',nature:'all',currency:'all',status:'confirmed'};
 function internationalPreviewMode(){
@@ -32,7 +71,7 @@ function cat(id){return state.categories.find(x=>x.id===id)||{name:'À classer',
 function scope(s){return s==='mine'?me:'couple';}
 function showGate(id){$('#cloudGate').classList.remove('hidden');['cloudLoadingPanel','cloudConfigPanel','cloudAuthPanel','cloudWorkspacePanel'].forEach(x=>$('#'+x)?.classList.toggle('hidden',x!==id));$('#app').classList.add('cloud-locked');}
 function hideGate(){$('#cloudGate').classList.add('hidden');$('#app').classList.remove('cloud-locked');}
-function sync(k,t){$('#syncPill').dataset.status=k;$('#syncLabel').textContent=(t||({synced:'Synchronisé',loading:'Connexion…',error:'Erreur'}[k]||k))+' · v'+window.__TRACE_BUILD__;}
+function sync(k,t){if(traceWritesBlocked&&k==='synced'){k='error';t='Conflit de données — rechargement nécessaire';}$('#syncPill').dataset.status=k;$('#syncLabel').textContent=(t||({synced:'Synchronisé',loading:'Connexion…',error:'Erreur'}[k]||k))+' · v'+window.__TRACE_BUILD__;}
 function openSheet(t,h){$('#sheetBackdrop').classList.remove('trace-premium-edit','trace-premium-movement','trace-premium-settlement','trace-premium-manual');$('#sheetTitle').textContent=t;$('#sheetBody').innerHTML=h;$('#sheetBackdrop').classList.add('open');document.body.classList.add('sheet-open');}
 function closeSheet(){$('#sheetBackdrop').classList.remove('open');document.body.classList.remove('sheet-open');}
 function split(t,id){const n=t.splitAmounts?.[id];if(n!==undefined&&n!==null&&Number.isFinite(Number(n))&&Number(n)>=0)return Number(n);const d=state.household.defaultSplit||{la:50,partner:50};return Math.round(Number(t.amountCAD||0)*Number(t.split?.[id]??d[id]??50))/100;}
@@ -1149,7 +1188,18 @@ function openInvestmentAccountAdd(){
 /* Trace 5.6 core: persistence, category and transaction lifecycle */
 function traceNotice(e){console.error(e);const x=$('#traceFeedback');if(x)x.textContent='Erreur de synchronisation. Réessaie sans fermer Trace.';}
 function traceFeedback(){return '<div class="trace-feedback" id="traceFeedback" role="status"></div>';}
-async function removeDocument(collection,id){if(internationalPreviewMode())return;const {data,error}=await client.from('documents').delete().eq('household_id',household.id).eq('collection',collection).eq('item_id',String(id)).select('item_id');if(error)throw error;if(!data||data.length!==1)throw new Error('Suppression non confirmée');}
+async function removeDocument(collection,id){if(internationalPreviewMode())return;
+ if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+ const key=traceWriteKey(collection,id);
+ return traceSerialWrite(key,async()=>{
+  if(!traceDocRevisions.has(key))throw Error('Document non chargé : suppression refusée.');
+  const {data,error}=await client.rpc('trace_cas_delete_document',{
+   p_household_id:household.id,p_collection:collection,p_item_id:String(id),
+   p_expected_revision:traceRevision(traceDocRevisions.get(key))});
+  if(error)throw traceSaveFailure(error);
+  if(data!==true)throw traceSaveFailure(new Error('Suppression non confirmée'));
+  traceDocRevisions.delete(key);sync('synced');
+ });}
 function categoryKind(c){return c.budgetKind||(c.type==='income'?'income':['rent','subscriptions','phone','taxes'].includes(c.id)?'fixed':'variable');}
 function manageCategories(){
  const active=state.categories.filter(c=>!c.archived).sort((a,b)=>a.type.localeCompare(b.type)||a.name.localeCompare(b.name,'fr'));
@@ -3833,23 +3883,33 @@ async function saveHouseholdSettings(){
   sync('saving');
   const settings={...(household.settings||{}),...state.household,schemaVersion:5};
   if(internationalPreviewMode()){household.settings=settings;sync('synced','Démo locale');return;}
-  const{error}=await client.from('households').update({settings,updated_by:session.user.id}).eq('id',household.id);
-  if(error){sync('error');throw error;}
-  household.settings=settings;
-  sync('synced');
+  if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+  return traceSerialWrite('settings:'+household.id,async()=>{
+   if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+   const {data,error}=await client.rpc('trace_cas_save_household_settings',{
+    p_household_id:household.id,p_settings:settings,
+    p_expected_revision:traceRevision(traceSettingsRevision)});
+   if(error)throw traceSaveFailure(error);
+   traceSettingsRevision=traceRevision(data);
+   household.settings=settings;sync('synced');
+  });
 }
 async function saveDocument(collection,item){
   sync('saving');
   if(internationalPreviewMode()){sync('synced','Démo locale');return;}
-  const{error}=await client.from('documents').upsert({
-    household_id:household.id,
-    collection,
-    item_id:String(item.id),
-    data:item,
-    updated_by:session.user.id
-  },{onConflict:'household_id,collection,item_id'});
-  if(error){sync('error');throw error;}
-  sync('synced');
+  if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+  if(!item||item.id===undefined||item.id===null||String(item.id)==='')
+   throw Error('Identifiant du document manquant.');
+  const id=String(item.id),key=traceWriteKey(collection,id);
+  return traceSerialWrite(key,async()=>{
+   if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+   const expected=traceDocRevisions.has(key)?traceRevision(traceDocRevisions.get(key)):null;
+   const {data,error}=await client.rpc('trace_cas_save_document',{
+    p_household_id:household.id,p_collection:collection,p_item_id:id,
+    p_data:item,p_expected_revision:expected});
+   if(error)throw traceSaveFailure(error);
+   traceDocRevisions.set(key,traceRevision(data));sync('synced');
+  });
 }
 function settingsBack(){return '<button class="secondary full settings-back" type="button" style="margin-top:16px">Retour aux paramètres</button>';}
 function bindSettingsBack(){$('.settings-back')?.addEventListener('click',profile);}
@@ -4047,8 +4107,12 @@ function starterCategoryDocs(hid,uid){
 async function seedNewHouseholdCategories(hid){
  if(!session?.user?.id||!hid)throw Error('Session nécessaire pour initialiser le budget.');
  const docs=starterCategoryDocs(hid,session.user.id);
- const {error}=await client.from('documents').upsert(docs,{onConflict:'household_id,collection,item_id',ignoreDuplicates:true});
- if(error)throw error;
+ for(const doc of docs){
+  const {error}=await client.rpc('trace_cas_save_document',{
+   p_household_id:hid,p_collection:'categories',p_item_id:doc.item_id,
+   p_data:doc.data,p_expected_revision:null});
+  if(error)throw traceSaveFailure(error);
+ }
 }
 async function restoreStarterCategories(){
  if(state.categories.length||state.budgets.length)throw Error('Catégories existantes : aucune initialisation automatique.');
@@ -4592,7 +4656,20 @@ function openDataSettings(){
   };
   bindSettingsBack();
 }
-async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Chargement de votre espace…');const{data:m,error:e}=await withTimeout(client.from('household_members').select('household_id,user_id,slot,display_name').eq('user_id',session.user.id).maybeSingle(),7000,'Chargement du profil trop long.');if(e)throw e;if(!m){showGate('cloudWorkspacePanel');return;}document.documentElement.dataset.traceUserId=session.user.id;me=m.slot;partner=me==='la'?'partner':'la';loadingStage('Synchronisation de vos données…');const[{data:h,error:he},{data:docs,error:de},{data:members,error:mee}]=await withTimeout(Promise.all([client.from('households').select('id,name,settings,schema_version,invite_code,created_by').eq('id',m.household_id).single(),client.from('documents').select('collection,item_id,data').eq('household_id',m.household_id),client.from('household_members').select('slot,display_name,role,user_id').eq('household_id',m.household_id)]),9000,'Synchronisation trop longue.');if(he||de||mee)throw he||de||mee;household=h;state={household:{...(h.settings||{}),name:h.name,inviteCode:h.invite_code||'',createdBy:h.created_by||'',workspaceMembers:members.map(x=>({slot:x.slot,name:x.display_name,role:x.role,userId:x.user_id}))},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[],importDays:[],smartImports:[]};if(!Array.isArray(state.household.members)||!state.household.members.length)state.household.members=members.map(x=>({id:x.slot,name:x.display_name,initials:initials(x.display_name)}));members.forEach(x=>{const mm=state.household.members.find(y=>y.id===x.slot);if(mm){mm.name=x.display_name||mm.name;mm.initials=initials(mm.name);}});const map={categories:'categories',accounts:'accounts',budgets:'budgets',transactions:'transactions',investmentAccounts:'investment_accounts',investmentOperations:'investment_operations',reconciliations:'reconciliations',importDays:'import_days',smartImports:'imports'};Object.entries(map).forEach(([k,c])=>state[k]=docs.filter(d=>d.collection===c).map(d=>d.data).filter(Boolean));state.household.referenceDate||=CM+'-01';$('#profileBtn').textContent=member(me).initials||initials(member(me).name);renderAll();navigate((location.hash||'#').slice(1)||'home');hideGate();sync('synced');window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});document.dispatchEvent(new Event('trace:workspace-ready'));setTimeout(offerInitialBankSetup,260);
+async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Chargement de votre espace…');const{data:m,error:e}=await withTimeout(client.from('household_members').select('household_id,user_id,slot,display_name').eq('user_id',session.user.id).maybeSingle(),7000,'Chargement du profil trop long.');if(e)throw e;if(!m){showGate('cloudWorkspacePanel');return;}document.documentElement.dataset.traceUserId=session.user.id;me=m.slot;partner=me==='la'?'partner':'la';loadingStage('Synchronisation de vos données…');const[{data:h,error:he},{data:docs,error:de},{data:members,error:mee}]=await withTimeout(Promise.all([client.from('households').select('id,name,settings,settings_revision,schema_version,invite_code,created_by').eq('id',m.household_id).single(),client.from('documents').select('collection,item_id,data,revision').eq('household_id',m.household_id),client.from('household_members').select('slot,display_name,role,user_id').eq('household_id',m.household_id)]),9000,'Synchronisation trop longue.');if(he||de||mee)throw he||de||mee;
+ // Deny missing/malformed revision data rather than silently reopening blind writes.
+ const incomingRevision=internationalPreviewMode()?null:traceRevision(h.settings_revision);
+ const loadedRevisions=new Map();
+ if(!internationalPreviewMode())for(const d of docs){
+  if(!d.collection||d.item_id===undefined||d.item_id===null)
+   throw Error('Document cloud incomplet : identifiant absent.');
+  loadedRevisions.set(traceWriteKey(d.collection,d.item_id),traceRevision(d.revision));
+ }
+ traceDocRevisions.clear();
+ for(const [key,rev] of loadedRevisions)traceDocRevisions.set(key,rev);
+ traceSettingsRevision=incomingRevision;traceWriteQueues.clear();traceWritesBlocked=false;
+ document.querySelector('#traceWriteConflict')?.remove();
+ household=h;state={household:{...(h.settings||{}),name:h.name,inviteCode:h.invite_code||'',createdBy:h.created_by||'',workspaceMembers:members.map(x=>({slot:x.slot,name:x.display_name,role:x.role,userId:x.user_id}))},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[],importDays:[],smartImports:[]};if(!Array.isArray(state.household.members)||!state.household.members.length)state.household.members=members.map(x=>({id:x.slot,name:x.display_name,initials:initials(x.display_name)}));members.forEach(x=>{const mm=state.household.members.find(y=>y.id===x.slot);if(mm){mm.name=x.display_name||mm.name;mm.initials=initials(mm.name);}});const map={categories:'categories',accounts:'accounts',budgets:'budgets',transactions:'transactions',investmentAccounts:'investment_accounts',investmentOperations:'investment_operations',reconciliations:'reconciliations',importDays:'import_days',smartImports:'imports'};Object.entries(map).forEach(([k,c])=>state[k]=docs.filter(d=>d.collection===c).map(d=>d.data).filter(Boolean));state.household.referenceDate||=CM+'-01';$('#profileBtn').textContent=member(me).initials||initials(member(me).name);renderAll();navigate((location.hash||'#').slice(1)||'home');hideGate();sync('synced');window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});document.dispatchEvent(new Event('trace:workspace-ready'));setTimeout(offerInitialBankSetup,260);
  if(state.household.traceSeparatedAt){
   let greeted=false;
   const localKey='trace:separation:greeting:'+session.user.id;
