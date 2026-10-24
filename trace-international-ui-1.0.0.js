@@ -1,18 +1,35 @@
-/* TRACE International home account selector / read-only global liquidity. */
+/* TRACE International 5.37 premium one-tap account viewing (read-only). */
 (function(root){'use strict';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode,checkingNode,cardNode,onSelect,requestRate}={}){
+// Read-only display selection. Never stored in household settings.
+let viewState=null;
+function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode,checkingNode,cardNode,
+ warningNode,badgeNode,onSelect,requestRate}={}){
  if(!host||!root.TraceInternational)return;
  // The summary is inside a clickable balance card; changing the account must not open settings.
  host.onclick=event=>event.stopPropagation();
  const I=root.TraceInternational,checking=accounts.filter(a=>a.owner===owner&&a.type==='checking'&&!a.archived);
- if(!checking.length){host.innerHTML='';return;}
- const snap=I.snapshot({accounts,owner,mainId,estimates,fxRates:rates}),cur=snap.currency,multi=snap.balances.length>1||cur!=='CAD';
- host.innerHTML='<div class="trace-intl-top"><label for="traceIntlPrimary">Compte principal</label>'+
+ if(!checking.length){host.innerHTML='';viewState=null;return;}
+ const primarySnap=I.snapshot({accounts,owner,mainId,estimates,fxRates:rates});
+ const primaryId=primarySnap.main?.id;
+ if(!viewState||viewState.owner!==owner||viewState.primaryId!==primaryId||
+    !checking.some(a=>a.id===viewState.accountId))
+  viewState={owner,primaryId,accountId:primaryId,primaryBadge:badgeNode?.textContent||''};
+ const selectedId=viewState.accountId;
+ const snap=I.snapshot({accounts,owner,mainId:selectedId,estimates,fxRates:rates});
+ const cur=snap.currency,multi=snap.balances.length>1||cur!=='CAD';
+ host.innerHTML=(checking.length>1?
+  '<div class="trace-intl-view-group"><span class="trace-intl-view-label">Consulter un solde</span>'+
+  '<div class="trace-intl-switch" role="group" aria-label="Consulter les soldes par compte">'+
+  checking.map(a=>'<button type="button" class="trace-intl-chip'+(a.id===selectedId?' is-active':'')+
+   '" data-trace-view-account="'+esc(a.id)+'" aria-pressed="'+(a.id===selectedId?'true':'false')+'">'+
+   esc(a.name||'Compte')+'</button>').join('')+'</div>'+
+  '<p class="trace-intl-view-note">Consultation uniquement · aucun changement de compte principal</p></div>':'')+
+ '<div class="trace-intl-top"><label for="traceIntlPrimary">Compte principal · modifier avec confirmation</label>'+
  '<select class="input" id="traceIntlPrimary">'+checking.map(a=>
-  '<option value="'+esc(a.id)+'"'+(a.id===snap.main?.id?' selected':'')+'>'+
+  '<option value="'+esc(a.id)+'"'+(a.id===primaryId?' selected':'')+'>'+
   esc(a.name)+' · '+I.currency(a)+'</option>').join('')+'</select></div>'+
- '<p class="trace-intl-primary-explain">Solde du compte principal et de ses cartes liées, en '+cur+'.</p>'+
+ '<p class="trace-intl-primary-explain">'+(selectedId===primaryId?'Compte principal':'Consultation du compte secondaire')+' et de ses cartes liées, en '+esc(cur)+'.</p>'+
  (multi?'<details class="trace-intl-details"><summary>Voir tous mes comptes et ma trésorerie globale</summary>'+
   '<div class="trace-intl-accounts">'+snap.balances.map(a=>
    '<div class="trace-intl-row"><span>'+esc(a.name)+' <small>'+a.nativeCurrency+'</small></span><b>'+
@@ -29,8 +46,34 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
   if(cardNode)cardNode.textContent=snap.card===null?(snap.cardsToReview.length?'Avoir de carte à vérifier':'—'):snap.card<0?
    I.money(Math.abs(snap.card),cur)+' de dette':snap.card>0?'Avoir estimé '+I.money(snap.card,cur):I.money(0,cur);
  }
+ const linkedReview=snap.cardsToReview.some(a=>a.settlementAccountId===selectedId||
+   (!a.settlementAccountId&&snap.balances.length===2&&a.owner===owner));
+ if(warningNode){
+  warningNode.hidden=!linkedReview;
+  warningNode.textContent=linkedReview?
+   'Avoir de carte à vérifier : cet avoir n’est pas ajouté au solde disponible.':'';
+ }
+ if(badgeNode){
+  if(selectedId!==primaryId){
+   if(badgeNode.textContent!=='Consultation · compte secondaire')
+    viewState.primaryBadge=badgeNode.textContent;
+   badgeNode.textContent='Consultation · compte secondaire';
+  }else badgeNode.textContent=viewState.primaryBadge||badgeNode.textContent;
+ }
  const sel=host.querySelector('#traceIntlPrimary');
- sel.onchange=()=>{if(typeof onSelect==='function')onSelect(sel.value);};
+ if(sel)sel.onchange=()=>{
+  if(typeof onSelect==='function'&&checking.some(a=>a.id===sel.value))onSelect(sel.value);
+ };
+ host.querySelectorAll('[data-trace-view-account]').forEach(button=>{
+  button.onclick=event=>{
+   event.stopPropagation();
+   const id=button.dataset.traceViewAccount;
+   if(!checking.some(a=>a.id===id)||id===viewState?.accountId)return;
+   viewState={...viewState,owner,primaryId,accountId:id};
+   render({host,accounts,owner,mainId,estimates,rates,balanceNode,checkingNode,cardNode,
+    warningNode,badgeNode,onSelect,requestRate});
+  };
+ });
  const missingCurrencies=[...new Set(snap.balances.filter(a=>a.nativeCurrency!=='CAD'&&!rates[a.nativeCurrency]).map(a=>a.nativeCurrency))];
  if(missingCurrencies.length&&typeof requestRate==='function')requestRate(missingCurrencies);
 }
