@@ -1,3 +1,17 @@
+## Portes additionnelles — captures étrangères et lots (24 octobre 2026)
+
+**NO-GO maintenu.** Les deux commits `274414664eb480f73666b9a409437cee67dce54a` et `6bca9ab80caf1c7dfb1255db4f6285587c0dda5c` ne touchent que le laboratoire candidat et ses tests, jamais `main`, Supabase réel ou le déploiement.
+
+- [x] Captures/OCR sur compte étranger : confirmation directe refusée et brouillon `pending` conservé ; bouton désactivé dans l'interface avec explication explicite.
+- [x] Validations groupées restreintes à `pending`, aucune réactivation d'une ligne ignorée/traitée.
+- [x] 7/7 tests captures/lots + 16/16 tests CSV exécutés dans un harnais V8 avec faux modules Node et transports, soit **23/23 simulés**. Ne pas leur attribuer le niveau de preuve Node natif/SQL/navigateur.
+- [ ] Implémenter et qualifier un vrai parcours individuel OCR étranger (le rejet sûr actuel n'est pas une fonctionnalité terminée).
+- [ ] Exécuter suites Node natives et SQL migrations 07/08/09 en PGlite/PostgreSQL fictifs, tester rôles, CAS et concurrence.
+- [ ] Reconstruire le service worker via le générateur et requalifier Chromium et hors ligne, puis Safari iPhone et PWA installée.
+- [ ] Préparer sauvegarde réelle fraîche autorisée, restauration isolée, rollback FX et décision GO explicite.
+
+---
+
 ## Contrôles supplémentaires — revue étrangère et validations groupées (24 octobre 2026)
 
 **NO-GO inchangé.** Les commits `650462a6c2e35199a1d230ed412ac1e54648e8a2` et `74e823f7deee512dc7021e7f3f824fdf7b328331` renforcent l'approbation CSV étrangère et bloquent la validation groupée des imports étrangers `pending` (CSV/OCR/PDF/captures). Changements strictement sur la branche de candidate avec `[skip ci]`, sans modification de `main`, CI ou déploiement.

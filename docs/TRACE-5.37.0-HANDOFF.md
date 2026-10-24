@@ -1,3 +1,22 @@
+## Lot suivant — captures internationales en attente et statut de validation strict (24 octobre 2026)
+
+**NO-GO conservé.** Commits de code : `274414664eb480f73666b9a409437cee67dce54a` et `6bca9ab80caf1c7dfb1255db4f6285587c0dda5c` ; base : `104e2c6854f0873a2f6416b8c848bcbd209d22c9`. Seule la branche `trace-5.37.0-international-accounts-fx` a été modifiée, commits `[skip ci]`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` inchangée. Aucune CI, fusion, PR, deployment ou donnée Supabase réelle.
+
+### Modifications effectives
+
+1. **`v5-app-5.37.0.js` — captures / OCR étrangers :** `smartApproveDraft` refuse la confirmation financière directe d'une capture provenant d'un compte non-CAD tant qu'un parcours de revue internationale n'est pas qualifié. Le brouillon et sa preuve restent `pending`, sans création d'opération `confirmed` ni conversion inventée. Les comptes CAD continuent à accéder au circuit existant.
+2. **Statuts de lot sûrs :** `TraceBankBridge.quickFinalizeApproved` et `openImportBatchReview` ne prennent plus que les lignes `pending` (et non tout statut différent de `confirmed`). Une ligne ignorée, déjà traitée ou reçue ne peut pas être rouverte et confirmée par le lot. Les garde-fous étrangers du lot précédent restent en place.
+3. **`trace-smart-inbox-3.5.0.js` — interface cohérente :** le bouton « Confirmer l'opération » est désactivé sur compte étranger avec libellé « À vérifier · devise étrangère » ; un texte visible précise que la preuve est conservée et que l'opération n'a pas encore d'impact financier. Comportement CAD inchangé.
+4. **`tests/trace-international-capture-confirm-guards.test.cjs` :** sept scénarios couvrent le rejet EUR/USD sans écriture, la continuation CAD, la non-réactivation des statuts ignorés/terminés/reçus et le bouton de revue. Résultat **7/7 sous V8 simulant les modules Node** ; l'ancienne suite CSV a été rejouée dans le même environnement : **16/16**. Total **23/23 V8 fictifs**, à distinguer de Node CLI, Chromium, PostgreSQL ou Safari, qui n'ont pas été exécutés sur ce HEAD. La syntaxe V8 des fichiers modifiés a été contrôlée.
+   
+### Blocages et suite
+
+Container Node v22 présent, mais aucun checkout local, DNS GitHub inaccessible, ni PGlite/serveur PostgreSQL : aucun test SQL 07/08/09 ou Node natif n'a été exécuté ici. Le SW `trace-international-preview-sw.js` reste périmé après modification des assets. Régénérer seulement avec `node scripts/build-trace-preview-pwa.mjs` puis `--check` sur checkout complet ; ne pas éditer à la main. Les imports étrangers OCR restent volontairement **non validables**, ce qui est une protection temporaire et **non une fonctionnalité achevée**.
+
+Priorité : checkout fictif + dépendances, exécution et correction tests SQL/Node, PWA hors ligne et Chromium, puis implémentation d'une revue individuelle OCR étrangère avec montants natifs, FX datée, nature et doublons vérifiés, sans revalidation automatique ni effet rétroactif ; poursuivre différé, devise Couple, Safari natif et sauvegarde/rollback sous autorisation.
+
+---
+
 ## Lot de reprise autonome — verrouillage des validations étrangères (24 octobre 2026)
 
 **NO-GO maintenu.** Deux corrections de code ont été enregistrées sur la SEULE branche `trace-5.37.0-international-accounts-fx` avec `[skip ci]` : `650462a6c2e35199a1d230ed412ac1e54648e8a2` et `74e823f7deee512dc7021e7f3f824fdf7b328331`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` n'a pas été modifiée. Aucun SQL hébergé, aucune CI, aucun déploiement ni données financières réelles consultées.
