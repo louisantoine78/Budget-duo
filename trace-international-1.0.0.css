@@ -215,3 +215,14 @@
 .trace-archived-account{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 0;border-top:1px solid #e1e9e2}
 .trace-archived-account>span{display:grid;gap:4px;flex:1 1 130px;min-width:0;font-size:13px;overflow-wrap:anywhere}
 .trace-archived-account small{font-size:11px;color:#536e60}
+/* Review every CSV row without treating a possible match as a deletion. */
+.trace-csv-preview-row{border:1px solid #e5e9e4;border-radius:14px;margin:9px 0;background:#fff;overflow:hidden}
+.trace-csv-preview-row>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 12px;min-height:48px;cursor:pointer;color:#123f38;font-size:13px}
+.trace-csv-preview-row>summary>span{min-width:0;overflow-wrap:anywhere}
+.trace-csv-preview-row>summary>b{white-space:nowrap;font-variant-numeric:tabular-nums;font-size:14px}
+.trace-csv-preview-row>summary small{display:block;margin-top:5px;color:#65766b;font-size:11px}
+.trace-csv-preview-row[data-has-match]>summary{background:#faf4e6}
+.trace-csv-preview-row>p{padding:0 12px}
+.trace-csv-comparison{display:grid;gap:6px;background:#f5f7f2;border-radius:10px;margin:9px 12px;padding:12px;font-size:13px;overflow-wrap:anywhere}
+.trace-csv-comparison>small{color:#65766b;line-height:1.5}
+.trace-csv-invalid{border:1px solid #ead3bd;border-radius:12px;padding:12px;margin-top:12px;font-size:13px}

@@ -98,6 +98,15 @@ async function main(){
   assert.equal(nativeFunctions.csvAlreadyImportedSourceRow({...same,bankAmount:26},[old]),false);
   assert.equal(nativeFunctions.csvAlreadyImportedSourceRow({...same,importFileName:'other.csv'},[old]),false);
  });
+ await test('all seven proposals and rejected source lines remain inspectable beyond the old five-row limit',()=>{
+  const many='Date;Libellé;Débit;Crédit\n'+Array.from({length:7},(_,i)=>
+   '15/10/2026;Achat '+i+';'+(20+i)+',00;').join('\n')+'\n16/10/2026;Ambigu;4,00;2,00';
+  const h=harness(),preview=h.load(many);
+  assert.equal((preview.match(/data-csv-preview-row=/g)||[]).length,7);
+  assert.match(preview,/data-csv-preview-row="8"/);
+  assert.match(preview,/Ligne 9 : 16\/10\/2026 \| Ambigu \| 4,00 \| 2,00/);
+  assert.match(preview,/1 ligne\(s\) invalide\(s\)/);assert.equal(h.writes.length,0);
+ });
  console.log(n+' source-row CSV idempotence and preservation checks passed');
 }
 main().catch(e=>{console.error('FAIL',e);process.exitCode=1;});

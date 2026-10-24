@@ -2508,13 +2508,27 @@ function importFile(file){
     try{
      const result=build(),preview=$('#csvPreviewResult');
      const flagged=result.all.filter(t=>t.csvReviewMatchIds?.length);
+     const account=accts.find(a=>a.id===$('#csvAccount').value),I=window.TraceInternational,
+      ccy=I.currency(account),existing=[...state.transactions,...result.all];
+     const comparison=t=>(t.csvReviewMatchIds||[]).map(id=>{
+      const matched=existing.find(x=>x.id===id);if(!matched)return'';
+      const destination=matched.type==='transfer'&&matched.toAccountId===t.accountId,
+       bank=I.amountOnAccount(matched,account,destination?'destination':'source'),
+       M=window.TraceMovement,kind=M?.fromStored?.(matched),nature=M?.get?.(kind)?.label||
+        ({expense:'Dépense',income:'Revenu',transfer:'Virement interne',refund:'Retour de commerçant'})[matched.type]||'Mouvement bancaire';
+      return '<article class="trace-csv-comparison" data-csv-compare-id="'+esc(id)+'"><b>'+esc(matched.name||'Opération bancaire')+'</b>'+
+       '<span>'+esc(matched.date)+' · '+I.money(bank,ccy)+'</span><small>'+esc(shortAccountLabel(account))+' · '+
+       esc(nature)+' · '+(matched.status==='confirmed'?'Confirmée':'À vérifier')+'</small></article>';
+     }).join('');
      preview.innerHTML='<div class="empty-note" style="margin-top:14px"><b>'+result.all.length+' lignes à vérifier</b> · '+result.duplicates+' doublon(s) déjà présents non réimportés · '+result.invalid.length+' ligne(s) invalide(s) · '+flagged.length+' rapprochement(s) possible(s).</div>'+
       (flagged.length?'<div class="empty-note" role="status"><b>Vérification bancaire nécessaire</b> : certaines lignes ressemblent à des paiements de carte, remboursements ou autres mouvements déjà saisis. Rien n’est fusionné ni supprimé automatiquement.</div>'+
-       flagged.slice(0,5).map(t=>'<div class="empty-note">'+esc(t.date)+' · '+esc(t.name)+' : '+t.csvReviewMatchIds.map(id=>{
-        const matched=state.transactions.find(x=>x.id===id);
-        return matched?esc(matched.date+' · '+matched.name+' ('+matched.type+')'):'Opération à vérifier';
-       }).join(' / ')+'</div>').join(''):'')+
-      result.all.slice(0,5).map(t=>'<div class="trace-list-btn"><span>'+esc(t.date)+' · '+esc(t.name)+'</span><b>'+window.TraceInternational.money(t.bankAmount,window.TraceInternational.currency(accts.find(a=>a.id===t.accountId)))+'</b></div>').join('')+
+       '<p class="empty-note">Déplie chaque ligne signalée pour comparer les opérations. Au plus cinq ressemblances par ligne ; ce contrôle ne certifie pas l’absence de doublon.</p>':'')+
+      result.all.map(t=>'<details class="trace-csv-preview-row" data-csv-preview-row="'+t.csvSourceRowIndex+'"'+(t.csvReviewMatchIds?.length?' data-has-match="true"':'')+'><summary><span>'+esc(t.date)+' · '+esc(t.name)+
+       '<small>Ligne '+t.csvSourceRowIndex+' · '+(t.csvReviewMatchIds?.length?'Rapprochement à vérifier':'À vérifier')+'</small></span><b>'+I.money(t.bankAmount,ccy)+'</b></summary>'+
+       '<p class="empty-note">Compte : '+esc(shortAccountLabel(account))+' · devise native '+esc(ccy)+' · '+(t.type==='income'?'Entrée':'Sortie')+'. Cette proposition n’est pas confirmée.</p>'+
+       comparison(t)+'</details>').join('')+
+      (result.invalid.length?'<details class="trace-csv-invalid"><summary>'+result.invalid.length+' ligne(s) non interprétée(s)</summary>'+result.invalid.map(n=>
+       '<p class="empty-note">Ligne '+n+' : '+esc((rows[n-2]||[]).join(' | '))+'</p>').join('')+'</details>':'')+
       (result.all.length?'<button class="primary full" id="csvCommit" style="margin-top:14px">Importer '+result.all.length+' opération(s) à vérifier</button>':'');
      if(!result.all.length)return;
      $('#csvCommit').onclick=async()=>{

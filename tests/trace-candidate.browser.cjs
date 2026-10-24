@@ -461,6 +461,49 @@ let base;
   await context.setOffline(false);await boot();
   assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
  });
+ await test('actual CSV upload shows all rows and bank matches, imports pending only and stays idempotent',async()=>{
+  const budget=await text('homeBudgetAvailable'),cash=await text('homeBalance');
+  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  const file={name:'fictional-canadian.csv',mimeType:'text/csv',buffer:Buffer.from(
+   'Date;Libellé;Débit;Crédit\n12/10/2026;Paiement CSV;50,00;\n'+
+   '15/10/2026;Ticket train;25,00;\n15/10/2026;Ticket train;25,00;\n'+
+   '16/10/2026;Fournitures;26,00;\n17/10/2026;Papeterie;27,00;\n'+
+   '18/10/2026;Document;28,00;\n19/10/2026;Dernière ligne;29,00;\n'+
+   '20/10/2026;Colonnes ambiguës;4,00;2,00;\n21/10/2026;Illisible;??;\n')};
+  const load=async()=>{
+   await page.locator('#importFile').setInputFiles(file);
+   await page.locator('#csvAccount').selectOption('demo-ca-current');
+   await page.locator('#csvPreview').click();
+  };
+  await load();assert.equal(await page.locator('[data-csv-preview-row]').count(),7);
+  assert.equal(await page.locator('[data-csv-preview-row="8"]').count(),1);
+  assert.match(await text('csvPreviewResult'),/2 ligne\(s\) invalide\(s\)/);
+  await page.locator('[data-csv-preview-row="2"]>summary').click();
+  assert.match(await page.locator('[data-csv-compare-id="demo-card-payment"]').innerText(),/Paiement Mastercard.*fictif/s);
+  assert.match(await page.locator('[data-csv-compare-id="demo-card-payment"]').innerText(),/Confirmée/);
+  await page.locator('#csvCommit').click();
+  await page.locator('#importResult').filter({hasText:'7 opération(s) placée(s)'}).waitFor();
+  assert.equal(await page.locator('[data-import-pending]').count(),8);
+  assert.equal(await page.locator('[data-import-pending]').filter({hasText:'Ticket train'}).count(),2);
+  await go('home');assert.equal(await text('homeBudgetAvailable'),budget);assert.equal(await text('homeBalance'),cash);
+  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  await load();assert.match(await text('csvPreviewResult'),/0 lignes à vérifier/);
+  assert.match(await text('csvPreviewResult'),/7 doublon\(s\) déjà présents non réimportés/);
+  assert.equal(await page.locator('#csvCommit').count(),0);
+ });
+ await test('foreign CSV retains its actual EUR amount while budget and native bank balance remain unchanged pending review',async()=>{
+  await go('home');await page.locator('[data-trace-view-account="demo-fr-current"]').click();
+  const cash=await text('homeBalance'),budget=await text('homeBudgetAvailable');
+  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  await page.locator('#importFile').setInputFiles({name:'fictional-french.csv',mimeType:'text/csv',
+   buffer:Buffer.from('Date;Libellé;Débit;Crédit\n20/10/2026;Achat EUR fictif;18,40;\n')});
+  await page.locator('#csvAccount').selectOption('demo-fr-current');await page.locator('#csvPreview').click();
+  assert.match(await page.locator('[data-csv-preview-row]').innerText(),/18,40.*€/);
+  await page.locator('#csvCommit').click();
+  await page.locator('#importResult').filter({hasText:'1 opération(s) placée(s)'}).waitFor();
+  assert.match(await page.locator('[data-import-pending]').filter({hasText:'Achat EUR fictif'}).innerText(),/18,40.*€.*CAD à valider/);
+  await go('home');assert.equal(await text('homeBalance'),cash);assert.equal(await text('homeBudgetAvailable'),budget);
+ });
  await test('the dedicated laboratory worker caches no credentials, financial records or bank statements',async()=>{
   const cached=await page.evaluate(async()=>({
    registrations:(await navigator.serviceWorker.getRegistrations()).map(r=>({scope:r.scope,script:r.active?.scriptURL})),
