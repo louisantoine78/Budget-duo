@@ -68,7 +68,7 @@ test('renderBudget completes without selector error',()=>{
  assert.equal(elem('#budgetCategoryImpact').innerHTML,'cat rendered');
  assert.equal(typeof clicks.get('#annualBudgetChart [data-insight-month]')[0].onclick,'function');
 });
-const openAnnual=compile('openAnnualBudgetAnalysis','\nfunction internationalHome(',ctx);
+const openAnnual=compile('openAnnualBudgetAnalysis','\n/* TRACE 5.37 UX',ctx);
 test('annual details opens and months are clickable',()=>{
  openAnnual();assert.equal(typeof clicks.get('#traceAnnualDetail [data-insight-month]')[0].onclick,'function');
 });
