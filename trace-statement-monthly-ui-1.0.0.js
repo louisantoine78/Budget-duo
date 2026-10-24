@@ -155,8 +155,10 @@
    say('Propositions recopiées, NON validées. Vérifie chaque ligne et complète les lignes manquantes à partir du PDF.');
   }
   async function extractLocalPDF(){
-   const picked=file,token=++scanToken;
-   if(!picked||scanning){say('Sélectionne un PDF avant la détection.',true);return;}
+   const picked=file;
+   if(!picked){say('Sélectionne un PDF avant la détection.',true);return;}
+   if(scanning)return; // Ignore repeat taps without invalidating an in-flight scan.
+   const token=++scanToken;
    if(!root.TraceStatementPDFText?.scan){say('Extracteur PDF local absent. Contrôle manuel disponible.',true);return;}
    scanning=true;extraction=null;renderExtraction();
    say('Lecture locale de la couche texte simple, aucune donnée transmise…');
