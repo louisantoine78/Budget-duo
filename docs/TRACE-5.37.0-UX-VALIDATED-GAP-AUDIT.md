@@ -185,3 +185,20 @@ Modifications et documentation **uniquement sur `trace-5.37.0-international-acco
 - Transversal : modes différés dans vrai grand livre, QA complète et plan de rollback, autorisation de mise en production.
 
 **Prochaine priorité technique** : raccord PDF mensuel de contrôle (ne pas créer de transactions sans validation), puis intégration des mouvements différés uniquement sur données fictives, et Safari iPhone avant production.
+
+
+## Contrôle mensuel du relevé PDF — intégration intermédiaire sécurisée (24 octobre 2026)
+
+**Livré réellement sur la candidate fictive, sans déploiement :** dans Activité → Importer, un panneau « Contrôle mensuel PDF · revue manuelle sécurisée ». Un PDF bancaire local (signature %PDF-, taille max 12 Mo) peut être ouvert via un lien Blob, mais ses opérations ne sont **PAS extraites automatiquement**. Le titulaire retranscrit toutes les opérations (maximum 250 par contrôle) en indiquant pour chacune page/numéro de ligne, date, libellé, débit/crédit, montant dans la devise native et extrait fidèle de la preuve. Il déclare le nombre total de mouvements, vérifie chaque ligne, et atteste qu'aucune n'a été omise. **Cette saisie manuelle ne peut garantir l'exhaustivité réelle du PDF** : aucun OCR, aucune analyse automatique des pages, aucune certification des relevés.
+ 
+La comparaison réemploie sans modification les moteurs préexistants TraceStatementEvidence.stage/compareReviewed et TraceStatementReconcile.compare. Les montants restent natifs, le compte et la période sont vérifiés, et une approbation par preuve est obligatoire. Le rapport indique correspondances uniques, lignes manquantes, lignes à valider, ambiguïtés et transactions TRACE non trouvées dans les lignes fournies ; tolérance de deux jours. Il reste en mémoire et **strictement en lecture seule** : aucune écriture Supabase, aucune nouvelle transaction ni impact budgétaire, aucun téléchargement de relevé vers un service. L'ancien import CSV et les imports quotidiens continuent sans changement. Un lien renvoie à Activité filtrée par compte.
+
+**Bugs corrigés pendant le lot :** double ajout d'une ligne par des événements clic concurrents ; association erronée des cases d'approbation (le moteur de preuves ne renvoie pas de propriété index sur les lignes prêtes). Les approbations suivent désormais l'ordre explicite des preuves et sont invalidées dès qu'un champ source est modifié.
+
+**Commits de code, tous [skip ci] :** module manuel PDF 932ef8df ; correctif double ajout f48a6ddc ; style premium iPhone 48cafde2 ; HTML laboratoire ddaacf65 ; montage application candidate 1d3792fd ; correctif indices de vérification 212c72e6 ; tests UX PDF fictifs 4c297281.
+
+**QA après relecture GitHub : 167/167 tests ciblés V8 simulés**, 12 suites au total (100 anciens UX/finances, 56 moteurs de comparaison/preuves, 11 UI PDF). Cas couverts : document faussement nommé PDF, octets de signature, nombre de lignes, attestation par ligne, doublons ambigus, mutation de champs source qui invalide les approbations, comparaison et retour vers Activité, absence d'écriture financière. **Ni navigateur Safari iPhone, ni véritable PDF de banque testé, ni Node CLI exhaustif/CI, ni E2E multi-utilisateur**. Ne jamais décrire ce parcours comme OCR ou contrôle PDF complet.
+
+**Interdits préservés :** aucune modification de main 02c70f50e7e51da79b77a91dde96a03c6c719909, aucune donnée Supabase réelle, aucun déploiement Vercel/production, aucune activation des cartes différées ni des workflows GitHub/PickPoint. Le vieux lien Vercel déployé au code 2c312f n'affiche pas ces changements.
+
+**Prochain impératif :** véritable extraction locale fiable des couches texte PDF, références page/ligne, identification de colonnes bancaires et variantes de relevés, validation de l'exhaustivité sur relevés bancaires fictifs multipages, puis tests réels Safari avant d'envisager la production. La méthode manuelle actuelle est un filet de sécurité, pas la fonction finale approuvée.
