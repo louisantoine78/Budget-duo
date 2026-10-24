@@ -1,3 +1,16 @@
+## Lot de reprise autonome — verrouillage des validations étrangères (24 octobre 2026)
+
+**NO-GO maintenu.** Deux corrections de code ont été enregistrées sur la SEULE branche `trace-5.37.0-international-accounts-fx` avec `[skip ci]` : `650462a6c2e35199a1d230ed412ac1e54648e8a2` et `74e823f7deee512dc7021e7f3f824fdf7b328331`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` n'a pas été modifiée. Aucun SQL hébergé, aucune CI, aucun déploiement ni données financières réelles consultées.
+
+- `v5-app-5.37.0.js` : l'approbation rapide d'une dépense étrangère CSV est limitée au **statut `pending`** et refuse les statuts ignorés/terminés. Le compte et la transaction sont comparés à leur état initial immédiatement après la recherche de taux asynchrone ; une modification intervenue pendant cette attente refuse l'enregistrement.
+- **Fermeture du contournement par lots :** `legacyImportNatureReady` refuse la confirmation groupée des importations `pending` sur des comptes non-CAD pour les sources CSV, OCR, capture ou PDF, même si une nature suggérée existe ou si `natureReviewed` est déjà vrai. Les saisies manuelles et l'enregistrement individuel expressément revu restent accessibles ; les imports étrangers prévalorisés sans parcours individuel adapté restent en attente. Le contrôle s'applique à la validation de lot, à `validatePendingAll` et à `TraceBankBridge.quickFinalizeApproved`.
+- `tests/trace-international-foreign-csv-confirm.test.cjs` : 16 scénarios (12 antérieurs + 4 supplémentaires) **effectivement exécutés sous V8**, avec source de test récupérée sur GitHub, modules Node simulés, vrai moteur financier extrait, fausses UI/base et aucun réseau. **16/16 réussis, zéro échec**. Compilation syntaxique V8 des deux fichiers modifiés réussie. **Ce ne sont PAS** des tests Node natifs, Chromium, Safari, PostgreSQL ou Supabase hébergé.
+- Le conteneur a Node 22 mais toujours ni checkout Git accessible, ni DNS GitHub, ni PGlite installé : les migrations 07/08/09 et les tests Node natifs restent **non exécutés sur ces commits**. Aucun service worker généré manuellement ; `trace-international-preview-sw.js` reste périmé et doit être régénéré via `node scripts/build-trace-preview-pwa.mjs`, puis contrôlé avec `--check`, une fois un checkout complet autorisé obtenu.
+
+**Suite :** restaurer un checkout fictif Node/PGlite, exécuter les tests SQL et natifs, revoir les droits et la concurrence à deux sessions, régénérer/requalifier la PWA laboratoire, finaliser les natures étrangères et le débit différé, puis faire la recette Safari, la préparation de sauvegarde/rollback sous autorisation avant toute décision GO.
+
+---
+
 ## Reprise technique suivante — robustesse des catégories, sécurité RPC, contrôle CSV (24 octobre 2026)
 
 **NO-GO.** Aucune modification de `main`, aucun déploiement et aucune lecture/écriture des données Supabase réelles. Le conteneur disponible possède Node 22 mais **aucun checkout GitHub ni résolution réseau fonctionnelle**, et PGlite/PostgreSQL serveur ne sont pas installés : les deux tests d'intégration SQL restent **non exécutés**. Les essais ont été réalisés sur le code extrait de la branche avec transports fictifs sous V8 via le connecteur GitHub (ni CLI Node natif, ni navigateur, ni PostgreSQL réel).

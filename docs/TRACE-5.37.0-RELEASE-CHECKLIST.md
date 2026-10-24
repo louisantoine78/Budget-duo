@@ -1,3 +1,18 @@
+## Contrôles supplémentaires — revue étrangère et validations groupées (24 octobre 2026)
+
+**NO-GO inchangé.** Les commits `650462a6c2e35199a1d230ed412ac1e54648e8a2` et `74e823f7deee512dc7021e7f3f824fdf7b328331` renforcent l'approbation CSV étrangère et bloquent la validation groupée des imports étrangers `pending` (CSV/OCR/PDF/captures). Changements strictement sur la branche de candidate avec `[skip ci]`, sans modification de `main`, CI ou déploiement.
+
+- [x] Statut `pending` strict pour l'éditeur de dépense étrangère CSV ; révision de l'état de transaction et de compte après une attente de taux FX.
+- [x] Garde commune de validation par lot : import étranger non-CAD `pending` jamais confirmé en masse ; revue individuelle obligatoire.
+- [x] 16/16 scénarios réels du fichier de test exécutés **sous V8 simulant les modules Node**, sans PostgreSQL, navigateur ou données réelles ; syntaxe des actifs modifiés vérifiée sous V8.
+- [ ] Rejouer ce test en Node CLI et toutes les suites historiques sur le checkout candidat final.
+- [ ] Qualifier 07/08/09 en PostgreSQL fictif, deux sessions, rôles, droits, RLS et concurrence ; protéger les écritures directes uniquement après un cutover explicitement approuvé.
+- [ ] Régénérer `trace-international-preview-sw.js` via le générateur, vérifier hors ligne et navigateur ; Safari iPhone natif restant à faire.
+- [ ] Finaliser les autres flux internationaux de validation (les rejets sûrs actuels ne constituent PAS une fonctionnalité achevée).
+- [ ] Sauvegarde/restauration/rollback sous autorisation et GO explicite avant tout déploiement.
+
+---
+
 ## Contrôles ajoutés après la reprise catégorie/CAS/CSV (24 octobre 2026)
 
 **NO-GO conservé.** Aucun nouveau test PostgreSQL, Chromium ou Safari natif n'a été exécuté.
