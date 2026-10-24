@@ -202,3 +202,29 @@ La comparaison réemploie sans modification les moteurs préexistants TraceState
 **Interdits préservés :** aucune modification de main 02c70f50e7e51da79b77a91dde96a03c6c719909, aucune donnée Supabase réelle, aucun déploiement Vercel/production, aucune activation des cartes différées ni des workflows GitHub/PickPoint. Le vieux lien Vercel déployé au code 2c312f n'affiche pas ces changements.
 
 **Prochain impératif :** véritable extraction locale fiable des couches texte PDF, références page/ligne, identification de colonnes bancaires et variantes de relevés, validation de l'exhaustivité sur relevés bancaires fictifs multipages, puis tests réels Safari avant d'envisager la production. La méthode manuelle actuelle est un filet de sécurité, pas la fonction finale approuvée.
+
+
+## 24 octobre 2026 — texte PDF local : extraction PARTIELLE et sûre (candidate 5.37 uniquement)
+
+**Travail codé, enregistré, sans déploiement** : `trace-statement-pdf-text-1.0.0.js` analyse localement, sans réseau ni stockage, certaines couches texte PDF simples, reconstruit l'ordre via l'arbre des pages, conserve une référence de **page / numéro de ligne / extrait original** et propose *uniquement* les mouvements au format déterministe « date | libellé | DÉBIT/CRÉDIT | montant ». Les propositions contenant une date impossible ou une valeur mal formée ne sont PAS converties, ni devinées. Montants natifs, aucune FX ni écriture. L'application candidate charge ce module avant `trace-statement-monthly-ui-1.0.0.js`.
+
+**Parcours utilisateur** : Activité → Importer → Contrôle mensuel PDF → ouvrir PDF local, bouton « Proposer les lignes à partir du texte PDF » → visualiser le nombre de pages, les propositions et les lignes NON interprétées → **action explicite** « Recopier ces propositions » (refus si compte/période incorrects, avertissement et consentement avant écrasement de saisies manuelles). Chaque proposition rejoint alors uniquement les champs manuels, avec preuves de page/ligne ; aucune ligne n'est confirmée, aucune transaction créée. La procédure manuelle existante (nombre total de lignes, vérification d'extrait, attestation de complétude et approbation de CHAQUE ligne) reste entièrement obligatoire avant le comparateur déjà existant. Les rapports restent indicatifs et lecture seule.
+
+**Support actuellement volontairement limité :** PDF non chiffré, flux directs non compressés ou Flate via `DecompressionStream` lorsqu'il est disponible, arbre de pages explicite, polices Type1 simples standard Helvetica/Courier/Times, caractères ASCII sans codage ToUnicode ; pages non pivotées ; pas de XObjects, scans image, OCR, polices embarquées complexes, structures ObjStm/XRef, sources PDF indirectes, ou pages dont le texte est incomplet. **Ne pas annoncer un parseur PDF généraliste** : les vraies banques peuvent employer des polices complexes, de multiples colonnes, du texte compressé différent ou des PDF scannés ; le moteur retourne alors « non pris en charge » et oriente vers la vérification manuelle. Limites prudentes : 12 Mo, 40 pages, 250 lignes détectées et 2 Mo par flux décompressé. Les lignes hors schéma reconnu s'affichent comme non interprétées et ne sont jamais converties en dépenses.
+
+**Fiabilité et responsabilité** : même avec les suggestions présentes, TRACE ne peut pas prouver que TOUTES les opérations du PDF ont été détectées. Il ne doit ni valider ni enregistrer une transaction automatiquement, ni déclarer le relevé rapproché ou « 100 % complet » après extraction. Confirmation d'utilisateur de la totalité des lignes et comparaison visuelle toujours requises. Les erreurs de lecture des flux, polices et source causent un refus plutôt qu'un faux montant ; le fichier et ses preuves ne sortent pas du navigateur. **Aucune validation sur vrai Safari iPhone, aucun relevé bancaire réel ou multisource réel, aucun test E2E sur vraie base fictive persistante.**
+
+**Commits [skip ci] :**
+- scanner PDF strict : `6c22b45f762c7bf8696e2f9151a319edca6ca7cf` ;
+- refus des polices à encodage inconnu : `af4f91bd4a5fbf8014ee435e227bcae112d4a248` ;
+- connexion à l'interface de revue manuelle, avec non-écrasement par défaut : `747df2b8c80cd12b34afb05f90b366a9ad6946f9` ;
+- chargement seulement dans la preview : `dd1ce259f5c2c3c0ba750169776c65da124bab4a` ;
+- style de restitution et limites : `9dfce273ff6599aca92a8c4543a3cd171898fbd3` ;
+- tests du parseur (PDF structure réelle synthétique multipage) : `c86893254001942f9c54b85949ff71e20a426105` ;
+- ancienne suite corrigée pour refléter l'extraction limitée : `ca762882731e5e28e155b137b65a93dccf5896c8` ;
+- tests UI d'adoption explicite : `e4f2a97aaf351e74aac2c9cef902b2075b9cb887` ;
+- correction double clic pendant lecture : `b2b5698da5750e0d80d51920a8cf3c5980435161`.
+
+**Résultats de test** : 186 / 186 contrôles ciblés V8 simulés sur 14 suites (ancien socle 167, nouveau parseur 11, UI propositions 8). Après le dernier fix de course, 30 / 30 contrôles des trois suites PDF retestés sur GitHub. Ces tests n'utilisent pas le navigateur Safari réel, ni des PDF bancaires réels ; les flux Flate ne sont pas encore validés sur vrai navigateur.
+
+**Prochain chantier recommandé** : ne pas élargir naïvement les regex PDF. Évaluer/embarquer un moteur reconnu (ex. PDF.js local et version épinglée, sans CDN, licence et CSP auditées), puis construire des parseurs de colonnes de banques *sur relevés fictifs provenant des gabarits ciblés* avec une mesure explicite de couverture des pages/lignes, preuves visuelles et validation humaine. Ensuite fiabiliser l'UX Safari iPhone, les modèles FR/CA/internationaux, et les cas crédit/débit différé avant la décision de production. Aucun merge main / déploiement / Supabase réel / CI / PickPoint.
