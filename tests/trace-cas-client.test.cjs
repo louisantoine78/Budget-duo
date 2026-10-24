@@ -120,3 +120,17 @@ test('No direct document update or deletion remains in candidate write adapter',
  assert.match(source,/select\('collection,item_id,data,revision'\)/);
  assert.match(source,/select\('id,name,settings,settings_revision/);
 });
+
+test('Queued settings save takes the latest in-memory values before each RPC',async()=>{
+ const {app,state,calls}=createContext();
+ app.setRevision(0);
+ state.household.versionHint='initial';
+ await app.saveHouseholdSettings();
+ state.household.versionHint='newer';
+ await Promise.all([app.saveHouseholdSettings(),app.saveHouseholdSettings()]);
+ const writes=calls.filter(x=>x.method==='trace_cas_save_household_settings');
+ assert.equal(writes.length,3);
+ assert.equal(writes[0].p.p_settings.versionHint,'initial');
+ assert.equal(writes[2].p.p_settings.versionHint,'newer');
+ assert.deepEqual(writes.map(x=>x.p.p_expected_revision),[0,1,2]);
+});
