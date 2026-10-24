@@ -11,7 +11,11 @@ const start=app.indexOf('function reviewForeignPendingCsvExpense(t){'),
 assert.ok(start>0&&end>start);
 const excerpt=app.slice(start,end);
 function build(overrides={}){
- const window={TraceImportGuide:{cardStatementSettlementLabel:name=>/PAIEMENT CARTE/i.test(name)}};
+ const window={TraceImportGuide:{
+  cardStatementSettlementLabel:name=>/PAIEMENT CARTE/i.test(name),
+  safeForQuickApproval:(accountType,type,name)=>type==='expense'&&
+   !/PAIEMENT CARTE|VIREMENT|INTERAC/i.test(name)
+ }};
  new Function('window',engine)(window);
  window.TraceInternational={...window.TraceInternational,getRate:async()=>{throw Error('Historical FX service unavailable')}};
  const account={id:'fr',name:'Compte EUR fictif',owner:'la',type:'checking',currency:'EUR'};
@@ -87,6 +91,12 @@ test('unknown foreign CSV movement remains in safety fallback',()=>{
  const c=build({transaction:{type:'transfer',toAccountId:'another'}});
  c.review(c.t);
  assert.match(c.sheets[0].title,/Nature bancaire/);
+});
+test('ambiguous transfer description is never offered as simple CSV expense',()=>{
+ const c=build({transaction:{name:'VIREMENT INTERAC'}});
+ c.review(c.t);
+ assert.match(c.sheets[0].title,/Nature bancaire/);
+ assert.equal(c.node('#foreignCsvSave').onclick,null);
 });
 test('foreign CSV validator is routed only for non-confirmed expenses',()=>{
  assert.match(app,/reviewForeignPendingCsvExpense\(t\);return;/);
