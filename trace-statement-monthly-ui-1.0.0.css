@@ -55,3 +55,23 @@
  .trace-statement-result-line strong{max-width:100%;text-align:left}
  .trace-statement-heading,.trace-statement-row{padding:12px}}
 @media(prefers-reduced-motion:reduce){#traceStatementControl *{scroll-behavior:auto}}
+
+/* TRACE 5.37 — local PDF text suggestions; never automatic validation */
+.trace-statement-extraction{display:grid;gap:10px}
+.trace-statement-extraction-card{display:grid;gap:10px;padding:14px;border-radius:16px;
+ background:linear-gradient(145deg,#f1f9f3,#fff);border:1px solid #d8e9de}
+.trace-statement-extraction-card>strong{color:#215942;font-size:13px}
+.trace-statement-extraction-card p,.trace-statement-extraction-warning p{
+ margin:0;line-height:1.55;font-size:12px;color:#667e70}
+.trace-statement-extraction-warning{border:1px solid #eedec3;background:#fff9ee;
+ color:#775a34;padding:12px;border-radius:12px;line-height:1.55;font-size:12px}
+.trace-statement-extraction-warning strong{display:block;color:#86582c;margin-bottom:5px}
+.trace-statement-unparsed{padding:9px 11px;border:1px solid #e5eee8;background:#fffefa;
+ border-radius:11px;font-size:11px;color:#496b58}
+.trace-statement-unparsed summary{cursor:pointer;font-weight:800;min-height:31px}
+.trace-statement-unparsed div{padding:6px 0;line-height:1.5;overflow-wrap:anywhere}
+.trace-statement-proposal-list{max-height:200px;overflow:auto;background:#fff;
+ border:1px solid #e1ece3;border-radius:12px}
+.trace-statement-proposal-list div{padding:8px 10px;border-bottom:1px solid #eff2ec;
+ font-size:11px;color:#375d49;line-height:1.55;overflow-wrap:anywhere}
+.trace-statement-proposal-list div:last-child{border-bottom:0}
