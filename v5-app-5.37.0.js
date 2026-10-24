@@ -3886,12 +3886,15 @@ async function saveHouseholdSettings(){
   if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
   return traceSerialWrite('settings:'+household.id,async()=>{
    if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+   // Rebuild after earlier queued writes: a stale local snapshot must not
+   // overwrite newer edits made in the same browser session.
+   const queuedSettings={...(household.settings||{}),...state.household,schemaVersion:5};
    const {data,error}=await client.rpc('trace_cas_save_household_settings',{
-    p_household_id:household.id,p_settings:settings,
+    p_household_id:household.id,p_settings:queuedSettings,
     p_expected_revision:traceRevision(traceSettingsRevision)});
    if(error)throw traceSaveFailure(error);
    traceSettingsRevision=traceRevision(data);
-   household.settings=settings;sync('synced');
+   household.settings=queuedSettings;sync('synced');
   });
 }
 async function saveDocument(collection,item){
