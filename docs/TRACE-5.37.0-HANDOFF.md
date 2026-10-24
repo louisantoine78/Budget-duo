@@ -1,3 +1,19 @@
+## Lot du 24 octobre — premier achat OCR étranger confirmé sous revue (laboratoire uniquement)
+
+**NO-GO production.** Après `fbfcba597f71c8ec88173941ddb2fca0fa05de20`, les commits suivants existent uniquement sur `trace-5.37.0-international-accounts-fx`, avec `[skip ci]` :
+
+- `411a98349d3a8a92c461ce72caf78f8b1a7ccef6` : au lieu de bloquer toute capture provenant d'un compte non-CAD, `smartApproveDraft` admet **uniquement une dépense ordinaire explicitement revue**, avec `foreignNatureConfirmed=true`, titulaire du compte conforme, libellé non ambigu, montant bancaire à centimes exacts, montant d'achat d'origine si autre devise, cotation CAD datée avec source (historique ou manuelle). Les transferts, paiements de carte, remboursements, crédits ambigus et autres mouvements étrangers ne peuvent toujours pas être confirmés via ce parcours. `trace-smart-inbox-3.5.0.js` ajoute une case d'attestation au sein de la carte étrangère et une activation conditionnelle de sa confirmation. Instantané des transactions, brouillons, compte et preuve revérifié après cotation asynchrone ; écriture rejetée sans mutation locale si l'état a changé.
+- `aa4ce6fc6105071dfa282ab150d8a922fb29e842` : tests anciens recalés sur le nouveau texte ; le bouton protège aussi les comptes sans titulaire reconnu, identité courante absente ou ancien module `TraceImportGuide` incomplet. Suite ancienne de capture rétablie.
+- `59e1d451b439390e863064469342891f37ca8f91` : la case d'attestation étrangère se décoche automatiquement après modification de la date, du libellé, du montant, de la nature, du sens de mouvement, de la devise ou du montant d'achat d'origine ; retour immédiat à l'état non confirmable.
+
+**Exécution de tests sur le HEAD de code `59e1d45` : 46/46 réussis dans un harnais V8 isolé, avec modules Node, FS/DOM et écriture simulés, mais moteur FX, référentiel des natures et guide bancaire réels extraits de GitHub :** 18 CSV étranger, 7 statut/capture, 8 transferts et paiements carte, 13 capture étrangère. La dernière suite comprend EUR 40 -> CAD 64 avec taux fictif explicite 1,60, taux historique fictif 1,55, refus si consentement absent, FX manquant, libellé de paiement de carte, virement, écriture CAS rejetée, mutation d'une autre opération ou du compte pendant cotation, changement de devise d'achat sans prix d'origine. Une vérification d'interface vérifie également l'invalidation du consentement au changement de la preuve.
+
+**Limites formelles :** aucun test Node CLI natif, navigateur (Chromium/Safari iPhone), base PostgreSQL/PGlite, RLS/Auth, Supabase hébergé ou simultanéité à deux sessions sur le HEAD final ; les 46 tests fictifs ne les remplacent pas. Aucun fichier `main`, production 5.36.5, workflows, service réel, SQL hébergé ni CI touché. Le SW de preview est périmé après modification des JS ; reconstruire impérativement depuis le script officiel avant tout contrôle PWA. Aucune mise en production, aucun lancement de migration.
+
+**Priorités suivantes :** obtenir checkout local complet et PGlite isolé, exécuter suites Node et SQL migrations 07/08/09 avec concurrence réelle, réexécuter tests Chromium et hors ligne après génération service worker, compléter les autres natures étrangères, débit différé, compte/devise Couple et écrans premium, puis tests Safari iPhone, sauvegarde/restauration/rollback sous autorisation et GO explicite.
+
+---
+
 ## Reprise suivante — protection FX, paiements carte et transfert bancaire natif (24 octobre 2026)
 
 **Statut : NO-GO.** Les correctifs suivants ont été enregistrés sur `trace-5.37.0-international-accounts-fx`, avec `[skip ci]`, après le HEAD documentaire `0d6295d1d7b6bce1ddb6bfe4251e98589b192424` :

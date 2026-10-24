@@ -1,3 +1,18 @@
+## Première revue OCR des achats en devise étrangère — 24 octobre 2026
+
+**NO-GO.** Les commits `411a983`, `aa4ce6f` et `59e1d45` ne concernent que le laboratoire de TRACE 5.37.0.
+
+- [x] Capture étrangère d'achat ordinaire : nature explicitement attestée, montant native exact, source/date du taux CAD conservées, budget valorisé sans valeur FX = 1 par défaut ; l'exemple fictif 40 EUR avec cotation fictive 1,60 donne 64 CAD.
+- [x] Blocage des captures étrangères de remboursement, paiement de carte, virement et libellé ambigu ; conservation `pending` en l'absence de cotation ou confirmation.
+- [x] Le bouton étranger n'est activé que pour un achat sûr appartenant au titulaire courant et après case cochée ; l'attestation est invalidée à chaque changement des données bancaires revues.
+- [x] Re-vérification de la preuve après FX asynchrone et absence de mutation financière locale en cas de refus d'écriture.
+- [x] Relecture des quatre suites ciblées sous V8 fictif : **46/46 réussis** (18 + 7 + 8 + 13), avec véritables sources candidate + modules FX/nature/guide. Ne pas les confondre avec les tests Node CLI, DB, navigateur ou iPhone.
+- [ ] Exécuter toutes les suites Node natives et les migrations 07/08/09 en base PostgreSQL fictive et à deux sessions, Auth/RLS/CAS ; autres flux financiers étrangers restent incomplets.
+- [ ] Regénérer service worker via `scripts/build-trace-preview-pwa.mjs` et contrôler offline/Chromium, puis Safari iPhone réel.
+- [ ] S'assurer de couverture complète des mouvements étrangers, débit différé, UI premium/couple, sauvegarde-restauration/rollback autorisés et décision de sortie explicite.
+
+---
+
 ## Portes sécurité ajoutées — cotation FX et virements/cartes (24 octobre 2026)
 
 **NO-GO.** Les commits `070b8e7`, `bfb38d3`, `0c957b0`, `bc7f5e7` concernent uniquement la branche internationale.

@@ -1,3 +1,14 @@
+# ADDENDUM DE REPRISE — ACHATS SUR CAPTURES ÉTRANGÈRES (24 OCTOBRE 2026)
+
+**HEAD de code dernièrement vérifié : `59e1d451b439390e863064469342891f37ca8f91` ; résoudre le HEAD réel à chaque reprise.** La branche autorisée reste exclusivement `trace-5.37.0-international-accounts-fx` et `main` doit rester `02c70f50e7e51da79b77a91dde96a03c6c719909`. Trois commits nouveaux : `411a98349d3a8a92c461ce72caf78f8b1a7ccef6`, `aa4ce6fc6105071dfa282ab150d8a922fb29e842`, `59e1d451b439390e863064469342891f37ca8f91`.
+
+- Un achat **ordinaire** depuis capture/OCR de compte EUR/USD/GBP/CHF peut désormais être confirmé **individuellement** par l'utilisateur après contrôle du compte, libellé, centimes natifs, nature explicite et taux CAD daté sourcé ; les autres natures étrangères restent en attente. La case de confirmation se décoche si date, montant, nom, type, sens ou devise/prix d'achat change ; les doublons et modifications concurrentes locales pendant recherche FX sont surveillés. Jamais d'invention de FX.
+- Les contrôles ciblés ont été exécutés sur vrai code extrait de ce HEAD dans un **harnais V8 fictif** : 46/46 (CSV 18, statuts/capture 7, virements/cartes 8, nouvelle revue OCR étrangère 13). Aucun PostgreSQL/PGlite, Node CLI natif, Chromium, Safari, Supabase réel, CI ni déploiement. L'accès DNS GitHub au container, checkout local et PGlite restent indisponibles. Ne surtout pas transformer ces résultats en preuve de production.
+- Les documents `docs/TRACE-5.37.0-HANDOFF.md` et `docs/TRACE-5.37.0-RELEASE-CHECKLIST.md` sont les vérités prioritaires ; reconstruire le service worker preview uniquement via son générateur après checkout.
+- Poursuivre sans rediscuter la conception. Priorité absolue au checkout isolé, à Node / SQL 07/08/09, droits RLS, CAS et tests d'intégration ; compléter en parallèle les flux étrangers/différé et l'UX validée, puis tests PWA Chromium/Safari, sauvegarde/restore/rollback autorisés. Ne modifier ni main ni Supabase réel, ne pas lancer de CI ni déployer. Tous commits `[skip ci]`. **NO-GO inchangé.**
+
+---
+
 # ADDENDUM PRIORITAIRE — NOUVEAUX LOTS FX ET CARTES (24 OCTOBRE 2026)
 
 Résous d'abord le véritable HEAD GitHub de `trace-5.37.0-international-accounts-fx` ; **dernier HEAD de code** précédant cet addendum : `bc7f5e738457d33e430e25a1599d0d766083566b`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` reste absolument interdite de modification.
