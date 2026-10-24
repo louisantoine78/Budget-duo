@@ -1481,6 +1481,73 @@ function editForeignFriendRepayment(t){
 }
 
 
+/* Safe first foreign CSV route: simple expenses only, never special movements. */
+function reviewForeignPendingCsvExpense(t){
+ const I=window.TraceInternational,bank=state.accounts.find(a=>a.id===t?.accountId);
+ const currency=bank?I.currency(bank):null,amount=bank?I.amountOnAccount(t,bank):null;
+ const eligible=t&&bank&&bank.owner===me&&visibleBankAccounts(me).some(a=>a.id===bank.id)&&
+  currency!=='CAD'&&t.source==='csv'&&t.type==='expense'&&t.status!=='confirmed'&&
+  !t.toAccountId&&!t.transferPurpose&&!t.relatedExpenseId&&!t.linkedTransactionId&&
+  I.calendarDate(t.date)&&I.exactMoney(amount)!==null&&amount>0&&
+  !window.TraceImportGuide.cardStatementSettlementLabel(t.name||'');
+ if(!eligible){
+  openSheet('Nature bancaire à vérifier','<p class="empty-note">Ce mouvement exige une vérification spécifique. Aucun montant n’a été modifié.</p><button id="foreignCsvClose" class="secondary full">Fermer</button>');
+  $('#foreignCsvClose').onclick=closeSheet;return;
+ }
+ const before=JSON.stringify(t),cats=manualCategories('expense'),
+  similar=csvBankEvidenceMatches(t,state.transactions),
+  confirmed=similar.filter(x=>x.status==='confirmed'),
+  people=[{id:me,name:'Moi'},{id:partner,name:shortMemberName(partner)},{id:'couple',name:'Nous deux'}];
+ openSheet('Valider une dépense étrangère',
+  '<p class="trace-edit-lead">Le montant du relevé, la date et le compte restent inchangés. La dépense n’est comptabilisée qu’après confirmation explicite.</p>'+
+  '<div class="empty-note"><b>'+esc(t.name||'Dépense')+'</b> · '+esc(t.date)+' · '+esc(shortAccountLabel(bank))+' · '+esc(I.money(amount,currency))+'</div>'+
+  '<label class="label2">Catégorie</label><select class="input" id="foreignCsvCategory"><option value="">Choisir…</option>'+
+   cats.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===t.categoryId?' selected':'')+'>'+esc(c.name)+'</option>').join('')+'</select>'+
+  '<label class="label2">Pour qui ?</label><select class="input" id="foreignCsvWho">'+
+   people.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===t.beneficiary?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select>'+
+  '<label class="label2">Taux CAD par '+esc(currency)+' (facultatif si Banque du Canada disponible)</label>'+
+  '<input id="foreignCsvRate" class="input" type="number" min=".000001" step="any" inputmode="decimal" placeholder="Taux historique daté">'+
+  '<p class="trace-intl-help">Un taux manuel conserve sa source et la date de l’opération. Le taux ne devient jamais 1 par défaut. Les avances à des proches et mouvements spéciaux restent à vérifier séparément.</p>'+
+  (similar.length?'<div class="empty-note"><b>'+similar.length+' mouvement(s) semblable(s) à comparer</b>'+
+   similar.map(x=>'<div>'+esc(x.name||'Opération')+' · '+esc(x.date)+' · '+esc(x.status==='confirmed'?'Confirmée':'À vérifier')+'</div>').join('')+'</div>':'')+
+  '<label class="label2"><input id="foreignCsvNature" type="checkbox"> Je confirme qu’il s’agit d’un achat et non d’un paiement de carte ou d’un virement.</label>'+
+  (confirmed.length?'<label class="label2"><input id="foreignCsvDistinct" type="checkbox"> J’ai comparé les mouvements confirmés : cet achat est distinct.</label>':'')+
+  '<p id="foreignCsvError" class="trace-bank-setup-error" role="alert"></p>'+
+  '<button class="primary full" id="foreignCsvSave">Valider cette dépense</button>'+
+  '<button class="secondary full" id="foreignCsvCancel">Laisser en attente</button>');
+ $('#foreignCsvCancel').onclick=closeSheet;
+ $('#foreignCsvSave').onclick=async()=>{
+  const feedback=$('#foreignCsvError'),button=$('#foreignCsvSave');
+  feedback.textContent='';
+  try{
+   if(!$('#foreignCsvNature').checked)throw Error('Confirme la nature bancaire de cet achat.');
+   if(confirmed.length&&!$('#foreignCsvDistinct').checked)throw Error('Compare les opérations déjà confirmées.');
+   if(state.transactions.find(x=>x.id===t.id)!==t||JSON.stringify(t)!==before||
+      state.accounts.find(a=>a.id===bank.id)!==bank)
+    throw Error('Les données ont changé. Ferme et rouvre la fiche.');
+   if(csvBankEvidenceMatches(t,state.transactions).some(x=>x.status==='confirmed'&&!confirmed.some(y=>y.id===x.id)))
+    throw Error('Nouvelle ressemblance bancaire : réouvre la fiche pour comparer.');
+   const categoryId=$('#foreignCsvCategory').value,beneficiary=$('#foreignCsvWho').value,
+    rateText=$('#foreignCsvRate').value.trim(),rate=Number(rateText);
+   if(!cats.some(c=>c.id===categoryId))throw Error('Choisis une catégorie valide.');
+   if(!people.some(p=>p.id===beneficiary))throw Error('Choisis la répartition.');
+   if(rateText!==''&&(!Number.isFinite(rate)||rate<=0||rate>1e4))
+    throw Error('Taux CAD invalide.');
+   button.disabled=true;
+   const quote=rateText!==''?
+    {currency,cadPerUnit:rate,date:t.date,source:'Taux saisi manuellement par le membre'}:
+    await I.getRate(currency,t.date);
+   const booked=I.resolveBooking({account:bank,bankAmount:amount,date:t.date,quote,
+    originalCurrency:t.currency||currency,originalAmount:t.amountOriginal??amount});
+   const sharing=traceImportSplit({beneficiary},{amountCAD:booked.amountCAD});
+   const next={...t,...booked,categoryId,beneficiary,...sharing,natureReviewed:true,status:'confirmed'};
+   if(!legacyImportNatureReady(next))throw Error('Nature bancaire encore ambiguë.');
+   await saveDocument('transactions',next);
+   Object.assign(t,next);closeSheet();renderAll();navigate('activity');showTab('transactions');
+  }catch(err){button.disabled=false;feedback.textContent=String(err.message||err);}
+ };
+}
+
 /* Edit native-currency expense metadata without rewriting bank amounts or FX. */
 function editForeignExpenseMetadata(t){
  const account=state.accounts.find(a=>a.id===t?.accountId),I=window.TraceInternational;
@@ -1953,6 +2020,9 @@ function editTransaction(id,validating=false){
  const foreignAccount=state.accounts.find(a=>a.id===t.accountId);
  if(foreignAccount&&window.TraceInternational.currency(foreignAccount)!=='CAD'&&
     ['expense','income','refund'].includes(t.type)){
+  if(t.type==='expense'&&t.source==='csv'&&t.status!=='confirmed'&&foreignAccount.owner===me){
+   reviewForeignPendingCsvExpense(t);return;
+  }
   if(t.type==='expense'&&t.status==='confirmed'&&
      foreignAccount.owner===me&&!t.toAccountId)
    editForeignExpenseMetadata(t);
