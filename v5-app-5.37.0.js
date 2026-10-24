@@ -14,6 +14,7 @@ const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).joi
 const initialBudgetMonth=new URLSearchParams(location.search).get('month');
 let client,session,household,workspaceLoadPromise=null,me='la',partner='partner',homeScope='mine',budgetScope='mine',budgetMonth=/^\d{4}-\d{2}$/.test(initialBudgetMonth||'')?initialBudgetMonth:CM,wealthScope='mine',analysisScope='mine',tab='transactions',activityMonth=CM;
 let internationalQuotes={},internationalQuoteAttempt=new Set(),internationalFxBusy=false;
+let activityAccountFilter='all';
 function internationalPreviewMode(){
  return window.__TRACE_INTERNATIONAL_PREVIEW__===true&&
   String(location.pathname||'').split('/').pop()==='trace-international-preview.html'&&
@@ -480,6 +481,151 @@ function openAnnualBudgetAnalysis(){
   setBudgetMonth(b.dataset.insightMonth);closeSheet();navigate('budget');
  });
 }
+
+/* TRACE 5.37 UX — read-only account overview and detail, no fabricated FX. */
+function traceAccountTitle(a){
+ return accountType(a)==='card'?(a.paymentMode==='deferred'?'Carte à débit différé':'Carte de crédit'):
+  a.country==='FR'?'Compte à débit immédiat':'Compte courant';
+}
+function traceAccountNative(a){
+ const value=accountEstimate(a);
+ return value===null||!Number.isFinite(value)?'Solde à vérifier':
+  accountType(a)==='card'?
+    (value<0?window.TraceInternational.money(Math.abs(value),window.TraceInternational.currency(a))+' de dette':
+     value>0?'Avoir estimé '+window.TraceInternational.money(value,window.TraceInternational.currency(a)):
+      window.TraceInternational.money(0,window.TraceInternational.currency(a))):
+  window.TraceInternational.money(value,window.TraceInternational.currency(a));
+}
+function traceAccountCAD(a){
+ const value=accountEstimate(a),currency=window.TraceInternational.currency(a);
+ if(value===null||!Number.isFinite(value))return'Conversion indisponible · solde à vérifier';
+ if(currency==='CAD')return'Montant natif CAD';
+ const quote=internationalQuotes[currency];
+ if(!quote)return'Conversion indisponible · taux '+currency+' manquant';
+ const converted=window.TraceInternational.fxValue(value,currency,quote);
+ return converted===null||!Number.isFinite(converted)?'Conversion indisponible · taux à vérifier':
+  'Équivalent indicatif : '+window.TraceInternational.money(converted,'CAD')+
+   (quote.date?' · taux du '+esc(quote.date):'');
+}
+function traceAccountOperations(id){
+ return state.transactions.filter(t=>t.accountId===id||t.toAccountId===id)
+  .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||
+   String(b.id||'').localeCompare(String(a.id||'')));
+}
+function openAccountsOverview(){
+ const accounts=state.accounts.filter(a=>!a.archived&&['la','partner'].includes(a.owner)&&
+  ['checking','card'].includes(accountType(a))&&
+  (homeScope==='couple'||a.owner===me));
+ openSheet('Comptes et trésorerie',
+  '<p class="trace-intl-help">Soldes en devise native. Les contre-valeurs CAD restent indicatives et peuvent être indisponibles.</p>'+
+  '<div class="trace-account-overview">'+(accounts.length?accounts.map(a=>
+   '<button type="button" class="trace-account-overview-row" data-trace-account-open="'+esc(a.id)+'">'+
+   '<span><b>'+esc(shortAccountLabel(a))+
+   (a.owner===me&&state.household.primaryBankAccountByOwner?.[me]===a.id?' <span aria-label="Compte principal">★</span>':'')+
+   '</b><small>'+esc(traceAccountTitle(a))+' · '+esc(shortMemberName(a.owner))+
+   ' · '+esc(window.TraceInternational.currency(a))+'</small></span>'+
+   '<span class="trace-account-overview-values"><strong>'+esc(traceAccountNative(a))+
+   '</strong><small>'+traceAccountCAD(a)+'</small></span></button>').join(''):
+   '<p class="empty-note">Aucun compte disponible.</p>')+'</div>'+
+  '<button type="button" class="secondary full" id="traceAccountManage" style="margin-top:12px">Gérer mes comptes</button>'+
+  '<button type="button" class="secondary full" id="traceAccountsClose" style="margin-top:8px">Fermer</button>');
+ $('[data-trace-account-open]').forEach(btn=>btn.onclick=()=>openTraceAccountDetail(btn.dataset.traceAccountOpen));
+ $('#traceAccountManage').onclick=openAccountSettings;
+ $('#traceAccountsClose').onclick=closeSheet;
+}
+function openTraceAccountDetail(id){
+ const a=state.accounts.find(x=>x.id===id&&['la','partner'].includes(x.owner)&&
+  ['checking','card'].includes(accountType(x))&&!x.archived&&
+  (homeScope==='couple'||x.owner===me));
+ if(!a){openAccountsOverview();return;}
+ const currency=window.TraceInternational.currency(a);
+ const related=state.accounts.filter(x=>x.id!==a.id&&!x.archived&&
+  x.owner===a.owner&&(x.settlementAccountId===a.id||a.settlementAccountId===x.id));
+ const reconcile=state.reconciliations.filter(x=>x.accountId===a.id&&
+  x.confirmed!==false&&(!x.status||['confirmed','complete','matched'].includes(x.status))&&
+  /^\d{4}-\d\d-\d\d$/.test(String(x.date||'')))
+  .sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
+ const latest=traceAccountOperations(a.id).slice(0,2);
+ const txLine=t=>{
+  const direction=t.toAccountId===a.id?'destination':'source';
+  const native=window.TraceInternational.amountOnAccount(t,a,direction);
+  const display=native===null||!Number.isFinite(Number(native))?'Montant à vérifier':
+   window.TraceInternational.money(Math.abs(native),currency);
+  return '<div class="trace-account-last-line"><span><b>'+esc(t.name||'Opération')+
+   '</b><small>'+esc(t.date||'Date à préciser')+' · '+
+   (t.status==='confirmed'?'Confirmée':'À vérifier')+'</small></span><strong>'+
+   esc(display)+'</strong></div>';
+ };
+ openSheet(shortAccountLabel(a),
+  '<div class="trace-account-detail-hero"><span class="trace-account-detail-kicker">'+
+  esc(traceAccountTitle(a))+' · '+esc(currency)+' · '+esc(a.country||'Pays à définir')+'</span>'+
+  '<strong>'+esc(traceAccountNative(a))+'</strong><small>'+traceAccountCAD(a)+'</small></div>'+
+  '<div class="trace-account-detail-info">'+
+  '<div><span>Compte</span><b>'+esc(shortAccountLabel(a))+'</b></div>'+
+  '<div><span>Titulaire</span><b>'+esc(shortMemberName(a.owner))+'</b></div>'+
+  '<div><span>Compte principal</span><b>'+
+    (state.household.primaryBankAccountByOwner?.[a.owner]===a.id?'★ Principal':'Secondaire')+'</b></div>'+
+  '<div><span>Carte / compte lié</span><b>'+esc(related.length?
+    related.map(x=>shortAccountLabel(x)).join(', '):'Aucun lien indiqué')+'</b></div>'+
+  '<div><span>Dernier rapprochement</span><b>'+esc(reconcile?.date||'À effectuer')+'</b></div>'+
+  '</div>'+
+  (a.owner===me&&accountType(a)==='checking'?
+  '<button type="button" class="trace-intl-set-primary" id="traceAccountSelectPrimary">'+
+  (state.household.primaryBankAccountByOwner?.[me]===a.id?'★ Compte principal':'☆ Définir comme principal')+'</button>':'')+
+  '<div class="section-head"><h2>Deux dernières opérations</h2></div>'+
+  '<div class="trace-account-last">'+(latest.length?latest.map(txLine).join(''):
+    '<p class="empty-note">Aucune opération enregistrée sur ce compte.</p>')+'</div>'+
+  '<button type="button" class="primary full" id="traceAccountAllTx" style="margin-top:12px">Voir toutes les opérations</button>'+
+  '<button type="button" class="secondary full" id="traceAccountDetailBack" style="margin-top:8px">Retour aux comptes</button>');
+ $('#traceAccountDetailBack').onclick=openAccountsOverview;
+ $('#traceAccountAllTx').onclick=()=>openTraceAccountActivity(a.id);
+ const primary=$('#traceAccountSelectPrimary');
+ if(primary)primary.onclick=()=>confirmTracePrimaryAccount(a.id,()=>openTraceAccountDetail(a.id));
+}
+function openTraceAccountActivity(id){
+ const account=state.accounts.find(a=>a.id===id&&!a.archived&&
+  ['la','partner'].includes(a.owner)&&['checking','card'].includes(accountType(a)));
+ if(!account)return;
+ const latest=traceAccountOperations(id).find(t=>/^\d{4}-\d\d-\d\d$/.test(String(t.date||'')));
+ activityAccountFilter=id;
+ if(latest)activityMonth=latest.date.slice(0,7);
+ closeSheet();navigate('activity');renderActivity();showTab('transactions');
+}
+function confirmTracePrimaryAccount(id,after){
+ const account=state.accounts.find(a=>a.id===id&&!a.archived&&a.owner===me&&
+  accountType(a)==='checking'),oldId=state.household.primaryBankAccountByOwner?.[me];
+ if(!account){traceNotice(Error('Compte principal non autorisé.'));return;}
+ if(oldId===id){if(typeof after==='function')after();else renderHome();return;}
+ const oldAccount=state.accounts.find(a=>a.id===oldId);
+ openSheet('Changer le compte principal',
+  '<p class="trace-account-primary-intro">Choisir <b>'+esc(shortAccountLabel(account))+
+  '</b> comme compte principal ?</p>'+
+  '<p class="trace-intl-help">Ancien compte : '+esc(oldAccount?shortAccountLabel(oldAccount):'aucun')+
+  ' · Nouveau : '+esc(shortAccountLabel(account))+' ('+
+  window.TraceInternational.currency(account)+'). Le compte principal influence la devise de référence personnelle. La devise Couple et les budgets historiques ne sont pas modifiés.</p>'+
+  '<p id="tracePrimaryConfirmError" role="alert" class="trace-bank-setup-error"></p>'+
+  '<button type="button" class="primary full" id="tracePrimaryConfirm">Confirmer le changement</button>'+
+  '<button type="button" class="secondary full" id="tracePrimaryCancel" style="margin-top:8px">Annuler</button>');
+ $('#tracePrimaryCancel').onclick=()=>{if(typeof after==='function')after();else{closeSheet();renderHome();}};
+ $('#tracePrimaryConfirm').onclick=async()=>{
+  const button=$('#tracePrimaryConfirm');button.disabled=true;
+  if(state.accounts.find(x=>x.id===id)!==account||
+   state.household.primaryBankAccountByOwner?.[me]!==oldId){
+   $('#tracePrimaryConfirmError').textContent='Les comptes ont changé. Ouvre à nouveau la sélection.';
+   button.disabled=false;return;
+  }
+  const previous={...(state.household.primaryBankAccountByOwner||{})};
+  state.household.primaryBankAccountByOwner={...previous,[me]:id};
+  try{
+   await saveHouseholdSettings();renderAll();
+   if(typeof after==='function')after();else closeSheet();
+  }catch(e){
+   state.household.primaryBankAccountByOwner=previous;button.disabled=false;
+   $('#tracePrimaryConfirmError').textContent='Enregistrement impossible : compte principal inchangé.';
+  }
+ };
+}
+
 function internationalHome(){
  const I=window.TraceInternational;
  if(homeScope==='couple'){
@@ -530,12 +676,9 @@ function internationalHome(){
   balanceNode:homeScope==='mine'?$('#homeBalance'):null,
   checkingNode:homeScope==='mine'?$('#homeChecking'):null,
   cardNode:homeScope==='mine'?$('#homeCard'):null,
-  onSelect:async id=>{
+  onSelect:id=>{
    if(!accounts.some(a=>a.id===id&&a.type==='checking'))return;
-   const before={...(state.household.primaryBankAccountByOwner||{})};
-   state.household.primaryBankAccountByOwner={...before,[me]:id};
-   try{await saveHouseholdSettings();renderHome();}
-   catch(e){state.household.primaryBankAccountByOwner=before;traceNotice(e);renderHome();}
+   confirmTracePrimaryAccount(id,()=>{closeSheet();renderHome();});
   },
   requestRate:requestInternationalRates });
 }
@@ -2967,9 +3110,25 @@ function reviewAccountLabel(id){
  return a?shortAccountLabel(a):'Compte non identifié';
 }
 function renderActivity(){
- const ts=state.transactions.filter(t=>String(t.date||'').startsWith(activityMonth)&&t.status==='confirmed').sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ const ts=state.transactions.filter(t=>String(t.date||'').startsWith(activityMonth)&&
+  t.status==='confirmed'&&
+  (activityAccountFilter==='all'||t.accountId===activityAccountFilter||
+   t.toAccountId===activityAccountFilter))
+  .sort((a,b)=>String(b.date).localeCompare(String(a.date)));
  const counted=ts.filter(isFinancialPeriod);
  const expenses=counted.filter(t=>['expense','group_expense','person_payment'].includes(t.type)).reduce((v,t)=>v+Number(t.amountCAD||0),0),refunds=counted.filter(t=>t.type==='refund').reduce((v,t)=>v+Number(t.amountCAD||0),0),inc=counted.filter(t=>t.type==='income').reduce((v,t)=>v+Number(t.amountCAD||0),0),exp=Math.max(0,expenses-refunds);
+ const accountSelect=$('#activityAccountFilter');
+ if(accountSelect){
+  const available=state.accounts.filter(a=>!a.archived&&['la','partner'].includes(a.owner)&&
+   ['checking','card'].includes(accountType(a)));
+  if(activityAccountFilter!=='all'&&!available.some(a=>a.id===activityAccountFilter))
+   activityAccountFilter='all';
+  accountSelect.innerHTML='<option value="all">Tous les comptes</option>'+
+   available.map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+
+    ' · '+window.TraceInternational.currency(a)+'</option>').join('');
+  accountSelect.value=activityAccountFilter;
+  accountSelect.onchange=()=>{activityAccountFilter=accountSelect.value;renderActivity();};
+ }
  $('#activityMonthLabel').textContent=monthLabel(activityMonth);$('#activityExpenses').textContent=money(exp);$('#activityIncome').textContent=money(inc);$('#activityNet').textContent=money(inc-exp);
  $('#transactionList').innerHTML=ts.length?ts.map(txRow).join(''):'<div class="empty-note">Aucune opération confirmée ce mois-ci.</div>';
  $$('[data-tx-open]').forEach(btn=>btn.onclick=()=>editTransaction(btn.dataset.txOpen));
@@ -3813,7 +3972,7 @@ function openAccountSettings(){
      '<span class="trace-bank-readonly">Consultation</span>')+'</div>'+
     (editable?
      (accountType(a)==='checking'?'<button type="button" class="trace-intl-set-primary" data-primary-bank="'+esc(a.id)+'">'+
-       (state.household.primaryBankAccountByOwner?.[me]===a.id?'✓ Compte principal':'Définir comme principal')+'</button>':'')+
+       (state.household.primaryBankAccountByOwner?.[me]===a.id?'★ Compte principal':'☆ Définir comme principal')+'</button>':'')+
      '<label class="label2">'+(accountType(a)==='card'?'Dette de carte':'Solde de référence')+' à cette date ('+
       window.TraceInternational.currency(a)+')</label>'+
      '<input class="input account-opening" data-id="'+esc(a.id)+'" type="number" '+(accountType(a)==='card'?'min="0" ':'')+'step="0.01" value="'+esc(accountType(a)==='card'&&balances[a.id]!=null?Math.abs(Number(balances[a.id])):(balances[a.id]??''))+'">'+
@@ -3834,12 +3993,8 @@ function openAccountSettings(){
   settingsBack());
  $$('[data-bank-scope]').forEach(button=>button.onclick=()=>{bankSettingsScope=button.dataset.bankScope==='couple'?'couple':'mine';openAccountSettings();});
  $$('[data-rename-bank]').forEach(button=>button.onclick=()=>openRenameBankAccount(button.dataset.renameBank));
- $$('[data-primary-bank]').forEach(button=>button.onclick=async()=>{
-  const previous={...(state.household.primaryBankAccountByOwner||{})};
-  state.household.primaryBankAccountByOwner={...previous,[me]:button.dataset.primaryBank};
-  button.disabled=true;
-  try{await saveHouseholdSettings();renderAll();openAccountSettings();}
-  catch(e){state.household.primaryBankAccountByOwner=previous;button.disabled=false;traceNotice(e);}
+ $('[data-primary-bank]').forEach(button=>button.onclick=()=>{
+  confirmTracePrimaryAccount(button.dataset.primaryBank,openAccountSettings);
  });
  $('#traceAddBankAccount').onclick=()=>openNewBankAccount();
  if(mine.length)$('#saveAccountSettings').onclick=async()=>{
@@ -4176,7 +4331,7 @@ function fatal(e){
   openSheet('Trace a rencontré un problème','<div class="empty-note">Une partie de Trace n’a pas pu se charger correctement.</div><button class="primary full" id="traceReloadBtn" type="button" style="margin-top:14px">Recharger Trace</button>');
   $('#traceReloadBtn').onclick=()=>location.reload();
 }
-function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('import');}else navigate(b.dataset.go);});$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$('#shareOpen').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{emailRedirectTo:new URL('./index.html',window.location.href).href,data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{
+function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('import');}else navigate(b.dataset.go);});$('#homeAccountsBtn').onclick=event=>{event.stopPropagation();openAccountsOverview();};$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$('#shareOpen').onclick=()=>((state.household.workspaceMembers||[]).length<2?openCoupleSettings():openSharing());$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{emailRedirectTo:new URL('./index.html',window.location.href).href,data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{
  e.preventDefault();
  const button=e.currentTarget.querySelector('button[type="submit"]');
  if(button)button.disabled=true;
