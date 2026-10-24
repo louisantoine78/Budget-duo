@@ -159,6 +159,12 @@
    if(/\/Encrypt\b|\/ObjStm\b|\/XRef\b|\/ToUnicode\b|\/XObject\b/.test(str))
     return err('PDF chiffré, graphique ou avec polices complexes : contrôle manuel requis');
    const objects=parseObjects(str);
+   const fonts=[...objects.values()].filter(value=>/\/Type\s*\/Font\b/.test(value));
+   // Without an explicit, simple base-14 font we cannot trust character bytes.
+   if(!fonts.length||fonts.some(font=>!(/\/Subtype\s*\/Type1\b/.test(font))||
+     !(/\/BaseFont\s*\/(?:Helvetica(?:-Bold|-Oblique|-BoldOblique)?|Courier(?:-Bold|-Oblique|-BoldOblique)?|Times-(?:Roman|Bold|Italic|BoldItalic))\b/.test(font))||
+     (/\/Encoding\s*\/(?!WinAnsiEncoding\b|StandardEncoding\b)/.test(font))))
+    return err('Police PDF avec codage complexe : vérification manuelle nécessaire');
    const catalogs=[...objects.entries()].filter(([,s])=>/\/Type\s*\/Catalog\b/.test(s));
    if(catalogs.length!==1) return err('Structure des pages PDF non reconnue');
    const rootRef=/\/Pages\s+(\d+)\s+0\s+R\b/.exec(catalogs[0][1])?.[1];
