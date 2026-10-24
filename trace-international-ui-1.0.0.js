@@ -25,11 +25,12 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
    '" data-trace-view-account="'+esc(a.id)+'" aria-pressed="'+(a.id===selectedId?'true':'false')+'">'+
    esc(a.name||'Compte')+'</button>').join('')+'</div>'+
   '<p class="trace-intl-view-note">Consultation uniquement · aucun changement de compte principal</p></div>':'')+
- '<div class="trace-intl-top"><label for="traceIntlPrimary">Compte principal · modifier avec confirmation</label>'+
+ '<details class="trace-intl-primary-control"><summary><span>★ Compte principal</span><small>Modifier</small></summary>'+
+ '<div class="trace-intl-top"><label for="traceIntlPrimary">Choisir avec confirmation</label>'+
  '<select class="input" id="traceIntlPrimary">'+checking.map(a=>
   '<option value="'+esc(a.id)+'"'+(a.id===primaryId?' selected':'')+'>'+
-  esc(a.name)+' · '+I.currency(a)+'</option>').join('')+'</select></div>'+
- '<p class="trace-intl-primary-explain">'+(selectedId===primaryId?'Compte principal':'Consultation du compte secondaire')+' et de ses cartes liées, en '+esc(cur)+'.</p>'+
+  esc(a.name)+' · '+I.currency(a)+'</option>').join('')+'</select></div></details>'+
+ '<p class="trace-intl-primary-explain">'+(selectedId===primaryId?'Solde du compte principal':'Solde du compte consulté')+' et de ses cartes liées, en '+esc(cur)+'.</p>'+
  (multi?'<details class="trace-intl-details"><summary>Voir tous mes comptes et ma trésorerie globale</summary>'+
   '<div class="trace-intl-accounts">'+snap.balances.map(a=>
    '<div class="trace-intl-row"><span>'+esc(a.name)+' <small>'+a.nativeCurrency+'</small></span><b>'+
@@ -72,6 +73,9 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
    viewState={...viewState,owner,primaryId,accountId:id};
    render({host,accounts,owner,mainId,estimates,rates,balanceNode,checkingNode,cardNode,
     warningNode,badgeNode,onSelect,requestRate});
+   const selected=[...host.querySelectorAll('[data-trace-view-account]')].find(x=>x.dataset.traceViewAccount===id);
+   selected?.focus?.({preventScroll:true});
+   selected?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'auto'});
   };
  });
  const missingCurrencies=[...new Set(snap.balances.filter(a=>a.nativeCurrency!=='CAD'&&!rates[a.nativeCurrency]).map(a=>a.nativeCurrency))];

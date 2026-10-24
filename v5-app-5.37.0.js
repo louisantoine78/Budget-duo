@@ -742,8 +742,8 @@ function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.e
  .reduce((sum,t)=>sum+Number(t.amountCAD||0),0);
  $('#homeCELITransfers').textContent=money(savedToCeli);renderHomeReview();
  window.TraceInsights.renderCategories($('#homeBudgetCategories'),{rows:breakdown(CM,sId),totalExpense:s.expense,
-  budgetTotal:s.eb,month:CM,limit:8,onCategory:id=>insightCategoryDrilldown(CM,sId,id)});
- window.TraceInsights.renderTrend($('#homeTrend'),{months:insightMonths(sId),selected:CM});const cb=coupleBalance(),pa=member(partner),la=member('la');$('#partnerAvatar').textContent=pa.initials||initials(pa.name);$('#shareLabel').textContent=`Solde avec ${pa.name}`;$('#shareBalance').textContent=Math.abs(cb)<.01?'Vous êtes à l’équilibre':cb>0?`${shortMemberName('partner')} doit ${money(cb)} à ${shortMemberName('la')}`:`${shortMemberName('la')} doit ${money(Math.abs(cb))} à ${shortMemberName('partner')}`;if((state.household.workspaceMembers||[]).length<2){
+  budgetTotal:s.eb,month:CM,limit:8,showSummary:true,onCategory:id=>insightCategoryDrilldown(CM,sId,id)});
+ window.TraceInsights.renderTrend($('#homeTrend'),{months:insightMonths(sId),selected:CM,compact:true});const cb=coupleBalance(),pa=member(partner),la=member('la');$('#partnerAvatar').textContent=pa.initials||initials(pa.name);$('#shareLabel').textContent=`Solde avec ${pa.name}`;$('#shareBalance').textContent=Math.abs(cb)<.01?'Vous êtes à l’équilibre':cb>0?`${shortMemberName('partner')} doit ${money(cb)} à ${shortMemberName('la')}`:`${shortMemberName('la')} doit ${money(Math.abs(cb))} à ${shortMemberName('partner')}`;if((state.household.workspaceMembers||[]).length<2){
  $('#partnerAvatar').textContent='+';
  $('#shareLabel').textContent='Inviter ton partenaire';
  $('#shareBalance').textContent='À deux, quand tu le souhaites';
@@ -841,6 +841,7 @@ function openManualTransaction(preferredKind='expense'){
   '<label class="label2" id="manualFxRateLabel">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
   '<p class="trace-intl-help">Le montant ci-dessus est celui réellement débité par la banque. En l’absence de taux de référence disponible, entre un taux vérifié.</p>'+
   '<div id="manualDestAmountWrap" hidden><label class="label2" id="manualDestAmountLabel">Montant réellement reçu sur le compte destinataire</label><input class="input" id="manualDestAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
+  '<div id="manualTransferFeeWrap" class="trace-intl-transaction" hidden><label class="label2">Frais déjà inclus dans le débit bancaire (facultatif)</label><input class="input" id="manualTransferFee" type="number" min="0" step=".01" inputmode="decimal" placeholder="Montant dans la devise du compte de départ"><small>Le montant du virement est le débit total de la banque, frais compris. Les frais documentés ici ne créent pas un deuxième débit ni une dépense supplémentaire.</small></div>'+
   '<div id="manualCategoryWrap"><label class="label2">Catégorie budgétaire</label><select class="input" id="manualTxCategory"></select><small id="manualCategorySuggestion"></small></div>'+
   ''+
   '<div id="manualWhoWrap"><label class="label2">Cette dépense concerne</label><select class="input" id="manualTxBeneficiary">'+who+'</select></div>'+
@@ -909,6 +910,7 @@ function openManualTransaction(preferredKind='expense'){
   const from=bankAccounts.find(a=>a.id===$m('manualTxAccount').value),
    fromCurrency=window.TraceInternational.currency(from);
   $m('manualBankCurrencyNote').textContent='Montant réellement prélevé / crédité · '+fromCurrency;
+  $m('manualTransferFeeWrap').hidden=kind!=='transfer';
   const currencyBadge=$m('manualTxAmount').closest?.('.trace-edit-money-control')?.querySelector?.('.trace-edit-currency');
   if(currencyBadge)currencyBadge.textContent=fromCurrency;
   $m('manualFxRateLabel').hidden=fromCurrency==='CAD';
@@ -1005,7 +1007,7 @@ function openManualTransaction(preferredKind='expense'){
     (!investmentId||accountType(bankAccount)!=='checking'||!trackedSavingsAccounts(me).some(a=>a.id===investmentId&&isReadySavingsAccount(a)&&date>a.openingDate))){
     error.textContent='Configure ton CELI et son solde initial, puis choisis un mouvement à une date ultérieure.';return;
   }
-  let shares,related,repaymentAllocations=null,booking,destinationBankAmount,friendDebtors;
+  let shares,related,repaymentAllocations=null,booking,destinationBankAmount,friendDebtors,transferFees={};
   try{
    const currency=window.TraceInternational.currency(bankAccount),
     input=$m('manualFxRate').value.trim(),userRate=Number(input);
@@ -1019,6 +1021,11 @@ function openManualTransaction(preferredKind='expense'){
     originalCurrency:$m('manualPurchaseCurrency').value,
     originalAmount:$m('manualPurchaseAmount').value||null});
    const destination=bankAccounts.find(a=>a.id===targetId);
+   if(kind==='transfer'&&$m('manualTransferFee').value.trim()!==''){
+    const fee=window.TraceInternational.exactMoney($m('manualTransferFee').value);
+    if(fee===null||fee<0||fee>amount)throw Error('Les frais doivent être au centime et compris dans le débit total.');
+    transferFees={transferFeeAmount:fee,transferFeeCurrency:currency,transferFeeIncludedInDebit:true};
+   }
    if(['transfer','card_payment'].includes(kind)){
     if(accountType(destination)==='card'&&!validCardTarget(bankAccount,destination))
      throw Error('Cette carte doit être réglée depuis son compte courant lié, dans sa devise.');
@@ -1049,7 +1056,7 @@ function openManualTransaction(preferredKind='expense'){
    }else related=validateFriendLink(kind,$m('manualRelatedExpense').value,date,booking.amountCAD);
   }catch(e){error.textContent=String(e.message||e);return;}
   const item={id:txDocId(),date,name,note:'',merchant:'',type:def.type,transferPurpose:def.purpose||null,
-   status:'confirmed',...booking,
+   status:'confirmed',...booking,...transferFees,
    ...(['transfer','card_payment'].includes(kind)?{toBankAmount:destinationBankAmount,
     toBankCurrency:window.TraceInternational.currency(bankAccounts.find(a=>a.id===targetId))}:{}),
    categoryId,accountId,payerId:me,...shares,...friendDebtors,

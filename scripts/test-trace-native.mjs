@@ -18,6 +18,8 @@ for(const entry of ['index.html','trace-international-preview.html']){
 }
 for(const name of readdirSync(join(root,'scripts')))
  if(name.endsWith('.mjs'))active.add('scripts/'+name);
+for(const name of readdirSync(join(root,'tests')))
+ if(/\.(?:browser|integration)\.cjs$/.test(name))active.add('tests/'+name);
 const report={runtime:process.version,network:'not used',financialData:'fictional only',
  syntax:[],suites:[],passed:false};
 for(const file of [...active].sort()){

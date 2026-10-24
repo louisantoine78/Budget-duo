@@ -160,6 +160,8 @@
   // whole group before removing its old container, including destination legs.
   const international=fields.querySelector('.trace-intl-transaction');
   if(international)twoBody.appendChild(international);
+  const transferFee=doc.getElementById('manualTransferFeeWrap');
+  if(transferFee)twoBody.appendChild(transferFee);
   const named=[['manualCategoryWrap'],['manualWhoWrap'],['manualFriendsGroup'],['manualTargetWrap'],['manualSavingsWrap'],['manualFriendLink']];
   named.forEach(([id])=>{const el=doc.getElementById(id);if(el)threeBody.appendChild(el)});
   const whoLabel=doc.querySelector('#manualWhoWrap label');if(whoLabel)whoLabel.textContent=names.allocation;

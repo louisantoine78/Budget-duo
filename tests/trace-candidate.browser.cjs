@@ -12,6 +12,11 @@ const reportIndex=process.argv.indexOf('--report'),reportPath=reportIndex<0?null
 let browser,server,page,context;
 const test=async(name,fn)=>{await fn();results.push({name,passed:true});console.log('PASS '+name)};
 const text=id=>page.locator('#'+id).innerText();
+const selectPrimary=async id=>{
+ const control=page.locator('.trace-intl-primary-control');
+ if(!await control.evaluate(el=>el.open))await control.locator('summary').click();
+ await page.locator('#traceIntlPrimary').selectOption(id);
+};
 const go=async name=>{await page.locator('[data-nav="'+name+'"]').click();
  await page.locator('.page[data-page="'+name+'"]').waitFor({state:'visible'})};
 async function boot(){
@@ -85,6 +90,7 @@ let base;
  await test('account chips show native EUR without changing the official principal or budget',async()=>{
   const budget=await text('homeBudgetAvailable');
   await page.locator('[data-trace-view-account="demo-fr-current"]').click();
+  assert.equal(await page.evaluate(()=>document.activeElement?.dataset.traceViewAccount),'demo-fr-current');
   assert.match(await text('homeBalance'),/1\s*208,80/);assert.match(await text('homeBalance'),/€/);
   assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
   assert.equal(await text('homeBudgetAvailable'),budget);
@@ -92,7 +98,7 @@ let base;
   assert.match(await text('homeBalance'),/3\s*670,00/);
  });
  await test('changing principal requires explicit confirmation; cancelling is read-only',async()=>{
-  await page.locator('#traceIntlPrimary').selectOption('demo-fr-current');
+  await selectPrimary('demo-fr-current');
   assert.equal(await text('sheetTitle'),'Changer le compte principal');
   assert.match(await text('homeBalance'),/3\s*670,00/);
   await page.locator('#tracePrimaryCancel').click();
@@ -100,7 +106,7 @@ let base;
  });
  await test('confirmed EUR principal keeps CAD historical budget and independent Couple totals',async()=>{
   const budget=await text('homeBudgetAvailable');
-  await page.locator('#traceIntlPrimary').selectOption('demo-fr-current');
+  await selectPrimary('demo-fr-current');
   await page.locator('#tracePrimaryConfirm').click();
   assert.match(await text('homeBalance'),/1\s*208,80/);
   assert.equal(await text('homeBudgetAvailable'),budget);
@@ -246,10 +252,45 @@ let base;
   const after=Number((await text('homeSpending')).replace(/[^0-9]/g,''));
   assert.equal(after-before,64);
  });
+ await test('50 USD purchase paid as 46.20 EUR keeps native debit and historical CAD valuation',async()=>{
+  await page.locator('#quickAdd').click();
+  await page.locator('#manualTxAccount').selectOption('demo-fr-current');
+  await page.locator('#manualTxName').fill('Fictional 50 USD paid from EUR');
+  await page.locator('#manualTxAmount').fill('46.20');
+  await page.locator('#manualPurchaseCurrency').selectOption('USD');
+  await page.locator('#manualPurchaseAmount').fill('50');
+  await page.locator('#manualTxCategory').selectOption('travel');
+  await page.locator('#saveManualTx').click();
+  await page.locator('#sheetBackdrop').waitFor({state:'hidden'});await go('home');
+  assert.match(await text('homeBalance'),/1\s*122,60/);
+  assert.match(await text('homeSpending'),/416/);
+ });
+ await test('CAD to EUR transfer preserves actual debit, receipt and included fees with no budget expense',async()=>{
+  const budget=await text('homeBudgetAvailable'),spending=await text('homeSpending');
+  await page.locator('#quickAdd').click();
+  await page.locator('#manualTxAccount').selectOption('demo-ca-current');
+  await page.locator('#manualKind').selectOption('transfer');
+  await page.locator('#manualTarget').selectOption('demo-fr-current');
+  await page.locator('#manualTxName').fill('Fictional CAD EUR transfer with fees');
+  await page.locator('#manualTxAmount').fill('150');
+  await page.locator('#manualDestAmount').fill('95');
+  await page.locator('#manualTransferFee').fill('2.005');
+  await page.locator('#saveManualTx').click();
+  assert.match(await text('manualMovementError'),/centime/);
+  await page.locator('#manualTransferFee').fill('2');
+  await page.locator('#saveManualTx').click();
+  await page.locator('#sheetBackdrop').waitFor({state:'hidden'});await go('home');
+  await page.locator('[data-trace-view-account="demo-ca-current"]').click();
+  assert.match(await text('homeChecking'),/3\s*850/);
+  assert.match(await text('homeBalance'),/3\s*420/);
+  await page.locator('[data-trace-view-account="demo-fr-current"]').click();
+  assert.match(await text('homeBalance'),/1\s*217,60/);
+  assert.equal(await text('homeBudgetAvailable'),budget);assert.equal(await text('homeSpending'),spending);
+ });
  await test('offline navigation works in the loaded session and online reload resets only fictional data',async()=>{
   await context.setOffline(true);await go('home');
   await page.locator('[data-trace-view-account="demo-ca-current"]').click();
-  assert.match(await text('homeBalance'),/3\s*570,00/);
+  assert.match(await text('homeBalance'),/3\s*420,00/);
   await go('wealth');await go('budget');
   await context.setOffline(false);await boot();
   assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
