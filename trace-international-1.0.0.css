@@ -56,7 +56,7 @@
 .trace-home-priority #balanceCard{position:relative;overflow:hidden;background:linear-gradient(145deg,#fffdf9 5%,#eef7f0 100%);border:1px solid rgba(34,93,69,.14);border-radius:21px;box-shadow:0 10px 30px rgba(20,69,53,.08),0 2px 5px rgba(20,69,53,.025);padding:20px 18px}
 .trace-home-priority #balanceCard .money{color:#123f38;font-size:clamp(30px,7.4vw,44px);line-height:1.1;letter-spacing:-.035em;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .trace-home-priority #balanceCard .eyebrow{color:#55796a;font-weight:750;letter-spacing:.06em}
-.trace-home-priority .trace-home-available{min-height:unset;border-radius:19px;border:1px solid rgba(24,82,59,.08);background:#fffefb;box-shadow:0 6px 19px rgba(21,66,50,.035)}
+.trace-home-priority .trace-home-available{min-height:unset;border-radius:19px;border:1px solid rgba(24,82,59,.08);background:linear-gradient(140deg,#113f38 0%,#1f6659 100%);box-shadow:0 6px 19px rgba(21,66,50,.08)}
 .trace-home-priority .trace-home-available .big{font-variant-numeric:tabular-nums;letter-spacing:-.027em}
 .trace-home-month-head{margin-top:19px!important}
 .trace-home-month-head h2,.trace-wealth-section-head h2{font-weight:800;letter-spacing:-.02em}

@@ -159,6 +159,8 @@
    if(!picked){say('Sélectionne un PDF avant la détection.',true);return;}
    if(scanning)return; // Ignore repeat taps without invalidating an in-flight scan.
    const token=++scanToken;
+   const scannedAccount=selectedAccount();
+   if(!scannedAccount){say('Choisis le compte du relevé avant la détection.',true);return;}
    if(!root.TraceStatementPDFText?.scan){say('Extracteur PDF local absent. Contrôle manuel disponible.',true);return;}
    scanning=true;extraction=null;renderExtraction();
    say('Lecture locale de la couche texte simple, aucune donnée transmise…');
@@ -169,7 +171,7 @@
     const rich=pdfjs&&typeof pdfjs.getDocument==='function'&&
      root.TraceStatementPDFJS?.scan;
     const result=rich?
-     await root.TraceStatementPDFJS.scan(picked,{engine:pdfjs}):
+     await root.TraceStatementPDFJS.scan(picked,{engine:pdfjs,currency:scannedAccount.currency||'CAD'}):
      await root.TraceStatementPDFText.scan(picked);
     if(token!==scanToken||picked!==file)return;
     extraction=result;renderExtraction();
@@ -197,7 +199,7 @@
     '</b><small>'+esc(x.name||'Sans libellé')+' — '+esc(x.rawText)+'</small></span></label>'
    ).join('')+
    '<label class="trace-statement-attest"><input type="checkbox" id="traceStatementAttest">'+
-    '<span>J’ai vérifié la totalité des mouvements de ce PDF et recopié chaque ligne sans omission.</span></label>'+
+    '<span>J’ai vérifié le compte, la devise et la totalité des mouvements de ce PDF, et recopié chaque ligne sans omission.</span></label>'+
    '<button class="primary full" type="button" id="traceStatementCompare">Comparer les lignes vérifiées à TRACE</button>'+
    '<p class="trace-statement-note">Une case cochée approuve uniquement la preuve affichée. Toute modification des champs oblige à recommencer.</p></div>';
    el(host,'traceStatementCompare').onclick=runCompare;
@@ -227,7 +229,7 @@
        '<b>'+esc(x.name||'Opération TRACE')+'</b><small>'+esc(x.date)+
        ' · '+money(x.amount,result.currency)+'</small></span><strong>À vérifier</strong></div>'
       ).join(''):'')+
-    '<div class="trace-statement-report-warning">Rapport indicatif : aucune ligne du PDF n’a été extraite automatiquement. Même si toutes les lignes saisies correspondent, le relevé complet n’est pas certifié.</div>'+
+    '<div class="trace-statement-report-warning">Rapport indicatif des seules lignes vérifiées. Même si toutes ces lignes correspondent, le relevé complet n’est pas certifié.</div>'+
     '<button type="button" class="secondary full" id="traceStatementOpenActivity">Voir les transactions du compte</button>'+
     '</div>';
    el(host,'traceStatementOpenActivity').onclick=()=>{
@@ -292,6 +294,7 @@
    if(event.target.closest('#traceStatementResults'))return;
    if(event.target.closest('#traceStatementPrepare'))return;
    if(event.target.closest('#traceStatementFile'))return;
+   if(event.target===accountNode){++scanToken;extraction=null;renderExtraction();}
    clearReview();
   };
   host.addEventListener('input',invalidate);
@@ -307,7 +310,7 @@
    }
   });
   fileNode.onchange=async()=>{
-   ++scanToken;extraction=null;renderExtraction();clearReview();file=null;
+   const token=++scanToken;extraction=null;renderExtraction();clearReview();file=null;
    if(url){root.URL?.revokeObjectURL?.(url);url=null;}
    fileInfo.textContent='Vérification du document local…';
    const picked=fileNode.files?.[0];
@@ -318,14 +321,17 @@
    }
    try{
     const bytes=new Uint8Array(await picked.slice(0,5).arrayBuffer());
+    // A slow read of a former file must never replace a more recent choice.
+    if(token!==scanToken||fileNode.files?.[0]!==picked)return;
     if(String.fromCharCode(...bytes)!=='%PDF-')throw Error('Signature PDF invalide');
     file=picked;
     url=root.URL?.createObjectURL?.(picked)||null;
     fileInfo.innerHTML='Fichier local : <b>'+esc(stableFilename(picked.name))+'</b>'+
       (url?' · <a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+
        'Ouvrir le PDF pour vérifier les lignes</a>':' · Ouvre le PDF dans Fichiers');
-    say('PDF reconnu. Les lignes ne sont pas extraites : saisis-les ci-dessous.');
-   }catch(e){fileInfo.textContent='Lecture ou signature du PDF non prise en charge.';
+    say('PDF reconnu. Propose les lignes depuis le texte ou recopie-les pour les vérifier.');
+   }catch(e){if(token!==scanToken)return;
+    fileInfo.textContent='Lecture ou signature du PDF non prise en charge.';
     say('Ce PDF ne peut pas être utilisé pour ce contrôle.',true);}
   };
   el(host,'traceStatementPrepare').onclick=prepare;

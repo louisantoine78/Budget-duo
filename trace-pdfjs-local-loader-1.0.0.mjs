@@ -1,6 +1,6 @@
-/* Candidate ONLY. Do not add this module script to HTML until the pinned
- * local pdfjs-dist assets have been vendored AND CSP worker-src / Safari
- * have been reviewed. Never load this module from a CDN.
+/* Isolated candidate only: audited pinned assets, same-origin module worker,
+ * no remote services. Native + Chromium extraction tested; Safari is a separate
+ * release gate. Production 5.36.5 does not include this loader.
  */
 import * as pdfjs from './vendor/pdfjs/pdf.mjs';
 pdfjs.GlobalWorkerOptions.workerSrc=

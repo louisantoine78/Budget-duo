@@ -20,7 +20,7 @@ function fixture(options={}){
  fs.writeFileSync(path.join(pkg,'LICENSE'),options.badLicense?'not the license'.repeat(30):'Apache License\nVersion 2.0\n'+'license fixture\n'.repeat(25));
  fs.writeFileSync(path.join(base,'trace-international-preview.html'),
   '<meta http-equiv="Content-Security-Policy" content="worker-src \'none\'; connect-src \'none\';">');
- return {base,run:(script)=>spawnSync(process.execPath,[path.join(base,'scripts',script)],{encoding:'utf8'}),
+ return {base,run:(script,args=[])=>spawnSync(process.execPath,[path.join(base,'scripts',script),...args],{encoding:'utf8'}),
   cleanup:()=>fs.rmSync(base,{recursive:true,force:true})};
 }
 function use(fn,options){const f=fixture(options);try{fn(f)}finally{f.cleanup()}}
@@ -77,4 +77,14 @@ test('loader inclusion in preview is refused by the pre-activation gate',()=>use
  fs.appendFileSync(path.join(f.base,'trace-international-preview.html'),
   '<script type="module" src="trace-pdfjs-local-loader-1.0.0.mjs"></script>');
  assert.notEqual(f.run('verify-trace-pdfjs.mjs').status,0);
+}));
+test('explicit candidate-only mode verifies strict CSP and keeps production unmodified',()=>use(f=>{
+ assert.equal(f.run('vendor-trace-pdfjs.mjs').status,0);
+ fs.writeFileSync(path.join(f.base,'index.html'),'<meta name="trace-build" content="5.36.5">');
+ fs.writeFileSync(path.join(f.base,'trace-international-preview.html'),
+  '<meta http-equiv="Content-Security-Policy" content="worker-src \'self\'; connect-src \'none\'; script-src \'self\';">'+
+  '<script type="module" src="trace-pdfjs-local-loader-1.0.0.mjs"></script>');
+ assert.equal(f.run('verify-trace-pdfjs.mjs',['--preview-enabled']).status,0);
+ fs.appendFileSync(path.join(f.base,'index.html'),'<script src="trace-pdfjs-local-loader-1.0.0.mjs"></script>');
+ assert.notEqual(f.run('verify-trace-pdfjs.mjs',['--preview-enabled']).status,0);
 }));

@@ -1,0 +1,14 @@
+{
+  "package": "pdfjs-dist",
+  "version": "6.4.299",
+  "registryArchive": "https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-6.4.299.tgz",
+  "npmIntegrity": "sha512-AVl138zALtfaAPvADulE0PZThbYzCBS79nL4pOSL/6Sm/4AH5A21BD9VHt97OlCuzJuCpmeZtAtkinisF4Vb1g==",
+  "npmSha1": "4a46f5146ac6505564c1a5d472900be4df8bf628",
+  "archiveBytes": 8539589,
+  "verifiedDuringMission": "2026-10-24",
+  "verification": "npm pack --ignore-scripts; actual archive SHA-512 checked against registry metadata; exact legacy assets and LICENSE extracted without package scripts",
+  "license": "Apache-2.0",
+  "runtime": "local files and same-origin module worker only; no CDN, upload, OCR or PDF JavaScript execution",
+  "assetHashes": "vendor/pdfjs/trace-vendor-manifest.json",
+  "limitations": "Registry integrity plus recorded asset hashes, not an independent cryptographic maintainer signature; supported column text layouts only; Safari iPhone remains a release gate"
+}

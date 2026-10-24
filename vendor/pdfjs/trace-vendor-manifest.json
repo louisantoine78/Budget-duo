@@ -1,0 +1,23 @@
+{
+  "product": "TRACE 5.37 local PDF.js adapter (candidate only)",
+  "package": "pdfjs-dist",
+  "version": "6.4.299",
+  "license": "Apache-2.0",
+  "distribution": "legacy/build",
+  "noRuntimeCDN": true,
+  "files": {
+    "pdf.mjs": {
+      "sha256": "bc51f4874a66e3853189cb5d50aba4b3096afa83ed433b885d293a3d94583cdc",
+      "bytes": 1069549
+    },
+    "pdf.worker.mjs": {
+      "sha256": "bb422f60804477de4a0b09091d8347a916a387755ed1cbad24ccaec1d09c78bf",
+      "bytes": 2418244
+    },
+    "LICENSE": {
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "bytes": 10174
+    }
+  },
+  "activation": "NOT ENABLED - requires manual CSP, offline and Safari QA"
+}

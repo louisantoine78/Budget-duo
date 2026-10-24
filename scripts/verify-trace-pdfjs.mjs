@@ -29,10 +29,21 @@ for(const name of files){
  if(name==='LICENSE'&&!/Apache License\s+Version 2\.0/.test(bytes.toString('utf8')))
   throw Error('Licence Apache 2.0 non vérifiée');
 }
-// This is a PRE-activation check. Never silently enable the loader or workers.
+// Default is PRE-activation. Explicit --preview-enabled checks the isolated
+// candidate with a real local worker; it is never production authorization.
 const preview=await readFile(join(base,'trace-international-preview.html'),'utf8');
-if(!/worker-src 'none'/.test(preview)||
-   /<script\b[^>]*\bsrc\s*=\s*["'][^"']*trace-pdfjs-local-loader/i.test(preview)||
-   /<script\b[^>]*\btype\s*=\s*["']module["'][^>]*trace-pdfjs-local-loader/i.test(preview))
- throw Error('La préversion ne respecte plus la porte de sécurité PDF.js désactivée');
-process.stdout.write('PDF.js '+EXPECTED+' : hachages et licence OK ; loader toujours désactivé. Safari/CSP NON validés.\n');
+const loader=/<script\b[^>]*\bsrc\s*=\s*["'][^"']*trace-pdfjs-local-loader/i.test(preview);
+if(process.argv.includes('--preview-enabled')){
+ if(!/worker-src 'self'\s*;/.test(preview)||!loader||
+    !/connect-src 'none'\s*;/.test(preview)||!/script-src 'self'\s*;/.test(preview)||
+    /worker-src[^;]*(?:blob:|data:|https?:|\*)/.test(preview))
+  throw Error('La CSP candidate doit limiter PDF.js au worker local et interdire les connexions');
+ const active=await readFile(join(base,'index.html'),'utf8');
+ if(/trace-pdfjs-local-loader|worker-src 'self'/.test(active))
+  throw Error('Le PDF.js candidat ne doit pas être activé sur l’entrée de production');
+ process.stdout.write('PDF.js '+EXPECTED+' : hachages et licence OK ; worker local candidat uniquement. Safari reste à valider.\n');
+}else{
+ if(!/worker-src 'none'/.test(preview)||loader)
+  throw Error('La préversion ne respecte plus la porte de sécurité PDF.js désactivée');
+ process.stdout.write('PDF.js '+EXPECTED+' : hachages et licence OK ; loader toujours désactivé. Safari/CSP NON validés.\n');
+}

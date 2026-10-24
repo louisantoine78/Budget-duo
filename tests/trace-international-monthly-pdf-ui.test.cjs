@@ -62,6 +62,18 @@ async function main(){
   const x=fixture();await x.pdf.onchange();
   assert.match(x.el('#traceStatementLocalFile').innerHTML,/blob:fictional-statement/);
  });
+ await test('a slow former file never replaces the most recently selected PDF',async()=>{
+  const x=fixture();let release;
+  const old={name:'former.pdf',size:100,type:'application/pdf',
+   slice:()=>({arrayBuffer:()=>new Promise(r=>{release=r})})};
+  x.pdf.files=[old];const first=x.pdf.onchange();
+  const next={...old,name:'latest.pdf',slice:()=>({arrayBuffer:async()=>
+   new Uint8Array([37,80,68,70,45]).buffer})};
+  x.pdf.files=[next];await x.pdf.onchange();
+  release(new Uint8Array([37,80,68,70,45]).buffer);await first;
+  assert.match(x.el('#traceStatementLocalFile').innerHTML,/latest\.pdf/);
+  assert.doesNotMatch(x.el('#traceStatementLocalFile').innerHTML,/former\.pdf/);
+ });
  await test('statement count mismatch blocks even a valid PDF',async()=>{
   const x=fixture();await x.pdf.onchange();x.el('#traceStatementCount').value='3';
   x.el('#traceStatementPrepare').onclick();

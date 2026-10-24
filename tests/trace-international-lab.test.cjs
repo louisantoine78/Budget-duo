@@ -34,7 +34,9 @@ test('lab does not import credentials, real Supabase SDK or a service worker',()
  assert.doesNotMatch(html,/supabase\.min\.js/);
  assert.doesNotMatch(html,/trace-launch-v2\.html/);
  assert.match(html,/connect-src 'none'/);
- assert.match(html,/worker-src 'none'/);
+ assert.match(html,/worker-src 'self';/);
+ assert.match(html,/<script type="module" src="trace-pdfjs-local-loader-1\.0\.0\.mjs"/);
+ assert.doesNotMatch(html,/worker-src[^;]*(?:blob:|data:|https?:|\*)/);
  assert.match(html,/form-action 'none'/);
 });
 test('lab contains the actual international balance mount and all essential page nodes',()=>{

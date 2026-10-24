@@ -1,4 +1,4 @@
-/* TRACE International 5.37 — strict PDF.js text-item adapter (NO PDF.js bundled).
+/* TRACE International 5.37 — strict adapter for the pinned local PDF.js engine.
  * The caller must inject an audited LOCAL pinned pdfjs-dist engine.
  * No remote URLs, storage, budget booking, OCR or confidence guesses.
  * Never assert statement completeness merely because text items were parsed.
@@ -73,6 +73,11 @@
   }
   if(headers.length!==1)return result('En-tête unique Date / Libellé / Débit / Crédit non reconnu sur cette page');
   const h=headers[0];
+  // Only the statement heading may identify its account currency. A purchase
+  // description mentioning USD must not relabel an EUR account statement.
+  const declared=[...new Set(raw.filter(x=>x.line<h.line).flatMap(x=>
+   x.rawText.match(/\b(?:CAD|EUR|USD|GBP|CHF)\b/g)||[]))];
+  if(declared.length>1)return result('Plusieurs devises dans l’en-tête : contrôle manuel requis');
   if(!(h.date<h.desc&&h.desc<h.debit&&h.debit<h.credit)||
    [h.desc-h.date,h.debit-h.desc,h.credit-h.debit].some(x=>x<18))
    return result('Colonnes bancaires trop rapprochées ou non ordonnées');
@@ -105,17 +110,31 @@
   return{status:'review_required',reason:unparsed.length?
    'Lignes et en-têtes restant à vérifier sur le relevé.':
    'Reconnaissance partielle à vérifier, sans preuve de complétude.',
-   pages:1,lines:raw.map(x=>({page:x.page,line:x.line,rawText:x.rawText})),
+   pages:1,declaredCurrency:declared[0]||null,
+   lines:raw.map(x=>({page:x.page,line:x.line,rawText:x.rawText})),
    proposals,unparsed,complete:false,writes:0,financialChanges:0};
  }
- async function scan(file,{engine}={}){
+ async function scan(file,{engine,currency=null}={}){
   if(!engine||typeof engine.getDocument!=='function')
    return result('PDF.js local versionné non disponible : utilise le contrôle manuel');
   if(!file||typeof file.arrayBuffer!=='function'||!Number.isFinite(file.size)||
      file.size<40||file.size>MAX_SIZE)return result('Fichier PDF invalide ou supérieur à 12 Mo');
   let task=null,document=null;
+  const timer=typeof root.setTimeout==='function'?root.setTimeout.bind(root):
+   typeof setTimeout==='function'?setTimeout:null;
+  const cancelTimer=typeof root.clearTimeout==='function'?root.clearTimeout.bind(root):
+   typeof clearTimeout==='function'?clearTimeout:null;
+  const deadline=Date.now()+20000;
+  const wait=async promise=>{
+   if(!timer||!cancelTimer)return promise;
+   let handle;
+   try{return await Promise.race([promise,new Promise((resolve,reject)=>{
+    handle=timer(()=>reject(Error('Délai de lecture dépassé, contrôle manuel requis')),
+     Math.max(1,deadline-Date.now()));
+   })]);}finally{cancelTimer(handle);}
+  };
   try{
-   const bytes=new Uint8Array(await file.arrayBuffer());
+   const bytes=new Uint8Array(await wait(file.arrayBuffer()));
    if(bytes.byteLength!==file.size||String.fromCharCode(...bytes.slice(0,5))!=='%PDF-')
     return result('Signature PDF invalide');
    task=engine.getDocument({data:bytes,disableRange:true,disableStream:true,
@@ -123,23 +142,28 @@
     useSystemFonts:false,useWasm:false});
    if(!task||typeof task.promise?.then!=='function')
     return result('Document PDF.js non initialisé');
-   document=await task.promise;
+   document=await wait(task.promise);
    if(!Number.isInteger(document.numPages)||document.numPages<1||document.numPages>MAX_PAGES)
     return result('Pagination PDF absente ou supérieure à 40 pages');
-   const proposals=[],unparsed=[],lines=[];
+   const proposals=[],unparsed=[],lines=[],declared=new Set();
    for(let p=1;p<=document.numPages;p++){
-    const page=await document.getPage(p);
+    const page=await wait(document.getPage(p));
     if(!page||typeof page.getTextContent!=='function'||page.rotate%360!==0)
      return result('Page pivotée ou illisible, contrôle manuel requis');
-    const content=await page.getTextContent({disableNormalization:false});
+    const content=await wait(page.getTextContent({disableNormalization:false}));
     const out=pageText(p,content?.items);
     page.cleanup?.();
     if(out.status!=='review_required')return result('Page '+p+' : '+out.reason);
+    if(out.declaredCurrency)declared.add(out.declaredCurrency);
+    if(declared.size>1)return result('Devises d’en-tête différentes entre les pages');
+    if(currency&&out.declaredCurrency&&out.declaredCurrency!==String(currency).toUpperCase())
+     return result('Devise du PDF '+out.declaredCurrency+' différente du compte '+currency);
     lines.push(...out.lines);proposals.push(...out.proposals);unparsed.push(...out.unparsed);
     if(lines.length>MAX_LINES)return result('Plus de 250 lignes détectées : contrôle manuel requis');
    }
    return{status:'review_required',reason:'Propositions à vérifier, aucune preuve de complétude.',
-    pages:document.numPages,lines,proposals,unparsed,
+    pages:document.numPages,declaredCurrency:[...declared][0]||null,
+    currencyReviewRequired:declared.size===0,lines,proposals,unparsed,
     complete:false,writes:0,financialChanges:0};
   }catch(e){return result('Lecture PDF.js impossible : '+String(e?.message||'document non pris en charge').slice(0,160));}
   finally{try{await task?.destroy?.();}catch(e){}}
