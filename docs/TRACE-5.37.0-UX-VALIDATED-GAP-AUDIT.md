@@ -153,3 +153,35 @@ Modifications et documentation **uniquement sur `trace-5.37.0-international-acco
 - Relevé PDF mensuel, débit différé réel, intégration bancaire et QA release générale sont toujours bloquants.
 
 **Prochaine priorité** : regroupement journalier et filtres d'Activité (compte, période, catégorie, nature, devise, statut) + navigation depuis les catégories Budget ; ensuite Partage Couple/Proches dans Activité. Toujours uniquement sur candidate avec tests fictifs.
+
+
+## Activité : journal et Partage intégré — développement candidat du 24 octobre 2026 (suite du chantier du 23)
+
+**Changement réellement commité, pas seulement spécifié.** La page fictive `trace-international-preview.html` présente maintenant trois sous-sections dans **Activité** : **Transactions, Importer, Partage**. La navigation principale reste **Accueil, Budget, +, Activité, Patrimoine**, donc aucun sixième onglet.
+
+### Transactions : bloc livré en amont et consolidé
+- Regroupement de l'historique par date, ordre décroissant ; filtres compte, mois, catégorie, nature, devise **du compte**, statut (confirmées, à valider, tous).
+- Les flux des opérations en attente ne sont jamais ajoutés aux KPI confirmés ; montants manquants affichés « à vérifier ».
+- Budget → détail catégorie → « Voir dans Activité » : mois et catégorie conservés, anciens filtres remis à zéro.
+- Commits : JS `1e1691082428d8118c1f2d6a9c3f41fc0aa760df`, HTML `15902faea7f83acbe08924e5c6054a6a61023fcf`, CSS `76be5d148118ddd46841180d52535b031b3d859f`, correctif de liaison clic `fc35b651d53e05e21331f9fbb475300fd02ce939`, mise à jour smoke `d06c27b7a16b9ea5caffdcb6605324b278162031`, tests neufs `ddc8194ef308af6fe972931bf98ff63cc68441dc`.
+
+### Partage : **nouvelle section visible et raccordée aux moteurs existants**
+- **Couple, puis Proches** au sein d'Activité, avec hiérarchie premium/mobile ; l'Accueil devient un **raccourci vers Activité → Partage** (si pas de partenaire, ouverture des réglages/invitation).
+- **Couple** : solde entre partenaires via `coupleBalance()` et `sharingHistory()`, historique confirmé, solde Tricount repris affiché ; boutons « Enregistrer un règlement » et « Solde initial Tricount » appellent **les éditeurs existants** `openSettlement()`, `editTricountOpening()`.
+- **Proches** : groupes calculés **uniquement** par `TraceMovement.friendReceivables` sur transactions réelles déjà chargées, somme restant due, avances, remboursé, restant, opérations partiellement remboursées, anciennes avances sans prénom en état « À attribuer » et signalement des répartitions à vérifier. Aucun nouveau stockage ni double comptage.
+- Boutons « Enregistrer un remboursement » et « Ajouter une avance » ouvrent le formulaire **existant** `openManualTransaction` en présélectionnant seulement la nature `friend_reimbursement` ou `expense`. Le formulaire continue à contrôler les montants, les associations aux avances et les validations. Un bouton ne valide ni ne sauvegarde automatiquement.
+- Le mois d'Activité est masqué pendant le Partage car son solde est **cumulatif depuis le début**, sans suggérer un calcul limité au mois sélectionné. Retour aux autres onglets et lien historique/import existants inchangés.
+- Commits `[skip ci]` : JS `efa749ebf382bdf33cce7a635a148e057e031492`, HTML `0924529d1ec4634dba5d05042af3af1e7373dd14`, CSS `a6697fb7e03589cf4c6f48cda29c8eec23a3de19`, test smoke adaptée `bdd1ba1cf7faed5ffcc9799c10332c3c7ecb1eb5`, **14 tests Partage** `b98643584700a9880436a4cf0ddd56eb3c21d8ba`.
+
+### Validation, sans exagération
+- **100/100 contrôles réussis au total, 9 suites ciblées, après lecture du code sauvegardé sur GitHub** : Partage 14, journal 6, bootstrap 7, smoke UI 12, premium 13, comptes 14, laboratoire 8, câblage 7, garde-fous financiers 19.
+- Ces tests ont été exécutés en **V8 avec interfaces Node, fichiers et DOM simulées**, **pas** avec la suite native Node CLI complète ni un navigateur Safari. Pas de tests E2E multi-utilisateurs sur base fictive persistante. La concurrence distante, le calcul financier multi-devises complet, et les rapprochements bancaires restent non validés.
+- Aucun commit sur `main` `02c70f50e7e51da79b77a91dde96a03c6c719909`, aucun déploiement Vercel, aucune opération sur Supabase réel, aucun changement de l'entrée 5.36.5. Le site Vercel préexistant au commit `2c312f0021d2df92d3fb98e906c169cc76f82698` **n'affiche toujours pas ces progrès**.
+
+### Reste à livrer avant GO
+- Activité : expérience de validation/import plus fluide, statut par compte, pagination/performance pour très longues listes ; contrôle PDF mensuel réellement connecté ; tests avec remboursements complexes et lots réels fictifs.
+- Partage : QA visuelle réelle Safari iPhone, scénarios couple multi-utilisateurs et associations multiples en bout en bout ; vieux accès `openSharing()` conservé en compatibilité mais **la section principale est maintenant intégrée dans Activité**.
+- Patrimoine : épargne liée en devise non CAD, restitution correcte du net et de la trésorerie, tests UX.
+- Transversal : modes différés dans vrai grand livre, QA complète et plan de rollback, autorisation de mise en production.
+
+**Prochaine priorité technique** : raccord PDF mensuel de contrôle (ne pas créer de transactions sans validation), puis intégration des mouvements différés uniquement sur données fictives, et Safari iPhone avant production.
