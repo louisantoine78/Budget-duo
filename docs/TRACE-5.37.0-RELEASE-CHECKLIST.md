@@ -1,3 +1,20 @@
+## Contrôle de sortie après raccordement client CAS — 24 octobre 2026
+
+**Statut actuel : NO-GO.** Le client 5.37.0 a maintenant le mécanisme de révisions et une UI de conflit ; l'ancienne ligne « raccorder le client » ci-dessous doit être interprétée comme **code présent mais non qualifié en PostgreSQL/Cloud**. Les RPC SQL 09 conservent temporairement les droits d'écriture directe par compatibilité, ce qui rend toujours le contournement possible.
+
+- [x] App cliente 5.37.0 : lecture des révisions, RPC sur création/édition/suppression/settings, séquence locale, blocage des sauvegardes après conflit, alerte de récupération sur iPhone.
+- [x] Contrats du vrai code extrait et tests de contrat exécutés sous V8 avec RPC fictives : 6/6 et 8/8 ; syntaxe JS vérifiée (distinct d'une exécution Node réelle).
+- [ ] **Rejouer `node tests/trace-cas-client.test.cjs`** et les suites 5.36.5/5.37.0 sur un checkout local réel. Aucun nouveau résultat Node CLI n'a été obtenu.
+- [ ] **Exécuter les deux tests d'intégration PostgreSQL des migrations 08/09** (et les 17 contrôles historiques) ; identifier et corriger les erreurs éventuelles.
+- [ ] **Régénérer `trace-international-preview-sw.js`** à l'aide du générateur local puis relancer `--check` : le cache référencé sur GitHub est périmé après modification du JS et CSS. Aucun test hors ligne nouveau n'a été réalisé.
+- [ ] Qualifier PostgREST/RLS/Auth/Realtime fictifs multi-session, coupures réseau, écriture persistante, rollback de conflits et privilèges `GRANT`/`REVOKE` avant de considérer `STALE-WRITE` clos.
+- [ ] Finaliser la validation d'import étranger et les natures banque/carte/virement/remboursement ; raccorder le différé et la devise Couple indépendante.
+- [ ] Refaire une recette sur **vrai Safari iPhone**, puis préparer sauvegarde réelle autorisée, migration et rollback financier avant toute publication.
+
+Le HANDOFF en tête du dépôt contient les SHA du lot et les commandes. Aucun SQL n'a été déployé. `main` et GitHub Actions sont inchangés.
+
+---
+
 ## Portes ajoutées après la reprise des migrations 08 et 09
 
 **NO-GO maintenu.** Les fichiers SQL ont été créés sur la branche, jamais appliqués à un Supabase réel. Les anciens résultats d'essais du 24 octobre restent historiques et ne qualifient pas les nouvelles migrations.
