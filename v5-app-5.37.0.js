@@ -2727,7 +2727,7 @@ function suggestImportCategory(t){
 }
 function openImportBatchReview(ids){
  const uniq=[...new Set((ids||[]).map(String))];
- const unresolved=uniq.map(id=>state.transactions.find(t=>t.id===id&&t.status!=='confirmed')).filter(Boolean);
+ const unresolved=uniq.map(id=>state.transactions.find(t=>t.id===id&&t.status==='pending')).filter(Boolean);
  const pending=unresolved.filter(t=>window.TraceMovement.get(window.TraceMovement.fromStored(t))?.budget!=='none');
  const specialCount=unresolved.length-pending.length;
  if(!pending.length){
@@ -3192,7 +3192,12 @@ async function smartApproveDraft(id,v){
  if(requestedType==='card_payment_received')throw Error('Ce paiement reçu doit être rapproché du virement du compte courant : choisis le paiement correspondant.');
  if(!['expense','income','refund','transfer','external_transfer','external_refund'].includes(type))
   throw Error('Choisis la nature de ce mouvement.');
- const accountKind=accountType(state.accounts.find(a=>a.id===accountId));
+ const bankAccount=state.accounts.find(a=>a.id===accountId);
+ // Foreign screenshot/OCR confirmation is blocked until a dedicated international review exists.
+ // Preserve the original import draft, its native amount and its bank evidence.
+ if(window.TraceInternational.currency(bankAccount)!=='CAD')
+  throw Error('Capture en devise étrangère : validation comptable indisponible. Cette ligne reste en attente pour une revue internationale.');
+ const accountKind=accountType(bankAccount);
  const expectedDirection=window.TraceImportGuide.direction(requestedType,accountKind,name);
  if(!window.TraceImportGuide.allowed(requestedType,accountKind,expectedDirection))
   throw Error('La nature ne correspond pas au compte bancaire. Vérifie le compte et le sens du mouvement.');
@@ -3238,7 +3243,6 @@ async function smartApproveDraft(id,v){
  if(['transfer','external_transfer','external_refund'].includes(type)&&state.transactions.some(t=>t.accountId===accountId&&t.date===date&&t.type===type&&
   Math.abs(Number(t.bankAmount??t.amountCAD)-amount)<.009&&normalizedMerchant(t.name)===normalizedMerchant(name)))
   throw Error('Ce mouvement semble déjà enregistré.');
- const bankAccount=state.accounts.find(a=>a.id===accountId);
  const currency=window.TraceInternational.currency(bankAccount),rateValue=String(v.manualFxRate||'').trim();
  const rate=Number(rateValue);
  if(rateValue!==''&&(!Number.isFinite(rate)||rate<=0))throw Error('Taux de change invalide.');
@@ -4987,7 +4991,7 @@ window.TraceBankBridge={
   if(!Array.isArray(items)||items.length>150)throw Error('Lot invalide.');
   const safe=items.filter(row=>{
    const t=state.transactions.find(x=>x.id===row.id);
-   return t&&t.status!=='confirmed'&&['image','ocr','pdf','csv'].includes(t.source)&&
+   return t&&t.status==='pending'&&['image','ocr','pdf','csv'].includes(t.source)&&
     Number(t.amountCAD)>0&&/^\d{4}-\d\d-\d\d$/.test(t.date)&&state.accounts.some(a=>a.id===t.accountId)&&
     legacyImportNatureReady(t)&&
     manualCategories(t.type).some(c=>c.id===row.categoryId)&&
@@ -4996,7 +5000,7 @@ window.TraceBankBridge={
   });
   let confirmed=0;
   for(const row of safe){
-   const t=state.transactions.find(x=>x.id===row.id&&x.status!=='confirmed');
+   const t=state.transactions.find(x=>x.id===row.id&&x.status==='pending');
    if(!t)continue;
    const who=t.type==='income'?t.payerId||me:row.beneficiary;
    const sharing=traceImportSplit({...row,beneficiary:who},t);
