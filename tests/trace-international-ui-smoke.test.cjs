@@ -101,6 +101,10 @@ test('budget analysis scope selector responds',()=>{
 });
 const activity=compile('renderActivity','\nfunction showTab(',{
  ...ctx,activityMonth:activeMonth,activityAccountFilter:'all',tab:'transactions',
+ traceActivityControls(){},
+ traceActivityRows:()=>state.transactions.filter(t=>String(t.date).startsWith(activeMonth)&&t.status==='confirmed'),
+ traceActivityGroupHTML:rows=>rows.length?rows.map(t=>'<button data-tx-open="'+t.id+'"></button>').join(''):
+  '<div class="empty-note">Aucune opération confirmée ce mois-ci.</div>',
  accountType:a=>a.type,
  isFinancialPeriod:()=>true,visibleBankAccounts:()=>[{id:'checking'}],
  shortAccountLabel:a=>a?.name||'Courant',
