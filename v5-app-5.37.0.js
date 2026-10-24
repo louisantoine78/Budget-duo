@@ -3259,14 +3259,16 @@ async function smartApproveDraft(id,v){
  const booking=window.TraceInternational.resolveBooking({
   account:bankAccount,bankAmount:amount,quote,date,originalCurrency:v.purchaseCurrency,
   originalAmount:v.purchaseAmount||null});
- let destinationBankAmount;
+ let destinationBankAmount,destinationBankCurrency;
  if(type==='transfer'){
   const toAccount=state.accounts.find(a=>a.id===toAccountId);
-  const toCurrency=window.TraceInternational.currency(toAccount);
-  if(toCurrency!==currency){
-   destinationBankAmount=Number(v.destinationBankAmount);
-   if(v.destinationBankAmount===''||v.destinationBankAmount==null||!(destinationBankAmount>0)||!Number.isFinite(destinationBankAmount))
-    throw Error('Saisis le montant crédité sur le compte destinataire en '+toCurrency+'.');
+  destinationBankCurrency=window.TraceInternational.currency(toAccount);
+  if(destinationBankCurrency!==currency){
+   // The destination is a real bank amount, not the source FX budget valuation.
+   // Sub-cent amounts must not create a confirmed transaction with an unreadable bank leg.
+   destinationBankAmount=window.TraceInternational.exactMoney(v.destinationBankAmount);
+   if(destinationBankAmount===null||!(destinationBankAmount>0))
+    throw Error('Saisis le montant exact crédité sur le compte destinataire en '+destinationBankCurrency+' (centimes requis).');
   }else destinationBankAmount=amount;
  }
  const share=movement.budget==='none'||movement.budget==='income'?
@@ -3275,7 +3277,7 @@ async function smartApproveDraft(id,v){
    {amountCAD:booking.amountCAD});
  const related=validateFriendLink(requestedType,String(v.relatedExpenseId||''),date,booking.amountCAD);
  const tx={id:transactionId,date,name,type,...booking,
-  ...(type==='transfer'?{toBankAmount:destinationBankAmount}:{}),
+  ...(type==='transfer'?{toBankAmount:destinationBankAmount,toBankCurrency:destinationBankCurrency}:{}),
   status:'confirmed',categoryId:isBudget?categoryId:'',accountId,payerId:me,
   ...(toAccountId?{toAccountId}:{}),...(movement.purpose?{transferPurpose:movement.purpose}:{}),...(investmentAccountId?{investmentAccountId}:{}),...(related?{relatedExpenseId:related}:{}),...share,source:'image',importFileName:d.sourceFileName,
   recurring:false,excludedByOpening:!isFinancialPeriod(probe)};
