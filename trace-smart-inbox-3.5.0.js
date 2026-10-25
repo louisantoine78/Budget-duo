@@ -262,7 +262,10 @@ function applyApprovalConstraints(el){
   dir=el.querySelector('.smart-direction')?.value,name=el.querySelector('.smart-name')?.value;
  if(!btn)return;
  const cardMatch=bank?.type==='card'&&(type==='card_payment_received'||guide.cardStatementSettlementLabel(name)),
-  valid=Boolean(type&&guide.allowed(type,bank?.type,dir)),
+  def=window.TraceMovement.get(type),
+  valid=Boolean(def&&!def.legacyOnly&&type&&guide.allowed(type,bank?.type,dir)),
+  duplicateCheck=el.querySelector('.smart-duplicate-confirm'),
+  duplicateReviewed=!duplicateCheck||duplicateCheck.checked,
   foreign=(bank?.currency||'CAD').toUpperCase()!=='CAD',
   currentOwner=bridge().currentOwner?.(),
   // A captured credit cannot be made an expense by changing the dropdown.
@@ -271,7 +274,7 @@ function applyApprovalConstraints(el){
    !!bank?.owner&&!!currentOwner&&bank.owner===currentOwner&&typeof guide.safeForQuickApproval==='function'&&
    guide.safeForQuickApproval(bank.type,'expense',name),
   foreignReviewed=safeForeignPurchase&&!!el.querySelector('.smart-foreign-nature-confirm')?.checked;
- btn.disabled=btn.dataset.duplicateBlocked==='yes'||!valid||cardMatch||(foreign&&!foreignReviewed);
+ btn.disabled=btn.dataset.duplicateBlocked==='yes'||!duplicateReviewed||!valid||cardMatch||(foreign&&!foreignReviewed);
  btn.textContent=btn.dataset.duplicateBlocked==='yes'?'Déjà comptabilisée':
   foreign?(safeForeignPurchase?'Confirmer cet achat étranger':'À vérifier · devise étrangère'):
   cardMatch?'Rapproche ce paiement pour éviter un doublon':'Confirmer l’opération';
@@ -403,10 +406,17 @@ function updateDuplicateReview(el){
  const recorded=overlaps.some(x=>x.exact&&x.status==='recorded')||inspected?.status==='already';
  const possible=overlaps.length>0||['possible','already'].includes(inspected?.status);
  const slot=field('.trace-smart-risk-slot'),state=field('.trace-review-state'),action=field('.smart-approve');
- const previous=Boolean(slot.querySelector('.smart-duplicate-confirm')?.checked);
+ // Consent is tied to the precise candidate and comparison evidence. An
+ // edited amount/name/date/type or refreshed match invalidates old consent.
+ const comparisonSignature=JSON.stringify({date,name,amount,type,
+  overlaps:overlaps.map(x=>[x.id,x.status,x.exact,x.date,x.amount,x.name]),
+  inspected:inspected?.status||''});
+ const previous=el.dataset.duplicateReviewSignature===comparisonSignature&&
+  Boolean(slot.querySelector('.smart-duplicate-confirm')?.checked);
  el.classList.toggle('is-duplicate',possible);
  if(state)state.textContent=possible?'DOUBLON À EXAMINER':d.needsAmountReview?'MONTANT À VÉRIFIER':'À CONFIRMER';
- if(!possible){slot.innerHTML='';action.dataset.duplicateBlocked='no';applyApprovalConstraints(el);return;}
+ if(!possible){slot.innerHTML='';el.dataset.duplicateReviewSignature='';
+  action.dataset.duplicateBlocked='no';applyApprovalConstraints(el);return;}
  const originalCategory=field('.smart-category')?.selectedOptions?.[0]?.textContent?.trim()||'';
  const compare=window.TraceDuplicateCompare.render({
   draft:{name,date,amount,categoryName:originalCategory&&!/choisir|sélectionner|catégorie/i.test(originalCategory)?originalCategory:''},
@@ -422,6 +432,8 @@ function updateDuplicateReview(el){
    '> Ce sont bien deux opérations distinctes ; j’ai comparé les captures.</label>')+
   '</div>';
  action.dataset.duplicateBlocked=recorded?'yes':'no';
+ el.dataset.duplicateReviewSignature=comparisonSignature;
+ slot.querySelector('.smart-duplicate-confirm')?.addEventListener('change',()=>applyApprovalConstraints(el));
  applyApprovalConstraints(el);
 }
 
