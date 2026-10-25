@@ -1,3 +1,18 @@
+## 25 octobre 2026 — test intégré CSV → rapprochement mensuel (simulé)
+
+**Commits [skip ci], branche internationale exclusivement :**
+- `f83c7fc091333950e80819c5b232e3b17d8a5868` : `tests/trace-csv-reader-flow.test.cjs` créé ; tests du parcours concret `FileReader` fictif, parser et UI CSV authentiques, clic prévisualisation → sauvegarde `pending` simulée, réimport sans doublon, deux achats égaux mais lignes indépendantes, collisions, mappage changé, compte modifié en cours de lot, devise EUR native, revue partielle humaine.
+- `d687df3f1496c37025f511b1ff49e595d010d925` : corrige **uniquement le harnais** (séquences `\n` fictives et `console` de test) ; premier lancement signalait des erreurs du harnais, **8/8** après réparation. Aucun changement de logique bancaire de l'app dans ces commits.
+- `832a821f9e60a5db7cb1491a9fc865cf0b448f8e` : trois tests intégrant `trace-statement-reconcile-1.0.0.js` **en lecture seule**, après staging des CSV fictifs via les vrais moteurs. Vérifie `pending` distinct de `matched`, plusieurs lignes identiques `ambiguous`, et mouvement manquant `missing`. Le rapport affiche `writes:0` et `financialChanges:0`, aucune dépense/revenu créé par le rapprochement.
+
+**Tests effectivement exécutés : `58/58` sous V8 simulé**, répartis `11 + 6 + 7 + 5 + 24 + 5` ; 6 fichiers authentiques et véritables sources app/International/moteur mensuel, fausses API Node, RPC, DOM et FileReader. Ne pas annoncer Node CLI natif / PostgreSQL/PGlite / Auth/RLS / Chromium / Safari. Aucune migration SQL appliquée, aucune donnée Supabase réelle lue. Conteneur Node 22.16 mais pas de checkout Github/npm ni PGlite (DNS indisponible). Les anciens tests Node/Chromium sur un commit antérieur ne sont pas des résultats de ce HEAD.
+
+**Limites de qualité :** le moteur mensuel utilisé est un moteur laboratoire candidat non chargé par l'app de production stable ; pas d'analyse réelle PDF dans ce lot. Les PDF mensuels doivent rester des preuves manuelles, jamais une écriture automatique ; CSV restant `pending` jusqu'à qualification de la nature/FX/source. Aucune preuve d'unicité réelle entre deux utilisateurs ou de droits SQL directs. Le SW de preview doit être régénéré exclusivement via générateur officiel après modifications précédentes JS/CSS.
+
+**Étape suivante prioritaire :** vrai checkout Node + PGlite fictif pour migrer 07/08/09/10 et tester deux sessions Auth/RLS/CAS/grants, puis scénarios Chromium/FileReader réels, PDF multi-pages et revues incomplètes, Safari iPhone, Cou ple/FX et moteur différé sécurisé ; préserver 5.36.5 et exiger backup/restore/rollback avant toute activation. **57 % global estimatif, production NO-GO.**
+
+---
+
 ## 25 octobre 2026 — grand lot CSV : contrôle de source, contexte et lignes illisibles
 
 **Commits code [skip ci] :**

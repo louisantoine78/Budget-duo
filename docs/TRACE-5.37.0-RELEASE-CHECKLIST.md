@@ -1,3 +1,16 @@
+## 25 octobre 2026 — test intégré CSV et moteur mensuel fictif
+
+- [x] Commit `f83c7fc091333950e80819c5b232e3b17d8a5868` : tests vrais points d'entrée CSV de `v5-app-5.37.0.js` avec FileReader/DOM/RPC fictifs (CAD/EUR, doublons, interruption en cours d'écriture, collisions de noms de fichier, lignes illisibles).
+- [x] Commit `d687df3f1496c37025f511b1ff49e595d010d925` : fixtures CSV corrigées et error logger injecté dans la **simulation**, 8/8 tests intégrés V8 réussis.
+- [x] Commit `832a821f9e60a5db7cb1491a9fc865cf0b448f8e` : rapprochement **lecture seule** du moteur mensuel sur les transactions CSV fictives — `pending` non `matched`, lignes bancaires identiques ambiguës, ligne absente détectée ; 3 scénarios supplémentaires.
+- [x] **58/58 cas V8 exécutés** sur code et tests actuels avec dépendances simulées : 11 CSV/mensuel + 6 compte/mappage + 7 source + 5 partiel + 24 CAS + 5 Accueil. Aucune modification des moteurs financiers dans ce lot.
+- [ ] **NON QUALIFIÉ :** tests Node natifs en checkout entier, SQL PostgreSQL/PGlite migrations 07–10, droits/grants/Auth/RLS/concurrence deux utilisateurs, lecture PDF réelle et comparaison manuelle exhaustive, rendu Chromium et Safari iPhone.
+- [ ] SW prévisualisation périmé après chantiers JS/CSS précédents ; le reconstruire uniquement via `scripts/build-trace-preview-pwa.mjs` et valider `--check` en checkout complet. Ne pas toucher au SW production.
+- [ ] Qualifier et sécuriser imports/Couple/multi-devises, débit différé atomique, patrimoine, interface premium, sauvegarde/restauration/rollback, puis obtenir GO utilisateur.
+- [ ] **Production NO-GO.** Estimation globale qualitative maintenue `57 % ±10` malgré le renforcement de la couverture.
+
+---
+
 ## 25 octobre 2026 — reprise : barrières CSV prévisualisation → import pending
 
 - [x] `67ba2cd314d7f1dc20a00562136958d6b74882f9` : cohérence des colonnes, signe, date, propriétaire, compte et devise native contrôlée **avant chaque** import de ligne CSV. Un changement exige une nouvelle prévisualisation ; lignes déjà pending conservées.

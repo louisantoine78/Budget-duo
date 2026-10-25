@@ -1,3 +1,21 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — QUALIFICATION DU PARCOURS CSV + CONTRÔLE MENSUEL
+
+**HEAD technique avant cette mise à jour documentaire :** `832a821f9e60a5db7cb1491a9fc865cf0b448f8e`. Revérifier le HEAD exact de la branche `trace-5.37.0-international-accounts-fx` avant reprise. Branche stable `main` de référence `02c70f50e7e51da79b77a91dde96a03c6c719909`, absolument hors périmètre. Aucun déploiement, PR, fusion, action CI, écriture financière réelle Supabase ni migration SQL appliquée. Chaque commit comporte `[skip ci]`.
+
+**Chantier livré (tests exclusivement, code bancaire préservé) :** `tests/trace-csv-reader-flow.test.cjs` teste la chaîne réelle `FileReader → parseCsv → mappage → preview DOM → clic de validation → saveDocument pending simulé` sur le véritable `v5-app-5.37.0.js` et le vrai `trace-international-1.0.0.js`. Des fixtures CSV fictives CAD/EUR sont utilisées ; le lecteur de fichier, le DOM et les RPC sont **simulés**. Les cas couvrent les comptes CAD/EUR sans FX fictif, le réimport exact, deux achats similaires à des lignes distinctes, la collision de source, la modification des colonnes après prévisualisation, la modification de la devise pendant un lot, et la revue partielle des lignes invalides. La version initiale du test a révélé deux défauts du banc d'essai (fin de ligne source et absence de `console` dans V8), corrigés **dans le test uniquement**, sans modification bancaire de l'application.
+
+**Passerelle contrôle mensuel :** avec le vrai moteur **lecture seule** `trace-statement-reconcile-1.0.0.js`, 3 tests supplémentaires vérifient que les achats CSV `pending` ne sont pas présentés comme `matched` confirmé, que deux lignes même date/montant restent `ambiguous`, et que les mouvements du relevé absents de TRACE apparaissent `missing`. `writes:0` et `financialChanges:0` attendus sur le moteur. Cette passerelle demeure une simulation d'intégration ; l'interface PDF mensuelle correspond à la **prévisualisation/laboratoire**, PAS à un flux de production complètement intégré.
+
+**Commits :** `f83c7fc091333950e80819c5b232e3b17d8a5868` (harnais initial), `d687df3f1496c37025f511b1ff49e595d010d925` (correction des fixtures et erreurs simulées), `832a821f9e60a5db7cb1491a9fc865cf0b448f8e` (couverture de rapprochement mensuel sans écriture). Les trois portent `[skip ci]`.
+
+**Preuve fraîche globale ciblée : `58/58` scénarios exécutés sous V8**, 6 fichiers de test authentiques, sources app/International/reconciliation authentiques et mocks Node/DOM/RPC : `11/11` parcours CSV complet+mensuel, `6/6` contexte de compte, `7/7` collision, `5/5` partiel, `24/24` client CAS, `5/5` Accueil. **Ne pas interpréter ces 58 comme des tests Node CLI natifs, Chromium, Safari iPhone, PostgreSQL, PGlite, Supabase ou Auth/RLS.** Réseau de checkout toujours bloqué dans le conteneur par DNS GitHub/npm ; PGlite indisponible ; Node v22.16.0 présent. Aucun `scripts/check-trace-537-release-gates.cjs` ni `tests/trace-cas-writes.integration.cjs` lancé sur un vrai checkout.
+
+**Garde-fous et blocages inchangés :** import CSV fiable côté test candidat mais pas d'unicité inter-clients native serveur ; lignes illisibles affichées et attestées mais non persistées ; relevé mensuel PDF non prouvé exhaustif ; migration 10 de quarantaine toujours non appliquée et débit différé interdit ; métier Couple/FX prospectif, UI premium, navigateur offline et vrai Safari iPhone encore incomplets. Service worker de prévisualisation potentiellement périmé ; NE PAS éditer manuellement, uniquement `node scripts/build-trace-preview-pwa.mjs` puis `--check` sur checkout complet. Reprendre en priorité les migrations 07–10 Auth/RLS/CAS en PostgreSQL fictif et le parcours UI réel; pas de GO sans tests + sauvegarde/rollback autorisés.
+
+**Avancement global qualitatif inchangé : 57 % (±10 points), 43 % restant. Production NO-GO.**
+
+---
+
 # REPRISE PRIORITAIRE — 25 OCTOBRE 2026 — LOT CSV INTÉGRITÉ DU RELEVÉ ET REVUE HUMAINE
 
 **HEAD technique de ce lot (avant commit documentaire) :** `3c6e0707a07fbe90d172a1b1979bb03044231cef`. Résoudre le HEAD GitHub au début de la prochaine mission. Branche exclusive `trace-5.37.0-international-accounts-fx`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` à préserver. Aucune PR, fusion, déploiement, Actions, Supabase réel ou migration appliquée. Commits toujours `[skip ci]`.
