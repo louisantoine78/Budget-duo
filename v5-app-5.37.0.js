@@ -3268,7 +3268,10 @@ async function smartApproveDraft(id,v){
  // The historical quote can be asynchronous. Never approve against evidence
  // that changed while waiting for an FX rate.
  const foreignEvidenceSignature=()=>JSON.stringify({
-  bank:bankAccount,draft:d,
+  // Re-read the LIVE state rather than captured object references: a sync may
+  // replace a bank or draft object during the awaited historical FX quote.
+  bank:state.accounts.find(a=>a.id===accountId),
+  draft:state.smartImports.find(x=>x.id===id&&x.kind==='smart_draft'),
   transactions:state.transactions.map(t=>[t.id,t.status,t.accountId,t.date,t.name,t.type,
    t.bankAmount,t.bankCurrency,t.amountCAD,t.toAccountId,t.toBankAmount]),
   drafts:state.smartImports.filter(x=>x.kind==='smart_draft')

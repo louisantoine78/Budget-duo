@@ -167,3 +167,21 @@ test('foreign UI rejects captured credit independently of selected expense type'
  assert.match(button.textContent,/À vérifier/);
  el.dataset.bankDirection='out';fn(el);assert.equal(button.disabled,false);
 });
+
+test('foreign OCR rejects a bank object replaced during awaited FX quote',async()=>{
+ let c;c=env({manualRate:'',quote:async()=>{
+  c.state.accounts[0]={...c.bank,currency:'USD'};
+  return{currency:'EUR',cadPerUnit:1.6,date:'2026-10-12',source:'Fictional quote'};
+ }});
+ await assert.rejects(c.approve('draft',c.input),/changé pendant la recherche du taux/);
+ assert.equal(c.writes.length,0);
+ assert.equal(c.d.status,'pending');
+});
+test('foreign OCR rejects a draft object replaced or resolved during FX wait',async()=>{
+ let c;c=env({manualRate:'',quote:async()=>{
+  c.state.smartImports[0]={...c.d,status:'done'};
+  return{currency:'EUR',cadPerUnit:1.6,date:'2026-10-12',source:'Fictional quote'};
+ }});
+ await assert.rejects(c.approve('draft',c.input),/changé pendant la recherche du taux/);
+ assert.equal(c.writes.length,0);
+});
