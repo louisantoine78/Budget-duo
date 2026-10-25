@@ -1,3 +1,9 @@
+## Addendum de vérification — 25 octobre 2026
+
+Après le circuit double preuve, `e825556372103f64d54149acd0fd5487017cc37d` ajoute `tests/trace-deferred-evidence-intake-real-modules.test.cjs` : **six scénarios sur les vraies sources** `TraceInternational`, `TraceDeferredDebit`, préparation d'achat, preuve carte, preuve courant et adaptateur. Ils sont **6/6 réussis dans un harnais V8 avec Node/fs/vm simulés** ; le fichier est présent pour sa future exécution **native Node** dans un checkout complet, mais **celle-ci n'a PAS été réalisée**. Montants 40 EUR → 64 CAD au taux fictif, deux attestations, invalidation indépendante, remboursement non accepté comme achat, impossibilité de confirmer/persister. Le SW de laboratoire est toujours périmé ; pas de PG/PGlite/Chromium/Safari ni GO. L'ancien bilan 219/219 V8 demeure historique et non rejoué sur ce nouveau HEAD.
+
+---
+
 # REPRISE DU 25 OCTOBRE 2026 — DEUX JUSTIFICATIFS DIFFÉRÉS EN LABORATOIRE
 
 HEAD de départ confirmé : `dd0201f45b24a51ac61ecea9824f21fc283c2da9`. Sur la branche exclusive `trace-5.37.0-international-accounts-fx` :
