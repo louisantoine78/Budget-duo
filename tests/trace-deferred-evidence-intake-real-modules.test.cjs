@@ -114,11 +114,20 @@ test('payment for unrelated purchase is never treated as this one',()=>{
  assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
   ...f.args,settlements:[{...f.settlement,purchaseIds:['unrelated'] }]}),/distinctes/);
 });
-test('a partial payment may cover multiple explicitly identified purchases',()=>{
- const f=fixture(),r=f.root.TraceDeferredEvidenceIntake.review({
-  ...f.args,settlements:[{...f.settlement,purchaseIds:[f.plan.document.id,'second']}]});
- assert.equal(r.localEvidenceReviewed,true);
- assert.equal(r.eligibleForServerConfirmation,false);
+test('a multi-purchase allocation expires its earlier bank attestation',()=>{
+ const f=fixture(),multi={...f.settlement,
+  purchaseIds:[f.plan.document.id,'second']};
+ const expired=f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[multi]});
+ assert.equal(expired.settlementStatuses[0].status,'stale_review');
+ assert.equal(expired.localEvidenceReviewed,false);
+ const token=f.root.TraceDeferredBankReview.reviewSnapshot({
+  statement:f.checkingDoc,settlement:multi});
+ const reviewed=f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[multi],
+  settlementReceipts:[{settlementId:multi.id,approved:true,snapshot:token}]});
+ assert.equal(reviewed.localEvidenceReviewed,true);
+ assert.equal(reviewed.eligibleForServerConfirmation,false);
 });
 test('checking statement in different currency is not a valid settlement source',()=>{
  const f=fixture();
