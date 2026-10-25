@@ -225,3 +225,18 @@ test('deferred type and transfer purpose cannot bypass the gate with unknown acc
   app.saveDocument('transactions',record),/TRACE_DEFERRED_NOT_RELEASED/);
  assert.equal(calls.length,0);
 });
+
+test('settlement and allocation metadata alone cannot bypass client gate',async()=>{
+ const {app,calls}=createContext();
+ for(const [id,extra] of [
+  ['standalone-full',{settlementMode:'full'}],
+  ['alloc-only',{purchaseIds:[]}],
+  ['fees-only',{feeIds:[]}],
+  ['bank-evidence',{deferredBankEvidenceReviewed:false}]
+ ]){
+  await assert.rejects(app.saveDocument('transactions',{
+   id,type:'transfer',accountId:'not-loaded',status:'pending',...extra
+  }),/TRACE_DEFERRED_NOT_RELEASED/);
+ }
+ assert.equal(calls.length,0);
+});
