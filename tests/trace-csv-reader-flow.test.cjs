@@ -9,6 +9,7 @@ const {test}=require('node:test');
 const root=path.join(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
 const intlSource=fs.readFileSync(path.join(root,'trace-international-1.0.0.js'),'utf8');
+const compareSource=fs.readFileSync(path.join(root,'trace-statement-reconcile-1.0.0.js'),'utf8');
 const start=source.indexOf('function normalizedCsvKey('),
  end=source.indexOf('/* Merchant suggestions never silently validate',start);
 assert.ok(start>0&&end>start,'CSV parser+UI block missing');
@@ -27,6 +28,7 @@ function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,
  function FakeReader(){}
  FakeReader.prototype.readAsText=function(file){this.result=file.content;this.onload();};
  const win={};new Function('window',intlSource)(win);
+ new Function('window',compareSource)(win);
  const money=n=>String(n)+' CAD';
  const context=new Function('FileReader','$','visibleBankAccounts','me','state',
   'window','accountType','shortAccountLabel','esc','smartExactBankAmount',
@@ -50,7 +52,9 @@ function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,
  Object.assign(node('#csvDateFormat'),{value:'dmy'});
  Object.assign(node('#csvSign'),{value:'income'});
  Object.assign(node('#csvAccount'),{value:'checking-la'});
- return{state,accounts,api,node,events,writes,preview:()=>node('#csvPreview').onclick(),
+ return{state,accounts,api,node,events,writes,
+  compare:win.TraceStatementReconcile.compare,amountOnAccount:win.TraceInternational.amountOnAccount,
+  preview:()=>node('#csvPreview').onclick(),
   commit:async()=>{const cb=node('#csvCommit').onclick;assert.equal(typeof cb,'function');await cb();}};
 }
 test('CSV FileReader to preview to pending CAD ledger; no confirmed booking',async()=>{
@@ -119,4 +123,41 @@ test('partial import requires explicit acknowledgment of unreadable lines',async
  await s.commit();
  assert.equal(s.writes.length,1);
  assert.equal(s.state.transactions.length,1);
+});
+
+test('monthly statement flags CSV pending rows as pending, never confirmed matching',async()=>{
+ const s=scenario({currency:'EUR'});s.preview();await s.commit();
+ const rows=s.writes.map((t,i)=>({
+  id:'pdf-'+i,date:t.date,direction:'out',amount:t.bankAmount,currency:'EUR'
+ }));
+ const compare=()=>s.compare({account:s.accounts[0],fromDate:'2026-10-01',toDate:'2026-10-31',
+  statementRows:rows,transactions:s.state.transactions,amountOnAccount:s.amountOnAccount});
+ const initial=compare();
+ assert.equal(initial.totals.pending,2);assert.equal(initial.totals.matched,0);
+ assert.equal(initial.writes,0);assert.equal(initial.financialChanges,0);
+ s.state.transactions[0].status='confirmed';
+ const reviewed=compare();
+ assert.equal(reviewed.totals.matched,1);assert.equal(reviewed.totals.pending,1);
+ assert.equal(s.writes.length,2);
+});
+test('monthly comparison labels identical same-day purchases ambiguous instead of false uniqueness',async()=>{
+ const content='Date,Description,Montant\n20/10/2026,Cafe,-5.00\n20/10/2026,Cafe,-5.00\n';
+ const s=scenario({content});s.preview();await s.commit();
+ const rows=[{date:'2026-10-20',direction:'out',amount:5,currency:'CAD'},
+  {date:'2026-10-20',direction:'out',amount:5,currency:'CAD'}];
+ const report=s.compare({account:s.accounts[0],fromDate:'2026-10-01',toDate:'2026-10-31',
+  statementRows:rows,transactions:s.state.transactions,amountOnAccount:s.amountOnAccount});
+ assert.equal(report.totals.ambiguous,2);
+ assert.equal(report.totals.matched,0);
+});
+test('monthly comparison highlights line absent in CSV-imported candidate journal',async()=>{
+ const s=scenario();s.preview();await s.commit();
+ const rows=[{date:'2026-10-20',direction:'out',amount:40,currency:'CAD'},
+  {date:'2026-10-22',direction:'out',amount:15,currency:'CAD'}];
+ const report=s.compare({account:s.accounts[0],fromDate:'2026-10-01',toDate:'2026-10-31',
+  statementRows:rows,transactions:s.state.transactions,amountOnAccount:s.amountOnAccount});
+ assert.equal(report.totals.pending,1);
+ assert.equal(report.totals.missing,1);
+ assert.equal(report.totals.matched,0);
+ assert.equal(s.writes.length,2);
 });
