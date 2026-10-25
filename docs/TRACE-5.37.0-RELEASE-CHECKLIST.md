@@ -1,3 +1,15 @@
+## Débit différé — garde de règlement exclusivement attribué à un achat (25 octobre 2026)
+
+- [x] `TraceDeferredEvidenceIntake` vérifie `checkingAccountId` du plan, devise du relevé courant et présence **sans doublon** de l'achat ciblé dans `purchaseIds` (commits `360ad429`, `fd1a241`).
+- [x] Règlements partiels affectés **seulement à cet achat et sans frais** plafonnés en cumul à son montant bancaire natif exact ; montant fractionnaire de centime bloqué (commit `1d85b2a`).
+- [x] Changement d'allocation multi-achats périme l'ancienne attestation bancaire et exige une nouvelle revue locale ; toujours 0 transaction créée.
+- [x] **27/27 tests Node CLI natifs isolés** sur mocks (22 contrôleur, 5 UI), syntaxe du contrôleur vérifiée. **51/51 cas V8 simulés** avec véritables sources candidate et faux modules Node/fs/vm (17 + 22 + 12).
+- [ ] **IMPORTANT** : les allocations de règlements comprenant d'autres achats, frais ou remboursements demandent le moteur complet et un journal fictif ; la revue de pièce bancaire seule ne prouve pas la répartition financière.
+- [ ] **CRITIQUE** : exécuter le vrai runner Node complet, SQL PGlite 07/08/09 sur données fictives, Auth/RLS/CAS deux clients. Les nombres isolés ci-dessus ne sont pas des validations de ces portes.
+- [ ] Compléter parcours réel d'import et confirmation `pending` sécurisée, Couple/multi-devises/premium, reconstruire SW de laboratoire via script, tester Chromium offline/Safari iPhone/rollback ; production **NO-GO**, aucune CI/deploy/Supabase réel.
+
+---
+
 ## Barrières d'association achat différé / prélèvement — 25 octobre 2026
 
 - [x] Le plan d'achat différé sauvegarde localement l'**identifiant du compte courant lié** dès la préparation en lecture seule ; pas de substitution ultérieure de compte par le comparateur.

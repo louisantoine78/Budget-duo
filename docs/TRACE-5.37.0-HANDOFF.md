@@ -1,3 +1,18 @@
+## Lot du 25 octobre 2026 — plafonnement des prélèvements exclusifs au centime natif
+
+**Commit** `1d85b2adb3bdd27b9d6f90d8fcc78a036e925046` (`[skip ci]`) sur la seule branche candidate. Après le contrôle du lien `checkingAccountId` et de `purchaseIds`, le module `TraceDeferredEvidenceIntake.review` contrôle maintenant un cas déterministe supplémentaire : **plusieurs prélèvements partiels exclusivement affectés à un achat unique, sans frais de carte, ne doivent pas dépasser le montant natif de cet achat**. Comparaison en centimes exacts, y compris test de sous-centimes malformés ; un total exactement égal au prix de l'achat reste présentable en **revue locale** et ne devient jamais une écriture.
+
+Un prélèvement destiné simultanément à plusieurs achats ou frais, ainsi que les remboursements marchands, nécessite toujours une vérification complète des allocations avec `TraceDeferredDebit` et les opérations du journal. L'adaptateur ne se substitue **pas** au moteur financier ni à une contrainte CAS/RLS serveur ; les champs `persistable:false`, `eligibleForServerConfirmation:false`, `writes:0` restent constants.
+
+**Exécution réelle du 25 octobre :**
+- Local isolé Node 22.16.0, `node --check trace-deferred-evidence-intake-1.0.0.js` et `node --test trace-deferred-evidence-intake.test.cjs trace-deferred-evidence-lab.test.cjs` : **27/27** tests natifs isolés, avec sous-contrôleurs/DOM simulés (22 + 5), zéro échec.
+- Sources candidate GitHub interrogées après commit : 3 suites chargées dans un environnement **V8 mock Node/fs/vm**, **51/51 scénarios** (17 préparation, 22 adaptateur, 12 modules financiers réels ensemble), zéro échec. **Cette exécution n'est PAS Node CLI natif**, ni une vraie DB ou un navigateur.
+- Tests du dossier entier `scripts/check-trace-537-release-gates.cjs` toujours **non exécutés** ; aucune preuve PostgreSQL/PGlite/SQL 07-08-09, Auth/RLS/CAS deux clients, SW preview régénéré, Chromium offline ou Safari. Le précédent 219/219 V8 reste historique, pas une nouvelle régression complète.
+
+**Prochaine priorité** : qualification native du candidat en checkout isolé, tests Auth/RLS/CAS SQL fictifs, contrôles d'allocation multi-achats/frais/refunds contre `TraceDeferredDebit`, import relevés PDF/CSV structurés et raccordement aux vrais parcours de revue `pending` sans persister, devise Couple et UI premium, reconstruction SW par script, Safari iPhone, sauvegarde/restauration/rollback. Aucune mutation de `main` stable, production, Supabase réel, CI, PR, fusion ou déploiement. **NO-GO strict**.
+
+---
+
 ## Lot du 25 octobre 2026 — vérification du compte courant et de l'allocation d'achat
 
 Commits candidats **[skip ci]** : `360ad42997a569e980d14c212d07f5f111677ff7` (code et tests), `fd1a241c7d23aa70e8fa739f098005f3b4682573` (test corrigé de consentement périmé).

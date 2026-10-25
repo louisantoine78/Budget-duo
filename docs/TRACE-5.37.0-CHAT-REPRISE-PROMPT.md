@@ -1,3 +1,15 @@
+# ADDENDUM 25 OCTOBRE 2026 — PLAFOND DES RÈGLEMENTS PARTIELS EXCLUSIFS
+
+Branche exclusive `trace-5.37.0-international-accounts-fx`. HEAD de code connu `1d85b2adb3bdd27b9d6f90d8fcc78a036e925046`, à revérifier. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` intact.
+
+En complément des associations carte/courant/`purchaseIds`, le commit `1d85b2adb3bdd27b9d6f90d8fcc78a036e925046` protège la revue locale d'un **achat unique sans frais** : chaque règlement exclusivement associé à cet achat est contrôlé au centime natif et leur somme ne peut pas excéder le montant de l'achat, y compris en plusieurs prélèvements. Toute valeur fractionnaire de centime refuse la comparaison ; paiement exactement égal au montant reste acceptable **pour comparaison seulement**. Les règlements mêlant plusieurs achats ou frais et les remboursements exigent encore une vérification complète du journal financier — ce module ne certifie PAS leur allocation. Aucune écriture `pending`, aucune confirmation, aucun changement bancaire.
+
+**Preuves du lot :** `27/27` tests **Node natifs isolés** (22 adaptateur avec contrôleurs simulés + 5 UI avec DOM/contrôleurs simulés), syntaxe JS contrôlée ; `51/51` cas **V8 simulant Node/fs/vm** sur les vraies sources GitHub (17 write-plan, 22 adapter, 12 vraies sources en combinaison). Pas de suite complète native du repo, PostgreSQL/PGlite 07/08/09, RLS/CAS, Chromium réel, Safari iPhone, QA offline, ni Supabase réel. L'ancien total 219/219 V8 est historique et ne qualifie pas le nouveau HEAD. La preview SW est encore périmée jusqu'à reconstruction via le script officiel. **NO-GO**.
+
+**Prochain chantier** : validation financière complète et sources réelles d'import **avec données fictives**, allocation des frais/refunds/prélèvements avec moteur différé et journal; checkout natif + SQL Auth/RLS/CAS deux clients, puis intégration UI `pending`, devises personnelles/Couple, UX premium, preview SW, Safari et rollback. Tout nouveau commit `[skip ci]`; aucune production, PR, CI, fusion, `main` ou donnée Supabase réelle.
+
+---
+
 # ADDENDUM 25 OCTOBRE 2026 — RÈGLE D'ASSOCIATION ACHAT / PRÉLÈVEMENT
 
 Dernier HEAD **code** à résoudre de nouveau au démarrage : `fd1a241c7d23aa70e8fa739f098005f3b4682573`. Branche exclusive `trace-5.37.0-international-accounts-fx`; stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` préservée.
