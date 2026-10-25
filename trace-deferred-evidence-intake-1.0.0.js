@@ -37,6 +37,18 @@
       !str(doc.sourceId)||!str(doc.sourceVersion)||!str(doc.importId)||
       physical.has(doc.sourceId))error();
   }
+  // For an installment allocated ONLY to this purchase with no card fees,
+  // even the sum of several debits cannot exceed the purchase's native cost.
+  // Mixed allocations and refunds still require a complete ledger validation.
+  let exclusivePaidCents=0;
+  const cents=v=>{
+   if(typeof v!=='number'&&typeof v!=='string')return null;
+   if(typeof v==='string'&&!/^\d{1,8}(?:\.\d{1,2})?$/.test(v))return null;
+   const x=Number(v),c=Math.round(x*100);
+   return Number.isFinite(x)&&x>0&&Number.isSafeInteger(c)&&
+    Math.abs(x*100-c)<1e-6?c:null;
+  };
+  const nativeCap=cents(plan.document.bankAmount);
   for(const s of settlements){
    if(!s||s.checkingAccountId!==checkingAccountId||
       s.cardAccountId!==plan.document.accountId||
@@ -46,6 +58,12 @@
       s.purchaseIds.length>5000||
       new Set(s.purchaseIds).size!==s.purchaseIds.length||
       !s.purchaseIds.includes(plan.document.id))error();
+   if(s.purchaseIds.length===1&&Array.isArray(s.feeIds)&&!s.feeIds.length){
+    const paid=cents(s.amount);
+    if(paid===null||nativeCap===null||
+       exclusivePaidCents+paid>nativeCap)error();
+    exclusivePaidCents+=paid;
+   }
   }
   const card=purchase.review({plan,statements:cardStatements,
    selection:cardSelection,receipts:cardReceipts,otherClaims:purchaseClaims});

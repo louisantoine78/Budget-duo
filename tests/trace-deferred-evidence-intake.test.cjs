@@ -15,13 +15,13 @@ function harness({purchase='manual_review_current',settlement='manual_review_cur
  vm.runInNewContext(fs.readFileSync(scripts,'utf8'),{window});
  const plan={kind:'deferred_write_plan',persistable:false,confirmed:false,
   checkingAccountId:'checking',
-  document:{id:'candidate1',payerId:'la',accountId:'card',bankCurrency:'EUR'}};
+  document:{id:'candidate1',payerId:'la',accountId:'card',bankCurrency:'EUR',bankAmount:40}};
  const cardStatements=[{statementId:'card-statement',accountId:'card',sourceId:'card-physical',
   sourceVersion:'v1',importId:'card-import'}];
  const checkingStatements=[{statementId:'check-statement',accountId:'checking',currency:'EUR',
   sourceId:'check-physical',sourceVersion:'v1',importId:'checking-import'}];
  const settlements=[{id:'pay1',cardAccountId:'card',checkingAccountId:'checking',
-  currency:'EUR',purchaseIds:['candidate1']}];
+  currency:'EUR',purchaseIds:['candidate1'],feeIds:[],amount:'12.35'}];
  const input={plan,checkingAccountId:'checking',cardStatements,checkingStatements,settlements};
  return{review:window.TraceDeferredEvidenceIntake.review,input,calls,window};
 }
@@ -139,4 +139,25 @@ test('missing or empty purchase allocation is never silently accepted',()=>{
  for(const purchaseIds of [undefined,[],['unrelated']])
   assert.throws(()=>h.review({...h.input,settlements:[{
    ...h.input.settlements[0],purchaseIds}]}),/distinctes/);
+});
+
+test('exclusive partial payment cannot exceed the one purchase in native cents',()=>{
+ const h=harness();assert.throws(()=>h.review({...h.input,settlements:[{
+  ...h.input.settlements[0],amount:'40.01'}]}),/distinctes/);
+});
+test('two individually valid partial payments cannot exceed the purchase together',()=>{
+ const h=harness(),a=h.input.settlements[0];
+ assert.throws(()=>h.review({...h.input,settlements:[
+  {...a,id:'part1',amount:'25'}, {...a,id:'part2',amount:'16'}]}),/distinctes/);
+});
+test('two partial payments summing exactly to purchase are reviewable locally only',()=>{
+ const h=harness(),a=h.input.settlements[0];
+ const r=h.review({...h.input,settlements:[
+  {...a,id:'part1',amount:'25'}, {...a,id:'part2',amount:'15'}]});
+ assert.equal(r.localEvidenceReviewed,true);assert.equal(r.persistable,false);
+});
+test('fractional native cents cannot bypass the exclusive allocation limit',()=>{
+ const h=harness(),a=h.input.settlements[0];
+ assert.throws(()=>h.review({...h.input,settlements:[
+  {...a,amount:'0.001'}]}),/distinctes/);
 });

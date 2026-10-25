@@ -134,3 +134,16 @@ test('checking statement in different currency is not a valid settlement source'
  assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
   ...f.args,checkingStatements:[{...f.checkingDoc,currency:'CAD'}]}),/distinctes/);
 });
+
+test('an exclusive payment exceeding the card purchase is refused',()=>{
+ const f=fixture();
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[{...f.settlement,amount:'40.01'}]}),/distinctes/);
+});
+test('two exclusive installments exceeding purchase native cents are refused',()=>{
+ const f=fixture();
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[
+   {...f.settlement,id:'p1',amount:'25'},
+   {...f.settlement,id:'p2',amount:'16'}]}),/distinctes/);
+});
