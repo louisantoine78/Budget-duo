@@ -663,6 +663,101 @@ function traceDeferredAccountReview(card){
  }catch(error){return warn('Rapprochement différé à vérifier',
   String(error?.message||'Règles financières non vérifiées.'));}
 }
+function traceDeferredPurchaseProjection(card,fields){
+ // One hypothetical purchase only. Never include or modify the real ledger.
+ const I=window.TraceInternational,simulate=window.TraceDeferredDebit?.simulate;
+ if(accountType(card)!=='card'||card.paymentMode!=='deferred'||
+    !card.id||!card.owner||card.archived)
+  throw Error('Ce compte n’est pas une carte différée active.');
+ if(typeof simulate!=='function'||!I)
+  throw Error('Moteur du débit différé indisponible : simulation impossible.');
+ const checking=state.accounts.find(a=>a.id===card.settlementAccountId&&
+   a.owner===card.owner&&!a.archived&&accountType(a)==='checking');
+ if(!checking)throw Error('Compte courant lié indisponible ou non autorisé.');
+ const raw=String(fields?.amount??'').trim().replace(',','.');
+ if(!/^\d{1,7}(?:\.\d{1,2})?$/.test(raw))
+  throw Error('Montant incorrect : deux décimales maximum, en devise bancaire.');
+ const amount=I.exactMoney(raw);
+ if(amount===null||amount<=0||amount>1e7)
+  throw Error('Montant bancaire positif et exact au centime requis.');
+ const purchaseDate=String(fields?.purchaseDate||''),
+  budgetDate=String(fields?.budgetDate||''),
+  dueDate=String(fields?.dueDate||'');
+ if(![purchaseDate,budgetDate,dueDate].every(I.calendarDate))
+  throw Error('Renseigne trois dates calendaires valides : achat, budget et prélèvement.');
+ if(purchaseDate>dueDate||budgetDate>dueDate)
+  throw Error('Le prélèvement prévu ne peut précéder l’achat ou la date budgétaire.');
+ const currency=I.currency(card),asOfDate=localDateISO(),
+  forecastDate=purchaseDate>asOfDate?purchaseDate:asOfDate;
+ const scenario=simulate({card,checking,asOfDate:forecastDate,
+  purchases:[{id:'hypothetical-deferred-purchase',type:'deferred_purchase',
+   cardAccountId:card.id,currency,amount,
+   purchaseDate,budgetDate,dueDate,status:'confirmed'}],
+  refunds:[],fees:[],settlements:[]});
+ if(scenario.batches.length!==1||scenario.bankTransfers.length!==0||
+    scenario.checkingBalanceChange!==0||scenario.writes!==0||scenario.financialChanges!==0)
+  throw Error('Simulation non neutre sur le compte courant : projection refusée.');
+ const monthBudget=scenario.monthlyBudget[budgetDate.slice(0,7)];
+ if(!Number.isFinite(monthBudget)||monthBudget!==amount)
+  throw Error('Impact budgétaire du scénario incohérent : vérification nécessaire.');
+ return{currency,amount,purchaseDate,budgetDate,dueDate,
+  asOfDate:forecastDate,month:budgetDate.slice(0,7),monthBudget,
+  liability:scenario.liability,checkingMovement:0,
+  status:scenario.batches[0].status};
+}
+function traceDeferredPurchaseForm(card){
+ if(accountType(card)!=='card'||card.paymentMode!=='deferred'||
+    card.archived||card.owner!==me)return'';
+ return '<section class="trace-deferred-forecast" aria-label="Simulation d’achat différé">'+
+  '<h3>Simuler un achat différé</h3>'+
+  '<p>Simulation isolée, non enregistrée : renseigne les trois dates du relevé. '+
+   'Le prélèvement indiqué est <strong>prévu</strong>, pas constaté en banque.</p>'+
+  '<div class="trace-deferred-forecast-grid">'+
+   '<label>Montant '+esc(window.TraceInternational.currency(card))+
+    '<input id="traceDeferredForecastAmount" type="text" inputmode="decimal" '+
+     'autocomplete="off" placeholder="40,00"></label>'+
+   '<label>Date d’achat<input id="traceDeferredForecastPurchase" type="date"></label>'+
+   '<label>Date d’impact sur le budget<input id="traceDeferredForecastBudget" type="date"></label>'+
+   '<label>Date prévue de prélèvement<input id="traceDeferredForecastDue" type="date"></label>'+
+  '</div>'+
+  '<button type="button" class="secondary full" id="traceDeferredForecastRun">'+
+   'Vérifier les conséquences, sans enregistrer</button>'+
+  '<div id="traceDeferredForecastResult" class="trace-deferred-forecast-result" role="status" aria-live="polite">'+
+   'Aucune simulation effectuée. Aucun solde modifié.</div>'+
+  '<small>Montants en devise native seulement. La conversion CAD nécessite un taux historique daté. '+
+   'Aucune dépense, dette ni écriture bancaire n’est créée ici.</small></section>';
+}
+function bindTraceDeferredPurchaseForm(card){
+ const action=$('#traceDeferredForecastRun'),target=$('#traceDeferredForecastResult');
+ if(!action||!target)return;
+ const ids=['#traceDeferredForecastAmount','#traceDeferredForecastPurchase',
+  '#traceDeferredForecastBudget','#traceDeferredForecastDue'];
+ const inputs=ids.map(id=>$(id));
+ if(inputs.some(x=>!x)){action.disabled=true;return;}
+ const invalidate=()=>{target.textContent='Paramètres modifiés : relance une simulation. Rien n’a été enregistré.';};
+ inputs.forEach(input=>{input.addEventListener('input',invalidate);
+  input.addEventListener('change',invalidate);});
+ action.onclick=()=>{
+  target.textContent='Vérification des trois dates et du montant…';
+  try{
+   const outcome=traceDeferredPurchaseProjection(card,{
+    amount:inputs[0].value,purchaseDate:inputs[1].value,
+    budgetDate:inputs[2].value,dueDate:inputs[3].value});
+   const fmt=n=>esc(window.TraceInternational.money(n,outcome.currency));
+   target.innerHTML='<strong>Simulation hypothétique au '+esc(outcome.asOfDate)+
+    ' · achat isolé</strong>'+
+    '<p>Budget de '+esc(outcome.month)+' : '+fmt(outcome.monthBudget)+
+    ' de dépense prévue.</p>'+
+    '<p>Dette de cet achat à cette date : '+fmt(outcome.liability)+'.</p>'+
+    '<p>Prélèvement prévu le '+esc(outcome.dueDate)+
+    '. Compte courant : <strong>aucun débit effectué</strong>.</p>'+
+    '<p>Ce résultat ne représente pas la dette totale de cette carte.</p>'+
+    '<small>Aucune donnée enregistrée. La contre-valeur CAD n’est pas calculée sans taux vérifié.</small>';
+  }catch(error){
+   target.textContent='Simulation non validée : '+String(error?.message||'vérifications manquantes');
+  }
+ };
+}
 function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
  const a=state.accounts.find(x=>x.id===id&&['la','partner'].includes(x.owner)&&
   ['checking','card'].includes(accountType(x))&&
@@ -700,6 +795,7 @@ function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
   '<div><span>Dernier rapprochement</span><b>'+esc(reconcile?.date||'À effectuer')+'</b></div>'+
   '</div>'+
   traceDeferredAccountReview(a)+
+  traceDeferredPurchaseForm(a)+
   (a.owner===me&&!a.archived&&accountType(a)==='checking'?
   '<button type="button" class="trace-intl-set-primary" id="traceAccountSelectPrimary">'+
   (state.household.primaryBankAccountByOwner?.[me]===a.id?'★ Compte principal':'☆ Définir comme principal')+'</button>':'')+
@@ -708,6 +804,7 @@ function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
     '<p class="empty-note">Aucune opération enregistrée sur ce compte.</p>')+'</div>'+
   '<button type="button" class="primary full" id="traceAccountAllTx" style="margin-top:12px">Voir toutes les opérations</button>'+
   '<button type="button" class="secondary full" id="traceAccountDetailBack" style="margin-top:8px">Retour aux comptes</button>');
+ bindTraceDeferredPurchaseForm(a);
  $('#traceAccountDetailBack').onclick=typeof onBack==='function'?onBack:openAccountsOverview;
  $('#traceAccountAllTx').onclick=()=>openTraceAccountActivity(a.id);
  const primary=$('#traceAccountSelectPrimary');

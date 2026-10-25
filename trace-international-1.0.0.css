@@ -266,3 +266,15 @@
 .trace-deferred-batches>div{border:1px solid #e0eae3;border-radius:11px;padding:9px;background:#fff;display:flex;gap:5px 8px;align-items:center;flex-wrap:wrap;font-size:12px}
 .trace-deferred-batches span{color:#507563}
 .trace-deferred-batches b{margin-left:auto;font-size:12px;overflow-wrap:anywhere}
+
+/* Deferred debit: candidate-only, read-only hypothetical purchase preview. */
+.trace-deferred-forecast{border:1px solid #d9e9dd;border-radius:16px;background:#f9fcfa;padding:14px;margin:13px 0;color:#254f41}
+.trace-deferred-forecast h3{font-size:14px;color:#215c49;margin:0 0 8px}
+.trace-deferred-forecast p,.trace-deferred-forecast small{font-size:12px;line-height:1.5}
+.trace-deferred-forecast small{display:block;margin-top:9px;color:#628071}
+.trace-deferred-forecast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.trace-deferred-forecast-grid label{min-width:0;display:grid;gap:5px;font-size:12px;font-weight:700}
+.trace-deferred-forecast-grid input{width:100%;min-width:0;max-width:100%;border:1px solid #cddfd5;border-radius:10px;padding:11px 8px;font-size:16px;color:#254f41;background:#fff}
+.trace-deferred-forecast-result{margin-top:10px;background:#eef5ef;border:1px solid #d8e9dc;border-radius:12px;padding:10px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.trace-deferred-forecast-result p{margin:7px 0}
+@media(max-width:420px){.trace-deferred-forecast-grid{grid-template-columns:1fr}.trace-deferred-forecast{padding:12px}}
