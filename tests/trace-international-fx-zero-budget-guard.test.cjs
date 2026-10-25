@@ -38,3 +38,24 @@ test('one-unit CAD account needs no FX conversion and stays nonzero',()=>{
  const t=I.resolveBooking({account:cad,bankAmount:0.01,date:at});
  assert.equal(t.amountCAD,0.01);assert.equal(t.bankAmount,0.01);
 });
+
+test('finite but overflowing FX quote cannot produce infinite budget or assets',()=>{
+ const quote={currency:'EUR',cadPerUnit:1e308,date:at,source:'Fictional extreme rate'};
+ assert.equal(I.fxValue(40,'EUR',quote),null);
+ assert.throws(()=>I.resolveBooking({account,bankAmount:40,date:at,quote}),/Taux CAD requis/);
+ const view=I.snapshot({accounts:[account],owner:'la',mainId:'eur',
+  estimates:{eur:40},fxRates:{EUR:quote}});
+ assert.equal(view.complete,false);
+ assert.equal(view.globalCAD,null);
+});
+test('FX amounts exceeding safe cent precision stay unknown rather than a fake wealth total',()=>{
+ const quote={currency:'EUR',cadPerUnit:1e14,date:at,source:'Fictional unsafe rate'};
+ assert.equal(I.fxValue(100,'EUR',quote),null);
+ const view=I.snapshot({accounts:[account],estimates:{eur:100},fxRates:{EUR:quote}});
+ assert.equal(view.complete,false);assert.equal(view.globalCAD,null);
+});
+test('ordinary foreign credit and debit balances still use their native currency',()=>{
+ const quote={currency:'EUR',cadPerUnit:1.6,date:at,source:'Fictional quote'};
+ assert.equal(I.fxValue(-30,'EUR',quote),-48);
+ assert.equal(I.fxValue(30,'EUR',quote),48);
+});

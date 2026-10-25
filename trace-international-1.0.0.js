@@ -52,9 +52,16 @@
   if(t.bankAmount!==null&&t.bankAmount!==undefined&&t.bankAmount!=='')return exactMoney(t.bankAmount);
   return code==='CAD'?exactMoney(t.amountCAD):null;
  };
- const fxValue=(native,code,quote)=>!numeric(native)||!valid(code)?null:code==='CAD'?round(native):
-  verifiedQuote(quote,code)?
-   round(native*Number(quote.cadPerUnit)):null;
+ const fxValue=(native,code,quote)=>{
+  if(!numeric(native)||!valid(code))return null;
+  const value=code==='CAD'?Number(native):
+   verifiedQuote(quote,code)?Number(native)*Number(quote.cadPerUnit):null;
+  // A finite quote can still overflow when multiplied by an account balance.
+  // An unsafe number of cents must be unknown, never displayed as real wealth.
+  if(value===null||!Number.isFinite(value)||
+     !Number.isSafeInteger(Math.round(value*100)))return null;
+  return round(value);
+ };
  const primary=(accounts,owner,primaryId)=>{
   const list=(accounts||[]).filter(a=>(!owner||a.owner===owner)&&!a.archived&&['checking','card'].includes(a.type));
   return list.find(a=>a.id===primaryId&&a.type==='checking')||
