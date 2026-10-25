@@ -1,3 +1,21 @@
+# REPRISE 25 OCTOBRE 2026 — ADAPTATEUR DE RELEVÉS STRUCTURÉS POUR LE DIFFÉRÉ
+
+**HEAD à revérifier au prochain lancement :** `7fba0e68bb58f5dc33f7d591ae37e3bba7e36708` (commit de test). Branche d'écriture **exclusivement** `trace-5.37.0-international-accounts-fx`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` intacte ; aucun déploiement, PR, fusion, CI, Supabase réel ou modification de production.
+
+**Nouveaux commits candidats `[skip ci]` :**
+- `224f73dc08ed3aca44af437071033a8e8042693b` — ajout de `trace-deferred-statement-bridge-1.0.0.js`, pur/read-only, qui transforme les résultats de `TraceStatementEvidence.stage/reviewedRows` issus de lignes PDF/CSV **déjà structurées** en relevés de carte ou de courant utilisables par les contrôleurs existants. Toutes les lignes doivent être approuvées, classées et rattachées au snapshot intégral du document ; source physique/import, compte, devise, période, page/ligne et texte d'origine conservés. Classification achetée/débit/frais/remboursement explicite et sens cohérent. Complétude seulement **attestée localement par un humain**, pas une preuve automatique de couverture du PDF ni une authentification bancaire. `persistable:false`, `writes:0`.
+- `b9e97ad965f94f0489720a6e52f15bc5fe15e1fc` — sept scénarios d'intégration croisée sur les vrais modules source : achat fictif 40 EUR, valorisation fictive 64 CAD, prélèvement 12,35 EUR, documents PDF et CSV structurés, contrôles séparés, péremption, zéro mutation.
+- `176a46fc2a13884d6be4bb1e932a334c9470580b` — l'interface de **laboratoire uniquement** `trace-deferred-evidence-lab-1.0.0.js` crée désormais les deux documents en passant réellement par `TraceStatementEvidence.stage` et `TraceDeferredStatementBridge.convert`, au lieu de fabriquer directement des documents complets. Ajout du bridge aux scripts de `trace-international-preview.html`, pas à la production.
+- `7fba0e68bb58f5dc33f7d591ae37e3bba7e36708` — cinq tests de parcours preview utilisant neuf vrais modules et DOM simulé.
+
+**Preuve reproductible ce lot : 77/77 tests V8 simulant Node, fs et vm sur sept suites** (17 write-plan + 22 intake + 12 intake avec vrais modules + 9 bridge + 7 source-to-intake + 5 UI simulée + 5 preview avec neuf vrais modules). Tests localement exécutés sous V8 avec les vraies sources GitHub ; **CE NE SONT PAS des exécutions Node CLI natives**, ni PostgreSQL/PGlite, RLS/Auth/CAS, Chromium ou Safari. Un test `node --test` de 27 cas isolés du chantier précédent a été réexécuté dans le conteneur **avant** les changements UI de ce lot, il ne qualifie donc pas le nouveau HEAD. Les 219/219 V8 initiaux restent historiques.
+
+**Important :** `trace-international-preview-sw.js` est encore potentiellement **périmé**, ne pas éditer manuellement : regénérer uniquement par `node scripts/build-trace-preview-pwa.mjs` depuis un checkout local complet, puis `--check`. Aucun vrai fichier PDF/CSV, parseur de banque, import persisté, flux `pending` ou confirmation serveur n'est livré par ce pont. Il reste à connecter l'interface des imports existants à une revue sûre, après contrôle du moteur et des permissions en PostgreSQL fictif avec deux clients ; ensuite multi-devises/Couple, frais/refunds, UX premium, PWA offline/iPhone et restauration/rollback avant GO explicite.
+
+**NO-GO production.**
+
+---
+
 # ADDENDUM 25 OCTOBRE 2026 — PLAFOND DES RÈGLEMENTS PARTIELS EXCLUSIFS
 
 Branche exclusive `trace-5.37.0-international-accounts-fx`. HEAD de code connu `1d85b2adb3bdd27b9d6f90d8fcc78a036e925046`, à revérifier. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` intact.

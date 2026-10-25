@@ -1,3 +1,17 @@
+## Raccordement des relevés PDF/CSV structurés à la revue différée (25 octobre 2026)
+
+- [x] Pont **local et sans écriture** `TraceDeferredStatementBridge.convert` : sources préalablement structurées PDF/CSV via `TraceStatementEvidence.stage`, `reviewedRows`, contrôle de toutes les lignes, classifications signées uniquement par snapshot local, identification source/version, revue de complétude humaine, montants natifs, compte/devise/dates/page/ligne/texte d'origine.
+- [x] Reconnaissance stricte des natures carte achat/remboursement/frais/paiement et courant débit/crédit, directions cohérentes ; lignes malformées, non classées, non approuvées ou modifiées refusées. Les attestations sont **non cryptographiques, non bancaires et non certifiées côté serveur**.
+- [x] Le laboratoire fictif `trace-international-preview.html` utilise désormais le **vrai staging/bridge** pour fabriquer ses deux justificatifs locaux, au lieu de les créer directement comme documents complets. Deux attestations distinctes et expiration individuelle lors du changement de source, 0 transaction.
+- [x] 4 commits : `224f73d`, `b9e97ad`, `176a46f`, `7fba0e6` ; toujours `[skip ci]` et seulement sur la branche candidate.
+- [x] **77/77 vérifications V8 simulées** sur 7 suites de code candidat ; pas de Node CLI natif, PostgreSQL/PGlite, navigateur, OCR/PDF binaire ou flux cloud au HEAD actuel.
+- [ ] **BLOQUANT** — relier les imports réels de relevés PDF/CSV aux états de revue utilisateur avec des données **fictives**, sans écrire en base ; gérer la complétude de toutes les lignes et les différences d'interprétation.
+- [ ] **BLOQUANT** — qualifications natives Node et PGlite/PostgreSQL 07/08/09 Auth/RLS/CAS 2 clients sur checkout isolé ; préconditions `pending` → `confirmed` et prévention des doublons côté serveur.
+- [ ] **BLOQUANT** — reconstruire `trace-international-preview-sw.js` avec le script officiel, QA Chromium/offline/iPhone Safari, restauration et rollback. Conserver désactivation cartes différées et aucune production.
+- [ ] Finalisation multi-devises, Couple, frais/refunds/allocations et design premium avant un GO humain explicite. **NO-GO**.
+
+---
+
 ## Débit différé — garde de règlement exclusivement attribué à un achat (25 octobre 2026)
 
 - [x] `TraceDeferredEvidenceIntake` vérifie `checkingAccountId` du plan, devise du relevé courant et présence **sans doublon** de l'achat ciblé dans `purchaseIds` (commits `360ad429`, `fd1a241`).

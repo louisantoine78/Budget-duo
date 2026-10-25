@@ -1,3 +1,21 @@
+## Lot 25 octobre 2026 — chaîne de preuve du relevé préparé à la revue différée
+
+**Code candidat ajouté :**
+1. `224f73dc08ed3aca44af437071033a8e8042693b` — `TraceDeferredStatementBridge.convert` transforme, **sans écriture**, un `TraceStatementEvidence.stage` avec revue complète des lignes en document de relevé exploitable dans `TraceDeferredPurchaseEvidence.review` (achat, crédit, frais, paiement de carte) ou `TraceDeferredBankReview.compare` (courant). Entrées explicites et obligatoires : type carte/courant, source `pdf_extracted` / `csv` déjà structurée, identité physique/import, approbations de chaque ligne et classifications/sens de chaque ligne liés à `statementKey`, attestation de complétude du nombre attendu de lignes. Conserve page, ligne, extrait original, centimes/devise/date. Toute ambiguïté, édition ou attestation expirée renvoie `status:'blocked'`. `statement.complete:true` signifie **seulement complétude localement déclarée** ; pas de garantie OCR/PDF réelle, pas d'authentification bancaire ni unicité serveur.
+2. `b9e97ad965f94f0489720a6e52f15bc5fe15e1fc` — nouveau test `tests/trace-deferred-statement-real-integration.test.cjs` avec les **vraies sources** des deux contrôleurs, moteur FX, write-plan, `TraceStatementEvidence`, bridge et intake. Montre deux attestations indépendantes en EUR, classification obligatoire, origine bancaire non substituable, token périmé, aucune écriture.
+3. `176a46fc2a13884d6be4bb1e932a334c9470580b` — modification de la **seule** preview fictive et de `trace-deferred-evidence-lab-1.0.0.js`, qui utilise désormais réellement le staging et bridge sur ses deux sources fictives (achat carte 40 €, prélèvement 12,35 €), sans écriture. Les boutons de modification font expirer séparément les versions source. Test UI historique adapté pour charger les nouveaux moteurs.
+4. `7fba0e68bb58f5dc33f7d591ae37e3bba7e36708` — `tests/trace-deferred-evidence-preview-real-modules.test.cjs` vérifiant la démo entière avec 9 modules candidat, DOM simulé, jamais production.
+
+**Tests effectivement rejoués sur le dernier HEAD de code : 77/77 V8 ciblés réussis, zéro échec**, avec Node/fs/vm simulés :
+- 17 préparation achat, 22 contrôles intake, 12 tests intake/moteurs réels ;
+- 9 tests du bridge, 7 tests croisés staging/import structuré/contrôleurs réels ;
+- 5 tests UI avec sous-contrôleurs simulés, 5 tests UI avec les neuf modules réels et DOM simulé.
+- Un essai interactif supplémentaire V8 montre les états `needs_human_review → manual_review_current → stale_review` lors du changement du document carte et du courant. **Aucun** test de vrais navigateurs, PDF, CSV parseur, PostgreSQL/PGlite ou Node CLI complet n'est revendiqué.
+
+**BLOQUANTS :** ce raccordement utilise des lignes de source déjà structurées et des données fictives ; il n'est PAS encore branché au traitement des uploads de l'utilisateur ni au flux de sauvegarde `pending`. Le vrai Node CLI complet / SQL 07/08/09 Auth/RLS/CAS deux sessions restent à exécuter dans un checkout isolé. Le SW de laboratoire est périmé après changement de HTML/JS et doit être reconstruit via générateur, jamais à la main. Tests Chromium offline, Safari iPhone, couverture Couple/FX, frais/remboursements/allocations, sauvegarde/rollback et autorisation avant production. Production 5.36.5, `main`, Supabase réel, GitHub Actions, PR, fusion et déploiement intacts. **NO-GO.**
+
+---
+
 ## Lot du 25 octobre 2026 — plafonnement des prélèvements exclusifs au centime natif
 
 **Commit** `1d85b2adb3bdd27b9d6f90d8fcc78a036e925046` (`[skip ci]`) sur la seule branche candidate. Après le contrôle du lien `checkingAccountId` et de `purchaseIds`, le module `TraceDeferredEvidenceIntake.review` contrôle maintenant un cas déterministe supplémentaire : **plusieurs prélèvements partiels exclusivement affectés à un achat unique, sans frais de carte, ne doivent pas dépasser le montant natif de cet achat**. Comparaison en centimes exacts, y compris test de sous-centimes malformés ; un total exactement égal au prix de l'achat reste présentable en **revue locale** et ne devient jamais une écriture.
