@@ -3211,6 +3211,9 @@ async function smartApproveDraft(id,v){
   throw Error('Capture en devise étrangère : seuls les achats explicitement vérifiés peuvent être confirmés. Cette ligne reste en attente.');
  const accountKind=accountType(bankAccount);
  const expectedDirection=window.TraceImportGuide.direction(requestedType,accountKind,name);
+ // Source bank debit/credit is immutable evidence, never editable classification.
+ if(['in','out'].includes(d.bankDirection)&&d.bankDirection!==expectedDirection)
+  throw Error('Sens bancaire incohérent avec la capture : vérifie débit/crédit avant confirmation.');
  if(!window.TraceImportGuide.allowed(requestedType,accountKind,expectedDirection))
   throw Error('La nature ne correspond pas au compte bancaire. Vérifie le compte et le sens du mouvement.');
  if(accountKind==='card'&&window.TraceImportGuide.cardStatementSettlementLabel(name))

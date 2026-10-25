@@ -272,15 +272,20 @@ function applyApprovalConstraints(el){
   duplicateReviewed=!duplicateCheck||duplicateCheck.checked,
   foreign=(bank?.currency||'CAD').toUpperCase()!=='CAD',
   currentOwner=bridge().currentOwner?.(),
-  // A captured credit cannot be made an expense by changing the dropdown.
+  // Reject a selected nature opposing the OCR bank debit/credit, including CAD.
   capturedDirection=el.dataset.bankDirection||'',
-  safeForeignPurchase=foreign&&type==='expense'&&capturedDirection!=='in'&&
+  expectedDirection=guide.direction?.(type,bank?.type,name)||'',
+  directionConflict=['in','out'].includes(capturedDirection)&&
+   capturedDirection!==expectedDirection,
+  safeForeignPurchase=foreign&&type==='expense'&&!directionConflict&&
    !!bank?.owner&&!!currentOwner&&bank.owner===currentOwner&&typeof guide.safeForQuickApproval==='function'&&
    guide.safeForQuickApproval(bank.type,'expense',name),
   foreignReviewed=safeForeignPurchase&&!!el.querySelector('.smart-foreign-nature-confirm')?.checked;
- btn.disabled=btn.dataset.duplicateBlocked==='yes'||!duplicateReviewed||!valid||cardMatch||(foreign&&!foreignReviewed);
+ btn.disabled=btn.dataset.duplicateBlocked==='yes'||!duplicateReviewed||!valid||directionConflict||
+  cardMatch||(foreign&&!foreignReviewed);
  btn.textContent=btn.dataset.duplicateBlocked==='yes'?'Déjà comptabilisée':
   !duplicateReviewed?'Comparer les doublons avant de confirmer':
+  directionConflict?'Sens bancaire incompatible · À vérifier':
   foreign?(safeForeignPurchase?'Confirmer cet achat étranger':'À vérifier · devise étrangère'):
   cardMatch?'Rapproche ce paiement pour éviter un doublon':'Confirmer l’opération';
 }

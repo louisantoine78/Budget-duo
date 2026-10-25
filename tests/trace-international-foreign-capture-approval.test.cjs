@@ -10,7 +10,8 @@ const si=app.indexOf('async function smartApproveDraft(id,v){'),ei=app.indexOf('
 assert.ok(si>=0&&ei>si);
 const approveSource=app.slice(si,ei);
 function env(options={}){
- const bank={id:'fr',owner:'la',type:'checking',currency:'EUR',country:'FR'};
+ const bank={id:'fr',owner:'la',type:'checking',currency:options.bankCurrency||'EUR',
+  country:options.bankCurrency==='CAD'?'CA':'FR'};
  const d={id:'draft',kind:'smart_draft',status:'pending',accountId:'fr',date:'2026-10-12',
   bankDirection:options.bankDirection||'',amount:40,name:'Librairie',sourceFileName:'fake.png'};
  const state={accounts:[bank],smartImports:[d],transactions:[],investmentAccounts:[],
@@ -36,7 +37,7 @@ function env(options={}){
  const input={verified:true,foreignNatureConfirmed:true,date:'2026-10-12',name:options.name||'Librairie',
   type:options.type||'expense',amount:'40',categoryId:'books',beneficiary:'la',
   manualFxRate:options.manualRate===undefined?'1.60':options.manualRate,
-  purchaseCurrency:options.currency||'EUR',
+  purchaseCurrency:options.currency||options.bankCurrency||'EUR',
   purchaseAmount:options.original===undefined?'40':options.original};
  return{bank,d,state,writes,approve,input};
 }
@@ -184,4 +185,36 @@ test('foreign OCR rejects a draft object replaced or resolved during FX wait',as
  }});
  await assert.rejects(c.approve('draft',c.input),/changé pendant la recherche du taux/);
  assert.equal(c.writes.length,0);
+});
+
+test('CAD capture marked bank credit cannot be confirmed as an expense',async()=>{
+ const c=env({bankCurrency:'CAD',bankDirection:'in'});
+ await assert.rejects(c.approve('draft',c.input),/Sens bancaire incohérent/);
+ assert.equal(c.writes.length,0);assert.equal(c.d.status,'pending');
+});
+test('CAD captured debit remains valid without foreign FX',async()=>{
+ const c=env({bankCurrency:'CAD',bankDirection:'out'});
+ const result=await c.approve('draft',c.input);
+ assert.equal(result.saved,true);assert.equal(c.writes[0].item.amountCAD,40);
+ assert.equal(c.writes[0].item.bankCurrency,'CAD');
+});
+test('CAD bank debit cannot be relabeled as an income credit',async()=>{
+ const c=env({bankCurrency:'CAD',bankDirection:'out',type:'income'});
+ await assert.rejects(c.approve('draft',c.input),/Sens bancaire incohérent/);
+ assert.equal(c.writes.length,0);
+});
+test('CAD UI locks confirmation if the capture says credit but expense is chosen',()=>{
+ const i=ui.indexOf('function applyApprovalConstraints(el){'),
+  j=ui.indexOf('function synchronizeRow(',i);
+ assert.ok(i>0&&j>i);
+ const bank={id:'fr',owner:'la',type:'checking',currency:'CAD'},
+  button={disabled:false,dataset:{duplicateBlocked:'no'},textContent:''};
+ const q={'.smart-approve':button,'.smart-type':{value:'expense'},
+  '.smart-direction':{value:'out'},'.smart-name':{value:'Librairie'}};
+ const el={dataset:{bankDirection:'in'},querySelector:key=>q[key]},
+  bridge=()=>({accounts:()=>[bank],currentOwner:()=> 'la'});
+ const window={};new Function('window',guide)(window);new Function('window',movement)(window);
+ const apply=new Function('bridge','account','window',ui.slice(i,j)+'return applyApprovalConstraints;')(bridge,'fr',window);
+ apply(el);assert.equal(button.disabled,true);assert.match(button.textContent,/Sens bancaire incompatible/);
+ el.dataset.bankDirection='out';apply(el);assert.equal(button.disabled,false);
 });
