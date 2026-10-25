@@ -1,3 +1,18 @@
+## Lot du 25 octobre 2026 — séparation de la date budgétaire et préparation d'écriture différée
+
+**3 commits de code uniquement sur `trace-5.37.0-international-accounts-fx` :**
+- `445ee9642c98fcfe21b643ef78abf209ce7bd0ac` : sélection du mois budgétaire par `budgetDate` pour achats explicitement `deferredKind:'purchase'` et remboursements `deferredKind:'merchant_refund'` ; les opérations historiques non taguées restent dans leur ancien mois `date`. Aucun changement de date bancaire, ni nouvelle dépense lors du transfert de règlement. Une date budgétaire malformée n'est jamais remplacée implicitement par une autre date.
+- `7e7b2bb7b39de861bfdbba322a35f8757346249f` : la revue read-only `traceDeferredAccountReview` reconnaît désormais le même marqueur explicite `deferredKind:'purchase'` ; les marqueurs inconnus sont refusés plutôt que comptés comme achats.
+- `908d46cfe40aa67b3c12c899dbc747e6a14296b4` : nouveau moteur pur `trace-deferred-write-plan-1.0.0.js`, méthode `TraceDeferredWritePlan.prepare`. Il prépare un **document de transaction candidat, inexportable vers la base par ce module**, au statut strict `pending`, `persistable:false` / `confirmed:false`, et n'a **aucune fonction d'écriture**. Entrées obligatoires : carte différée + compte courant lié/autorisé/même devise+pays, titulaire, libellé, identifiant unique, montant exact natif, date achat, date budget, date prévue du débit et catégorie de dépense active. `TraceInternational.resolveBooking` exige taux CAD daté/sourcé pour compte EUR/USD/GBP/CHF (jamais taux 1 inventé, jamais zéro CAD d'arrondi), conservation de la devise de l'achat et du montant original ; avertissement doublon bancaire sur même compte/date/libellé/montant natif. `TraceDeferredDebit.simulate` valide le contrat d'échéance avec achat fictif, **sans règlement ni écriture**, et l'objet renvoie les effets **uniquement si confirmé ultérieurement**. Répartition personnelle 100 % du titulaire, pas d'appropriation de compte partenaire.
+
+**Portée :** préparation du schéma et de la validation backend, mais **aucune saisie de transaction différée enregistrable**, aucun appel CAS/SQL et aucune modification de la vraie base ou de `main`. Le nouveau module n'est pas encore câblé à l'UI ou au service worker, il est autonome et testable : ne pas annoncer « débit différé activé ». La fonction read-only précédente et le simulateur restent disponibles dans la candidate laboratoire. Les cartes différées restent non activables dans les contrôles d'ajout de compte.
+
+**Tests du lot : 166/166 vérifications sous V8 fictif** sur sept suites : 14 préparation document, 12 date budgétaire, 14 revue compte différé, 15 achat simulé, 14 détails comptes, 84 moteur différé, 13 parcours premium. Simulations réelles du code repo dans un environnement **Node/VM/FS mocké**, ce n'est pas Node CLI natif, PGlite ni Safari. L'outil `scripts/check-trace-537-release-gates.cjs` est toujours non exécuté faute de checkout local complet et PGlite dans cet environnement.
+
+**Avant tout GO :** étendre la prise en compte `budgetDate` à tous les widgets de période applicables, construire une édition/revue documentée, créer la transition `pending` → `confirmed` sous CAS/RLS/auth et justification bancaire fiable, gérer règlements/frais/remboursements avec preuves, tests PostgreSQL **fictifs** 07/08/09 et multi-client, PWA Chromium offline/iPhone Safari, régénérer SW laboratoire par générateur (la modification du JS de l'app a pu périmer son cache), sauvegarde/rollback. Aucune production, Supabase réel, fusion, PR ni workflows CI. **NO-GO.**
+
+---
+
 ## Lot du 25 octobre 2026 — simulateur d'achat différé à trois dates
 
 **Nouveaux commits sur la seule branche `trace-5.37.0-international-accounts-fx` :**

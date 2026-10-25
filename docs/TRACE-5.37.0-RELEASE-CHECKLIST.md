@@ -1,3 +1,15 @@
+## Débit différé — dates budgétaires et contrat d'écriture, 25 octobre 2026
+
+- [x] Budget/Home/catégories/année reposant sur `txs` : opération `expense` avec `deferredKind:'purchase'` affectée au mois `budgetDate` plutôt qu'au mois d'achat ; remboursement `deferredKind:'merchant_refund'` idem. Les anciennes transactions sans marqueur restent inchangées. Date invalide = pas d'écriture fictivement attribuée à un mois.
+- [x] Revue de carte différée reconnaît les achats `deferredKind:'purchase'` et refuse un marqueur non identifié.
+- [x] Nouveau `trace-deferred-write-plan-1.0.0.js` (non câblé à l'app) préparant seulement un objet `status:'pending'`, **non persistable** ; contrôle compte/titulaire, montant natif, date achat/budget/échéance, catégorie, devises achat/compte, quote CAD datée/sourcée, doublons et effets de simulation neutres.
+- [x] **166/166 vérifications V8 fictives** en sept suites : 14 + 12 + 14 + 15 + 14 + 84 + 13, aucun test Node natif/SQL/browser.
+- [ ] Lier la revue des documents en attente aux imports/relevés et aux corrections de doublons ; ne permettre `pending` → `confirmed` qu'après validation bancaire et tests Auth/RLS/CAS en PostgreSQL fictif. Les cartes différées sont toujours non activables et le module n'a pas d'écriture réseau.
+- [ ] Vérifier les autres vues date/période, la granularité des allocations Couple, saisie/édition des achats, remboursements, frais et règlements. Tester toutes les suites natives et les deux clients CAS.
+- [ ] Régénérer SW du labo avec son script, exécuter `scripts/check-trace-537-release-gates.cjs` sur checkout isolé avec PGlite, QA Chromium offline et Safari iPhone, sauvegarde/rollback. **NO-GO production**.
+
+---
+
 ## Formulaire de simulation d'achat différé à trois dates — 25 octobre 2026
 
 - [x] Sur la fiche d'une carte différée du titulaire : montant bancaire natif et dates **achat / impact budgétaire / prélèvement prévu** saisis distinctement, sans valeur présumée.

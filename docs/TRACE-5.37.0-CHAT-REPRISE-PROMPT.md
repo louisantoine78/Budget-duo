@@ -1,3 +1,17 @@
+# ADDENDUM DE REPRISE — DATE BUDGÉTAIRE + DOCUMENT EN ATTENTE DIFFÉRÉ (25 OCT 2026)
+
+Sur branche exclusive `trace-5.37.0-international-accounts-fx`, trois commits de code `[skip ci]` (HEAD de code dernier vérifié `908d46cfe40aa67b3c12c899dbc747e6a14296b4`, à re-vérifier au redémarrage). Main `02c70f50e7e51da79b77a91dde96a03c6c719909` reste intangible, pas de données Supabase réelles, PR, fusion, CI, SW prod ou déploiement.
+
+- `445ee9642c98fcfe21b643ef78abf209ce7bd0ac` : `traceBudgetPostingMonth(t)` et `txs` utilisent le mois `budgetDate` **uniquement** pour achats différés `deferredKind:'purchase'` et remboursements différés `deferredKind:'merchant_refund'`. Transactions historiques non taguées et date bancaire `t.date` inchangées ; règlements carte toujours hors budget ; budget date manquante n'est jamais devinée.
+- `7e7b2bb7b39de861bfdbba322a35f8757346249f` : revue différée de fiche carte reconnaît les achats tagués `purchase` (auparavant ils auraient été rejetés) ; marqueur inconnu verrouille la projection.
+- `908d46cfe40aa67b3c12c899dbc747e6a14296b4` : nouveau module autonome `trace-deferred-write-plan-1.0.0.js` sans écriture et **non chargé dans l'interface**. Prépare une proposition candidate `pending`, `persistable:false` avec 3 dates, montant natif exact, catégorie active, propriétaire/compte lié, conversion CAD historique datée/sourcée et prix devise d'achat distinct, détection doublon sur compte/date/montant/nom natifs, répartition 100 % propriétaire et moteur `TraceDeferredDebit.simulate` sans paiement/dépense supplémentaire. Zéro écriture de base, aucun statut confirmé.
+
+**166/166 tests V8 simulés** repassés sur sept suites. Ceci n'a PAS exécuté Node CLI, migrations PostgreSQL/PGlite 07/08/09, navigateurs ni Safari. `scripts/check-trace-537-release-gates.cjs` présent mais environnement sans checkout/PGlite. Le SW laboratoire peut être périmé après JS modifié et doit être reconstruit via script, jamais à la main.
+
+**Prochaine étape réelle** : raccordement au flux de revue sans persister avant d'avoir validé les règles et permissions CAS en base fictive, réconciliation achat/règlement avec justificatifs, écriture `pending` puis confirmation autorisée seulement après QA, garantir budgets et répartitions Couple, dates et FX, tests natifs Node + PGlite, Chromium offline + iPhone Safari, backup/rollback. Ne pas activer le sélecteur de carte différée ou annoncer une release. **NO-GO** jusqu'à preuve et accord explicite.
+
+---
+
 # ADDENDUM DE REPRISE — ACHAT DIFFÉRÉ À TROIS DATES (25 OCT 2026)
 
 **Branche exclusive :** `trace-5.37.0-international-accounts-fx`. Dernier HEAD **de code** confirmé : `d0953eda57dfc3f229f7462c64971ced8aa62992`; lire le HEAD GitHub courant à la reprise. Stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intangible. Ne pas modifier la production 5.36.5, les données Supabase réelles, déployer, fusionner, ouvrir PR ou lancer Actions ; tout commit candidate `[skip ci]`.
