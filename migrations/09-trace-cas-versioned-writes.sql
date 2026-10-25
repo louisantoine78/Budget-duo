@@ -77,6 +77,33 @@ begin
       using errcode = '42501';
   end if;
 
+  -- An investment movement can change a portfolio or a linked bank balance.
+  -- Verify BOTH native account references inside this SECURITY DEFINER RPC;
+  -- otherwise one member could use a partner-owned account ID as a write target.
+  if p_collection = 'investment_operations' then
+    if coalesce(p_data->>'accountId','') = '' or not exists (
+      select 1 from public.documents investment
+      where investment.household_id = p_household_id
+        and investment.collection = 'investment_accounts'
+        and investment.item_id = p_data->>'accountId'
+        and investment.data->>'owner' = actor_slot
+    ) then
+      raise exception 'TRACE_WRITE_FORBIDDEN: investment account not owned by caller'
+        using errcode = '42501';
+    end if;
+    if nullif(p_data->>'bankAccountId','') is not null and not exists (
+      select 1 from public.documents bank
+      where bank.household_id = p_household_id
+        and bank.collection = 'accounts'
+        and bank.item_id = p_data->>'bankAccountId'
+        and bank.data->>'owner' = actor_slot
+        and bank.data->>'type' = 'checking'
+    ) then
+      raise exception 'TRACE_WRITE_FORBIDDEN: investment bank account not owned by caller'
+        using errcode = '42501';
+    end if;
+  end if;
+
   if p_expected_revision is null then
     insert into public.documents(household_id,collection,item_id,data,updated_by)
     values(p_household_id,p_collection,p_item_id,p_data,auth.uid())
@@ -94,6 +121,13 @@ begin
       and d.revision = p_expected_revision
       and (p_collection not in ('accounts','investment_accounts')
            or d.data->>'owner' = actor_slot)
+      and (p_collection <> 'investment_operations' or exists (
+        select 1 from public.documents original_portfolio
+        where original_portfolio.household_id = p_household_id
+          and original_portfolio.collection = 'investment_accounts'
+          and original_portfolio.item_id = d.data->>'accountId'
+          and original_portfolio.data->>'owner' = actor_slot
+      ))
     returning revision into current_revision;
   end if;
 
@@ -140,8 +174,13 @@ begin
   delete from public.documents d
   where d.household_id = p_household_id and d.collection = p_collection
     and d.item_id = p_item_id and d.revision = p_expected_revision
-    and (p_collection not in ('accounts','investment_accounts')
-         or d.data->>'owner' = actor_slot)
+    and (p_collection <> 'investment_operations' or exists (
+      select 1 from public.documents original_portfolio
+      where original_portfolio.household_id = p_household_id
+        and original_portfolio.collection = 'investment_accounts'
+        and original_portfolio.item_id = d.data->>'accountId'
+        and original_portfolio.data->>'owner' = actor_slot
+    ))
   returning item_id into deleted_id;
   if deleted_id is null then
     raise exception 'TRACE_WRITE_CONFLICT: document missing or modified'

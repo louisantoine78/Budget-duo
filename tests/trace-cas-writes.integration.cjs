@@ -76,6 +76,33 @@ async function run(){
    await assert.rejects(rpcDelete(1,'accounts','partner',0),/TRACE_WRITE_CONFLICT/);
    assert.equal((await readDoc('accounts','partner')).data.owner,'partner');
   });
+  await check('investment operations require native portfolio and banking ownership',async()=>{
+   const ownPortfolio={id:'pea-la',owner:'la',type:'broker',currency:'EUR'};
+   const otherPortfolio={id:'pea-partner',owner:'partner',type:'broker',currency:'EUR'};
+   await rpcSave(1,'investment_accounts','pea-la',ownPortfolio,null);
+   await rpcSave(2,'investment_accounts','pea-partner',otherPortfolio,null);
+   const ownOperation={id:'op-la',accountId:'pea-la',type:'deposit',
+    bankAccountId:'la',bankAmount:40,bankCurrency:'CAD',status:'confirmed'};
+   const otherOperation={id:'op-partner',accountId:'pea-partner',type:'deposit',
+    bankAccountId:'partner',bankAmount:20,bankCurrency:'EUR',status:'confirmed'};
+   assert.equal((await rpcSave(1,'investment_operations','op-la',ownOperation,null)).rows[0].revision,0);
+   assert.equal((await rpcSave(2,'investment_operations','op-partner',otherOperation,null)).rows[0].revision,0);
+   await assert.rejects(rpcSave(2,'investment_operations','forged', {
+    ...ownOperation,id:'forged'},null),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'investment_operations','foreign-bank',{
+    ...ownOperation,id:'foreign-bank',bankAccountId:'partner'},null),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'investment_operations','ghost',{
+    ...ownOperation,id:'ghost',accountId:'nonexistent'},null),/TRACE_WRITE_FORBIDDEN/);
+   // Changing the destination of an existing operation must not steal it.
+   await assert.rejects(rpcSave(2,'investment_operations','op-la',{
+    ...ownOperation,accountId:'pea-partner'},0),/TRACE_WRITE_CONFLICT/);
+   await assert.rejects(rpcDelete(2,'investment_operations','op-la',0),/TRACE_WRITE_CONFLICT/);
+   assert.equal((await readDoc('investment_operations','op-la')).data.accountId,'pea-la');
+   assert.equal((await rpcSave(1,'investment_operations','op-la',{
+    ...ownOperation,bankAmount:41},0)).rows[0].revision,1);
+   assert.equal((await rpcDelete(1,'investment_operations','op-la',1)).rows[0].ok,true);
+   assert.equal(await readDoc('investment_operations','op-la'),undefined);
+  });
   await check('arbitrary collections cannot be written by privileged RPC',async()=>{
    await assert.rejects(rpcSave(1,'unknown_settings','intruder',
     {id:'intruder',amountCAD:9000},null),/TRACE_WRITE_INVALID/);
