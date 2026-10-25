@@ -104,3 +104,19 @@ test('budgetDate remains distinct while debit settles later and is not another e
  assert.equal(p.document.dueDate,'2026-12-05');
  assert.equal(p.impactIfLaterConfirmed.checkingDebitNow,0);
 });
+
+test('French comma input is preserved as native cents without FX invention',()=>{
+ const p=env({fields:{...fields,amount:'40,00'}}).prepare();
+ assert.equal(p.document.bankAmount,40);assert.equal(p.document.amountCAD,64);
+});
+test('different original purchase currency permits 50,25 USD and 40,00 EUR',()=>{
+ const p=env({fields:{...fields,purchaseCurrency:'USD',purchaseAmount:'50,25',
+  amount:'40,00'}}).prepare();
+ assert.equal(p.document.currency,'USD');
+ assert.equal(p.document.amountOriginal,50.25);
+ assert.equal(p.document.bankAmount,40);
+});
+test('invalid or subcent bank amounts cannot be silently coerced',()=>{
+ for(const amount of ['40,001','40,0,0','40.0,0','1 000,00','40e2','0x20'])
+  assert.throws(env({fields:{...fields,amount}}).prepare,/Montant/);
+});

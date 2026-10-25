@@ -35,10 +35,20 @@
   if(!Array.isArray(existingTransactions)||
      existingTransactions.some(t=>t?.id===id))
    throw Error('Identifiant déjà utilisé ou historique illisible.');
+  // The 3-date French UI accepts comma decimals; the financial contract
+  // normalizes them without changing currency or rounding fractional cents.
+  const moneyInput=value=>{
+   if(value===null||value===undefined)return value;
+   if(typeof value!=='string')return value;
+   const raw=value.trim();
+   if(!/^\d{1,8}(?:[.,]\d{1,2})?$/.test(raw))
+    throw Error('Montant en devise invalide : deux décimales maximum.');
+   return raw.replace(',','.');
+  };
   const booking=I.resolveBooking({
-   account:card,bankAmount:fields?.amount,
+   account:card,bankAmount:moneyInput(fields?.amount),
    originalCurrency:fields?.purchaseCurrency||I.currency(card),
-   originalAmount:fields?.purchaseAmount??null,
+   originalAmount:moneyInput(fields?.purchaseAmount??null),
    quote,date
   });
   const amount=booking.bankAmount;
