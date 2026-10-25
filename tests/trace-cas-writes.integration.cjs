@@ -29,7 +29,8 @@ async function run(){
   const hid=h.household_id;
   for(const file of ['05-trace-v5-foundation.sql','06-trace-import-day-states.sql',
     '07-trace-account-owner-write-guard.sql','08-trace-personal-settings-owner-guard.sql',
-    '09-trace-cas-versioned-writes.sql'])
+    '09-trace-cas-versioned-writes.sql',
+    '10-trace-deferred-write-quarantine.sql'])
    await db.exec(await fs.readFile(path.join(root,'migrations',file),'utf8'));
   const rpcSave=(n,collection,id,data,rev)=>acting(n,tx=>tx.query(
    'select public.trace_cas_save_document($1,$2,$3,$4,$5) as revision',
@@ -134,6 +135,53 @@ async function run(){
    const latest=(await db.query('select settings from public.households where id=$1',[hid])).rows[0].settings;
    await assert.rejects(rpcHouse(1,{...latest,accountOpeningBalances:{partner:999}},3),/TRACE_SETTINGS_FORBIDDEN/);
    assert.equal((await db.query('select settings from public.households where id=$1',[hid])).rows[0].settings.accountOpeningBalances.partner,250);
+  });
+  await check('server quarantines deferred cards through CAS and direct document insert',async()=>{
+   const disabled={id:'deferred-fr',owner:'la',type:'card',paymentMode:'deferred',
+    country:'FR',currency:'EUR',settlementAccountId:'la'};
+   await assert.rejects(rpcSave(1,'accounts','deferred-fr',disabled,null),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal(await readDoc('accounts','deferred-fr'),undefined);
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'accounts','deferred-direct',JSON.stringify({...disabled,id:'deferred-direct'}),uid(1)]
+   ),/TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal(await readDoc('accounts','deferred-direct'),undefined);
+  });
+  await check('pending, confirmed and direct deferred settlement writes are blocked',async()=>{
+   for(const status of ['pending','confirmed']){
+    const item={id:'purchase-'+status,type:'expense',status,
+     accountId:'la',bankCurrency:'EUR',bankAmount:40,
+     deferredKind:'purchase'};
+    await assert.rejects(rpcSave(1,'transactions',item.id,item,null),
+     /TRACE_DEFERRED_NOT_RELEASED/);
+   }
+   const settlement={id:'payment-df',type:'transfer',status:'confirmed',
+    accountId:'la',toAccountId:'partner',transferPurpose:'deferred_settlement',
+    purchaseIds:['p1'],settlementMode:'partial'};
+   await assert.rejects(rpcSave(1,'transactions',settlement.id,settlement,null),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'transactions','direct-deferred',JSON.stringify({...settlement,id:'direct-deferred'}),uid(1)]
+   ),/TRACE_DEFERRED_NOT_RELEASED/);
+  });
+  await check('ordinary pending transactions and credit cards still work',async()=>{
+   const credit={id:'credit-fake',owner:'la',type:'card',
+    country:'CA',currency:'CAD',paymentMode:'credit',settlementAccountId:'la'};
+   assert.equal((await rpcSave(1,'accounts','credit-fake',credit,null)).rows[0].revision,0);
+   const item={id:'normal-pending',type:'expense',accountId:'credit-fake',
+    amountCAD:12.5,status:'pending'};
+   assert.equal((await rpcSave(1,'transactions',item.id,item,null)).rows[0].revision,0);
+   assert.equal((await rpcSave(2,'transactions',item.id,{
+    ...item,status:'confirmed'},0)).rows[0].revision,1);
+  });
+  await check('quarantine migration is repeatable without modifying existing rows',async()=>{
+   const before=(await db.query('select collection,item_id,data,revision from public.documents order by collection,item_id')).rows;
+   await db.exec(await fs.readFile(path.join(root,
+    'migrations/10-trace-deferred-write-quarantine.sql'),'utf8'));
+   const after=(await db.query('select collection,item_id,data,revision from public.documents order by collection,item_id')).rows;
+   assert.deepEqual(after,before);
   });
   await check('legacy direct writes bump server revision but remain a cutover blocker',async()=>{
    const old=(await readDoc('transactions','shared')).revision;
