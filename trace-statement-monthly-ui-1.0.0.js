@@ -310,6 +310,7 @@
   const invalidate=(event)=>{
    if(event.target.closest('#traceStatementReview'))return;
    if(event.target.closest('#traceStatementResults'))return;
+   if(event.target.closest('#traceStatementDeferredControl'))return;
    if(event.target.closest('#traceStatementPrepare'))return;
    if(event.target.closest('#traceStatementFile'))return;
    if(event.target===accountNode){++scanToken;extraction=null;renderExtraction();}
