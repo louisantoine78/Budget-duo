@@ -201,7 +201,25 @@ function findSimilarTransaction(candidate){
  return matches.find(x=>x.status==='exact')||matches[0]||null;
 }
 
-function txs(m,s,confirmed=true){return state.transactions.filter(t=>String(t.date||'').startsWith(m)&&isFinancialPeriod(t)&&(!confirmed||t.status==='confirmed')&&(s==='couple'||t.beneficiary===s||t.beneficiary==='couple'||(t.beneficiary==='custom'&&split(t,s)>.005)||(t.payerId===s&&['income','transfer','external_refund'].includes(t.type))));}
+/* Deferred purchase, budget and bank dates are separate by design.
+ * Only explicitly tagged deferred records can override budget-period selection.
+ * Unreviewable tagged dates are excluded rather than silently posted in the
+ * purchase or debit month. The bank ledger still uses t.date unchanged. */
+function traceBudgetPostingMonth(t){
+ if((t.type==='expense'&&t.deferredKind==='purchase')||
+    (t.type==='refund'&&t.deferredKind==='merchant_refund')){
+  return window.TraceInternational?.calendarDate?.(t.budgetDate)?
+   t.budgetDate.slice(0,7):null;
+ }
+ return String(t.date||'').slice(0,7);
+}
+function txs(m,s,confirmed=true){
+ return state.transactions.filter(t=>traceBudgetPostingMonth(t)===m&&
+  isFinancialPeriod(t)&&(!confirmed||t.status==='confirmed')&&
+  (s==='couple'||t.beneficiary===s||t.beneficiary==='couple'||
+   (t.beneficiary==='custom'&&split(t,s)>.005)||
+   (t.payerId===s&&['income','transfer','external_refund'].includes(t.type))));
+}
 function summary(m,s){let income=0,expense=0,refund=0;txs(m,s,true).forEach(t=>{if(t.type==='income')income+=alloc(t,s);else if(['expense','group_expense','person_payment'].includes(t.type))expense+=alloc(t,s);else if(t.type==='refund')refund+=alloc(t,s);});expense=Math.max(0,expense-refund);const bs=state.budgets.filter(b=>b.month===m),ib=bs.filter(b=>cat(b.categoryId).type==='income').reduce((x,b)=>x+budgetAmt(b,s),0),eb=bs.filter(b=>cat(b.categoryId).type==='expense').reduce((x,b)=>x+budgetAmt(b,s),0);return{income,expense,ib,eb,saving:income-expense};}
 function breakdown(m,s){return state.categories.filter(c=>c.type==='expense'&&!c.archived).map(c=>{const budget=state.budgets.filter(b=>b.month===m&&b.categoryId===c.id).reduce((x,b)=>x+budgetAmt(b,s),0),actual=txs(m,s,true).filter(t=>t.categoryId===c.id).reduce((x,t)=>x+(['expense','group_expense','person_payment'].includes(t.type)?alloc(t,s):t.type==='refund'?-alloc(t,s):0),0);return{...c,budget,actual:Math.max(0,actual),ratio:budget?actual/budget:0};}).filter(x=>x.budget||x.actual).sort((a,b)=>b.ratio-a.ratio||b.actual-a.actual);}
 function months6(){return Array.from({length:6},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth()-5+i,1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;});}
