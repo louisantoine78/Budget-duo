@@ -90,6 +90,8 @@
   });
   return Object.freeze({
    kind:'deferred_write_plan',persistable:false,confirmed:false,
+   // Bound at preparation time; no later user-supplied account substitution.
+   checkingAccountId:checking.id,
    document,requirements:Object.freeze([
     'Comparer les doublons avec les opérations bancaires importées',
     'Valider les trois dates et les pièces du relevé carte',

@@ -16,7 +16,9 @@
   if(typeof purchase?.review!=='function'||typeof bank?.compare!=='function')
    throw Error('Contrôleurs de preuve différée indisponibles.');
   if(!str(checkingAccountId)||!str(plan?.document?.accountId)||
-   !str(plan?.document?.payerId)||checkingAccountId===plan.document.accountId||
+   !str(plan?.document?.payerId)||!str(plan?.document?.id)||
+   !str(plan?.checkingAccountId)||plan.checkingAccountId!==checkingAccountId||
+   checkingAccountId===plan.document.accountId||
    !arr(cardStatements,50)||!arr(cardReceipts,1000)||
    !arr(purchaseClaims,5000)||!arr(checkingStatements,100)||
    !arr(settlements,5000)||!arr(settlementReceipts,5000))error();
@@ -30,6 +32,8 @@
   }
   for(const doc of checkingStatements){
    if(!doc||doc.accountId!==checkingAccountId||
+      String(doc.currency||'').toUpperCase()!==
+       String(plan.document.bankCurrency||'').toUpperCase()||
       !str(doc.sourceId)||!str(doc.sourceVersion)||!str(doc.importId)||
       physical.has(doc.sourceId))error();
   }
@@ -37,7 +41,11 @@
    if(!s||s.checkingAccountId!==checkingAccountId||
       s.cardAccountId!==plan.document.accountId||
       String(s.currency||'').toUpperCase()!==
-       String(plan.document.bankCurrency||'').toUpperCase())error();
+       String(plan.document.bankCurrency||'').toUpperCase()||
+      !Array.isArray(s.purchaseIds)||s.purchaseIds.length<1||
+      s.purchaseIds.length>5000||
+      new Set(s.purchaseIds).size!==s.purchaseIds.length||
+      !s.purchaseIds.includes(plan.document.id))error();
   }
   const card=purchase.review({plan,statements:cardStatements,
    selection:cardSelection,receipts:cardReceipts,otherClaims:purchaseClaims});

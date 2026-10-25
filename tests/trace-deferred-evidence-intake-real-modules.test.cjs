@@ -101,3 +101,27 @@ test('same physical source and incompatible checking account rejected',()=>{
  assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
   ...f.args,checkingAccountId:'other'}),/distinctes/);
 });
+
+test('plan locks the original checking account against reassignment',()=>{
+ const f=fixture();assert.equal(f.plan.checkingAccountId,'current-eur-demo');
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,checkingAccountId:'other',
+  checkingStatements:[{...f.checkingDoc,accountId:'other'}],
+  settlements:[{...f.settlement,checkingAccountId:'other'}]}),/distinctes/);
+});
+test('payment for unrelated purchase is never treated as this one',()=>{
+ const f=fixture();
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[{...f.settlement,purchaseIds:['unrelated'] }]}),/distinctes/);
+});
+test('a partial payment may cover multiple explicitly identified purchases',()=>{
+ const f=fixture(),r=f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[{...f.settlement,purchaseIds:[f.plan.document.id,'second']}]});
+ assert.equal(r.localEvidenceReviewed,true);
+ assert.equal(r.eligibleForServerConfirmation,false);
+});
+test('checking statement in different currency is not a valid settlement source',()=>{
+ const f=fixture();
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,checkingStatements:[{...f.checkingDoc,currency:'CAD'}]}),/distinctes/);
+});

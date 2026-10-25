@@ -32,6 +32,7 @@ test('builds pending native EUR document with dated CAD budget and no write',()=
  assert.equal(p.impactIfLaterConfirmed.budgetMonth,'2026-11');
  assert.equal(p.impactIfLaterConfirmed.checkingDebitNow,0);
  assert.equal(d.deferredBankEvidenceReviewed,false);
+ assert.equal(p.checkingAccountId,checking.id);
 });
 test('quotes are never invented and missing foreign FX aborts',()=>{
  const p=env({quote:null});assert.throws(p.prepare,/Taux CAD requis/);

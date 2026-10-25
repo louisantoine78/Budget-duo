@@ -14,12 +14,14 @@ function harness({purchase='manual_review_current',settlement='manual_review_cur
  if(evidenceOverride)window.TraceDeferredPurchaseEvidence.review=()=>evidenceOverride;
  vm.runInNewContext(fs.readFileSync(scripts,'utf8'),{window});
  const plan={kind:'deferred_write_plan',persistable:false,confirmed:false,
+  checkingAccountId:'checking',
   document:{id:'candidate1',payerId:'la',accountId:'card',bankCurrency:'EUR'}};
  const cardStatements=[{statementId:'card-statement',accountId:'card',sourceId:'card-physical',
   sourceVersion:'v1',importId:'card-import'}];
- const checkingStatements=[{statementId:'check-statement',accountId:'checking',
+ const checkingStatements=[{statementId:'check-statement',accountId:'checking',currency:'EUR',
   sourceId:'check-physical',sourceVersion:'v1',importId:'checking-import'}];
- const settlements=[{id:'pay1',cardAccountId:'card',checkingAccountId:'checking',currency:'EUR'}];
+ const settlements=[{id:'pay1',cardAccountId:'card',checkingAccountId:'checking',
+  currency:'EUR',purchaseIds:['candidate1']}];
  const input={plan,checkingAccountId:'checking',cardStatements,checkingStatements,settlements};
  return{review:window.TraceDeferredEvidenceIntake.review,input,calls,window};
 }
@@ -102,4 +104,39 @@ test('a broken unrelated checking statement prevents a successful combined revie
  assert.equal(r.settlementStatuses[0].status,'manual_review_current');
  assert.equal(r.checkingSourcesComplete,false);
  assert.equal(r.localEvidenceReviewed,false);
+});
+
+test('a different checking account cannot inherit valid card evidence',()=>{
+ const h=harness();
+ assert.throws(()=>h.review({...h.input,checkingAccountId:'other',
+  checkingStatements:[{...h.input.checkingStatements[0],accountId:'other'}],
+  settlements:[{...h.input.settlements[0],checkingAccountId:'other'}]}),/distinctes/);
+});
+test('a settlement for another purchase cannot attest this plan',()=>{
+ const h=harness();
+ assert.throws(()=>h.review({...h.input,settlements:[{
+  ...h.input.settlements[0],purchaseIds:['unrelated']}]}),/distinctes/);
+});
+test('duplicate purchase allocations do not create false local certainty',()=>{
+ const h=harness();
+ assert.throws(()=>h.review({...h.input,settlements:[{
+  ...h.input.settlements[0],purchaseIds:['candidate1','candidate1']}]}),/distinctes/);
+});
+test('an explicitly allocated multiple-purchase payment remains reviewable',()=>{
+ const h=harness();
+ const r=h.review({...h.input,settlements:[{
+  ...h.input.settlements[0],purchaseIds:['another','candidate1']} ]});
+ assert.equal(r.localEvidenceReviewed,true);
+ assert.equal(r.persistable,false);
+});
+test('wrong checking statement currency is rejected before comparison',()=>{
+ const h=harness();
+ assert.throws(()=>h.review({...h.input,checkingStatements:[{
+  ...h.input.checkingStatements[0],currency:'CAD'}]}),/distinctes/);
+});
+test('missing or empty purchase allocation is never silently accepted',()=>{
+ const h=harness();
+ for(const purchaseIds of [undefined,[],['unrelated']])
+  assert.throws(()=>h.review({...h.input,settlements:[{
+   ...h.input.settlements[0],purchaseIds}]}),/distinctes/);
 });
