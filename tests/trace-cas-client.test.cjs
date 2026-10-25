@@ -52,7 +52,7 @@ function createContext(){
 return{saveDocument,saveHouseholdSettings,removeDocument,traceWriteKey,traceDocRevisions,
  setRevision:n=>traceSettingsRevision=n,blocked:()=>traceWritesBlocked};`);
  const house={id:'fictional-household',settings:{}};
- const state={household:{baseCurrency:'CAD'}};
+ const state={household:{baseCurrency:'CAD'},accounts:[],transactions:[],smartImports:[],importDays:[]};
  const app=factory(client,(a,b)=>syncLog.push({status:a,detail:b}),document,
   {confirm:()=>false},{reload(){}},()=>false,house,state);
  return{app,client,saved,calls,root,house,state,syncLog,
@@ -133,4 +133,62 @@ test('Queued settings save takes the latest in-memory values before each RPC',as
  assert.equal(writes[0].p.p_settings.versionHint,'initial');
  assert.equal(writes[2].p.p_settings.versionHint,'newer');
  assert.deepEqual(writes.map(x=>x.p.p_expected_revision),[0,1,2]);
+});
+
+test('deferred card creation is blocked before RPC but normal bank accounts still save',async()=>{
+ const {app,calls}=createContext();
+ await assert.rejects(app.saveDocument('accounts',{id:'deferred-fr',type:'card',
+  paymentMode:'deferred',currency:'EUR'}),/TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
+ await app.saveDocument('accounts',{id:'current-fr',type:'checking',currency:'EUR'});
+ assert.equal(calls.filter(c=>c.method==='trace_cas_save_document').length,1);
+});
+test('deferred purchases cannot persist even as pending or confirmed',async()=>{
+ const {app,calls}=createContext();
+ for(const status of ['pending','confirmed']){
+  await assert.rejects(app.saveDocument('transactions',{id:'df-'+status,
+   type:'expense',status,deferredKind:'purchase',accountId:'unlinked',
+   bankAmount:40,bankCurrency:'EUR'}),/TRACE_DEFERRED_NOT_RELEASED/);
+ }
+ assert.equal(calls.length,0);
+});
+test('transfers targeting deferred card and imports from it are held locally',async()=>{
+ const {app,state,calls}=createContext();
+ state.accounts=[{id:'card-eur',type:'card',paymentMode:'deferred',
+  owner:'la',currency:'EUR'},{id:'current-eur',type:'checking',currency:'EUR'}];
+ for(const [collection,item] of [
+  ['transactions',{id:'transfer-1',type:'transfer',accountId:'current-eur',
+   toAccountId:'card-eur',status:'confirmed'}],
+  ['transactions',{id:'direct-1',type:'expense',accountId:'card-eur',status:'pending'}],
+  ['smartImports',{id:'inbox-1',accountId:'card-eur',status:'pending'}],
+  ['importDays',{id:'day-1',accountId:'card-eur'}],
+  ['reconciliations',{id:'reconcile-1',cardAccountId:'card-eur'}]
+ ])await assert.rejects(app.saveDocument(collection,item),/TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
+});
+test('ordinary pending to confirmed CAS updates remain available',async()=>{
+ const {app,saved,calls}=createContext();
+ await app.saveDocument('transactions',{id:'existing-cad',type:'expense',
+  accountId:'current',status:'pending',amountCAD:17});
+ await app.saveDocument('transactions',{id:'existing-cad',type:'expense',
+  accountId:'current',status:'confirmed',amountCAD:17});
+ const doc=saved.get(app.traceWriteKey('transactions','existing-cad'));
+ assert.equal(doc.data.status,'confirmed');assert.equal(doc.revision,1);
+ assert.equal(calls.length,2);
+});
+test('historical deferred transaction deletion fails locally without RPC',async()=>{
+ const {app,state,calls}=createContext();
+ state.accounts=[{id:'card-eur',type:'card',paymentMode:'deferred'}];
+ state.transactions=[{id:'old-card-1',accountId:'card-eur',
+  type:'expense',status:'pending'}];
+ await assert.rejects(app.removeDocument('transactions','old-card-1'),
+  /TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
+});
+test('existing deferred card may not be silently switched to credit',async()=>{
+ const {app,state,calls}=createContext();
+ state.accounts=[{id:'old-deferred',type:'card',paymentMode:'deferred'}];
+ await assert.rejects(app.saveDocument('accounts',
+  {id:'old-deferred',type:'card',paymentMode:'credit'}),/TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
 });

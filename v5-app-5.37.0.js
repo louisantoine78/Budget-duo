@@ -18,6 +18,33 @@ let internationalQuotes={},internationalQuoteAttempt=new Set(),internationalFxBu
 const traceDocRevisions=new Map(),traceWriteQueues=new Map();
 let traceSettingsRevision=null,traceWritesBlocked=false;
 const traceWriteKey=(collection,id)=>JSON.stringify([String(collection),String(id)]);
+// Safety quarantine until deferred postings, allocations and server-side CAS/RLS
+// are qualified on fictitious PostgreSQL. This is defense-in-depth on the
+// candidate client, NOT a substitute for a PostgreSQL constraint or bank proof.
+function traceRefuseUnqualifiedDeferredWrite(collection,item){
+ const accounts=Array.isArray(state?.accounts)?state.accounts:[];
+ const deferred=a=>a?.type==='card'&&a.paymentMode==='deferred';
+ const stored=accounts.find(a=>String(a?.id||'')===String(item?.id||''));
+ if(collection==='accounts'){
+  if(deferred(item)||deferred(stored))
+   throw Error('TRACE_DEFERRED_NOT_RELEASED : modification de carte différée non activée.');
+  return;
+ }
+ if(!['transactions','smartImports','importDays','reconciliations'].includes(collection)||
+    !item||typeof item!=='object')return;
+ const fields=['accountId','cardAccountId','toAccountId',
+  'linkedCardAccountId','sourceAccountId','destinationAccountId'];
+ const mentionsDeferred=fields.some(field=>accounts.some(a=>
+  deferred(a)&&item[field]!==undefined&&item[field]!==null&&
+  String(item[field])===String(a.id)));
+ const explicitDeferred=item.deferredKind!==null&&
+  item.deferredKind!==undefined&&String(item.deferredKind).trim()!==''||
+  item.settlementMode==='partial'||item.settlementMode==='full'&&
+  item.allocationDueDate!==undefined||
+  item.deferredBankEvidenceReviewed!==undefined;
+ if(mentionsDeferred||explicitDeferred)
+  throw Error('TRACE_DEFERRED_NOT_RELEASED : écriture différée en attente de qualification bancaire/serveur.');
+}
 function traceRevision(value){
  const n=Number(value);
  if(value===null||value===undefined||value===''||!Number.isSafeInteger(n)||n<0)
@@ -1399,6 +1426,11 @@ async function removeDocument(collection,id){if(internationalPreviewMode())retur
  if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
  const key=traceWriteKey(collection,id);
  return traceSerialWrite(key,async()=>{
+  const old=collection==='accounts'?state.accounts?.find(a=>String(a.id)===String(id)):
+   collection==='transactions'?state.transactions?.find(t=>String(t.id)===String(id)):
+   collection==='smartImports'?state.smartImports?.find(t=>String(t.id)===String(id)):
+   collection==='importDays'?state.importDays?.find(t=>String(t.id)===String(id)):null;
+  if(old)traceRefuseUnqualifiedDeferredWrite(collection,old);
   if(!traceDocRevisions.has(key))throw Error('Document non chargé : suppression refusée.');
   const {data,error}=await client.rpc('trace_cas_delete_document',{
    p_household_id:household.id,p_collection:collection,p_item_id:String(id),
@@ -4238,6 +4270,7 @@ async function saveDocument(collection,item){
   if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
   if(!item||item.id===undefined||item.id===null||String(item.id)==='')
    throw Error('Identifiant du document manquant.');
+  traceRefuseUnqualifiedDeferredWrite(collection,item);
   const id=String(item.id),key=traceWriteKey(collection,id);
   return traceSerialWrite(key,async()=>{
    if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
