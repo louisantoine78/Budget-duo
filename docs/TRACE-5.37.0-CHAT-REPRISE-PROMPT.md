@@ -1,3 +1,15 @@
+# ADDENDUM DE REPRISE — ACHAT DIFFÉRÉ À TROIS DATES (25 OCT 2026)
+
+**Branche exclusive :** `trace-5.37.0-international-accounts-fx`. Dernier HEAD **de code** confirmé : `d0953eda57dfc3f229f7462c64971ced8aa62992`; lire le HEAD GitHub courant à la reprise. Stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intangible. Ne pas modifier la production 5.36.5, les données Supabase réelles, déployer, fusionner, ouvrir PR ou lancer Actions ; tout commit candidate `[skip ci]`.
+
+Deux commits additionnels : `898d961787667c34f5fe0e990837aebba14f3725` intègre le **simulateur d'achat différé** dans la fiche d'une carte différée personnelle avec saisie libre montant + **date achat / date budget / date prélèvement prévu** et moteur déjà présent `TraceDeferredDebit.simulate`. Le résultat est explicitement hypothétique, en devise native, sans débit bancaire ni budget CAD inventé, et sans écriture persistante. `d0953eda57dfc3f229f7462c64971ced8aa62992` corrige une régression : n'installer ces écouteurs que sur les **cartes différées du titulaire**, non sur comptes courants/cartes classiques du partenaire.
+
+**138/138 vérifications V8 simulées** repassées sur cinq suites : 15 achats simulés, 12 échéanciers read-only, 14 détails des comptes, 84 scénarios moteur différé, 13 UX premium. **Aucun test natif Node CLI, PGlite SQL, navigateur/Safari.**
+
+La version n'active PAS encore les comptes différés ni les écritures/achats/règlements réels. Les blocs restant importants : modèle document/catégorie/FX et import banques fiable pour achats avec 3 dates distinctes, rapprochement des prélèvements et fonds, tests postgres fictif 07/08/09 Auth/RLS/CAS deux clients, finir les parcours Couple et UI premium, SW preview régénéré via `scripts/build-trace-preview-pwa.mjs` dans checkout complet, offline Chromium et Safari iPhone, sauvegarde/restauration/rollback. `scripts/check-trace-537-release-gates.cjs` est commité mais non exécutable ici sans checkout/PGlite ; PAS de faux succès. **NO-GO** jusqu'à validation totale et autorisation explicite.
+
+---
+
 # ADDENDUM — INTÉGRATION READ-ONLY DU DÉBIT DIFFÉRÉ (25 OCT 2026)
 
 Résoudre le HEAD réel de `trace-5.37.0-international-accounts-fx` à l'ouverture. Dernier HEAD **de code** connu `1f6ab1ec7dcc6bba83efca8f8d8e17374a3ff795`. Main stable `02c70f50e7e51da79b77a91dde96a03c6c719909` interdit de modification ; aucun SW prod/CI/Supabase réel/déploiement/PR/fusion. Commits `[skip ci]`.

@@ -1,3 +1,21 @@
+## Lot du 25 octobre 2026 — simulateur d'achat différé à trois dates
+
+**Nouveaux commits sur la seule branche `trace-5.37.0-international-accounts-fx` :**
+- `898d961787667c34f5fe0e990837aebba14f3725` — `feat(trace): add three-date deferred purchase simulator in card details without ledger writes [skip ci]`.
+- `d0953eda57dfc3f229f7462c64971ced8aa62992` — `fix(trace): bind deferred simulator only on owned deferred-card details [skip ci]`.
+
+**Fonctionnel :** `v5-app-5.37.0.js` contient `traceDeferredPurchaseProjection`, `traceDeferredPurchaseForm` et `bindTraceDeferredPurchaseForm`, appelés depuis `openTraceAccountDetail` uniquement pour les cartes différées du titulaire courant, actives. La fiche de compte peut **simuler un achat hypothétique et non enregistré** avec quatre champs à renseigner : montant natif au centime, **date d'achat**, **date d'impact budgétaire**, **date prévue de prélèvement**. Les trois dates restent indépendantes et explicites, sans valeur inventée. Le simulateur utilise le moteur strict existant `TraceDeferredDebit.simulate` avec un **achat fictif isolé** et aucun transfert. Il affiche le mois budget natif, la dette théorique propre à cet achat, la date du prélèvement **prévu** et indique que le compte courant n'a été **ni débité ni modifié**. La sortie ne représente jamais la dette globale ni une réelle opération bancaire ; aucune conversion CAD sans taux historique sourcé. Aucune donnée de l'utilisateur n'est lue par la simulation au-delà du compte/courant lié et aucune transaction n'est créée.
+
+**Validation UX et sécurité :** date calendrier stricte, date de prélèvement non antérieure à achat/date budget, devises/pays/propriétaires du duo banque-carte cohérents, saisie `40,00` ou `40.00`, maximum deux décimales, échec fermé sans moteur ou compte courant lié. Tout changement de saisie invalide la projection précédente. L'interface est responsive iPhone via `trace-international-1.0.0.css`. Le nouvel écouteur du formulaire a été limité aux cartes `paymentMode:'deferred'` détenues par `me`, pour ne pas affecter les comptes courants/cartes de crédit/compte du partenaire (régression détectée et corrigée avant validation).
+
+**Tests ciblés sur le dernier code : 138/138 passés dans un harnais V8 fictif**, soit `tests/trace-deferred-purchase-forecast.test.cjs` 15/15, `tests/trace-deferred-account-readonly-integration.test.cjs` 12/12, `tests/trace-international-account-details.test.cjs` 14/14 (async exécutés), `tests/trace-international-deferred-debit.test.cjs` 84/84, `tests/trace-international-premium-layout.test.cjs` 13/13. **Attention : aucun Node CLI natif, vraie base PostgreSQL/PGlite, navigateur Chromium, Safari ni client iPhone n'a été exécuté.**
+
+**Périmètre encore ouvert / NO-GO :** ces changements ajoutent un **parcours de simulation** et une revue read-only existante, mais **pas le stockage des achats différés ni la clôture du prélèvement**. La création des cartes différées demeure désactivée. Avant activation, il faut concevoir/vérifier le schéma et les écritures réelles dans PostgreSQL **fictif** avec CAS/RLS/auth, intégrer les imports/relevés, la séparation date achat/budget/débit réel, les remboursements, les frais, les transferts sans double comptage, la reprise de données sans migration risquée, puis tests Node et navigateur et iPhone Safari. `scripts/check-trace-537-release-gates.cjs` est prêt mais bloqué ici faute checkout complet/PGlite. Régénérer le SW preview avec `node scripts/build-trace-preview-pwa.mjs` puis `--check` exclusivement sur checkout de laboratoire ; ne pas éditer le SW à la main.
+
+**Aucune modification de `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, de production 5.36.5, workflows/Actions, Supabase réel, PR/fusion ou déploiement.** Aucun GO ou calendrier de publication à promettre tant que le périmètre précédent manque.
+
+---
+
 ## Lot du 25 octobre 2026 — raccordement lecture seule du débit différé
 
 **Commit de code : `1f6ab1ec7dcc6bba83efca8f8d8e17374a3ff795`**, uniquement `trace-5.37.0-international-accounts-fx`, message `[skip ci]` ; `main` stable et production inchangées.

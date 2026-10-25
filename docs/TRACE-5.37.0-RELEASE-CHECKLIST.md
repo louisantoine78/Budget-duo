@@ -1,3 +1,16 @@
+## Formulaire de simulation d'achat différé à trois dates — 25 octobre 2026
+
+- [x] Sur la fiche d'une carte différée du titulaire : montant bancaire natif et dates **achat / impact budgétaire / prélèvement prévu** saisis distinctement, sans valeur présumée.
+- [x] Simulation pure par `TraceDeferredDebit.simulate`, sans persistance ni double comptage, projection limitée à **cet achat hypothétique** (et non à la dette totale), montant/nombre de décimales/date/détention/compte lié contrôlés.
+- [x] Anciennes cartes classiques et comptes courants ne chargent pas le simulateur ; protection ajoutée après détection d'une régression dans les tests UX des comptes.
+- [x] Affichage mobile compact et projection expirant lorsque l'utilisateur modifie sa saisie.
+- [x] **138/138 vérifications V8 fictives** sur cinq suites ciblées : 15 nouvelle fonctionnalité, 12 revue différée, 14 fiche comptes, 84 moteur différé, 13 UX premium. Ne sont PAS Node CLI, PostgreSQL ni Safari.
+- [ ] **BLOQUANT** : cette fonction est un simulateur non enregistrable, pas un flux de création/validation des achats et règlements différés. Les cartes différées ne sont pas activables, aucun impact financier réel.
+- [ ] Finaliser achat différé réellement enregistrable avec dates distinctes, relevés et règlement attestés, cas frais/refunds/imports, non-double comptage, droits utilisateurs et concurrence CAS, puis **tester** migrations fictives 07/08/09 et rollback.
+- [ ] Lancer `node scripts/check-trace-537-release-gates.cjs` en checkout isolé avec PGlite, reconstruire le SW de preview depuis le script officiel, vérifier offline Chromium et iPhone Safari. Aucune autorisation production actuelle (**NO-GO**).
+
+---
+
 ## Débit différé — contrôle des échéances en lecture seule (25 octobre 2026)
 
 - [x] `traceDeferredAccountReview(card)` branché sur la fiche de compte candidat pour `paymentMode:'deferred'` : lecture des achats, frais, remboursements et règlements documentés ; dette théorique et échéances natives visibles **sans écriture**.
