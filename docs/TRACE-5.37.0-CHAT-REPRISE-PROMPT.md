@@ -1,3 +1,23 @@
+# REPRISE PRIORITAIRE — 25 OCTOBRE 2026 — QUARANTAINE DES ÉCRITURES DIFFÉRÉES
+
+**HEAD de départ à résoudre de nouveau :** `7e9c0528d6708f149f9c05932ac1fedc4358ce84`, suivi du commit documentaire de ce lot. Seule branche modifiable : `trace-5.37.0-international-accounts-fx`; `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` intact. Tous les commits ont `[skip ci]`. Aucune production, fusion, CI/Actions, PR, accès/donnée Supabase réelle ou déploiement.
+
+**Contexte :** la précédente reprise a créé un chemin **preview uniquement, lecture seule** pour préparer les justificatifs d'achat différé et de prélèvement après revue PDF. Les vrais `pending` différés restent **NON persistables** ; Auth/RLS/CAS/PG et validation bancaire ne sont pas terminés.
+
+**Nouveaux commits sur la branche :**
+- `c0cbdac8f4c1d467fffd1883795a2f40948656a1` : `traceRefuseUnqualifiedDeferredWrite` ajouté au client `v5-app-5.37.0.js`, sur `saveDocument` et `removeDocument`. Cartes `paymentMode:'deferred'`, achats `deferredKind`, paiements vers une carte différée connue, imports et rapprochements liés refusés avant RPC. Normal `pending→confirmed` de comptes ordinaires inchangé.
+- `274fd1a82a57de5df946b2c90e2e6c04135351e6` : même contrôle relancé **dans la file CAS sérialisée** immédiatement avant RPC, empêchant une modification de compte/objet intervenue pendant l'attente d'être sauvée.
+- `5a69e0e415464434fd0706a2af728dae180f2bbc` puis `7e9c0528d6708f149f9c05932ac1fedc4358ce84` : formes de transactions, allocations, règlements différés complets/partiels, `purchaseIds`, `feeIds` et champs de preuve refusés. Aucune écriture valide ne peut être autorisée en différé par ce **chemin client**.
+- `a9294f634be24cdcadfc6a4d0d8b9b9b1701a59f`, `a87f15b7eab3be6cff433d84af04b87f50d6dc9b`, `932be3cdd27bb1cda114567a0c40c9e1fed06de0` : nouvelle **migration candidate non déployée `migrations/10-trace-deferred-write-quarantine.sql`**, après 09. Fonction `SECURITY DEFINER` (pour éviter les angles morts RLS), déclencheur sur **INSERT / UPDATE / DELETE** dans `public.documents` refusant les écritures différées même hors RPC, et tentative de modification/suppression des anciennes écritures différées ; couvre cartes, transactions, imports, dates d'import, rapprochements, références de comptes natifs. Tests fictifs étendus dans `tests/trace-cas-writes.integration.cjs`, y compris anciens enregistrements, suppression et relance idempotente. **MIGRATION NON EXÉCUTÉE et NON VALIDÉE SQL.**
+ 
+**Preuves réelles ce cycle : `18/18` tests du client CAS exécutés en V8 avec RPC et Node/test simulés**, sur le code source candidate réel ; le test PostgreSQL a sa syntaxe JavaScript vérifiée par V8 et l'existence du déclencheur a été relue statiquement. **Aucun vrai PostgreSQL/PGlite 07/08/09/10**, aucune exécution `node --test` du checkout complet, aucun test RLS/concurrence navigateur, ni Safari iPhone, ni confiance bancaire. Le `101/101` V8 des suites précédentes est historique et **non rejoué** sur ce nouveau HEAD. Migration 09 garde encore les autorisations de writes directs pour compatibilité : seule la quarantaine différée est proposée par 10, pas un verrouillage CAS général.
+
+**Avancement global estimé : 57 %, 43 % restant (incertitude ~±10 points).** On ne compte pas la validation PG comme acquise. **NO-GO production**.
+
+**Prochain chantier prioritaire :** qualification de `tests/trace-cas-writes.integration.cjs` et migrations 07–10 sur **checkout + PGlite/PostgreSQL fictifs isolés** ; corriger les écarts SQL et exécuter deux sessions Auth/RLS/CAS. Ensuite seulement élaborer une ouverture progressive de l'écriture différée avec validation serveur de la double preuve, unicité et journal atomique, protection des frais/refunds, et retrait coordonné des grants directs. Reprendre Couple/multi-devises et UX premium, reconstruire SW de preview uniquement via générateur, QA Chromium/iPhone, backup/restore/rollback avant GO explicite.
+
+---
+
 # REPRISE — 25 OCTOBRE 2026 — FILTRAGE D'ACCÈS DE LA REVUE PDF DEBIT DIFFÉRÉ
 
 Résoudre le **vrai HEAD** au démarrage. HEAD de code vérifié après ce lot : `9ac3033f428668ac6e5209d57cbbb14786c0ebcd`. Branche d'écriture unique `trace-5.37.0-international-accounts-fx`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` inchangé. Tous commits `[skip ci]`, zéro PR, CI, fusion, déploiement, Supabase réel.

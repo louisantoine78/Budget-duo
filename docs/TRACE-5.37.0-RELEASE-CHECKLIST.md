@@ -1,3 +1,17 @@
+## 25 octobre 2026 — Barrières de sécurité des écritures différées
+
+- [x] Côté client candidat, `saveDocument` rejette les cartes différées et opérations référencées avec marqueurs financiers différés, `pending` comme `confirmed`. Même contrôle **dans la file CAS** immédiatement avant le RPC ; opérations ordinaires inchangées.
+- [x] `removeDocument` refuse la suppression d'une transaction différée identifiable dans le journal local. Barrière client seulement, non preuve de sécurité serveur.
+- [x] **Migration candidate 10 NON appliquée** : trigger `SECURITY DEFINER` `before insert or update or delete` sur `public.documents` pour refuser les écritures différées, y compris hors CAS ; cas anciennes lignes et écrasement des métadonnées abordés.
+- [x] Scénarios PostgreSQL fictifs ajoutés dans `tests/trace-cas-writes.integration.cjs` et syntaxe JavaScript vérifiée. Ce n'est **pas** une exécution PGlite/PostgreSQL.
+- [x] **18/18 tests client CAS exécutés sous V8 avec RPC et Node simulés**, cas de sauvegarde ordinaire, conflits, suppression, cartes différées, paiements, imports, file d'attente, marqueurs d'allocation. Zéro échec.
+- [ ] **BLOQUANT MAJEUR** : exécuter **réellement** migrations 07/08/09/10 sur PGlite/PostgreSQL fictif dans un checkout, vérifier SQL, permissions et transactions à deux sessions, Auth/RLS/CAS, rejets des créations/suppressions directes et effets sur historique.
+- [ ] **BLOQUANT MAJEUR** : avant déverrouillage des achats différés, concevoir et prouver une validation **serveur** de l'identité bancaire, sources distinctes, montants/devise/dates, unicité des pièces, transactions atomiques, remboursements/frais, révisions CAS et comptes Couple.
+- [ ] Droits d'écriture directe maintenus par migration 09 pour compatibilité : préparer le retrait coordonné uniquement après qualification et autorisation ; migration 10 n'enforce pas tout CAS.
+- [ ] Node natif complet, SW labo par générateur officiel, Chromium/offline, Safari iPhone, UI premium, devises Couple/patrimoine, backup/restore/rollback ; GO explicitement approuvé. **NO-GO production.**
+
+---
+
 ## Accès conditionnel à la préparation d'une preuve de débit différé (25 octobre 2026)
 
 - [x] `TraceDeferredStatementReviewUI` exige une carte au modèle bancaire `deferred`, liée à un compte courant non archivé même propriétaire/pays/devise, ou ce courant avec carte différée effectivement associée. Cartes ordinaires, comptes isolés, propriétaire différent et preuves hors preview sont exclus.

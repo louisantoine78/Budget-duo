@@ -1,3 +1,19 @@
+## 25 octobre 2026 — Protection candidate des écritures différées, client + SQL
+
+**Contexte** : le parcours PDF/CSV différé existant reste local/lecture seule ; la sélection des comptes liés ne suffit pas à garantir les écritures en base. Une revue ou un snapshot de navigateur ne doit jamais être assimilé à une preuve bancaire authentifiée.
+
+**Nouveaux commits** ([skip ci], branche candidate uniquement) : `c0cbdac8`, `274fd1a8`, `5a69e0e4`, `a9294f63`, `a87f15b7`, `932be3cd`, `7e9c0528`.
+
+- `v5-app-5.37.0.js` : `traceRefuseUnqualifiedDeferredWrite` stoppe dans `saveDocument` la création/modification de comptes de type carte différée, transactions/imports/rapprochements référençant une carte différée reconnue, documents avec `deferredKind`, `type:'deferred_purchase'`/`deferred_settlement`, `settlementMode`, `purchaseIds`, `feeIds`, `transferPurpose:'deferred_settlement'`, champ de revue bancaire différée. Même contrôle juste avant l'envoi de RPC **à l'intérieur** de `traceSerialWrite` afin de refuser un item devenu différé en attendant la file. Suppression de transactions différées identifiées localement bloquée. Les transactions classiques et leur CAS `pending→confirmed` restent disponibles.
+- Nouvelle migration **candidate, NON appliquée** `migrations/10-trace-deferred-write-quarantine.sql` : fonction `SECURITY DEFINER` `trace_is_unreleased_deferred_doc` identifiant les écritures différées, et trigger `trace_deferred_write_quarantine` **avant INSERT/UPDATE/DELETE** pour refuser les écritures différées dans `public.documents`, y compris les écritures directes legacy et la falsification d'anciens enregistrements. Cette quarantaine est temporaire : elle ne constitue PAS une implémentation de réservation/validation/écriture différée, et nécessite une stratégie explicite de remplacement sous Auth/RLS/CAS avant ouverture. Les droits d'écriture directs de 09 ne sont pas retirés sur cette branche.
+- Scénarios `tests/trace-cas-writes.integration.cjs` étendus pour migration 10, carte différée, achat `pending` et `confirmed`, settlement, direct insert/delete, ancien compte et achat fictifs créés **avant** l'installation du trigger, tentative de nettoyage des marqueurs, idempotence et maintien des opérations ordinaires. **Attention : ce test n'a PAS été exécuté en PostgreSQL.**
+
+**Vérification effectivement faite** : `18/18` cas du vrai client CAS en V8 avec modules Node/RPC simulés, sans échec ; syntaxe JS de l'intégration PGlite contrôlée, lecture statique des points d'entrée SQL et du release gate. Cette validation ne vérifie **aucune** contrainte/erreur native PostgreSQL ; il faut l'exécuter dans un checkout complet avec PGlite ou PostgreSQL fictif et corriger tout échec. Les `101/101` cas précédents ne sont pas réexécutés sur ce HEAD. Pas de QA Chromium, offline, Safari ni GO.
+
+**Portes restantes** : tests 07–10 + Auth/RLS/CAS (avec 2 clients et écritures directes), analyse de sécurité SQL, flux `pending→confirmed` réel et journal financier/carte/courant/frais/remboursement, devises personnelles et Couple, composants premium, service worker preview reconstruit via script, sauvegarde/restauration/rollback et consentement au déploiement. Estimation qualitative globale **57 %**. La stable 5.36.5, `main`, Supabase réel et production restent intacts. **NO-GO**.
+
+---
+
 ## Lot du 25 octobre 2026 — parcours PDF différé limité aux comptes bancaires liés
 
 Commits `[skip ci]` : `922b5b67633f83b565e0062e391b20924cf0143b` (5 fichiers), puis `9ac3033f428668ac6e5209d57cbbb14786c0ebcd` (test écran asynchrone corrigé). Sur `trace-5.37.0-international-accounts-fx` uniquement ; `main` stable et production hors périmètre.
