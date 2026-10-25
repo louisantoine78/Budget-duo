@@ -264,3 +264,31 @@ test('explicit deferred metadata is blocked even when importer lacks a loaded ac
  }
  assert.equal(calls.length,0);
 });
+
+
+test('internal deferred allocation metadata cannot bypass the unloaded-card client guard',async()=>{
+ const {app,calls}=createContext();
+ const fields={deferredPurchaseId:'purchase-1',deferredPurchaseIds:['purchase-1'],
+  deferredFeeIds:['fee-1'],deferredSettlementMode:'partial',
+  deferredDueDate:'2026-11-01',deferredBankEvidence:{},
+  deferredBankEvidenceReviewed:false};
+ for(const [field,value] of Object.entries(fields)){
+  await assert.rejects(app.saveDocument('transactions',{
+   id:'metadata-'+field,type:'expense',accountId:'unloaded',status:'pending',
+   [field]:value}),/TRACE_DEFERRED_NOT_RELEASED/);
+ }
+ assert.equal(calls.length,0);
+});
+
+test('deferred imports, import days and reconciliations refuse deletion by persisted names',async()=>{
+ const {app,state,calls}=createContext();
+ state.accounts=[{id:'legacy-card',type:'card',paymentMode:'deferred'}];
+ state.smartImports=[{id:'import-old',accountId:'legacy-card'}];
+ state.importDays=[{id:'day-old',accountId:'legacy-card'}];
+ state.reconciliations=[{id:'reconcile-old',accountId:'legacy-card'}];
+ for(const [collection,id] of [['imports','import-old'],
+  ['import_days','day-old'],['reconciliations','reconcile-old']]){
+  await assert.rejects(app.removeDocument(collection,id),/TRACE_DEFERRED_NOT_RELEASED/);
+ }
+ assert.equal(calls.length,0);
+});

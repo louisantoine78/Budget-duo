@@ -43,7 +43,9 @@ function traceRefuseUnqualifiedDeferredWrite(collection,item){
   item.transferPurpose==='deferred_settlement'||
   ['partial','full'].includes(item.settlementMode)||
   item.purchaseIds!==undefined||item.feeIds!==undefined||
-  item.deferredBankEvidenceReviewed!==undefined;
+  ['deferredPurchaseId','deferredPurchaseIds','deferredFeeIds',
+   'deferredSettlementMode','deferredDueDate','deferredBankEvidence',
+   'deferredBankEvidenceReviewed'].some(field=>Object.prototype.hasOwnProperty.call(item,field));
  if(mentionsDeferred||explicitDeferred)
   throw Error('TRACE_DEFERRED_NOT_RELEASED : écriture différée en attente de qualification bancaire/serveur.');
 }
@@ -1430,8 +1432,9 @@ async function removeDocument(collection,id){if(internationalPreviewMode())retur
  return traceSerialWrite(key,async()=>{
   const old=collection==='accounts'?state.accounts?.find(a=>String(a.id)===String(id)):
    collection==='transactions'?state.transactions?.find(t=>String(t.id)===String(id)):
-   collection==='smartImports'?state.smartImports?.find(t=>String(t.id)===String(id)):
-   collection==='importDays'?state.importDays?.find(t=>String(t.id)===String(id)):null;
+   collection==='imports'?state.smartImports?.find(t=>String(t.id)===String(id)):
+   collection==='import_days'?state.importDays?.find(t=>String(t.id)===String(id)):
+   collection==='reconciliations'?state.reconciliations?.find(t=>String(t.id)===String(id)):null;
   if(old)traceRefuseUnqualifiedDeferredWrite(collection,old);
   if(!traceDocRevisions.has(key))throw Error('Document non chargé : suppression refusée.');
   const {data,error}=await client.rpc('trace_cas_delete_document',{

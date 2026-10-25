@@ -209,6 +209,25 @@ async function run(){
    await assert.rejects(rpcSave(1,'transactions',transfer.id,transfer,null),
     /TRACE_DEFERRED_NOT_RELEASED/);
   });
+  await check('unlinked deferred allocation fields are quarantined by SQL',async()=>{
+   const reserved={deferredPurchaseId:'purchase-x',deferredPurchaseIds:['purchase-x'],
+    deferredFeeIds:['fee-x'],deferredSettlementMode:'partial',
+    deferredDueDate:'2026-11-01',deferredBankEvidence:{},
+    deferredBankEvidenceReviewed:false};
+   for(const [field,value] of Object.entries(reserved)){
+    const item={id:'server-deferred-'+field,type:'expense',status:'pending',
+     accountId:'la',[field]:value};
+    await assert.rejects(rpcSave(1,'transactions',item.id,item,null),
+     /TRACE_DEFERRED_NOT_RELEASED/);
+    assert.equal(await readDoc('transactions',item.id),undefined);
+   }
+   const direct={id:'direct-deferred-alias',type:'transfer',accountId:'la',
+    deferredPurchaseIds:['purchase-x']};
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'transactions',direct.id,JSON.stringify(direct),uid(1)]
+   ),/TRACE_DEFERRED_NOT_RELEASED/);
+  });
   await check('ordinary pending transactions and credit cards still work',async()=>{
    const credit={id:'credit-fake',owner:'la',type:'card',
     country:'CA',currency:'CAD',paymentMode:'credit',settlementAccountId:'la'};

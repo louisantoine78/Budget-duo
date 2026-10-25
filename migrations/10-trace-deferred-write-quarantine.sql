@@ -20,7 +20,11 @@ as $guard$
    coalesce(nullif(btrim(p_data->>'deferredKind'),''),'') <> ''
    or p_data->>'type' in ('deferred_purchase','deferred_settlement')
    or p_data->>'transferPurpose' = 'deferred_settlement'
-   or p_data ? 'deferredBankEvidenceReviewed'
+   or p_data ?| array[
+    'deferredPurchaseId','deferredPurchaseIds','deferredFeeIds',
+    'deferredSettlementMode','deferredDueDate','deferredBankEvidence',
+    'deferredBankEvidenceReviewed'
+   ]
    or p_data ? 'purchaseIds'
    or p_data ? 'feeIds'
    or p_data->>'settlementMode' in ('partial','full')
