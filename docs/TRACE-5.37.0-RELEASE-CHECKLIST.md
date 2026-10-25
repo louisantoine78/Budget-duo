@@ -1,3 +1,17 @@
+## Portes ajoutées — investissement CAS et sens de preuve OCR (24 octobre 2026)
+
+**NO-GO.** Correctifs candidats seulement, commits `a1ebbde`, `842ae60`, `e026ee1`, `8b2a4e3`, tous `[skip ci]`.
+
+- [x] Crédit bancaire `bankDirection:'in'` d'une capture étrangère jamais confirmé comme dépense ; contrôle interface + handler, essais fictifs.
+- [x] Après l'attente FX : relecture de l'objet compte et du brouillon synchronisés avant écriture, en plus des preuves déjà surveillées.
+- [x] Migration 09 candidate : contrôles explicites `investment_operations` sur propriétaire du portefeuille et du compte courant associé, ainsi que propriété de l'ancien placement sur UPDATE/DELETE.
+- [x] 51/51 simulations financières JS V8 + 5/5 contrôles statiques SQL V8 = **56/56 ciblés**, **pas** des tests Node CLI natifs, PG, navigateur ni RLS/Auth réels.
+- [ ] **CRITIQUE** — exécuter les nouvelles règles migration 09 et son scénario de compte portefeuille en PGlite/PostgreSQL fictifs ; sécuriser les écritures directes lors d'un cutover autorisé.
+- [ ] Rejouer toute la suite native Node / SQL 07/08/09 / deux sessions, reconstruire le SW laboratoire par le générateur et exécuter offline/Chromium/Safari.
+- [ ] Completer les parcours étrangers, différé, Couple/patrimoine/UX premium ; qualification sauvegarde/restore/rollback et GO sous autorisation.
+
+---
+
 ## Première revue OCR des achats en devise étrangère — 24 octobre 2026
 
 **NO-GO.** Les commits `411a983`, `aa4ce6f` et `59e1d45` ne concernent que le laboratoire de TRACE 5.37.0.

@@ -1,3 +1,19 @@
+# ADDENDUM DE REPRISE — STATUT OCR ÉTRANGER / CAS PLACEMENTS (24 OCTOBRE 2026)
+
+Ne pas reprendre depuis une ancienne valeur HEAD : interroger GitHub à chaque nouvelle session. Dernier HEAD de code vérifié avant cet addendum : `8b2a4e3ae931ca1afe369fdb0781b5b2049d3267`. Branche d'écriture unique : `trace-5.37.0-international-accounts-fx`. Stable `main` = `02c70f50e7e51da79b77a91dde96a03c6c719909`, à préserver impérativement.
+
+Commits après `2ff5eab3e79c284c6b51c5e37afc48a782298f9f` :
+- `a1ebbde9b7d81458f001eb51b0f132a0f31c5ba4` : les captures étrangères dont le sens bancaire OCR est un crédit (`bankDirection='in'`) sont refusées comme achat.
+- `842ae604c95a9d4aaae12d2d7db4e332d1d5717c` : sécurisation proposée de `migrations/09-trace-cas-versioned-writes.sql` pour les opérations de placements, portefeuille/banque du bon propriétaire et vérification du propriétaire préexistant lors de UPDATE/DELETE ; cas PG ajoutés mais **jamais exécutés**, plus cinq tests statiques.
+- `e026ee1993f82ae8f39d206df325e4e05eb3395b` : la revue asynchrone FX re-lit le compte et brouillon depuis le state courant après attente pour détecter des objets remplacés.
+- `8b2a4e3ae931ca1afe369fdb0781b5b2049d3267` : fixture UI héritée corrigée ; relecture de **56/56 contrôles V8 fictifs** (51 JS fonctionnels + 5 SQL statiques).
+
+Les résultats V8 **ne remplacent pas une exécution PGlite/PostgreSQL, Node natif, Chromium ou Safari**. Aucun test SQL n'est exécuté ici ; migration 09 reste candidat NO-GO. Aucune lecture/écriture financière Supabase réelle, aucun déploiement, CI, changement de main ou workflow. Le conteneur n'a toujours ni checkout ni DNS GitHub ni PGlite/psql ; les outils GitHub connectés fonctionnent.
+
+Priorité : checkout isolé, Node CLI/PGlite et tests réels SQL 07/08/09 et nouveau placement CAS, restauration RLS/Auth/multisession ; reconstruire SW preview via script et --check ; finir imports/devise/différé/Couple et design premium, Chromium/Safari iPhone et backup/rollback avant toute demande GO. Ne recommencer ni la conception validée ni les correctifs acquis. HANDOFF et RELEASE-CHECKLIST en tête restent les références prioritaires. Tous commits `[skip ci]`.
+
+---
+
 # ADDENDUM DE REPRISE — ACHATS SUR CAPTURES ÉTRANGÈRES (24 OCTOBRE 2026)
 
 **HEAD de code dernièrement vérifié : `59e1d451b439390e863064469342891f37ca8f91` ; résoudre le HEAD réel à chaque reprise.** La branche autorisée reste exclusivement `trace-5.37.0-international-accounts-fx` et `main` doit rester `02c70f50e7e51da79b77a91dde96a03c6c719909`. Trois commits nouveaux : `411a98349d3a8a92c461ce72caf78f8b1a7ccef6`, `aa4ce6fc6105071dfa282ab150d8a922fb29e842`, `59e1d451b439390e863064469342891f37ca8f91`.

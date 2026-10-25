@@ -1,3 +1,28 @@
+## Lot du 24 octobre — sécurité OCR débit/crédit, placement CAS et synchronisation FX
+
+**NO-GO inchangé.** Depuis `2ff5eab3e79c284c6b51c5e37afc48a782298f9f`, quatre nouveaux commits ont été enregistrés uniquement sur `trace-5.37.0-international-accounts-fx`, avec `[skip ci]` :
+
+1. **`a1ebbde9b7d81458f001eb51b0f132a0f31c5ba4`** : la revue d'une capture étrangère d'achat rejette désormais explicitement une source OCR marquée `bankDirection:'in'`. Le test du sens bancaire existe également dans l'interface : un crédit entrant ne peut plus être qualifié à tort de dépense, même si l'attestation a été cochée. Une direction inconnue garde la revue individuelle explicite ; les achats montrés comme `out` restent possibles.
+2. **`842ae604c95a9d4aaae12d2d7db4e332d1d5717c`** : durcissement de la migration candidate `09-trace-cas-versioned-writes.sql` : les RPC CAS `investment_operations` vérifient que le portefeuille natif appartient au membre, que le compte bancaire éventuel est un courant lui appartenant, que l'opération préexistante appartient à son portefeuille lors d'une modification ou suppression. Nouveau scénario fictif d'intégration ajouté dans `tests/trace-cas-writes.integration.cjs` (à exécuter réellement en PGlite/PostgreSQL) et cinq tests de contrat SQL purement statiques dans `tests/trace-cas-investment-ownership-static.test.cjs`. **Le SQL 09 modifié n'a PAS été exécuté contre une base et n'est pas qualifié.** Les écritures directes héritées demeurent autorisées, en attente d'un cutover explicitement validé.
+3. **`e026ee1993f82ae8f39d206df325e4e05eb3395b`** : après l'attente du taux FX d'une capture étrangère, la signature de preuve relit l'objet compte et le brouillon **depuis le state courant**, plutôt que de se limiter à une référence avant synchronisation ; changement ou remplacement pendant l'attente => refus sans comptabilisation.
+4. **`8b2a4e3ae931ca1afe369fdb0781b5b2049d3267`** : ancien simulateur d'interface complété avec `dataset.bankDirection`, puis reprise des cinq suites pertinentes.
+
+### Qualification exacte de ce lot
+
+- **51/51 tests financiers ciblés exécutés sous V8** avec vraies fonctions JS extraites du candidat et vrais modules FX, natures de mouvement et guide bancaire, mais faux Node, DOM et transports : CSV étranger **18**, captures / statuts **7**, virements et paiements de carte **8**, captures étrangères **18**.
+- **5/5 tests statiques** exécutés sous le même V8 et vérifiant la présence des gardes SQL `investment_operations`. **Total : 56/56 contrôles V8**, mais seulement 51 sont des simulations de chemins financiers JS ; les 5 autres ne sont pas des tests SQL.
+- **Aucun test Node CLI natif, aucune exécution PGlite/PostgreSQL, aucune authentification/Supabase hébergé, ni Chromium, Safari iPhone ou test de concurrence réseau sur ce HEAD.** Le conteneur possède Node v22 mais ne dispose pas de DNS GitHub/checkout et PGlite ou PostgreSQL sont absents. Ne pas transposer les 56 tests à ces catégories.
+- Aucun changement de `main`, du client de production 5.36.5, des workflows ou de Supabase financier réel, aucune migration appliquée, CI ni déploiement.
+
+### Prochaines étapes impératives
+
+1. Récupérer un checkout isolé, dépendances Node et PGlite fictifs ; exécuter et corriger les migrations **07, 08 et 09** et les suites natives, y compris le nouveau test sur les opérations de placement ; vérifier RLS/Auth, rôles, droits, CAS et deux sessions.
+2. **Reconstruire** `trace-international-preview-sw.js` via `node scripts/build-trace-preview-pwa.mjs`, puis `--check`, hors ligne/Chromium et Safari iPhone. Ne jamais éditer le SW généré à la main.
+3. Terminer les flux étrangers non encore couverts, le débit différé, devise perso/Couple et l'UX premium validée. Vérifier sauvegarde/restauration/rollback avec autorisation explicite avant toute mise en production.
+4. Aucun GO avant preuves réelles et autorisation.
+
+---
+
 ## Lot du 24 octobre — premier achat OCR étranger confirmé sous revue (laboratoire uniquement)
 
 **NO-GO production.** Après `fbfcba597f71c8ec88173941ddb2fca0fa05de20`, les commits suivants existent uniquement sur `trace-5.37.0-international-accounts-fx`, avec `[skip ci]` :
