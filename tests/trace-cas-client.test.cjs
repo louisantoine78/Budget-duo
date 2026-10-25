@@ -292,3 +292,21 @@ test('deferred imports, import days and reconciliations refuse deletion by persi
  }
  assert.equal(calls.length,0);
 });
+
+
+test('legacy deferred card without type is refused on create and later mutation',async()=>{
+ const {app,state,calls}=createContext();
+ const legacy={id:'old-mastercard',name:'Mastercard ancien',owner:'la',
+  paymentMode:'deferred',currency:'EUR'};
+ await assert.rejects(app.saveDocument('accounts',legacy),/TRACE_DEFERRED_NOT_RELEASED/);
+ state.accounts=[legacy];
+ await assert.rejects(app.saveDocument('accounts',{...legacy,paymentMode:'credit'}),
+  /TRACE_DEFERRED_NOT_RELEASED/);
+ await assert.rejects(app.saveDocument('transactions',{id:'old-charge',
+  type:'expense',accountId:'old-mastercard',status:'pending'}),
+  /TRACE_DEFERRED_NOT_RELEASED/);
+ state.transactions=[{id:'old-charge',type:'expense',accountId:'old-mastercard'}];
+ await assert.rejects(app.removeDocument('transactions','old-charge'),
+  /TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
+});

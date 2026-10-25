@@ -41,6 +41,12 @@ async function run(){
    [hid,'transactions','legacy-deferred-purchase',JSON.stringify({
     id:'legacy-deferred-purchase',type:'expense',status:'pending',
     deferredKind:'purchase',accountId:'legacy-deferred-card',bankAmount:40}),uid(1)]);
+  // 5.36.x legacy card documents could omit 'type'; type/name inference
+  // must not weaken SQL quarantine when migrated.
+  await db.query('insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [hid,'accounts','legacy-typeless-deferred',JSON.stringify({
+    id:'legacy-typeless-deferred',name:'Ancienne Mastercard',
+    paymentMode:'deferred',owner:'la',currency:'EUR'}),uid(1)]);
   await db.exec(await fs.readFile(path.join(root,'migrations/10-trace-deferred-write-quarantine.sql'),'utf8'));
   const rpcSave=(n,collection,id,data,rev)=>acting(n,tx=>tx.query(
    'select public.trace_cas_save_document($1,$2,$3,$4,$5) as revision',
@@ -157,6 +163,22 @@ async function run(){
     [hid,'accounts','deferred-direct',JSON.stringify({...disabled,id:'deferred-direct'}),uid(1)]
    ),/TRACE_DEFERRED_NOT_RELEASED/);
    assert.equal(await readDoc('accounts','deferred-direct'),undefined);
+  });
+  await check('type-free legacy deferred cards remain quarantined',async()=>{
+   const card=await readDoc('accounts','legacy-typeless-deferred');
+   assert.equal(card.data.paymentMode,'deferred');
+   await assert.rejects(rpcSave(1,'accounts','legacy-typeless-deferred',{
+    ...card.data,paymentMode:'credit',type:'card'},card.revision),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(rpcSave(1,'transactions','legacy-typeless-charge',{
+    id:'legacy-typeless-charge',accountId:'legacy-typeless-deferred',
+    type:'expense',status:'pending'},null),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(rpcSave(1,'accounts','new-typeless-deferred',{
+    id:'new-typeless-deferred',name:'Visa',paymentMode:'deferred',owner:'la'},
+    null),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'accounts','legacy-typeless-deferred']),/TRACE_DEFERRED_NOT_RELEASED/);
   });
   await check('pending, confirmed and direct deferred settlement writes are blocked',async()=>{
    for(const status of ['pending','confirmed']){

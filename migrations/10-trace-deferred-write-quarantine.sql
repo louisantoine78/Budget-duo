@@ -15,7 +15,7 @@ set search_path = ''
 as $guard$
  select case
   when p_collection = 'accounts' then
-   p_data->>'type' = 'card' and p_data->>'paymentMode' = 'deferred'
+   p_data->>'paymentMode' = 'deferred'
   when p_collection in ('transactions','imports','import_days','reconciliations') then
    coalesce(nullif(btrim(p_data->>'deferredKind'),''),'') <> ''
    or p_data->>'type' in ('deferred_purchase','deferred_settlement')
@@ -32,7 +32,7 @@ as $guard$
     select 1 from public.documents bank
     where bank.household_id = p_household_id
       and bank.collection = 'accounts'
-      and bank.data->>'type' = 'card'
+      -- Legacy 5.36.x cards may omit 'type'; do not allow bypass by type erasure.
       and bank.data->>'paymentMode' = 'deferred'
       and bank.item_id in (
        p_data->>'accountId',p_data->>'cardAccountId',p_data->>'toAccountId',

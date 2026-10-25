@@ -23,7 +23,9 @@ const traceWriteKey=(collection,id)=>JSON.stringify([String(collection),String(i
 // candidate client, NOT a substitute for a PostgreSQL constraint or bank proof.
 function traceRefuseUnqualifiedDeferredWrite(collection,item){
  const accounts=Array.isArray(state?.accounts)?state.accounts:[];
- const deferred=a=>a?.type==='card'&&a.paymentMode==='deferred';
+ // Legacy card rows may have no 'type'; accountType() infers card by name.
+ // Any reserved deferred payment mode must remain non-persistable, fail closed.
+ const deferred=a=>a?.paymentMode==='deferred';
  const stored=accounts.find(a=>String(a?.id||'')===String(item?.id||''));
  if(collection==='accounts'){
   if(deferred(item)||deferred(stored))
