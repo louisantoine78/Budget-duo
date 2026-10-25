@@ -2802,13 +2802,24 @@ function csvImportedDuplicate(t,rows){const key=csvFingerprint(t);return rows.so
 
 // Only identical rows of the SAME statement file, account and physical row
 // are idempotent. Equal prices/merchant/date can be separate real purchases.
-function csvAlreadyImportedSourceRow(t,rows){
+function csvSourceRowsAtIndex(t,rows){
  const index=Number(t?.csvSourceRowIndex);
- if(!Number.isSafeInteger(index)||index<2||!t.importFileName)return false;
+ if(!Number.isSafeInteger(index)||index<2||!t.importFileName)return[];
+ return(rows||[]).filter(x=>x.source==='csv'&&x.accountId===t.accountId&&
+  x.importFileName===t.importFileName&&Number(x.csvSourceRowIndex)===index);
+}
+function csvAlreadyImportedSourceRow(t,rows){
  const fingerprint=csvFingerprint(t);
- return(rows||[]).some(x=>x.source==='csv'&&x.accountId===t.accountId&&
-  x.importFileName===t.importFileName&&Number(x.csvSourceRowIndex)===index&&
+ return csvSourceRowsAtIndex(t,rows).some(x=>
   (x.importFingerprint||csvFingerprint(x))===fingerprint);
+}
+// Same source label + physical row index but different bank data is not
+// an automatically new purchase. A reused default filename for another
+// statement must be distinguished by the user, not silently recorded.
+function csvConflictingSourceRows(t,rows){
+ const fingerprint=csvFingerprint(t);
+ return csvSourceRowsAtIndex(t,rows).filter(x=>
+  (x.importFingerprint||csvFingerprint(x))!==fingerprint);
 }
 
 
@@ -2931,7 +2942,8 @@ function importFile(file){
       dateFormat:$('#csvDateFormat')?.value,sign:$('#csvSign')?.value
      });
      const mappingAtPreview=reviewedMapping();
-     const flagged=result.all.filter(t=>t.csvReviewMatchIds?.length);
+     const flagged=result.all.filter(t=>t.csvReviewMatchIds?.length),
+      sourceConflicts=result.all.filter(t=>csvConflictingSourceRows(t,state.transactions).length);
      const account=accts.find(a=>a.id===$('#csvAccount').value),I=window.TraceInternational,
       ccy=I.currency(account),accountAtPreview=csvImportAccountSnapshot(account,me),
       existing=[...state.transactions,...result.all];
@@ -2946,6 +2958,7 @@ function importFile(file){
        esc(nature)+' · '+(matched.status==='confirmed'?'Confirmée':'À vérifier')+'</small></article>';
      }).join('');
      preview.innerHTML='<div class="empty-note" style="margin-top:14px"><b>'+result.all.length+' lignes à vérifier</b> · '+result.duplicates+' doublon(s) déjà présents non réimportés · '+result.invalid.length+' ligne(s) invalide(s) · '+flagged.length+' rapprochement(s) possible(s).</div>'+
+      (sourceConflicts.length?'<div class="empty-note trace-csv-source-conflict" role="alert"><b>Import suspendu : '+sourceConflicts.length+' conflit(s) de fichier</b>. Le même nom de CSV et le même numéro de ligne ont déjà été utilisés pour une opération différente sur ce compte. Compare les relevés précédents. Si c’est réellement un autre relevé, renomme le fichier en incluant sa période puis prévisualise-le de nouveau. Aucun mouvement n’est créé automatiquement.</div>':'')+
       (flagged.length?'<div class="empty-note" role="status"><b>Vérification bancaire nécessaire</b> : certaines lignes ressemblent à des paiements de carte, remboursements ou autres mouvements déjà saisis. Rien n’est fusionné ni supprimé automatiquement.</div>'+
        '<p class="empty-note">Déplie chaque ligne signalée pour comparer les opérations. Au plus cinq ressemblances par ligne ; ce contrôle ne certifie pas l’absence de doublon.</p>':'')+
       result.all.map(t=>'<details class="trace-csv-preview-row" data-csv-preview-row="'+t.csvSourceRowIndex+'"'+(t.csvReviewMatchIds?.length?' data-has-match="true"':'')+'><summary><span>'+esc(t.date)+' · '+esc(t.name)+
@@ -2954,8 +2967,8 @@ function importFile(file){
        comparison(t)+'</details>').join('')+
       (result.invalid.length?'<details class="trace-csv-invalid"><summary>'+result.invalid.length+' ligne(s) non interprétée(s)</summary>'+result.invalid.map(n=>
        '<p class="empty-note">Ligne '+n+' : '+esc((rows[n-2]||[]).join(' | '))+'</p>').join('')+'</details>':'')+
-      (result.all.length?'<button class="primary full" id="csvCommit" style="margin-top:14px">Importer '+result.all.length+' opération(s) à vérifier</button>':'');
-     if(!result.all.length)return;
+      (result.all.length&&!sourceConflicts.length?'<button class="primary full" id="csvCommit" style="margin-top:14px">Importer '+result.all.length+' opération(s) à vérifier</button>':'');
+     if(!result.all.length||sourceConflicts.length)return;
      $('#csvCommit').onclick=async()=>{
       const btn=$('#csvCommit');btn.disabled=true;let saved=0;
       try{
@@ -2968,6 +2981,8 @@ function importFile(file){
          throw Error('Le compte bancaire a changé depuis la prévisualisation. Relance la revue du CSV.');
        };
        validateReview();
+       if(result.all.some(t=>csvConflictingSourceRows(t,state.transactions).length))
+        throw Error('Conflit de source détecté depuis la prévisualisation. Compare les relevés et recommence.');
        const newEntries=result.all.filter(t=>!csvAlreadyImportedSourceRow(t,state.transactions));
        // Unquoted foreign rows remain pending in their real bank currency.
        // CAD is assigned only during explicit validation at a dated FX rate.
@@ -2975,6 +2990,8 @@ function importFile(file){
         // Repeat after each awaited RPC: a account change mid-import must
         // stop subsequent writes; previously saved pending rows stay intact.
         validateReview();
+        if(csvConflictingSourceRows(t,state.transactions).length)
+         throw Error('Conflit de fichier détecté pendant l’import. Examine les lignes précédentes.');
         const account=state.accounts.find(a=>a.id===t.accountId);
         if(!account||I.currency(account)!==t.bankCurrency)
          throw Error('Devise native du compte modifiée : nouvel examen CSV requis.');
