@@ -107,15 +107,17 @@
    finally{busy=false;button.disabled=false;}
   };
   const getLocalStatement=()=>{
-   if(!chosenStatement||!prepared||busy||!valid()||!attestation.checked||
-      staged.statementKey!==prepared.statementKey||
-      [...host.querySelectorAll('[data-deferred-classify]')].some((s,i)=>
-       s.value!==prepared.choices[i])||
-      root.TraceStatementEvidence.reviewedRows(staged,prepared.approvals).status!=='reviewed'){
-    if(chosenStatement)reset();
-    return null;
-   }
-   return chosenStatement;
+   try{
+    if(!chosenStatement||!prepared||busy||!valid()||!attestation.checked||
+       staged.statementKey!==prepared.statementKey)return null;
+    const selectors=[...host.querySelectorAll('[data-deferred-classify]')];
+    if(selectors.length!==prepared.choices.length||
+       selectors.some((s,i)=>s.value!==prepared.choices[i])||
+       root.TraceStatementEvidence.reviewedRows(staged,prepared.approvals).status!=='reviewed'){
+     reset();return null;
+    }
+    return chosenStatement;
+   }catch(e){reset();return null;}
   };
   return Object.freeze({getLocalStatement,clear:reset});
  }
