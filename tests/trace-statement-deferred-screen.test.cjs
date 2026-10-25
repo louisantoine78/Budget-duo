@@ -55,13 +55,13 @@ function fixture(){
      if(id==='traceStatementRows'&&s==='')rows.length=0;
      if(id==='traceStatementReview'){
       approvals.clear();
-      for(const m of s.matchAll(/data-statement-approve="(\\d+)"/g))
+      for(const m of s.matchAll(/data-statement-approve="(\d+)"/g))
        approvals.set('[data-statement-approve="'+m[1]+'"]',{checked:false});
       getNode('traceStatementAttest').checked=false;
      }
      if(id==='traceStatementDeferredControl'){
       deferred.length=0;
-      for(const m of s.matchAll(/data-deferred-classify="(\\d+)"/g))
+      for(const m of s.matchAll(/data-deferred-classify="(\d+)"/g))
        deferred.push({value:''});
       getNode('deferredComplete').checked=false;
       getNode('deferredPrepare').disabled=false;
