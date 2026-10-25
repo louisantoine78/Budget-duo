@@ -1,3 +1,18 @@
+## 25 octobre 2026 — grand lot CSV : contrôle de source, contexte et lignes illisibles
+
+**Commits code [skip ci] :**
+- `67ba2cd314d7f1dc20a00562136958d6b74882f9` : fonction pure `csvImportAccountSnapshot` ; gel de la correspondance des colonnes, du sens, du format de date et du compte choisi entre prévisualisation et écriture. Relecture de la banque active avant chaque RPC `pending`. Invalidation si owner/devise/pays/modèle/liaison de carte changés ou compte archivé. Anciennes cartes typeless prises en compte via `accountType`, cartes différées exclues.
+- `352e03be722df1f3d8696e3f56b524193fde6577` : `csvSourceRowsAtIndex`, `csvConflictingSourceRows`. Un autre CSV de même nom, pour le même compte et numéro de ligne, mais avec données bancaires différentes devient un conflit visible ; pas d'écriture pour ce lot. La vraie répétition identique reste un no-op ; des achats identiques à des lignes distinctes restent indépendants. Aucun doublon supprimé automatiquement.
+- `3c6e0707a07fbe90d172a1b1979bb03044231cef` : `csvPartialImportAllowed` et case explicite « J'ai examiné les lignes illisibles » avant import partiel. Les lignes invalides affichées **ne sont pas persistées** en journal ni comptabilisées ; le contrôle de complétude mensuel reste partiel et devra suivre cette liste hors contexte de preview.
+
+**Tests exécutés ce cycle : 47/47** sous V8 sur véritables tests + code candidat et dépendances Node/test/fs/DOM/RPC simulées. Répartition : 6 contexte ; 7 source ; 5 import partiel ; 24 CAS ; 5 Accueil. Une première simulation CAS avait 23/24 à cause d'un défaut du faux `assert.rejects` (mauvaise conversion d'objet Error), résolu dans l'infrastructure de simulation ; rerun **24/24** sans modification de l'app. Aucun Node CLI natif, test PostgreSQL, navigateur, CSS visuel ou Safari exécuté sur ce HEAD.
+
+**Risques ouverts :** le nom du fichier et index de ligne ne sont pas un identifiant bancaire cryptographique ; un nouveau relevé de même nom déclenche un contrôle manuel, mais le renommage en période ne garantit pas l'unicité bancaire. C'est une barrière cliente additionnelle, pas une contrainte serveur. Persistance partielle des lignes `pending` possible lors d'une interruption (sans doublon de l'identifiant de source exact). Cas à deux utilisateurs et anciennes opérations à tester sur base fictive. Aucune preuve que PDF/captures et CSV ont une réconciliation exhaustive en production. Le SW de preview est périmé ; ne le reconstruire que via le script officiel sur checkout entier.
+
+**Prochaine étape :** créer/rejouer parcours réel FileReader/DOM fictif et tests de non-régression sur CSV ; récupérer environnement PGlite/PostgreSQL 07–10 ; finaliser Couple/FX, imports multi-formats et QA des 5 onglets, sauvegarde/restauration/rollback. `main`, production et Supabase réel intacts. **57 % global qualitatif, NO-GO.**
+
+---
+
 ## 25 octobre 2026 — intégration de « À faire » dans l'Accueil premium
 
 **HEAD technique :** `362fdec5861b781391b310eadba981a46f1bfa38` avant commit de ces documents. Commits `[skip ci]` sur seule branche internationale :

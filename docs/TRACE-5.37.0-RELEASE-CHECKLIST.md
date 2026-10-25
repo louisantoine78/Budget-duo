@@ -1,3 +1,16 @@
+## 25 octobre 2026 — reprise : barrières CSV prévisualisation → import pending
+
+- [x] `67ba2cd314d7f1dc20a00562136958d6b74882f9` : cohérence des colonnes, signe, date, propriétaire, compte et devise native contrôlée **avant chaque** import de ligne CSV. Un changement exige une nouvelle prévisualisation ; lignes déjà pending conservées.
+- [x] `352e03be722df1f3d8696e3f56b524193fde6577` : source CSV déjà importée au même compte, fichier, numéro de ligne et empreinte identique ignorée ; contenu différent à la même source = **conflit visible, aucun import silencieux**. Anciennes transactions non supprimées, véritables occurrences sur lignes différentes préservées.
+- [x] `3c6e0707a07fbe90d172a1b1979bb03044231cef` : import partiel conditionné à une attestation explicite concernant les lignes invalides visibles, dont l'enregistrement reste absent. **Ne pas déclarer un relevé complet.**
+- [x] **47/47 scénarios V8** exécutés sur véritables sources 5.37.0 avec faux modules Node/DOM/RPC : 6 contexte, 7 collision, 5 consentement, 24 CAS, 5 Accueil ; zéro échec après correction du simulateur d'assertions.
+- [ ] Qualifier l'intégration CSV complète (FileReader/DOM réel, différentes banques et formats, iPhone Safari) et conservation traçable des lignes invalides pour contrôle mensuel ; vérifier conflit de sources et comptes via sessions simultanées.
+- [ ] **BLOQUANT :** checkout Node natif complet, `@electric-sql/pglite` ou PostgreSQL fictif migrations 07–10, droits directs, RLS/Auth/CAS, tests deux clients, validation serveur différée et rollback.
+- [ ] Reconstruire le SW de prévisualisation **uniquement** par `scripts/build-trace-preview-pwa.mjs`, vérifier `--check`, Chromium/offline et Safari iPhone ; aucun SW production modifié.
+- [ ] Couple/multi-devises prospective, imports multi-formats, fonctionnalités premium, restauration et GO humain explicite. **Production NO-GO**, global environ **57 % qualitatif ±10 points**.
+
+---
+
 ## 25 octobre 2026 — « À faire » : trois raccourcis et fiabilité OCR
 
 - [x] `9a6d3d71bdb7f69964067fc977fbd588a5984ebe` `[skip ci]` : trois actions tactiles intégrées dans l'Accueil candidat « Importer » (Activité → Importer), « Rapprocher » (réconciliations existantes), « Rappels » (alertes existantes). CSS premium + responsive et boutons accessibles ; aucun nouvel onglet ni débit.

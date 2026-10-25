@@ -1,3 +1,27 @@
+# REPRISE PRIORITAIRE — 25 OCTOBRE 2026 — LOT CSV INTÉGRITÉ DU RELEVÉ ET REVUE HUMAINE
+
+**HEAD technique de ce lot (avant commit documentaire) :** `3c6e0707a07fbe90d172a1b1979bb03044231cef`. Résoudre le HEAD GitHub au début de la prochaine mission. Branche exclusive `trace-5.37.0-international-accounts-fx`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` à préserver. Aucune PR, fusion, déploiement, Actions, Supabase réel ou migration appliquée. Commits toujours `[skip ci]`.
+
+**Lot fonctionnel terminé dans le CODE CANDIDAT (pas recette navigateur) :**
+1. `67ba2cd314d7f1dc20a00562136958d6b74882f9` — prévisualisation CSV → contrôles de contexte au moment de l'enregistrement et avant **chaque** ligne : correspondance des colonnes, format date, signe, compte, titulaire, archivage, modèle bancaire, devise native, pays, carte liée. Le modèle `paymentMode:'deferred'` est interdit. Si l'état change, ne pas enregistrer de nouvelles lignes ; les lignes `pending` déjà créées restent conservées et le message invite à re-prévisualiser.
+2. `352e03be722df1f3d8696e3f56b524193fde6577` — rapprochement de source physique `csvSourceRowsAtIndex` : même fichier/compte/numéro de ligne avec empreinte identique = réimportation sans doublon ; empreinte différente = **conflit**, import suspendu avant toute écriture de ce lot. Il peut s'agir d'un nouveau relevé portant le même nom, d'un export modifié ou d'une ancienne transaction changée : aucune décision bancaire automatique. UI conseille de comparer les relevés et, seulement si distincts, renommer le fichier avec la période avant réimport ; ce garde-fou demeure documentaire, pas une unicité serveur entre appareils.
+3. `3c6e0707a07fbe90d172a1b1979bb03044231cef` — lignes CSV invalides restent visibles ; une importation *partielle* des lignes lisibles exige maintenant une confirmation explicite de la vérification séparée des lignes non interprétées. Les lignes invalides ne sont **pas** enregistrées en tant que documents pour l'instant : ne pas prétendre que la complétude des relevés est garantie ou que les 100 % des lignes sont persistées.
+
+**Preuves exécutées sur le HEAD de code de ce lot :** `47/47` cas V8, cinq fichiers tests réels de la branche et vrai `v5-app-5.37.0.js` avec modules `node:fs`, `node:test`, assertions, DOM, RPC **simulés** :
+- `tests/trace-csv-preview-context.test.cjs`: 6/6
+- `tests/trace-csv-source-collision.test.cjs`: 7/7
+- `tests/trace-csv-partial-review.test.cjs`: 5/5
+- `tests/trace-cas-client.test.cjs`: 24/24
+- `tests/trace-home-next-actions.test.cjs`: 5/5.
+
+**IMPORTANT :** aucune preuve d'exécution Node CLI native depuis le checkout entier, aucun PostgreSQL/PGlite, Auth/RLS, navigateur Chromium, iPhone Safari ni service worker régénéré à ce nouveau HEAD. Le conteneur a Node 22.16 mais DNS `github.com` inaccessible et `@electric-sql/pglite` absent. Tests SQL 07/08/09/10, `node scripts/check-trace-537-release-gates.cjs`, concurrence à deux utilisateurs, vraie validation bancaire restent bloquants. Le SW de preview est **périmé** après JS modifié : régénération UNIQUEMENT par `node scripts/build-trace-preview-pwa.mjs` et `--check` dans checkout complet ; ne pas éditer manuellement.
+
+**Suite recommandée :** qualification DB fictive et script portes, puis un vrai test d'intégration import CSV avec FileReader/DOM et données fictives, validation du conflit de fichier aux changements inter-clients, identification du relevé bancaire par lot et contrôle de toutes ses lignes, liaison au contrôle mensuel PDF, couple/FX, débit différé atomique, QA premium Chromium + iPhone, backup/restauration/rollback. Ne jamais ouvrir en production sans GO humain exprès.
+
+**Avancement global maintenu à 57 % (approx., incertitude ±10 points).** Ce lot apporte un vrai garde-fou fonctionnel au chemin CSV mais ne qualifie pas les parcours globaux. **Production NO-GO**.
+
+---
+
 # REPRISE PRIORITAIRE — 25 OCTOBRE 2026 — ACCUEIL « À FAIRE » PREMIUM
 
 **Dernier HEAD technique observé avant cette actualisation :** `362fdec5861b781391b310eadba981a46f1bfa38` (le présent commit documentaire crée un HEAD plus récent). Branche exclusivement autorisée : `trace-5.37.0-international-accounts-fx`. Stable `main` : `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun déploiement, fusion, PR, Actions, écriture ou lecture des données Supabase réelles. Tous commits `[skip ci]`.
