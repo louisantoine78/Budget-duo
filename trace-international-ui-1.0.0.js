@@ -32,14 +32,24 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
   esc(a.name)+' · '+I.currency(a)+'</option>').join('')+'</select></div></details>'+
  '<p class="trace-intl-primary-explain">'+(selectedId===primaryId?'Solde du compte principal':'Solde du compte consulté')+' et de ses cartes liées, en '+esc(cur)+'.</p>'+
  (multi?'<details class="trace-intl-details"><summary>Voir tous mes comptes et ma trésorerie globale</summary>'+
-  '<div class="trace-intl-accounts">'+snap.balances.map(a=>
-   '<div class="trace-intl-row"><span>'+esc(a.name)+' <small>'+a.nativeCurrency+'</small></span><b>'+
-   (a.balance===null?'Solde inconnu':I.money(a.balance,a.nativeCurrency))+'</b></div>').join('')+'</div>'+
+  '<div class="trace-intl-accounts">'+snap.balances.map(a=>{
+   const quote=rates[a.nativeCurrency];
+   const conversion=a.nativeCurrency==='CAD'?'':a.cad===null?
+    'Conversion CAD à vérifier · taux manquant ou montant non valorisable':
+    '≈ '+esc(I.money(a.cad,'CAD'))+' · '+
+    (quote?.date?'taux du '+esc(quote.date):'date du taux inconnue')+
+    (quote?.source?' · '+esc(quote.source):'');
+   return '<div class="trace-intl-row"><span class="trace-intl-account-label">'+esc(a.name)+
+    ' <small>'+esc(a.nativeCurrency)+'</small>'+
+    (conversion?'<small class="trace-intl-account-conversion">'+conversion+'</small>':'')+
+    '</span><b>'+(a.balance===null?'Solde inconnu':esc(I.money(a.balance,a.nativeCurrency)))+
+    '</b></div>';
+  }).join('')+'</div>'+
   '<p class="trace-intl-grand">'+(snap.complete?
    'Situation nette estimée · '+I.money(snap.globalCAD,'CAD'):
    'Situation globale à compléter · soldes, taux ou cartes à vérifier')+'</p>'+
   '<p class="trace-intl-foot">'+[...new Set(snap.balances.filter(a=>rates[a.nativeCurrency]).map(a=>rates[a.nativeCurrency].date))].map(esc).join(' · ')+
-   ' · Taux indicatifs de la Banque du Canada, non contractuels. L’épargne et les placements sont dans Patrimoine.</p>'+
+   ' · Taux indicatifs (Banque du Canada ou saisie manuelle), non contractuels. L’épargne et les placements sont dans Patrimoine.</p>'+
  '</details>':'');
  if(snap.main){
   if(balanceNode)balanceNode.textContent=snap.net===null?(snap.cardsToReview.length||snap.ambiguousCards.length||snap.mixedLinkedCurrencies.length?'À vérifier':'À configurer'):I.money(snap.net,cur);
@@ -78,7 +88,10 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
    selected?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'auto'});
   };
  });
- const missingCurrencies=[...new Set(snap.balances.filter(a=>a.nativeCurrency!=='CAD'&&!rates[a.nativeCurrency]).map(a=>a.nativeCurrency))];
+ // A malformed or unusable cached quote must not suppress a request for
+ // a usable CAD valuation. Unknown bank balances do not trigger FX fetches.
+ const missingCurrencies=[...new Set(snap.balances.filter(a=>
+  a.nativeCurrency!=='CAD'&&a.balance!==null&&a.cad===null).map(a=>a.nativeCurrency))];
  if(missingCurrencies.length&&typeof requestRate==='function')requestRate(missingCurrencies);
 }
 root.TraceInternationalUI=Object.freeze({render});
