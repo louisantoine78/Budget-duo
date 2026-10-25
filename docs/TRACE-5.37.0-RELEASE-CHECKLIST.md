@@ -1,3 +1,15 @@
+## 25 octobre 2026 — « À faire » : trois raccourcis et fiabilité OCR
+
+- [x] `9a6d3d71bdb7f69964067fc977fbd588a5984ebe` `[skip ci]` : trois actions tactiles intégrées dans l'Accueil candidat « Importer » (Activité → Importer), « Rapprocher » (réconciliations existantes), « Rappels » (alertes existantes). CSS premium + responsive et boutons accessibles ; aucun nouvel onglet ni débit.
+- [x] `362fdec5861b781391b310eadba981a46f1bfa38` `[skip ci]` : correction de l'état « Tout est à jour » pour signaler les lignes OCR non résolues, sans les additionner au nombre des opérations `pending` et sans double comptage.
+- [x] Tests **5/5** `tests/trace-home-next-actions.test.cjs` sous **V8 simulant Node/DOM** sur la section réelle ; **24/24** client CAS de nouveau sous V8 avec RPC simulées. Ces résultats ne sont **pas** des exécutions Node natives ni navigateur/Safari/PostgreSQL.
+- [ ] Contrôler les trois boutons, lisibilité, focus et états OCR sur Chromium aux tailles iPhone et un vrai Safari iPhone ; vérifier écran de rappel, imports et rapprochements à l'arrivée, sans nouvelles opérations financières.
+- [ ] Reconstruire **uniquement SW de preview** via `node scripts/build-trace-preview-pwa.mjs` puis `--check` sur checkout complet ; interdit d'éditer manuellement le SW, actuellement périmé.
+- [ ] **BLOQUANT sécurité** : Node CLI complet, PGlite/PostgreSQL fictif 07–10 et Auth/RLS/CAS deux clients, ancien historique, cutover droits directs, double preuve différée, banques et Couple/FX.
+- [ ] Rétablir les portes qualité mobile, import end-to-end, backup/restore/rollback et obtenir autorisation humaine avant publication. **Production NO-GO, global 57 % qualitatif**.
+
+---
+
 ## 25 octobre 2026 — couverture des comptes différés historiques et des placements
 
 - [x] Commit `8323cc64d3ac333c358e660f9f11ffe4af18f23d` : garde client et SQL candidate 10 refusent `paymentMode:'deferred'` même lorsque les comptes historiques omettent `type`. Tests typeless cartes + transactions + modifications + suppression préparés.

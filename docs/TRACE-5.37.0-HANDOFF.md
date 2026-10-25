@@ -1,3 +1,16 @@
+## 25 octobre 2026 — intégration de « À faire » dans l'Accueil premium
+
+**HEAD technique :** `362fdec5861b781391b310eadba981a46f1bfa38` avant commit de ces documents. Commits `[skip ci]` sur seule branche internationale :
+- `9a6d3d71bdb7f69964067fc977fbd588a5984ebe` : `v5-app-5.37.0.js` + `trace-international-1.0.0.css` : la rubrique existante `#homeReviewAccounts` conserve les fiches des comptes et propose trois actions tactiles premium, import vers Activité → Importer, rapprochement bancaire existant, réglages de rappels existants ; aucun flux financier nouveau ni enregistrement.
+- `362fdec5861b781391b310eadba981a46f1bfa38` : correction de la fausse validation « Tout est à jour » lorsqu'il reste des lignes OCR non résolues dans `import_days.unresolvedCount`. Message séparé sans majorer le compteur `pending`, pour éviter le double comptage avec les brouillons déjà présents.
+- `tests/trace-home-next-actions.test.cjs` créé : interactions, compteurs et dédoublonnage, absence de comptes, refresh et OCR à contrôler ; **5/5 cas V8 réellement exécutés** sur vraie section de l'app, dépendances Node/DOM simulées. Régression des 24 tests CAS **24/24 exécutés sous V8 simulé sur le nouveau HEAD**. Zéro test Node CLI, SQL PG, navigateur ou iPhone en ce lot.
+
+**Décisions préservées :** 5 onglets, ordre de l'Accueil, plein accès aux workflows précédents sans créer de 6e onglet, comptes natifs et FX intacts, suppression de zéro ligne financière, aucune donnée réelle Supabase. Le CSS mobile est un contrat de style, **pas** une preuve Safari.
+
+**Statut et limites :** global 57 % qualitatif environ ; PG migrations 07–10 toujours non exécuté, SW de preview périmé après modifications JS/CSS (seul générateur officiel permis), Chromium/offline et vrai Safari à faire, Couple/FX et imports bancaires complets toujours partiels, migration et rollback non autorisés. Production NO-GO.
+
+---
+
 ## 25 octobre 2026 — cartes typeless historiques et détour par les placements
 
 **Commits :** `8323cc64d3ac333c358e660f9f11ffe4af18f23d`, `dfed7afab3611c84a0e31e16827f7bf5260cfa5e`, sur la seule branche `trace-5.37.0-international-accounts-fx`, chaque commit `[skip ci]`. `main` inchangée.

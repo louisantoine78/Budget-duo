@@ -1,3 +1,19 @@
+# REPRISE PRIORITAIRE — 25 OCTOBRE 2026 — ACCUEIL « À FAIRE » PREMIUM
+
+**Dernier HEAD technique observé avant cette actualisation :** `362fdec5861b781391b310eadba981a46f1bfa38` (le présent commit documentaire crée un HEAD plus récent). Branche exclusivement autorisée : `trace-5.37.0-international-accounts-fx`. Stable `main` : `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun déploiement, fusion, PR, Actions, écriture ou lecture des données Supabase réelles. Tous commits `[skip ci]`.
+
+**Chantier UX intégré :** `9a6d3d71bdb7f69964067fc977fbd588a5984ebe` enrichit directement `renderHomeReview` dans `v5-app-5.37.0.js` avec trois boutons premium tactiles « Importer », « Rapprocher », « Rappels », qui appellent exclusivement les **parcours déjà présents** `navigate('activity'); showTab('import')`, `openReconcileSettings()`, `openNotificationSettings()`. Aucun module bancaire créé, aucun RPC depuis ces boutons, aucune modification de `index.html` stable ni de `sw.js` production. Adaptation CSS 320–430 px, focus accessible, préférence de mouvement réduit. Sans comptes, conserve la consigne de configuration et masque les actions inutilisables.
+
+**Fiabilité de l'état « À faire » :** `362fdec5861b781391b310eadba981a46f1bfa38` empêche « Tout est à jour » lorsque `import_days.unresolvedCount` signale encore des lignes OCR. Les comptes bancaires `pending` et les lignes OCR restent des indicateurs séparés afin de ne pas compter deux fois les brouillons d'import comme transactions. Les nombres proviennent toujours des données existantes ; aucune opération n'est créée.
+
+**Preuve actuelle après ces deux commits :** `5/5` cas du nouveau `tests/trace-home-next-actions.test.cjs` passés sous V8 en exécutant la vraie section d'Accueil, avec `node:test`, assertions, `fs`, DOM et navigateurs **simulés**. `24/24` tests client CAS de `tests/trace-cas-client.test.cjs` aussi rejoués sur le code candidat courant sous V8 avec RPC simulées, zéro échec. **Pas de vrai navigateur Chromium ni Safari iPhone, pas de Node CLI natif sur checkout complet, pas de PG/PGlite/SQL 07–10.** Le conteneur dispose de Node 22 mais pas de checkout réseau ni PGlite (`github.com` et `registry.npmjs.org` sans DNS). Le SW de preview, déjà signalé périmé, l'est toujours davantage après les modifications JS/CSS : ne pas le modifier manuellement ; utiliser uniquement `node scripts/build-trace-preview-pwa.mjs`, puis `--check` dans un checkout complet et autorisé.
+
+**Suite ordonnée :** 1) qualification locale PG/PGlite migrations 07–10 et RLS/Auth/CAS/anciens documents/double utilisateur ; 2) vérification visuelle Chromium sur les raccourcis et états OCR (320/390/430) avec SW labo officiellement reconstruit ; 3) QA Safari iPhone et parcours réels d'imports, Couple/FX, premium ; 4) contrôles financiers, sauvegarde/restore/rollback et GO humain explicite. En absence de PG, continuer les lots isolables mais ne pas ouvrir la persistance des écritures différées.
+
+**Avancement global maintenu 57 % qualitatif ±10 points, environ 43 % restant, production NO-GO.** Accueil « À faire » : navigation code intégrée et testée sous V8, QA visuelle/mobile et expérience installée **encore à réaliser**.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026, TYPES BANCAIRES HISTORIQUES ET PLACEMENTS
 
 **Dernier HEAD technique :** `dfed7afab3611c84a0e31e16827f7bf5260cfa5e` ; le commit de ces documents suit. Branche d'écriture unique `trace-5.37.0-international-accounts-fx`. `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intacte. Pas de fusion, PR, CI, déploiement, Supabase réel, reset ou migrations appliquées.
