@@ -2797,6 +2797,11 @@ function csvImportAccountSnapshot(account,owner){
  });
 }
 
+// A partial CSV import must never quietly dismiss unparsed bank lines.
+function csvPartialImportAllowed(invalidCount,acknowledged){
+ return Number.isSafeInteger(invalidCount)&&invalidCount>=0&&
+  (invalidCount===0||acknowledged===true);
+}
 function csvFingerprint(t){const norm=String(t.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();return[t.date,t.type,Number(t.bankAmount??t.amountCAD).toFixed(2),norm,t.accountId].join('|');}
 function csvImportedDuplicate(t,rows){const key=csvFingerprint(t);return rows.some(x=>(x.importFingerprint||csvFingerprint(x))===key);}
 
@@ -2967,9 +2972,17 @@ function importFile(file){
        comparison(t)+'</details>').join('')+
       (result.invalid.length?'<details class="trace-csv-invalid"><summary>'+result.invalid.length+' ligne(s) non interprétée(s)</summary>'+result.invalid.map(n=>
        '<p class="empty-note">Ligne '+n+' : '+esc((rows[n-2]||[]).join(' | '))+'</p>').join('')+'</details>':'')+
+      (result.all.length&&result.invalid.length&&!sourceConflicts.length?
+       '<label class="trace-csv-partial-ack"><input type="checkbox" id="csvInvalidAcknowledged"> J’ai examiné les '+result.invalid.length+' ligne(s) illisibles. Elles ne seront pas importées et je les vérifierai séparément sur mon relevé bancaire.</label>'+
+       '<p id="csvImportWarnings" class="trace-csv-partial-warning" role="alert"></p>':'')+
       (result.all.length&&!sourceConflicts.length?'<button class="primary full" id="csvCommit" style="margin-top:14px">Importer '+result.all.length+' opération(s) à vérifier</button>':'');
      if(!result.all.length||sourceConflicts.length)return;
      $('#csvCommit').onclick=async()=>{
+      if(!csvPartialImportAllowed(result.invalid.length,$('#csvInvalidAcknowledged')?.checked)){
+       const warning=$('#csvImportWarnings');
+       if(warning)warning.textContent='Vérifie les lignes non interprétées et confirme leur traitement séparé avant cet import partiel.';
+       return;
+      }
       const btn=$('#csvCommit');btn.disabled=true;let saved=0;
       try{
        const validateReview=()=>{
