@@ -1,3 +1,16 @@
+## Barrières d'association achat différé / prélèvement — 25 octobre 2026
+
+- [x] Le plan d'achat différé sauvegarde localement l'**identifiant du compte courant lié** dès la préparation en lecture seule ; pas de substitution ultérieure de compte par le comparateur.
+- [x] Revue du prélèvement : compte et devise cohérents avec le plan, `purchaseIds` exigé, non vide, sans doublon, contient l'achat préparé.
+- [x] Si une allocation de règlement est modifiée, l'attestation locale du prélèvement devient `stale_review` ; une nouvelle attestation reste **locale, jamais persistable**.
+- [x] **23/23 tests natifs Node isolés** (18 contrôleur avec mock, 5 UI avec mock DOM) ; **45/45 tests V8** (Node/fs/vm fictifs, vraies sources financières incluses dans une suite). Un test de changement de répartition a détecté correctement une attestation expirée, puis a été corrigé pour l'exiger.
+- [x] Test de clics V8 sur 7 modules réels et DOM simulé : double attestation, péremption séparée de chaque justificatif, zéro écriture.
+- [ ] **BLOQUANT** : validation end-to-end des vrais imports structurés PDF/CSV sur données fictives, allocs multi-achats/frais/refunds dans moteur financier, source d'authentification et unicité vérifiées côté serveur.
+- [ ] **BLOQUANT** : Node complet sur checkout, PGlite/PostgreSQL fictif migrations 07/08/09 Auth/RLS/CAS deux clients, SW de labo régénéré par script, Chromium offline, Safari iPhone et backup/rollback.
+- [ ] Finaliser multi-devises/Couple/UX premium, autorisation explicite de GO avant toute modification réelle. **Production NO-GO.**
+
+---
+
 ## Durcissement — complétude des relevés du courant (25 octobre 2026)
 
 Le regroupement `TraceDeferredEvidenceIntake` ne marque plus deux preuves comme revues si `TraceDeferredBankReview.compare` signale un **autre document du lot bancaire invalide**, même si le prélèvement sélectionné a une attestation locale. Le champ `checkingSourcesComplete` le signale explicitement. **12/12 tests natifs Node isolés** sur l'adaptateur avec contrôleurs simulés ; 5/5 tests UI natifs isolés précédents ; 6/6 scénarios multi-modules V8 fictifs supplémentaires sur les sources réelles, ainsi qu'un clic-test V8 avec les sept modules réels (statuts initiaux, deux attestations, deux expirations). Ceci **n'est pas** un test Node intégré du dépôt, ni SQL, PG/PGlite ou Safari. Toutes les dépenses restent non persistables, NO-GO. HEAD initial de ce lot `de5782ed5299b6af4993fd93ed2f9cb06f00fe58`; aucun changement main, prod ou Supabase réel.
