@@ -59,3 +59,19 @@ test('ordinary foreign credit and debit balances still use their native currency
  assert.equal(I.fxValue(-30,'EUR',quote),-48);
  assert.equal(I.fxValue(30,'EUR',quote),48);
 });
+
+test('nonzero foreign bank balance that rounds to 0 CAD is marked incomplete',()=>{
+ const quote={currency:'EUR',cadPerUnit:0.001,date:at,source:'Fictional tiny FX quote'};
+ const s=I.snapshot({accounts:[account],mainId:'eur',owner:'la',
+  estimates:{eur:0.01},fxRates:{EUR:quote}});
+ assert.equal(s.complete,false);assert.equal(s.globalCAD,null);
+ assert.equal(s.balances[0].balance,0.01);
+ assert.equal(s.balances[0].cad,null);
+});
+test('genuinely zero foreign account balance stays safely known at 0 CAD',()=>{
+ const quote={currency:'EUR',cadPerUnit:0.001,date:at,source:'Fictional tiny FX quote'};
+ const s=I.snapshot({accounts:[account],mainId:'eur',owner:'la',
+  estimates:{eur:0},fxRates:{EUR:quote}});
+ assert.equal(s.complete,true);assert.equal(s.globalCAD,0);
+ assert.equal(s.balances[0].cad,0);
+});

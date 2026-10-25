@@ -91,8 +91,14 @@
   // A positive card estimate may reflect missing purchases rather than a
   // verified surplus. Never promote it to available cash or global wealth.
   const cardsToReview=active.filter(a=>a.type==='card'&&Number(estimates[a.id])>0);
-  const balances=active.map(a=>({id:a.id,name:a.name||'',nativeCurrency:currency(a),balance:estimates[a.id]??null,
-   cad:estimates[a.id]===null||estimates[a.id]===undefined?null:fxValue(estimates[a.id],currency(a),fxRates[currency(a)])}));
+  const balances=active.map(a=>{
+   const native=estimates[a.id],code=currency(a),
+    converted=native===null||native===undefined?null:fxValue(native,code,fxRates[code]);
+   // A nonzero foreign balance rounding to zero CAD is unresolved, not
+   // confirmed zero cash. A truly zero native balance remains a known zero.
+   const cad=converted===0&&native!==0?null:converted;
+   return{id:a.id,name:a.name||'',nativeCurrency:code,balance:native??null,cad};
+  });
   const complete=balances.length>0&&balances.every(a=>a.balance!==null&&a.cad!==null)&&
    !cardsToReview.length;
   const totalCAD=complete?round(balances.reduce((n,a)=>n+a.cad,0)):null;
