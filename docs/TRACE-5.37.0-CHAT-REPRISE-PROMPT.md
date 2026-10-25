@@ -1,3 +1,15 @@
+# REPRISE DU 25 OCTOBRE 2026 — DEUX JUSTIFICATIFS DIFFÉRÉS EN LABORATOIRE
+
+HEAD de départ confirmé : `dd0201f45b24a51ac61ecea9824f21fc283c2da9`. Sur la branche exclusive `trace-5.37.0-international-accounts-fx` :
+- `8a71018ebb139d8905469cf1fb497cd76dd89982` : adaptateur autonome `TraceDeferredEvidenceIntake.review` réunissant les contrôles **distincts** d'achat sur relevé carte et de prélèvement sur compte courant, sans substituer une preuve à l'autre. Refus des sources physiques réutilisées, comptes/devises incompatibles et effets financiers non nuls. Toujours `persistable:false`, `confirmed:false`, `eligibleForServerConfirmation:false`.
+- Lot suivant : démonstration interactive chargée **uniquement** dans `trace-international-preview.html` avec deux attestations locales séparées, chacune périmée si son propre relevé fictif change. Pas de mise à jour de `index.html` ni du service worker production.
+
+**Preuves sur poste isolé :** 11 tests `node --test` natifs de l'adaptateur avec contrôleurs simulés, plus 5 tests `node --test` natifs de l'interface avec faux DOM/contrôleurs, soit **16/16 tests nouveaux**, et `node --check` de ces deux sources. Ce sont des tests **isolés**, pas la suite native entière du dépôt ; pas de vrais navigateurs/SQL/PGlite, pas de flux bancaire/import PDF utilisable. Le bilan historique 219/219 V8 n'a pas été rejoué ici. Le nouveau service worker de laboratoire est périmé après ajout d'assets : regénération impérative via `scripts/build-trace-preview-pwa.mjs` dans un vrai checkout avant essai PWA/offline, **jamais** par édition manuelle.
+
+**Suite prioritaire :** parcours d'import structuré PDF/CSV avec lignes et sources réelles mais **fictives**, validation de bout en bout des modules déjà présents, écriture `pending` sous permissions CAS/RLS Auth/PostgreSQL simulées puis seulement plus tard confirmation sûre ; 07/08/09 natif PGlite, concurrence 2 clients, multi-devises/Couple, fin premium, Chromium/iPhone Safari, backup/rollback. Rien d'activé en production. **NO-GO**.
+
+---
+
 # ADDENDUM 25 OCT 2026 — PREUVE D'ACHAT DIFFÉRÉ VS PREUVE DU PRÉLÈVEMENT
 
 Résoudre le HEAD de `trace-5.37.0-international-accounts-fx` au début de toute reprise, dernier HEAD de **code** connu `b0ae1129c307e59ddd62546450326ef26371b32c`. Stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intact. Ne pas modifier production stable, CI, données Supabase réelles, PR/fusion ou déploiement. Commits `[skip ci]`.

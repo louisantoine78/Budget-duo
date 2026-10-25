@@ -1,3 +1,14 @@
+## Revue d'achat et prélèvement : démonstration double preuve (25 octobre 2026)
+
+- [x] Adaptateur **lecture seule** `TraceDeferredEvidenceIntake` : preuve d'achat sur carte et preuve de prélèvement sur courant sont deux canaux indépendants ; sources physiques et comptes distincts, contrôle des devises et associations.
+- [x] Présentation dans `trace-international-preview.html` **laboratoire uniquement**, avec exemple fictif 40 EUR / 12,35 EUR, deux boutons d'attestation et changement de version source invalidant séparément chaque attestation.
+- [x] **16/16 tests Node CLI natifs isolés** (11 adaptateur avec contrôleurs simulés + 5 UI avec DOM/contrôleurs simulés) et syntaxe JavaScript vérifiée. Ne pas les confondre avec des tests Node complets intégrés aux sources existantes, des tests SQL ou un navigateur.
+- [ ] Brancher les sources de vrais imports **fictifs** PDF/CSV déjà structurés et intégrer le contrôle au parcours de validation de la candidate ; démonstration seule actuellement, aucune confirmation ni `pending` persistable.
+- [ ] Exécuter Node complet + PGlite SQL 07/08/09 Auth/RLS/CAS 2 sessions, reconstruire SW **lab** officiel devenu périmé, tester Chromium/offline et iPhone Safari ; aucune production ni vraie donnée.
+- [ ] Compléter multi-devises/Couple, frais/remboursements, UI premium, backup/rollback et GO humain explicite. **NO-GO**.
+
+---
+
 ## Débit différé — preuve de l'achat sur la carte (25 octobre 2026)
 
 - [x] Saisie `40,00` ou `40.00` dans le contrat candidat `pending`, montants natifs exacts, sous-centimes/notations ambiguës refusés.

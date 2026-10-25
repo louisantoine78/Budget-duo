@@ -1,3 +1,16 @@
+## Lot du 25 octobre 2026 — circuit double preuve d'achat et de prélèvement en labo
+
+- Code : `8a71018ebb139d8905469cf1fb497cd76dd89982` + commit laboratoire de cette entrée. `trace-deferred-evidence-intake-1.0.0.js` relie les contrôleurs existants sans les fusionner, empêche la réutilisation d'une même pièce physique carte/courant et toute conversion d'une attestation en écriture.
+- `trace-deferred-evidence-lab-1.0.0.js` propose **uniquement dans la preview fictive** un affichage à deux colonnes : achat carte 40 EUR, prélèvement partiel courant 12,35 EUR, deux attestations manuelles, expirations indépendantes quand les sources changent. Sources PDF/CSV **préalablement structurées et fabriquées pour le laboratoire**, pas de parser ni connexion bancaire.
+- **Tests réellement exécutés avec Node 22.16.0 dans un répertoire isolé** : 11 nouveaux scénarios adaptateur + 5 interface, **16/16**, mais dépendances/données et DOM simulés ; vérifications syntaxiques des 2 JS. Ce n'est pas la suite native complète, ni l'exécution réelle des anciens modules ensemble, ni une recette navigateur, ni PGlite/PostgreSQL/RLS.
+- Suite historique 219/219 V8 (9 suites) documentée au HEAD initial, **non rejouée**. Pas de tests réels SQL 07/08/09, Safari, Chromium offline, deux clients, ni rollback.
+- Après ajout des assets à `trace-international-preview.html`, le SW de laboratoire est **périmé** : ne pas utiliser la preview offline avant construction par `scripts/build-trace-preview-pwa.mjs` et `--check` dans un checkout complet ; aucune génération manuelle, aucun SW de production.
+- Pas de création de compte différé activée, aucune sauvegarde `pending`, aucune confirmation, aucune mutation d'argent. Aucune donnée Supabase réelle, aucun `main`, PR/fusion/CI/deploiement modifiés. **NO-GO**.
+
+**À faire ensuite :** connecter les imports PDF/CSV structurés et les fiches de validation réelles de la candidate, empêcher doublon/confirm concurrent côté serveur, tester en SQL/Auth/RLS/CAS fictifs (07/08/09), finir multi-devises/Couple et écrans premium, tester Safari iPhone, restaurations et rollback ; validation explicite avant production.
+
+---
+
 ## Lot du 25 octobre 2026 — rapprochement du justificatif d'achat différé (distinct du prélèvement)
 
 **Trois commits de code sur `trace-5.37.0-international-accounts-fx` seulement (tous `[skip ci]`) :**
