@@ -240,3 +240,27 @@ test('settlement and allocation metadata alone cannot bypass client gate',async(
  }
  assert.equal(calls.length,0);
 });
+
+test('real persisted imports and import_days collections cannot bypass deferred gate',async()=>{
+ const {app,state,calls}=createContext();
+ state.accounts=[{id:'card-eur',type:'card',paymentMode:'deferred',
+  owner:'la',currency:'EUR'},{id:'checking',type:'checking',currency:'EUR'}];
+ for(const collection of ['imports','import_days']){
+  const item={id:collection+'-001',accountId:'card-eur',status:'pending'};
+  await assert.rejects(app.saveDocument(collection,item),/TRACE_DEFERRED_NOT_RELEASED/);
+ }
+ assert.equal(calls.length,0);
+ await app.saveDocument('import_days',{id:'ordinary-day',accountId:'checking',
+  status:'pending'});
+ assert.equal(calls.filter(x=>x.method==='trace_cas_save_document').length,1);
+ assert.equal(calls.at(-1).p.p_collection,'import_days');
+});
+test('explicit deferred metadata is blocked even when importer lacks a loaded account',async()=>{
+ const {app,calls}=createContext();
+ for(const collection of ['imports','import_days']){
+  const entry={id:collection+'-missing-card',status:'pending',
+   deferredKind:'purchase',bankAmount:40,bankCurrency:'EUR'};
+  await assert.rejects(app.saveDocument(collection,entry),/TRACE_DEFERRED_NOT_RELEASED/);
+ }
+ assert.equal(calls.length,0);
+});
