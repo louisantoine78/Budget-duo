@@ -17,6 +17,9 @@ function mount({pathname='/trace-international-preview.html',enabled=true}={}){
    dataset:{},style:{},setAttribute(){},
    set innerHTML(v){[...v.matchAll(/id="([^"]+)"/g)].forEach(m=>el(m[1]));}
   };}}};
+ for(const filename of ['trace-statement-evidence-1.0.0.js',
+  'trace-deferred-statement-bridge-1.0.0.js'])
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..',filename),'utf8'),{window});
  window.TraceInternational={resolveBooking(){}};
  window.TraceDeferredDebit={simulate(){}};
  window.TraceDeferredWritePlan={prepare(){return{kind:'deferred_write_plan',persistable:false,

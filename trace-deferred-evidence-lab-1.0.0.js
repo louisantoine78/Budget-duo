@@ -13,7 +13,7 @@
   section.setAttribute('aria-label','Revue fictive distincte des justificatifs');
   section.style.marginTop='16px';
   section.innerHTML='<h3>Deux justificatifs, deux contrôles</h3>'+
-   '<p class="sub">Exemple fictif : achat de 40,00 € sur la carte et prélèvement partiel de 12,35 € sur le compte courant. Relevés PDF/CSV déjà structurés, sans import bancaire ni écriture.</p>'+
+   '<p class="sub">Exemple fictif : achat de 40,00 € sur la carte et prélèvement partiel de 12,35 € sur le compte courant. Lignes PDF/CSV structurées puis revues localement, sans import bancaire ni écriture.</p>'+
    '<div class="grid grid-2" style="margin:12px 0">'+
    '<div class="statbox"><span>Preuve de l’achat (carte)</span><b id="tracePurchaseEvidenceStatus">—</b></div>'+
    '<div class="statbox"><span>Preuve du prélèvement (courant)</span><b id="traceCheckingEvidenceStatus">—</b></div></div>'+
@@ -37,7 +37,9 @@
    !root.TraceDeferredWritePlan?.prepare||
    !root.TraceDeferredPurchaseEvidence?.review||
    !root.TraceDeferredBankReview?.reviewSnapshot||
-   !root.TraceDeferredEvidenceIntake?.review){
+   !root.TraceDeferredEvidenceIntake?.review||
+   !root.TraceStatementEvidence?.stage||
+   !root.TraceDeferredStatementBridge?.convert){
    unavailable('contrôleurs requis absents.');return;
   }
   try{
@@ -51,35 +53,53 @@
      quote:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-12',source:'Taux fictif'},
      categories:[{id:'food',type:'expense',archived:false}],
      existingTransactions:[]}),
-    cardDocument={statementId:'card-doc',importId:'card-import',
-     sourceId:'physical-card',sourceVersion:'card-v1',sourceType:'pdf_extracted',
-     complete:true,accountId:card.id,currency:'EUR',
+    cardStage=root.TraceStatementEvidence.stage({
+     documentId:'card-doc',accountId:card.id,currency:'EUR',
      fromDate:'2026-10-01',toDate:'2026-10-31',
-     rows:[{lineId:'purchase-line',type:'card_purchase',
-      purchaseDate:'2026-10-12',direction:'debit',status:'confirmed',amount:'40.00'},
-      {lineId:'refund-line',type:'card_refund',debitDate:'2026-10-19',
-       direction:'credit',status:'confirmed',amount:'3.00'}]},
-    bankDocument={statementId:'checking-doc',importId:'checking-import',
-     sourceId:'physical-checking',sourceVersion:'checking-v1',sourceType:'csv',
-     complete:true,accountId:checking.id,currency:'EUR',
+     rows:[{page:1,line:4,rawText:'12/10 Courses fictives 40,00',
+      date:'2026-10-12',name:'Courses de démonstration',debit:'40,00'},
+      {page:1,line:5,rawText:'19/10 Remboursement fictif 3,00',
+       date:'2026-10-19',name:'Remboursement fictif',credit:'3,00'}]}),
+    bankStage=root.TraceStatementEvidence.stage({
+     documentId:'checking-doc',accountId:checking.id,currency:'EUR',
      fromDate:'2026-12-01',toDate:'2026-12-31',
-     rows:[{lineId:'debit-line',debitDate:'2026-12-05',direction:'debit',
-      amount:'12.35',status:'confirmed'}]},
+     rows:[{page:1,line:7,rawText:'05/12 Débit différé 12,35',
+      date:'2026-12-05',name:'Règlement fictif',debit:'12,35'}]}),
+    toDocument=(stage,accountKind,sourceType,sourceId,kinds)=>{
+     const proposed=root.TraceDeferredStatementBridge.convert({
+      staged:stage,accountKind,sourceType,sourceId,
+      importId:'import-'+sourceId,
+      approvals:stage.ready.map(r=>({id:r.id,evidenceKey:r.evidenceKey,
+       confirmed:true})),
+      classifications:stage.ready.map((r,i)=>({
+       id:r.id,evidenceKey:r.evidenceKey,statementKey:stage.statementKey,
+       kind:kinds[i],confirmed:true,posted:true})),
+      completeness:{confirmed:true,statementKey:stage.statementKey,
+       expectedRows:stage.totalRows,reviewedBy:'la'}});
+     if(proposed.status!=='local_document_ready')
+      throw Error('Justificatif fictif non vérifiable.');
+     return proposed.statement;
+    },
+    cardBaseDocument=toDocument(cardStage,'card','pdf_extracted',
+     'physical-card',['card_purchase','card_refund']),
+    bankBaseDocument=toDocument(bankStage,'checking','csv',
+     'physical-checking',['checking_debit']),
     settlement={id:'settlement-partial-demo',settlementMode:'partial',
      cardAccountId:card.id,checkingAccountId:checking.id,currency:'EUR',
      debitDate:'2026-12-05',allocationDueDate:'2026-12-05',
      amount:'12.35',status:'confirmed',purchaseIds:[plan.document.id],feeIds:[],
-     bankEvidence:{statementId:'checking-doc',lineId:'debit-line',
+     bankEvidence:{statementId:'checking-doc',lineId:bankBaseDocument.rows[0].lineId,
       accountId:checking.id,currency:'EUR',direction:'debit',
       amount:'12.35',debitDate:'2026-12-05',status:'confirmed',reviewed:true}};
-   let purchaseReceipt=[],settlementReceipt=[];
+   let cardDocument=cardBaseDocument,bankDocument=bankBaseDocument,
+    purchaseReceipt=[],settlementReceipt=[];
    const purchaseInputs=()=>({plan,statements:[cardDocument],
-    selection:{statementId:'card-doc',lineId:'purchase-line'},receipts:purchaseReceipt,
+    selection:{statementId:'card-doc',lineId:cardDocument.rows[0].lineId},receipts:purchaseReceipt,
     otherClaims:[]});
    const run=()=>{
     const results=root.TraceDeferredEvidenceIntake.review({
      plan,checkingAccountId:checking.id,cardStatements:[cardDocument],
-     cardSelection:{statementId:'card-doc',lineId:'purchase-line'},
+     cardSelection:{statementId:'card-doc',lineId:cardDocument.rows[0].lineId},
      cardReceipts:purchaseReceipt,checkingStatements:[bankDocument],
      settlements:[settlement],settlementReceipts:settlementReceipt});
     const bankStatus=results.settlementStatuses[0]?.status||'preuve manquante';
@@ -95,7 +115,7 @@
    get('traceReviewPurchase').addEventListener('click',()=>{
     try{const r=root.TraceDeferredPurchaseEvidence.review(purchaseInputs());
      purchaseReceipt=r.reviewToken?[{planId:plan.document.id,
-      reviewedBy:plan.document.payerId,statementId:'card-doc',lineId:'purchase-line',
+      reviewedBy:plan.document.payerId,statementId:'card-doc',lineId:cardDocument.rows[0].lineId,
       approved:true,snapshot:r.reviewToken}]:[];run();}
     catch(e){unavailable(String(e.message||e));}
    });
@@ -106,10 +126,10 @@
     catch(e){unavailable(String(e.message||e));}
    });
    get('traceChangePurchaseSource').addEventListener('click',()=>{
-    cardDocument.sourceVersion+='-edited';run();
+    cardDocument={...cardDocument,sourceVersion:cardDocument.sourceVersion+'-edited'};run();
    });
    get('traceChangeCheckingSource').addEventListener('click',()=>{
-    bankDocument.sourceVersion+='-edited';run();
+    bankDocument={...bankDocument,sourceVersion:bankDocument.sourceVersion+'-edited'};run();
    });
    run();
   }catch(e){unavailable(String(e?.message||e));}
