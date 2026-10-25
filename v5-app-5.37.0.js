@@ -2781,6 +2781,22 @@ function parseCsvDate(raw,format){
  const date=new Date(y,m-1,d);
  return date.getFullYear()===y&&date.getMonth()+1===m&&date.getDate()===d?String(y).padStart(4,'0')+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'):null;
 }
+// TRACE 5.37 — CSV import must use the same verified bank model at preview
+// and persistence. Pure read-only snapshot: legacy cards may omit 'type'.
+function csvImportAccountSnapshot(account,owner){
+ if(!account||account.owner!==owner||account.archived||
+    !['checking','card'].includes(accountType(account))||
+    account.paymentMode==='deferred')
+  throw Error('Compte bancaire indisponible pour cet import. Choisis un compte actif.');
+ const I=window.TraceInternational;
+ return JSON.stringify({
+  id:String(account.id),owner:String(account.owner),
+  kind:accountType(account),currency:I.currency(account),country:I.country(account),
+  paymentMode:String(account.paymentMode||''),
+  settlementAccountId:String(account.settlementAccountId||'')
+ });
+}
+
 function csvFingerprint(t){const norm=String(t.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();return[t.date,t.type,Number(t.bankAmount??t.amountCAD).toFixed(2),norm,t.accountId].join('|');}
 function csvImportedDuplicate(t,rows){const key=csvFingerprint(t);return rows.some(x=>(x.importFingerprint||csvFingerprint(x))===key);}
 
@@ -2859,6 +2875,8 @@ function importFile(file){
    const col=k=>Number($('#csvCol_'+k).value);
    const build=()=>{
     if(col('date')<0||col('name')<0||(col('amount')<0&&(col('debit')<0||col('credit')<0)))throw new Error('Associe les colonnes Date, Description et Montant (ou Débit + Crédit).');
+    const selected=accts.find(a=>a.id===$('#csvAccount').value);
+    csvImportAccountSnapshot(selected,me);
     const all=[],invalid=[];
     rows.forEach((row,index)=>{
      const date=parseCsvDate(row[col('date')],$('#csvDateFormat').value),name=String(row[col('name')]||'').trim();
@@ -2905,9 +2923,18 @@ function importFile(file){
    $('#csvPreview').onclick=()=>{
     try{
      const result=build(),preview=$('#csvPreviewResult');
+     // Capture the exact reviewed mapping. Changing source interpretation
+     // or bank account after preview requires another human review.
+     const reviewedMapping=()=>JSON.stringify({
+      account:$('#csvAccount')?.value,
+      columns:['date','name','amount','debit','credit'].map(k=>col(k)),
+      dateFormat:$('#csvDateFormat')?.value,sign:$('#csvSign')?.value
+     });
+     const mappingAtPreview=reviewedMapping();
      const flagged=result.all.filter(t=>t.csvReviewMatchIds?.length);
      const account=accts.find(a=>a.id===$('#csvAccount').value),I=window.TraceInternational,
-      ccy=I.currency(account),existing=[...state.transactions,...result.all];
+      ccy=I.currency(account),accountAtPreview=csvImportAccountSnapshot(account,me),
+      existing=[...state.transactions,...result.all];
      const comparison=t=>(t.csvReviewMatchIds||[]).map(id=>{
       const matched=existing.find(x=>x.id===id);if(!matched)return'';
       const destination=matched.type==='transfer'&&matched.toAccountId===t.accountId,
@@ -2932,11 +2959,25 @@ function importFile(file){
      $('#csvCommit').onclick=async()=>{
       const btn=$('#csvCommit');btn.disabled=true;let saved=0;
       try{
+       const validateReview=()=>{
+        if(reviewedMapping()!==mappingAtPreview)
+         throw Error('Colonnes ou compte modifiés : prévisualise de nouveau le CSV.');
+        const current=state.accounts.find(a=>a.id===account.id);
+        if(csvImportAccountSnapshot(current,me)!==accountAtPreview||
+           !visibleBankAccounts(me).some(a=>a.id===account.id))
+         throw Error('Le compte bancaire a changé depuis la prévisualisation. Relance la revue du CSV.');
+       };
+       validateReview();
        const newEntries=result.all.filter(t=>!csvAlreadyImportedSourceRow(t,state.transactions));
        // Unquoted foreign rows remain pending in their real bank currency.
        // CAD is assigned only during explicit validation at a dated FX rate.
        for(const t of newEntries){
-        const account=accts.find(a=>a.id===t.accountId);
+        // Repeat after each awaited RPC: a account change mid-import must
+        // stop subsequent writes; previously saved pending rows stay intact.
+        validateReview();
+        const account=state.accounts.find(a=>a.id===t.accountId);
+        if(!account||I.currency(account)!==t.bankCurrency)
+         throw Error('Devise native du compte modifiée : nouvel examen CSV requis.');
         const booked=t.bankCurrency==='CAD'?
          window.TraceInternational.resolveBooking({account,bankAmount:t.bankAmount,date:t.date}):null;
         const item=booked?{...t,...booked,...traceSplit(me,booked.amountCAD)}:{...t};
@@ -2948,7 +2989,9 @@ function importFile(file){
        }
        renderAll();navigate('activity');showTab('review');
        $('#importResult').textContent=saved+' opération(s) placée(s) dans À vérifier.';
-      }catch(e){console.error(e);renderAll();$('#importResult').textContent=saved+' ligne(s) importée(s). Import interrompu : vérifie la connexion puis recommence (les doublons sont reconnus).';}
+      }catch(e){console.error(e);renderAll();$('#importResult').textContent=saved+
+       ' ligne(s) importée(s). Import interrompu : '+String(e.message||e)+
+       ' Les écritures déjà placées en attente sont conservées. Relance la prévisualisation avant de reprendre.';}
      };
     }catch(e){$('#csvPreviewResult').textContent=e.message;}
    };
