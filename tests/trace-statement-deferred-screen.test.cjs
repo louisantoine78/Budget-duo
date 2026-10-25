@@ -160,7 +160,7 @@ test('all temporary proof state is discarded when UI is disposed',async()=>{
  assert.equal(f.ui.getReport(),null);
 });
 
-test('ordinary credit card cannot receive a deferred proof',()=>{
+test('ordinary credit card cannot receive a deferred proof',async()=>{
  const f=fixture();await f.begin();
  assert.equal(f.root.TraceDeferredStatementReviewUI.eligible({
   id:'ordinary',type:'card',owner:'la',country:'FR',currency:'EUR',
