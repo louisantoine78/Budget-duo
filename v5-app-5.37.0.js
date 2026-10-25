@@ -577,6 +577,92 @@ function openAccountsOverview(){
  $('#traceAccountManage').onclick=openAccountSettings;
  $('#traceAccountsClose').onclick=closeSheet;
 }
+function traceDeferredAccountReview(card){
+ // Read-only bridge from existing TRACE ledger documents to the deferred lab.
+ // NEVER save, mutate, infer maturity dates or create a second budget expense.
+ if(accountType(card)!=='card'||card.paymentMode!=='deferred')return'';
+ const warn=(label,detail)=>'<section class="trace-deferred-account" aria-live="polite">'+
+  '<h3>Débit différé · contrôle</h3><p><strong>'+esc(label)+'</strong></p>'+
+  '<p>'+esc(detail)+'</p><small>Aucune écriture créée, aucun débit ni dépense ajouté.</small></section>';
+ const simulate=window.TraceDeferredDebit?.simulate,I=window.TraceInternational;
+ if(typeof simulate!=='function')return warn('Analyse indisponible',
+  'Le module de contrôle du différé n’est pas chargé. Aucune estimation automatique.');
+ const checking=state.accounts.find(a=>a.id===card.settlementAccountId&&
+  !a.archived&&accountType(a)==='checking'&&a.owner===card.owner);
+ if(!checking)return warn('Compte de règlement à définir',
+  'Lie la carte à un compte courant du même titulaire avant toute projection.');
+ const rows=state.transactions.filter(t=>t&&
+  ['confirmed','pending'].includes(t.status)&&
+  t.type!=='card_statement_evidence'&&
+  (t.accountId===card.id||t.toAccountId===card.id||t.cardAccountId===card.id));
+ if(!rows.length)return warn('Aucune échéance complète',
+  'Les dates d’achat, de budget et de débit doivent être renseignées explicitement.');
+ const purchases=[],refunds=[],fees=[],settlements=[];
+ let incomplete=0;
+ for(const t of rows){
+  const transfer=t.type==='transfer'&&t.toAccountId===card.id;
+  const native=transfer?
+   I.amountOnAccount(t,card,'destination'):I.amountOnAccount(t,card);
+  if(native===null||!Number.isFinite(native)||native<=0||
+     !I.calendarDate(t.date)){incomplete++;continue;}
+  const common={id:t.id,currency:I.currency(card),amount:native,status:t.status};
+  if(t.type==='expense'&&t.accountId===card.id&&t.deferredKind==='card_fee'){
+   if(!I.calendarDate(t.budgetDate)||!I.calendarDate(t.dueDate)||
+      t.status!=='confirmed'){incomplete++;continue;}
+   fees.push({...common,type:'card_fee',cardAccountId:card.id,
+    chargeDate:t.date,budgetDate:t.budgetDate,dueDate:t.dueDate});
+  }else if(t.type==='expense'&&t.accountId===card.id&&!t.deferredKind){
+   if(!I.calendarDate(t.budgetDate)||!I.calendarDate(t.dueDate)||
+      t.status!=='confirmed'){incomplete++;continue;}
+   purchases.push({...common,type:'deferred_purchase',cardAccountId:card.id,
+    purchaseDate:t.date,budgetDate:t.budgetDate,dueDate:t.dueDate});
+  }else if(t.type==='refund'&&t.accountId===card.id&&
+     t.deferredPurchaseId){
+   if(!I.calendarDate(t.budgetDate)){incomplete++;continue;}
+   refunds.push({...common,type:'merchant_refund',cardAccountId:card.id,
+    purchaseId:t.deferredPurchaseId,refundDate:t.date,budgetDate:t.budgetDate});
+  }else if(transfer&&t.accountId===checking.id&&
+     Array.isArray(t.deferredPurchaseIds)&&Array.isArray(t.deferredFeeIds)&&
+     t.toBankAmount!==null&&t.toBankAmount!==undefined){
+   settlements.push({...common,type:'deferred_settlement',
+    cardAccountId:card.id,checkingAccountId:checking.id,debitDate:t.date,
+    purchaseIds:t.deferredPurchaseIds,feeIds:t.deferredFeeIds,
+    settlementMode:t.deferredSettlementMode||'full',
+    ...(t.deferredSettlementMode==='partial'?{
+     allocationDueDate:t.deferredDueDate,bankEvidence:t.deferredBankEvidence}: {})});
+  }else incomplete++;
+ }
+ // Never display a partial projection when a single bank movement is missing.
+ if(incomplete)return warn('Informations bancaires incomplètes',
+  incomplete+' mouvement(s) nécessitent une date de budget, une échéance, un montant natif ou un rapprochement explicite. Aucun solde projeté.');
+ try{
+  const r=simulate({card,checking,purchases,refunds,fees,settlements,asOfDate:localDateISO()});
+  if(!r.batches.length)return warn('Aucune échéance validable',
+   'Aucun lot complet à rapprocher de cette carte.');
+  const fmt=n=>I.money(n,I.currency(card)),labels={
+   scheduled:'À venir',overdue:'Échéance dépassée',
+   settled:'Réglé',cleared_by_refund:'Soldé par remboursement',
+   pending_review:'Paiement à vérifier',
+   partially_settled:'Partiellement réglé',
+   partially_settled_pending_review:'Règlement partiel à vérifier'};
+  return '<section class="trace-deferred-account">'+
+   '<h3>Débit différé · échéances</h3>'+
+   '<p>Lecture seule · montants natifs '+esc(I.currency(card))+
+    '. Cette simulation ne modifie ni les budgets CAD historiques ni les soldes bancaires.</p>'+
+   '<div class="trace-deferred-summary"><span>Dette différée théorique</span><b>'+
+    esc(fmt(r.liability))+'</b></div>'+
+   '<div class="trace-deferred-summary"><span>Échéances dépassées</span><b>'+
+    esc(fmt(r.overdue))+'</b></div>'+
+   '<div class="trace-deferred-batches">'+r.batches.map(batch=>
+    '<div><strong>'+esc(batch.dueDate)+'</strong><span>'+
+     esc(labels[batch.status]||'À revoir')+'</span><b>'+
+     esc(fmt(batch.remainingAmount))+' restant · '+esc(fmt(batch.paidAmount))+
+     ' réglé</b></div>').join('')+'</div>'+
+   '<small>Règlement de carte = transfert interne, jamais une seconde dépense. Vérifie les relevés avant toute activation des écritures.</small>'+
+   '</section>';
+ }catch(error){return warn('Rapprochement différé à vérifier',
+  String(error?.message||'Règles financières non vérifiées.'));}
+}
 function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
  const a=state.accounts.find(x=>x.id===id&&['la','partner'].includes(x.owner)&&
   ['checking','card'].includes(accountType(x))&&
@@ -613,6 +699,7 @@ function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
     related.map(x=>shortAccountLabel(x)).join(', '):'Aucun lien indiqué')+'</b></div>'+
   '<div><span>Dernier rapprochement</span><b>'+esc(reconcile?.date||'À effectuer')+'</b></div>'+
   '</div>'+
+  traceDeferredAccountReview(a)+
   (a.owner===me&&!a.archived&&accountType(a)==='checking'?
   '<button type="button" class="trace-intl-set-primary" id="traceAccountSelectPrimary">'+
   (state.household.primaryBankAccountByOwner?.[me]===a.id?'★ Compte principal':'☆ Définir comme principal')+'</button>':'')+

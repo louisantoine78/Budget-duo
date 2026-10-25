@@ -254,3 +254,15 @@
  .trace-conflict-alert { left: 8px; right: 8px; padding: 13px; }
  .trace-conflict-alert strong { font-size: 14px; }
 }
+
+/* Candidate-only read-only debit differe report; no controls or bank writes. */
+.trace-deferred-account{margin:14px 0;padding:15px;border:1px solid #d4e5da;border-radius:16px;background:#f6faf7;color:#26493d}
+.trace-deferred-account h3{font-size:14px;margin:0 0 8px;color:#205e4a}
+.trace-deferred-account p{font-size:12px;line-height:1.5;margin:6px 0}
+.trace-deferred-account small{display:block;font-size:11px;line-height:1.5;margin-top:11px;color:#5c786b}
+.trace-deferred-summary{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:7px 0;border-bottom:1px solid #e0eae3;font-size:12px}
+.trace-deferred-summary b{font-size:14px;font-variant-numeric:tabular-nums}
+.trace-deferred-batches{margin-top:9px;display:grid;gap:8px}
+.trace-deferred-batches>div{border:1px solid #e0eae3;border-radius:11px;padding:9px;background:#fff;display:flex;gap:5px 8px;align-items:center;flex-wrap:wrap;font-size:12px}
+.trace-deferred-batches span{color:#507563}
+.trace-deferred-batches b{margin-left:auto;font-size:12px;overflow-wrap:anywhere}
