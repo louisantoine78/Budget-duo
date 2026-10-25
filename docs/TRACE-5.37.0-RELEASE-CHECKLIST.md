@@ -1,3 +1,18 @@
+## Contrôle FX au centime et patrimoine — 24 octobre 2026
+
+**NO-GO maintenu.** Trois commits `e8abbc5`, `f9ffc6b`, `7adbb09`, uniquement sur la branche internationale avec `[skip ci]`.
+
+- [x] Refus explicite d'un achat bancaire étranger non nul qui deviendrait **0,00 CAD** en budget après arrondi.
+- [x] Refus des valorisations étrangères avec multiplication FX infinie ou perte de précision sûre au centime.
+- [x] Un solde étranger non nul ne peut pas devenir un actif `0 CAD` fictivement fiable : la vue `snapshot` est incomplète ; un solde natif réellement nul reste zéro.
+- [x] Relecture intégrité : **78/78 contrôles V8 fictifs**, dont 5 vérifications **statiques** SQL ; aucun test PostgreSQL/PGlite ni Node CLI natif effectué sur ce HEAD.
+- [ ] Exécuter les suites natives via `scripts/test-trace-native.mjs` sur checkout et dépendances fictifs.
+- [ ] Exécuter réellement SQL 07/08/09 en PG fictif, vérifier le scénario `investment_operations`, la concurrence CAS, les droits RLS/Auth et les écritures directes à fermer lors du cutover.
+- [ ] Regénérer le SW de preview via `scripts/build-trace-preview-pwa.mjs`, lancer `--check`, navigateur offline/Chromium, iPhone Safari.
+- [ ] Terminer les flux financiers internationaux restants et le débit différé/UX premium/Couple ; aucun déploiement, aucune migration hébergée ou accès aux données réelles avant autorisation explicite.
+
+---
+
 ## Portes ajoutées — investissement CAS et sens de preuve OCR (24 octobre 2026)
 
 **NO-GO.** Correctifs candidats seulement, commits `a1ebbde`, `842ae60`, `e026ee1`, `8b2a4e3`, tous `[skip ci]`.

@@ -1,3 +1,18 @@
+# ADDENDUM PRIORITAIRE — INTÉGRITÉ FX ET PATRIMOINE (24 OCTOBRE 2026)
+
+**Toujours résoudre le véritable HEAD GitHub avant de travailler.** Dernier HEAD de code vérifié avant cet addendum : `7adbb096b201d1840c7da5f20b06d62b8e8d465c`. Branche autorisée : `trace-5.37.0-international-accounts-fx`, jamais `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+
+Nouveaux commits depuis le précédent handoff `32b320998b0d802a7f34f21a987e559d05806440` :
+- `e8abbc556120274db5b2f1f3b30af80fd1d048dc` : un achat positif en devise étrangère valorisé 0,00 CAD après arrondi ne peut plus être confirmé.
+- `f9ffc6b10e79d3453329a7402c587054be679ae5` : refus de valorisations FX infinies ou hors précision sûre.
+- `7adbb096b201d1840c7da5f20b06d62b8e8d465c` : un solde natif étranger non nul ne peut être affiché comme valeur CAD zéro certaine ; retour incomplet, zéro natif réel préservé.
+
+**78/78 vérifications ciblées V8 simulées** sur ce HEAD : 11 gardes FX, 11 tests d'intégrité monétaire, 18 CSV étrangers, 7 anciennes captures, 8 virements/cartes, 18 captures étrangères, 5 contrats **SQL statiques**. Ce n'est ni une exécution Node CLI native, ni SQL/PGlite/PostgreSQL, ni Safari/Chromium, ni test hébergé. Les migrations 07/08/09 n'ont toujours pas été exécutées et le SW de labo est périmé après changements JS. Ne pas annoncer GO.
+
+Poursuivre sans rediscuter les décisions fonctionnelles/UX approuvées : prioriser checkout isolé + dépendances Node/PGlite, suites natives et SQL 07/08/09/RLS/CAS, reconstruction SW avec générateur puis --check, browsers/hors ligne/iPhone, finalisation étranger/différé/Couple/UX premium, sauvegarde/restauration/rollback sous autorisation. Ne pas toucher aux données Supabase réelles, ni déployer, ni main, ni CI. Commits `[skip ci]`. Voir HANDOFF et RELEASE-CHECKLIST mis à jour en tête du dépôt.
+
+---
+
 # ADDENDUM DE REPRISE — STATUT OCR ÉTRANGER / CAS PLACEMENTS (24 OCTOBRE 2026)
 
 Ne pas reprendre depuis une ancienne valeur HEAD : interroger GitHub à chaque nouvelle session. Dernier HEAD de code vérifié avant cet addendum : `8b2a4e3ae931ca1afe369fdb0781b5b2049d3267`. Branche d'écriture unique : `trace-5.37.0-international-accounts-fx`. Stable `main` = `02c70f50e7e51da79b77a91dde96a03c6c719909`, à préserver impérativement.

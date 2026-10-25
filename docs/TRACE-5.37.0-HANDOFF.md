@@ -1,3 +1,34 @@
+## Lot du 24 octobre — intégrité FX zéro CAD et patrimoine non valorisable
+
+**NO-GO production maintenu.** Après le HEAD documentaire `32b320998b0d802a7f34f21a987e559d05806440`, trois commits de code ont été ajoutés sur la SEULE branche `trace-5.37.0-international-accounts-fx`, tous `[skip ci]` :
+
+1. **`e8abbc556120274db5b2f1f3b30af80fd1d048dc`** : `TraceInternational.resolveBooking` refuse désormais une dépense bancaire native non nulle dont le taux CAD historique (même sourcé) conduirait après arrondi à **0,00 CAD** ; jamais de sous-évaluation artificielle du budget ou de taux de change inventé. Suite `tests/trace-international-fx-zero-budget-guard.test.cjs` ajoutée, avec exemples fictifs EUR 0,01 et EUR 40 -> CAD 64.
+2. **`f9ffc6b10e79d3453329a7402c587054be679ae5`** : `TraceInternational.fxValue` refuse toute contre-valeur infinie ou hors précision entière sûre du centime, plutôt que d'inscrire un faux chiffre de patrimoine. Les soldes CAD/étrangers normaux restent utilisables.
+3. **`7adbb096b201d1840c7da5f20b06d62b8e8d465c`** : `TraceInternational.snapshot` distingue un solde étranger réellement égal à zéro de la conversion d'un solde non nul arrondie à zéro. Le second cas rend la valorisation globale **incomplète**, sans chiffre patrimonial faussement précis. Le zéro réel reste traité comme zéro.
+
+### Preuve et limites
+
+Les **78/78 tests ciblés** ont été exécutés sans échec dans un harnais **V8 avec Node, FS, VM, DOM et transports simulés**, sur les vraies sources du candidat et les vrais moteurs FX/mouvements :
+- `trace-international-fx-zero-budget-guard.test.cjs` : 11
+- `trace-international-money-integrity.test.cjs` : 11
+- `trace-international-foreign-csv-confirm.test.cjs` : 18
+- `trace-international-capture-confirm-guards.test.cjs` : 7
+- `trace-smart-cross-currency-transfer-guards.test.cjs` : 8
+- `trace-international-foreign-capture-approval.test.cjs` : 18
+- `trace-cas-investment-ownership-static.test.cjs` : 5 (**contrôles statiques SQL, aucun SQL exécuté**).
+
+Ces 78 vérifications **ne sont pas des tests Node CLI natifs**, ni PostgreSQL/PGlite, RLS/Auth, Chromium, Safari ou deux clients en conditions réelles. Le conteneur fournit Node v22, mais **ni checkout du dépôt, ni accès DNS GitHub, ni PGlite/psql**. Ne pas annoncer des tests natifs ni un GO.
+
+`main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` préservée ; aucun déploiement, fusion, workflow/CI ni données Supabase réelles touchés. Les assets JS du laboratoire ayant changé, `trace-international-preview-sw.js` **reste périmé** : régénérer uniquement via `node scripts/build-trace-preview-pwa.mjs` depuis un checkout complet avant tout test PWA/offline. L'intégration SQL 07/08/09 et le nouveau scénario sur `investment_operations` n'ont toujours **pas** été exécutés.
+
+### Priorités suivantes
+
+1. Accéder à un checkout isolé avec Node et PGlite/PostgreSQL fictif ; exécuter le script local `scripts/test-trace-native.mjs` et les tests PG 07/08/09, RLS/Auth/CAS deux sessions, corriger les échecs avant toute décision.
+2. Recréer le SW labo par son générateur et `--check`; tester hors ligne, Chromium, puis Safari iPhone.
+3. Terminer les autres parcours bancaires internationaux, débit différé relié, devise Couple, UX premium et vérifications sauvegarde-restauration/rollback, toujours avec autorisation avant les étapes touchant les données réelles.
+
+---
+
 ## Lot du 24 octobre — sécurité OCR débit/crédit, placement CAS et synchronisation FX
 
 **NO-GO inchangé.** Depuis `2ff5eab3e79c284c6b51c5e37afc48a782298f9f`, quatre nouveaux commits ont été enregistrés uniquement sur `trace-5.37.0-international-accounts-fx`, avec `[skip ci]` :
