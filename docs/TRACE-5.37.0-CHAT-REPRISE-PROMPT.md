@@ -1,3 +1,15 @@
+# ADDENDUM 25 OCT 2026 — PREUVE D'ACHAT DIFFÉRÉ VS PREUVE DU PRÉLÈVEMENT
+
+Résoudre le HEAD de `trace-5.37.0-international-accounts-fx` au début de toute reprise, dernier HEAD de **code** connu `b0ae1129c307e59ddd62546450326ef26371b32c`. Stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intact. Ne pas modifier production stable, CI, données Supabase réelles, PR/fusion ou déploiement. Commits `[skip ci]`.
+
+Depuis `7a0e6b4` : `e4dee650` normalise en toute sécurité `40,00` et `50,25` (achat devise étrangère) dans `trace-deferred-write-plan-1.0.0.js`, sous-centimes rejetés. `dc71b913` crée **`trace-deferred-purchase-evidence-1.0.0.js`**, module autonome en lecture seule de revue des lignes d'achats **carte différée** (différent de `trace-deferred-bank-review-1.0.0.js` dédié aux prélèvements du courant) : PDF/CSV **déjà structurés**, ligne source explicite, dates/compte/devise/sens/montant au centime et statuts, anti-doublons physiques/import, attestation manuelle à snapshot périmant sur changement. `b0ae1129` permet un relevé de carte mixte achats, remboursements, paiements et frais sans accepter une ligne non-achat comme preuve d'achat.
+
+**Les modules restent autonomes et ne sont PAS câblés à l'UI ou à un flux persistable.** Même `manual_review_current` n'est qu'une vérification locale du justificatif et n'implique aucune autorisation serveur ou banque. `persistable:false`, `confirmed:false`, `createdTransactions:0`. **219/219 vérifications V8 simulées** sur neuf suites ; aucun Node CLI, vrai PostgreSQL/PGlite 07/08/09, navigateur, iPhone Safari. Environnement sans checkout ni DNS GitHub/PGlite ; runner local `scripts/check-trace-537-release-gates.cjs` non exécuté. Ne pas prétendre prêt au GO.
+
+**Prochaines actions :** relier en labo les sources PDF/CSV carte et courant à leurs justificatifs **distincts**, introduire revue contrôlée `pending` sans écrire en production, développer l'autorisation robuste de confirmation uniquement après vrai PGlite SQL/Auth/RLS/CAS, tester concurrence et imports, fin multi-devises/Couple/debit différé et écrans premium. Regénération SW preview via script officiel en checkout isolé, browser Chromium offline, Safari iPhone, restaurations/rollback. **NO-GO**.
+
+---
+
 # ADDENDUM DE REPRISE — DATE BUDGÉTAIRE + DOCUMENT EN ATTENTE DIFFÉRÉ (25 OCT 2026)
 
 Sur branche exclusive `trace-5.37.0-international-accounts-fx`, trois commits de code `[skip ci]` (HEAD de code dernier vérifié `908d46cfe40aa67b3c12c899dbc747e6a14296b4`, à re-vérifier au redémarrage). Main `02c70f50e7e51da79b77a91dde96a03c6c719909` reste intangible, pas de données Supabase réelles, PR, fusion, CI, SW prod ou déploiement.

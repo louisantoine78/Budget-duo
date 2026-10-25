@@ -1,3 +1,16 @@
+## Débit différé — preuve de l'achat sur la carte (25 octobre 2026)
+
+- [x] Saisie `40,00` ou `40.00` dans le contrat candidat `pending`, montants natifs exacts, sous-centimes/notations ambiguës refusés.
+- [x] Nouveau `TraceDeferredPurchaseEvidence.review` **lecture seule**, distinct de `TraceDeferredBankReview` des prélèvements du courant. Exige source structurée PDF/CSV complète, ligne d'achat explicitement sélectionnée, date/compte/devise/montant exact/sens débit, doublons physiques et revendications concurrentes bloqués.
+- [x] Une attestation locale de comparaison reste `manual_review_current`, **jamais autorisation d'écriture**, expiration à changement de source/plan, non cryptographique.
+- [x] Source bancaire carte mixte (achat/remboursement/frais/paiement) acceptée ; **seule** une ligne `card_purchase` constitue une preuve d'achat.
+- [x] **219/219 contrôles V8 fictifs** sur 9 suites en reprise, dont 23 revue achat et 27 revue prélèvement. Aucun Node CLI/PGlite/Safari réel.
+- [ ] Modules de preuve autonomes **non intégrés dans l'interface**. Relier au laboratoire d'imports structurés avec preuve d'achat séparée du prélèvement, afficher les ambiguïtés et les modifications de source ; ne pas ouvrir l'écriture.
+- [ ] Sécuriser `pending` → `confirmed` sous Auth/RLS/CAS/PostgreSQL **fictif** avec preuves et unicité revalidées côté serveur, tests deux clients ; achat budget une fois, règlement transfert interne, remboursement/frais au centime.
+- [ ] Checkout isolé/PGlite, `scripts/check-trace-537-release-gates.cjs`, SW preview régénéré par script, Chromium offline, iPhone Safari, backup/rollback ; **NO-GO**.
+
+---
+
 ## Débit différé — dates budgétaires et contrat d'écriture, 25 octobre 2026
 
 - [x] Budget/Home/catégories/année reposant sur `txs` : opération `expense` avec `deferredKind:'purchase'` affectée au mois `budgetDate` plutôt qu'au mois d'achat ; remboursement `deferredKind:'merchant_refund'` idem. Les anciennes transactions sans marqueur restent inchangées. Date invalide = pas d'écriture fictivement attribuée à un mois.
