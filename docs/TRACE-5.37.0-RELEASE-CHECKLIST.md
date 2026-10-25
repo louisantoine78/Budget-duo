@@ -1,3 +1,14 @@
+## 25 octobre 2026 — couverture des comptes différés historiques et des placements
+
+- [x] Commit `8323cc64d3ac333c358e660f9f11ffe4af18f23d` : garde client et SQL candidate 10 refusent `paymentMode:'deferred'` même lorsque les comptes historiques omettent `type`. Tests typeless cartes + transactions + modifications + suppression préparés.
+- [x] Commit `dfed7afab3611c84a0e31e16827f7bf5260cfa5e` : surveillance de `investment_operations` et de `bankAccountId` dans le client et SQL candidate 10 pour refuser les références à des cartes différées via des écritures de placement directes. Les transactions d'investissement ordinaires sur compte courant continuent à être acceptées par le contrat client.
+- [x] **24/24 tests du fichier CAS client exécutés V8 avec Node/RPC/DOM simulés** ; aucune erreur. Compilation syntaxique JS des trois fichiers modifiés vérifiée.
+- [ ] **BLOQUANT** : exécuter réellement `node scripts/check-trace-537-release-gates.cjs`, `tests/trace-cas-writes.integration.cjs` et les autres tests SQL migrations 07/08/09/10 sur checkout isolé + PGlite/PostgreSQL fictif ; valider vieilles cartes sans `type`, accès `bankAccountId`, RLS/Auth, RPC/CAS, deux sessions, grants directs et rollback. Tests SQL ajoutés mais PAS exécutés.
+- [ ] Parcours bancaires différés réellement atomiques et double preuve côté serveur, vérifications de bout en bout des imports/Couple/FX, intégration premium, SW preview officiel, offline, Safari iPhone réel et GO explicite.
+- [ ] Production **NO-GO** ; global qualitatif **57 % ±10**, pas de déploiement ou migration exécutée.
+
+---
+
 ## 25 octobre 2026 — reprise : suppression, alias différés, test V8
 
 - [x] **Commit `023c9130861df6c48eefb5c525ac6dbe9ce97577` uniquement branche 5.37.0 avec `[skip ci]`** : côté client, contrôle de suppression rétabli pour `imports`/`import_days` (recherche mémoire correspondante) et `reconciliations` ; alias d'allocation différée couverts sans carte chargée.

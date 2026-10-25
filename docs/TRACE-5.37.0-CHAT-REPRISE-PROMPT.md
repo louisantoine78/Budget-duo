@@ -1,3 +1,17 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026, TYPES BANCAIRES HISTORIQUES ET PLACEMENTS
+
+**Dernier HEAD technique :** `dfed7afab3611c84a0e31e16827f7bf5260cfa5e` ; le commit de ces documents suit. Branche d'écriture unique `trace-5.37.0-international-accounts-fx`. `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intacte. Pas de fusion, PR, CI, déploiement, Supabase réel, reset ou migrations appliquées.
+
+**Deux correctifs supplémentaires liés à la migration candidate 10 :**
+- `8323cc64d3ac333c358e660f9f11ffe4af18f23d` : détection des cartes `paymentMode:'deferred'` **même sans champ `type`**. L'interface `accountType()` reconnaît des cartes historiques par leur nom, tandis que les deux gardes exigeaient auparavant `type==='card'`. Les créations, modifications/déclassements, transactions associées, suppressions directes et mises à jour d'une ancienne carte différée typeless sont donc mises en quarantaine au client et dans le SQL candidat ; scénarios fictifs ajoutés.
+- `dfed7afab3611c84a0e31e16827f7bf5260cfa5e` : ajoute `investment_operations` à la quarantaine et `bankAccountId` aux références surveillées pour qu'une écriture directe legacy ne puisse pas lier un mouvement de placement à une carte différée ancienne. Un virement vers un vrai compte courant ordinaire reste autorisé dans le contrat client, et les RPC 09 ont déjà leur contrôle propre de compte courant, mais les grants SQL directs restent en place jusqu'au cutover.
+
+**Preuves fraîches :** `24/24` tests réels du fichier `tests/trace-cas-client.test.cjs` exécutés dans V8 sur le véritable `v5-app-5.37.0.js`, avec Node/assert/fs/RPC/DOM **simulés**. Syntaxe V8 des fichiers JS modifiés vérifiée. Scénarios PostgreSQL fictifs enrichis **mais non exécutés** ; pas de PGlite/PostgreSQL. Dans le conteneur, Node 22.16 est présent, `github.com` et `registry.npmjs.org` restent inaccessibles et PGlite absent, aucun checkout complet. Ne jamais requalifier les 24/24 comme des tests natifs Node ou PG. `node scripts/check-trace-537-release-gates.cjs` reste non exécuté dans un checkout isolé.
+
+**Priorité de reprise :** obtenir checkout + PostgreSQL/PGlite fictif, relancer toutes les portes natives 07–10 et migrations idempotentes, rôles réels, deux utilisateurs, anciens comptes sans type, placements `bankAccountId`, blocages d'INSERT/UPDATE/DELETE directs et RPC. Inspecter le risque de droits directs sur les autres collections, `SECURITY DEFINER` et stratégie cutover/rollback. En parallèle traiter Couple/FX, imports, UX premium déjà décidée, offline/preview SW via générateur officiel, iPhone Safari, sauvegarde/rollback. Ne pas ouvrir le débit différé. **57 % qualitatif (±10), 43 % restant, production NO-GO**.
+
+---
+
 # MISE À JOUR PRIORITAIRE — REPRISE DU 25 OCTOBRE 2026, GARDES DIFFÉRÉS COMPLÉMENTAIRES
 
 **HEAD de code vérifié après reprise :** `023c9130861df6c48eefb5c525ac6dbe9ce97577` ; ce bloc documentaire ajoute ensuite un nouveau HEAD à relire. Branche exclusive `trace-5.37.0-international-accounts-fx`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, sans aucune écriture. Tous commits `[skip ci]`. Aucun déploiement, merge, PR, activation CI, ni écriture/lecture financière Supabase réelle.

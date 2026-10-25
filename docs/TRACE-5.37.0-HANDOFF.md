@@ -1,3 +1,17 @@
+## 25 octobre 2026 — cartes typeless historiques et détour par les placements
+
+**Commits :** `8323cc64d3ac333c358e660f9f11ffe4af18f23d`, `dfed7afab3611c84a0e31e16827f7bf5260cfa5e`, sur la seule branche `trace-5.37.0-international-accounts-fx`, chaque commit `[skip ci]`. `main` inchangée.
+
+1. `accountType()` savait reconnaître une ancienne Mastercard/Carte par son nom si `type` était absent, mais `traceRefuseUnqualifiedDeferredWrite` et la fonction SQL 10 exigeaient `type==='card'` pour `paymentMode:'deferred'`. Les deux gardes refusent maintenant tout `paymentMode:'deferred'` dans `accounts` et identifient les références à ces cartes historiques dans les autres documents, même sans type. L'ancienne carte demeure non éditable/supprimable durant la quarantaine ; aucun historique migré.
+2. `investment_operations` est maintenant une collection surveillée des deux côtés ; `bankAccountId` rejoint les références inspectées, puisque les anciennes écritures directes peuvent contourner les validations de la RPC 09. Mouvements ordinaires vers des comptes courants non différés non bloqués par la garde cliente.
+3. Nouveau test réel V8 sur les anciennes cartes sans type, un autre sur les mouvements de placement. Des scénarios dans `tests/trace-cas-writes.integration.cjs` couvrent typeless legacy et les insertions directes sur `investment_operations`, mais **aucune vérification PostgreSQL n'a été exécutée**.
+
+**Niveau de preuve :** `24/24` cas du véritable test client CAS passés en V8 avec fausses dépendances Node/fs/DOM/RPC. Analyse de syntaxe JS réussie ; pas de Node CLI/PGlite/PostgreSQL native, Auth/RLS réelle, Safari, Chromium ou SW mis à jour. Conteneur sans accès GitHub/npm DNS, PGlite absent. Vérifier précisément le comportement de la migration candidate 10 sur PG avant toute conclusion financière.
+
+**Statut 57 % qualitatif inchangé, NO-GO production**. Prochain chantier critique : qualification 07–10 dans checkout isolé ; puis sécurité de création atomique des écritures différées, flux banques/Couple/FX, interface premium et tests mobiles. Aucune PR, merge, déploiement, Actions ou accès données réelles.
+
+---
+
 ## 25 octobre 2026 — reprise : alias différés et collections de suppression
 
 **SHA code :** `023c9130861df6c48eefb5c525ac6dbe9ce97577` — `fix(trace): guard deferred allocation aliases and persisted collection deletions [skip ci]` (branche internationale uniquement). Nouveau HEAD documentaire à résoudre après ce bloc.
