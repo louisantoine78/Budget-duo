@@ -1,3 +1,15 @@
+## 25 octobre 2026 — contrôle des collections persistées et barrière de sortie PostgreSQL
+
+- [x] Correctif `traceRefuseUnqualifiedDeferredWrite` : collections CAS effectives `imports` et `import_days` protégées à la place des noms mémoire `smartImports` / `importDays`.
+- [x] `20/20` tests client CAS sous **V8 simulant Node et RPC** après correction des anciennes fixtures. La validation de la présence de vrais imports a détecté puis éliminé un écart réel, sans écriture Supabase.
+- [x] Test d'intégration fictif enrichi : documents `transactions`, `imports`, `import_days`, `reconciliations` rattachés à une **ancienne carte différée** rejetés par le futur serveur même sans `deferredKind` ; transfert `toAccountId` idem. **Tests PostgreSQL NON exécutés**.
+- [x] Commits exclusivement branche candidate et `[skip ci]` : `9ff2e6d`, `455eafe`, `1f8ae90`.
+- [ ] **BLOQUANT** : exécuter vrais tests avec Node CLI du checkout complet et migrations 07/08/09/10 sur PGlite/PostgreSQL fictifs. Environnement actuel sans DNS GitHub/registre npm ni PGlite disponible.
+- [ ] **BLOQUANT** : prouver Auth/RLS/CAS deux sessions et validation atomique de chaque preuve bancaire en base ; fermeture coordonnée des écritures directes, stratégie de rollback. Ne pas confondre la quarantaine 10 non appliquée avec la sécurité du déploiement.
+- [ ] Imports réels, Couple/FX, débit différé et frais/refunds, UX premium, SW preview reconstruit par générateur, Chromium offline, Safari iPhone, sauvegarde/restore et GO explicite. **NO-GO production**.
+
+---
+
 ## 25 octobre 2026 — Barrières de sécurité des écritures différées
 
 - [x] Côté client candidat, `saveDocument` rejette les cartes différées et opérations référencées avec marqueurs financiers différés, `pending` comme `confirmed`. Même contrôle **dans la file CAS** immédiatement avant le RPC ; opérations ordinaires inchangées.

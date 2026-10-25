@@ -1,3 +1,19 @@
+## 25 octobre 2026 — défaut de noms de collections CAS, corrigé ; relais de conversation
+
+Les collections réellement utilisées par `saveDocument` dans `v5-app-5.37.0.js` sont **`imports`** et **`import_days`**, comme dans la liste blanche du RPC 09. La protection cliente `traceRefuseUnqualifiedDeferredWrite` employait par erreur les noms des structures mémoire `smartImports` / `importDays`, omettant ainsi certaines écritures d'imports : **défaut concret corrigé**, sans aucune écriture réelle.
+
+- `9ff2e6d71d939aec7c1254b7d7b8525dfd58af08` (`[skip ci]`) : garde CAS réalignée sur `['transactions','imports','import_days','reconciliations']`, et scénarios de refus des imports liés à une carte différée ou possédant une nature différée explicite même sans compte chargé.
+- `455eafe7fbabf7bf222ae0e5b09a52a2e57bbb33` (`[skip ci]`) : anciens tests réalignés sur les noms réels `imports` et `import_days`. Premier re-test V8 **19/20**, avec test ancien signalant l'écart attendu ; après correction **20/20** cas V8 du contrat client CAS réussis, sous requêtes RPC et modules Node simulés. Ne pas déclarer que les tests natifs du repo sont passés.
+- `1f8ae90e94ac040a1ddd16eadb861d107ace571f` (`[skip ci]`) : scénario du fichier `tests/trace-cas-writes.integration.cjs` exigeant refus serveur des `transactions`, `imports`, `import_days` et `reconciliations` pointant vers l'ancienne carte différée fictive, **même si le document n'a aucun marqueur `deferredKind`** ; plus virement dont `toAccountId` pointe vers carte différée. **Le test SQL est prêt, pas exécuté.**
+
+**Limite d'exécution :** dans l'environnement local de ce cycle, `node v22.16.0` est disponible, mais `git ls-remote` ne résout pas `github.com`, `npm view @electric-sql/pglite` ne résout pas `registry.npmjs.org` et le package PGlite n'est pas disponible localement. Aucun checkout complet dans le conteneur. Le test d'intégration PostgreSQL a été vérifié au niveau **syntaxe JavaScript** via V8. Impossible de confirmer les contraintes ou transitions réelles PostgreSQL/Auth/RLS/CAS ; `migrations/10-trace-deferred-write-quarantine.sql` n'a été appliquée nulle part.
+
+**Toujours NO-GO production**. Prochain départ : résoudre le HEAD, lire les 3 documents complets, obtenir un checkout isolé + PGlite et lancer vrai `scripts/check-trace-537-release-gates.cjs` ; si indisponible, continuer à traiter les chantiers utilisables sans simuler le succès serveur. Poursuivre aussi contrôles bancaires atomiques, Couple/FX, écrans premium iPhone, SW de preview via script uniquement, tests offline/Safari/rollback. `main` stable 5.36.5 intact, aucun CI/PR/merge/deploy/Supabase réel.
+
+**Avancement qualitatif : 57 % global, environ 43 % restant.** Ce bilan n'est pas calculé depuis le nombre de tests.
+
+---
+
 ## 25 octobre 2026 — Protection candidate des écritures différées, client + SQL
 
 **Contexte** : le parcours PDF/CSV différé existant reste local/lecture seule ; la sélection des comptes liés ne suffit pas à garantir les écritures en base. Une revue ou un snapshot de navigateur ne doit jamais être assimilé à une preuve bancaire authentifiée.

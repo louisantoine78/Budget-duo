@@ -1,3 +1,22 @@
+# RELAIS PRIORITAIRE — FIN DE CONVERSATION DU 25 OCTOBRE 2026 — TRACE INTERNATIONAL 5.37.0
+
+**Branche exclusivement autorisée :** `trace-5.37.0-international-accounts-fx` sur `louisantoine78/Budget-duo`. **HEAD technique connu à vérifier avant toute modification :** `1f8ae90e94ac040a1ddd16eadb861d107ace571f` suivi du commit des présentes docs. `main` 5.36.5 demeure sur `02c70f50e7e51da79b77a91dde96a03c6c719909`. **Interdit :** écriture main, merge, PR, CI/Actions, production, déploiement, Supabase réel. Tous commits `[skip ci]`.
+
+**Dernier chantier :** audit de la barrière d'écritures différées des RPC et de la migration SQL fictive 10. Défaut réel découvert dans `v5-app-5.37.0.js` : `traceRefuseUnqualifiedDeferredWrite` surveillait `smartImports` et `importDays`, alors que les collections CAS persistées sont `imports` et `import_days`. Commit `9ff2e6d71d939aec7c1254b7d7b8525dfd58af08` corrige la barrière pour ces vrais identifiants et ajoute des tests. Commit `455eafe7fbabf7bf222ae0e5b09a52a2e57bbb33` corrige les deux anciennes fixtures qui utilisaient encore les noms mémoire. Commit `1f8ae90e94ac040a1ddd16eadb861d107ace571f` ajoute des cas **PostgreSQL fictifs NON exécutés** montrant qu'un import, jour, rapprochement ou virement même non marqué `deferredKind` doit être refusé s'il pointe vers une ancienne carte différée.
+
+**Preuves obtenues :** `20/20` tests du vrai code client `tests/trace-cas-client.test.cjs` réussis **dans un harnais V8 avec require/assert/RPC simulés**, pas en Node CLI ; syntaxe du test `trace-cas-writes.integration.cjs` vérifiée. État antérieur `101/101` tests V8 de relevés PDF / différé : **historique, non rejoué** ce dernier cycle. **Aucun SQL 07–10 ni PGlite/PostgreSQL exécuté.** Tentative du checkout GitHub depuis le conteneur : DNS `github.com` inaccessible. Node 22.16.0 présent, mais PGlite `@electric-sql/pglite` introuvable et `npm view` échoue sur DNS `registry.npmjs.org`. Aucune tentative de substituer un Supabase hébergé à la base fictive. Ces contraintes bloquent la qualification native/PG. Ne jamais prétendre que migrations 07–10 sont validées tant que `scripts/check-trace-537-release-gates.cjs` et `tests/trace-cas-writes.integration.cjs` ne sont réellement exécutés sur checkout isolé.
+
+**Code actuel :** `migrations/10-trace-deferred-write-quarantine.sql` est une migration **candidate, NON APPLIQUÉE**, avec garde SQL `SECURITY DEFINER` + trigger BEFORE INSERT/UPDATE/DELETE interdisant achats, prélèvements, imports et comptes différés même par écritures directes. La migration 09 ne retire pas les anciens grants directs généraux. Le parcours PDF → preuve différée est strictement en prévisualisation et non persistable. Les vrais flux bancaires restent incomplets ; aucun GO.
+
+**Étapes suivantes ordonnées :**
+1. Acquérir un checkout isolé autorisé du HEAD candidat et l'installation locale **sans secrets** de PGlite, exécuter `node scripts/check-trace-537-release-gates.cjs`, `node tests/trace-cas-writes.integration.cjs` avec vrais utilisateurs et transactions **fictifs** ; corriger tout échec SQL 07–10 / 2 sessions Auth-RLS-CAS. Vérifier aussi migration 10 idempotente, anciennes lignes, untagged imports, direct insert/delete et comptes séparés.
+2. Concevoir/valider les écritures atomiques différées avec double justificatif indépendant, dates achat/budget/débit, allocation des paiements/frais/remboursements, unicité bancaire et permissions serveur. Ne pas déverrouiller tant que la sécurité n'est pas qualifiée.
+3. Terminer multi-comptes/devise personnelle et Couple, import PDF/CSV/OCR, rapprochements, design premium validé pour les 5 onglets et Safari iPhone. Reconstruire service worker **de preview uniquement par script officiel**, QA Chromium offline, sauvegarde/restauration/rollback, GO humain explicite.
+
+**Suivi demandé :** annoncer souvent % global et % chantier. Global **57 % environ** (incertitude ±10 points) : **43 % reste**, sans avance chiffrée fictive faute de qualification PostgreSQL. **Production NO-GO.**
+
+---
+
 # REPRISE PRIORITAIRE — 25 OCTOBRE 2026 — QUARANTAINE DES ÉCRITURES DIFFÉRÉES
 
 **HEAD de départ à résoudre de nouveau :** `7e9c0528d6708f149f9c05932ac1fedc4358ce84`, suivi du commit documentaire de ce lot. Seule branche modifiable : `trace-5.37.0-international-accounts-fx`; `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` intact. Tous les commits ont `[skip ci]`. Aucune production, fusion, CI/Actions, PR, accès/donnée Supabase réelle ou déploiement.
