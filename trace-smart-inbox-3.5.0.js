@@ -105,7 +105,11 @@ function typeName(t){
  savings_transfer:'Épargne / CELI',external_transfer:'Virement hors budget',external_refund:'Entrée hors budget',friend_reimbursement:'Remboursement de frais avancés',friend_payment_expense:'Frais avancés par un proche',friend_advance:'Argent prêté',friend_advance_return:'Argent rendu'}[t]||'À qualifier';
 }
 function rowForm(d,bank,accounts,known,expanded=false){
- const title=esc(d.name),amount=d.amount===null?(d.suggestedAmount?'OCR : '+money(d.suggestedAmount):'À vérifier'):money(d.amount),
+ const nativeCurrency=String(bank?.currency||'CAD').toUpperCase();
+ const nativeMoney=value=>nativeCurrency==='CAD'?money(value):
+  window.TraceInternational?.money?.(value,nativeCurrency)||String(value)+' '+nativeCurrency;
+ const title=esc(d.name),
+  amount=d.amount===null?(d.suggestedAmount?'OCR : '+nativeMoney(d.suggestedAmount):'À vérifier'):nativeMoney(d.amount),
   flag=d.needsAmountReview?'Montant incertain':known?'À confirmer':'Date à préciser';
  if(!known){
   return '<article class="trace-smart-draft trace-smart-undated" data-smart-id="'+esc(d.id)+'">'+
@@ -162,7 +166,7 @@ function rowForm(d,bank,accounts,known,expanded=false){
   '<div class="trace-review-section-title"><span>01</span><div><strong>Contrôle bancaire</strong><small>Compare la ligne originale avec les informations reconnues.</small></div></div>'+
   (d.evidenceSource==='provided_bank_screenshot'?
     '<div class="trace-smart-bank-evidence"><strong>Montant repéré sur ton relevé fourni</strong>'+
-    '<p>'+esc(d.suggestedAmount?money(d.suggestedAmount):'À vérifier')+
+    '<p>'+esc(d.suggestedAmount?nativeMoney(d.suggestedAmount):'À vérifier')+
     ' · Proposition non comptabilisée tant que tu ne confirmes pas.</p></div>':'')+
   (d.needsAmountReview&&d.sourcePreviewVersion!==2?
     '<div class="trace-smart-legacy-note"><strong>Ancien extrait incomplet</strong>'+
@@ -321,8 +325,14 @@ function synchronizeRow(el){
   if(choices.some(c=>c.id===existing&&c.allowed))linkSelect.value=existing;
  }
  const preview=el.querySelector('.trace-movement-preview');
+ const foreignCurrency=String(bank?.currency||'CAD').toUpperCase();
  if(preview)preview.textContent=type==='card_payment_received'?
   'Crédit sur le relevé de carte · à rapprocher du paiement du compte courant. Après association : 0 $ de nouvelle dépense, 0 $ de nouveau revenu et aucune double écriture.':
+  foreignCurrency!=='CAD'?
+   'Montant du relevé : '+(el.querySelector('.smart-amount').value||'à vérifier')+' '+foreignCurrency+
+   '. '+(type==='expense'?'Contre-valeur CAD calculée uniquement au taux historique daté lors de la confirmation.':
+      'Revue internationale spécifique requise pour cette nature.')+
+   ' Aucun impact budgétaire enregistré à ce stade.':
   def?bridge().movementPreview(type,Number(el.querySelector('.smart-amount').value),
   budget&&def.budget!=='income'?el.querySelector('.smart-who').value:bridge().currentOwner?.()||'la',
   Number(el.querySelector('.smart-friends').value||0),Number(el.querySelector('.smart-partner').value||0)):
