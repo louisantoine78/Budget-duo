@@ -1,0 +1,40 @@
+'use strict';
+// Native Node-compatible isolated FX assertions; all examples fictional.
+// No calls to hosted Supabase, actual banks, or FX providers.
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const source=fs.readFileSync(path.join(__dirname,'..','trace-international-1.0.0.js'),'utf8');
+const sandbox={window:{}};
+vm.runInNewContext(source,sandbox);
+const I=sandbox.window.TraceInternational;
+const account={id:'eur',owner:'la',type:'checking',country:'FR',currency:'EUR'};
+const at='2026-10-12';
+function book(amount,rate){
+ return I.resolveBooking({account,bankAmount:amount,date:at,
+  quote:{currency:'EUR',cadPerUnit:rate,date:at,source:'Fictional manual quote'}});
+}
+test('foreign one-cent debit cannot disappear from CAD budget after rounding',()=>{
+ assert.throws(()=>book(0.01,0.000001),/Contre-valeur CAD nulle/);
+});
+test('near-threshold nonzero foreign debit cannot be silently zero valued',()=>{
+ assert.throws(()=>book(0.02,0.02),/Contre-valeur CAD nulle/);
+});
+test('real 40 EUR at sourced 1.6 produces 64 CAD with native preserved',()=>{
+ const t=book(40,1.6);
+ assert.equal(t.bankAmount,40);assert.equal(t.bankCurrency,'EUR');
+ assert.equal(t.amountCAD,64);assert.equal(t.bankRateCad,1.6);
+ assert.equal(t.fxRateSource,'Fictional manual quote');
+});
+test('a small but representable foreign purchase is retained',()=>{
+ const t=book(0.01,1.6);
+ assert.equal(t.amountCAD,0.02);assert.equal(t.bankAmount,0.01);
+});
+test('missing or zero FX quote never gets automatic 1:1 valuation',()=>{
+ assert.throws(()=>I.resolveBooking({account,bankAmount:40,date:at}),/Taux CAD requis/);
+ assert.throws(()=>book(40,0),/Taux CAD requis/);
+});
+test('one-unit CAD account needs no FX conversion and stays nonzero',()=>{
+ const cad={id:'cad',owner:'la',currency:'CAD',type:'checking',country:'CA'};
+ const t=I.resolveBooking({account:cad,bankAmount:0.01,date:at});
+ assert.equal(t.amountCAD,0.01);assert.equal(t.bankAmount,0.01);
+});

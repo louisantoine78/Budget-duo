@@ -250,6 +250,10 @@
      (!calendarDate(quote.date)||quote.date>date))throw Error('Date du taux de change invalide');
   const cad=fxValue(native,bankCurrency,quote);
   if(cad===null)throw Error('Taux CAD requis avec date et source pour cette opération');
+  // A verified but tiny rate may round a non-zero native debit to 0.00 CAD.
+  // Refuse to erase that expense from the CAD reference budget; require an
+  // explicit reconciliation rather than inventing a minimum cent or FX rate.
+  if(!(cad>0))throw Error('Contre-valeur CAD nulle après arrondi : taux à vérifier avant comptabilisation');
   return{currency:purchaseCurrency,amountOriginal:round(origin),bankCurrency,bankAmount:round(native),
    amountCAD:cad,rate:purchaseCurrency===bankCurrency?(bankCurrency==='CAD'?1:Number(quote.cadPerUnit)):null,
    bankRateCad:bankCurrency==='CAD'?1:Number(quote.cadPerUnit),fxRateDate:quote?.date||date||'',
