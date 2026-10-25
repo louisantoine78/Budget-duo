@@ -14,7 +14,7 @@ const start=source.indexOf('function normalizedCsvKey('),
 assert.ok(start>0&&end>start,'CSV parser+UI block missing');
 const body=source.slice(start,end);
 let seq=0;
-function scenario({currency='CAD',content='Date,Description,Montant\\n20/10/2026,Courses,-40.00\\n21/10/2026,Cafe,-5.50\\n',
+function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Cafe,-5.50\n',
  filename='octobre.csv',transactionRows=[],onSave}={}){
  const accounts=[{id:'checking-la',type:'checking',owner:'la',currency,country:currency==='EUR'?'FR':'CA'}];
  const state={accounts,transactions:transactionRows.map(t=>({...t}))};
@@ -30,7 +30,7 @@ function scenario({currency='CAD',content='Date,Description,Montant\\n20/10/2026
  const money=n=>String(n)+' CAD';
  const context=new Function('FileReader','$','visibleBankAccounts','me','state',
   'window','accountType','shortAccountLabel','esc','smartExactBankAmount',
-  'txDocId','traceSplit','saveDocument','renderAll','navigate','showTab','money','dateGapDays',
+  'txDocId','traceSplit','saveDocument','renderAll','navigate','showTab','money','dateGapDays','console',
   body+'return {importFile};');
  const api=context(FakeReader,node,()=>accounts.filter(a=>!a.archived),'la',state,win,
   a=>a?.type||'other',a=>a?.name||'Compte',s=>String(s||''),
@@ -40,7 +40,7 @@ function scenario({currency='CAD',content='Date,Description,Montant\\n20/10/2026
    assert.equal(collection,'transactions');writes.push({...item});
    if(onSave)await onSave({item,state,accounts,writes});
   },()=>events.push('render'),p=>events.push('navigate:'+p),
-  t=>events.push('tab:'+t),money,()=>0);
+  t=>events.push('tab:'+t),money,()=>0,{error:()=>{}});
  api.importFile({name:filename,type:'text/csv',size:content.length,content});
  Object.assign(node('#csvCol_date'),{value:'0'});
  Object.assign(node('#csvCol_name'),{value:'1'});
@@ -72,7 +72,7 @@ test('same imported physical source rows are idempotent on reimport',async()=>{
  assert.equal(second.writes.length,0);
 });
 test('same merchant and price in two distinct physical rows remain two pending expenses',async()=>{
- const content='Date,Description,Montant\\n20/10/2026,Cafe,-5.00\\n20/10/2026,Cafe,-5.00\\n';
+ const content='Date,Description,Montant\n20/10/2026,Cafe,-5.00\n20/10/2026,Cafe,-5.00\n';
  const s=scenario({content});s.preview();await s.commit();
  assert.equal(s.writes.length,2);
  assert.notEqual(s.writes[0].csvSourceRowIndex,s.writes[1].csvSourceRowIndex);
@@ -109,7 +109,7 @@ test('foreign EUR file stores native pending amount without fictitious CAD',asyn
  assert.ok(s.writes.every(t=>t.bankCurrency==='EUR'&&t.amountCAD===null&&t.rate===null));
 });
 test('partial import requires explicit acknowledgment of unreadable lines',async()=>{
- const content='Date,Description,Montant\\n20/10/2026,Courses,-40.00\\n21/10/2026,Cafe,??\\n';
+ const content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Cafe,??\n';
  const s=scenario({content});s.preview();
  assert.match(s.node('#csvPreviewResult').innerHTML,/id="csvInvalidAcknowledged"/);
  await s.commit();
