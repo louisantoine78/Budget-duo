@@ -728,6 +728,10 @@ function traceDeferredPurchaseForm(card){
    'Aucune dépense, dette ni écriture bancaire n’est créée ici.</small></section>';
 }
 function bindTraceDeferredPurchaseForm(card){
+ // Ordinary accounts never have this form. Do not bind synthetic/missing
+ // DOM nodes or callbacks when a normal card/checking detail is shown.
+ if(accountType(card)!=='card'||card.paymentMode!=='deferred'||
+    card.archived||card.owner!==me)return;
  const action=$('#traceDeferredForecastRun'),target=$('#traceDeferredForecastResult');
  if(!action||!target)return;
  const ids=['#traceDeferredForecastAmount','#traceDeferredForecastPurchase',

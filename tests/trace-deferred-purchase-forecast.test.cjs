@@ -116,3 +116,11 @@ test('account details wire form and listener, distinct from read-only due report
  assert.match(segment,/bindTraceDeferredPurchaseForm\(a\)/);
  assert.doesNotMatch(code,/saveDocument|state\.transactions\.push|state\.household\s*=/);
 });
+
+test('ordinary credit card and foreign partner never bind missing simulator nodes',()=>{
+ const c=context();
+ c.bind({...card,paymentMode:'credit'});
+ c.bind({...card,owner:'partner'});
+ c.bind({...card,archived:true});
+ assert.equal(Object.keys(c.nodes).length,0);
+});
