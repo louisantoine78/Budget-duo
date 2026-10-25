@@ -3204,7 +3204,9 @@ async function smartApproveDraft(id,v){
  // Foreign captures can book only individually reviewed, ordinary purchases.
  // All special movement types and ambiguous bank descriptions remain pending.
  if(foreignCapture&&(bankAccount.owner!==me||requestedType!=='expense'||type!=='expense'||
-     v.foreignNatureConfirmed!==true||
+     // OCR evidence that identifies a bank credit must not be booked as a debit.
+     // An unknown direction still requires the explicit screenshot attestation.
+     d.bankDirection==='in'||v.foreignNatureConfirmed!==true||
      !window.TraceImportGuide.safeForQuickApproval(accountType(bankAccount),'expense',name)))
   throw Error('Capture en devise étrangère : seuls les achats explicitement vérifiés peuvent être confirmés. Cette ligne reste en attente.');
  const accountKind=accountType(bankAccount);

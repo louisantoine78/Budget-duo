@@ -12,7 +12,7 @@ const approveSource=app.slice(si,ei);
 function env(options={}){
  const bank={id:'fr',owner:'la',type:'checking',currency:'EUR',country:'FR'};
  const d={id:'draft',kind:'smart_draft',status:'pending',accountId:'fr',date:'2026-10-12',
-  amount:40,name:'Librairie',sourceFileName:'fake.png'};
+  bankDirection:options.bankDirection||'',amount:40,name:'Librairie',sourceFileName:'fake.png'};
  const state={accounts:[bank],smartImports:[d],transactions:[],investmentAccounts:[],
   importDays:[{date:'2026-10-12',accountId:'fr'}]},writes=[];
  const window={};
@@ -113,7 +113,7 @@ test('UI enables foreign purchase only after consent; ambiguous labels stay disa
  const q={'.smart-approve':button,'.smart-type':{value:'expense'},
   '.smart-direction':{value:'out'},'.smart-name':{value:'Librairie'},
   '.smart-foreign-nature-confirm':checkbox};
- const el={querySelector:key=>q[key]},bridge=()=>({accounts:()=>[bank],currentOwner:()=> 'la'});
+ const el={dataset:{bankDirection:''},querySelector:key=>q[key]},bridge=()=>({accounts:()=>[bank],currentOwner:()=> 'la'});
  const window={};new Function('window',guide)(window);
  const apply=new Function('bridge','account','window',ui.slice(start,end)+'return applyApprovalConstraints;')(bridge,'fr',window);
  apply(el);assert.equal(button.disabled,true);
@@ -136,4 +136,34 @@ test('editing the reviewed bank capture invalidates the foreign-purchase consent
   "const consent=el.querySelector('.smart-foreign-nature-confirm');"+
   'if(consent)consent.checked=false;}')({querySelector:()=>({checked:true})});
  assert.equal(typeof fn,'function');
+});
+
+test('captured bank credit cannot be posted as foreign expense despite explicit consent',async()=>{
+ const c=env({bankDirection:'in'});
+ await assert.rejects(c.approve('draft',c.input),/achats explicitement vérifiés/);
+ assert.equal(c.writes.length,0);assert.equal(c.d.status,'pending');
+});
+test('captured bank debit can be accepted only after individual attestation',async()=>{
+ const c=env({bankDirection:'out'});
+ await c.approve('draft',c.input);
+ assert.equal(c.writes[0].item.type,'expense');
+ assert.equal(c.writes[0].item.bankCurrency,'EUR');
+});
+test('foreign UI rejects captured credit independently of selected expense type',()=>{
+ const start=ui.indexOf('function applyApprovalConstraints(el){'),
+  end=ui.indexOf('function synchronizeRow(',start);
+ assert.ok(start>=0&&end>start);
+ const bank={id:'fr',currency:'EUR',type:'checking',owner:'la'},
+  button={disabled:false,dataset:{duplicateBlocked:'no'},textContent:''},
+  confirmed={checked:true},fields={'.smart-approve':button,'.smart-type':{value:'expense'},
+   '.smart-direction':{value:'out'},'.smart-name':{value:'Librairie'},
+   '.smart-foreign-nature-confirm':confirmed};
+ const el={dataset:{bankDirection:'in'},querySelector:key=>fields[key]},
+  bridge=()=>({accounts:()=>[bank],currentOwner:()=> 'la'});
+ const window={};new Function('window',guide)(window);
+ const fn=new Function('bridge','account','window',
+  ui.slice(start,end)+'return applyApprovalConstraints;')(bridge,'fr',window);
+ fn(el);assert.equal(button.disabled,true);
+ assert.match(button.textContent,/À vérifier/);
+ el.dataset.bankDirection='out';fn(el);assert.equal(button.disabled,false);
 });

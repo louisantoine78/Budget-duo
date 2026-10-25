@@ -265,8 +265,10 @@ function applyApprovalConstraints(el){
   valid=Boolean(type&&guide.allowed(type,bank?.type,dir)),
   foreign=(bank?.currency||'CAD').toUpperCase()!=='CAD',
   currentOwner=bridge().currentOwner?.(),
-  safeForeignPurchase=foreign&&type==='expense'&&!!bank?.owner&&!!currentOwner&&
-   bank.owner===currentOwner&&typeof guide.safeForQuickApproval==='function'&&
+  // A captured credit cannot be made an expense by changing the dropdown.
+  capturedDirection=el.dataset.bankDirection||'',
+  safeForeignPurchase=foreign&&type==='expense'&&capturedDirection!=='in'&&
+   !!bank?.owner&&!!currentOwner&&bank.owner===currentOwner&&typeof guide.safeForQuickApproval==='function'&&
    guide.safeForQuickApproval(bank.type,'expense',name),
   foreignReviewed=safeForeignPurchase&&!!el.querySelector('.smart-foreign-nature-confirm')?.checked;
  btn.disabled=btn.dataset.duplicateBlocked==='yes'||!valid||cardMatch||(foreign&&!foreignReviewed);
