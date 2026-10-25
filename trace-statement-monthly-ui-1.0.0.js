@@ -26,7 +26,7 @@
    typeof amountOnAccount!=='function')return null;
   if(host.dataset.traceStatementMounted==='true')return null;
   host.dataset.traceStatementMounted='true';
-  let file=null,url=null,staged=null,verified=null,report=null,extraction=null,scanning=false,scanToken=0;
+  let file=null,url=null,staged=null,verified=null,report=null,extraction=null,scanning=false,scanToken=0,localDeferred=null;
   const initialMonth=typeof currentMonth==='function'?currentMonth():currentMonth;
   const period=monthBoundaries(initialMonth)||monthBoundaries(new Date().toISOString().slice(0,7));
   host.innerHTML='<div class="trace-statement-heading"><strong>Contrôle mensuel du relevé PDF</strong>'+
@@ -48,6 +48,7 @@
    '<button type="button" class="primary full" id="traceStatementPrepare">Préparer les vérifications</button>'+
    '<p id="traceStatementNotice" class="trace-statement-notice" role="status" aria-live="polite"></p>'+
    '<div id="traceStatementReview"></div><div id="traceStatementResults"></div>'+
+   '<div id="traceStatementDeferredControl"></div>'+
    '<p class="trace-statement-disclaimer">Aucune garantie de couverture à 100 % : TRACE ne sait pas si une ligne du PDF a été oubliée. Les preuves sont relues et attestées manuellement.</p>';
   const accountNode=el(host,'traceStatementAccount'),
    fromNode=el(host,'traceStatementFrom'),toNode=el(host,'traceStatementTo'),
@@ -57,8 +58,11 @@
    fileInfo=el(host,'traceStatementLocalFile'),
    extractionNode=el(host,'traceStatementExtraction');
   const clearReview=()=>{
+   localDeferred?.clear?.();localDeferred=null;
    staged=null;verified=null;report=null;
    reviewNode.innerHTML='';reportNode.innerHTML='';
+   const deferred=el(host,'traceStatementDeferredControl');
+   if(deferred)deferred.innerHTML='';
   };
   const say=(message,warning=false)=>{notice.textContent=message;notice.dataset.status=warning?'warning':'info';};
   const getAccounts=()=>accounts().filter(a=>a&&!a.archived&&
@@ -286,6 +290,20 @@
     }
     report=verified.report;
     renderReport(report);
+    // Candidate PREVIEW ONLY. The existing reviewed monthly PDF can be
+    // classified locally as a deferred-card/checking evidence document.
+    // Neither classification nor review permits a database write.
+    const control=el(host,'traceStatementDeferredControl'),selected=selectedAccount();
+    if(control){
+     control.innerHTML='';
+     const sourceFile=file,reviewedStage=staged,reviewedVersion=verified,
+      accountId=selected?.id;
+     localDeferred=root.TraceDeferredStatementReviewUI?.mount?.({
+      host:control,staged:reviewedStage,approvals,file:sourceFile,
+      account:selected,active:()=>file===sourceFile&&staged===reviewedStage&&
+       verified===reviewedVersion&&accountNode.value===accountId&&
+       selectedAccount()?.id===accountId&&!scanning})||null;
+    }
     say('Rapport établi en lecture seule. Aucun enregistrement ou changement budgétaire.');
    }catch(error){say(error.message||'Comparaison impossible.',true);reportNode.innerHTML='';}
   }
@@ -338,6 +356,7 @@
   el(host,'traceStatementExtract').onclick=extractLocalPDF;
   syncAccounts();addRow();
   return Object.freeze({getReport:()=>report,getExtraction:()=>extraction,
+   getDeferredStatement:()=>localDeferred?.getLocalStatement?.()||null,
    dispose(){if(url)root.URL?.revokeObjectURL?.(url);
     ++scanToken;file=null;url=null;extraction=null;clearReview();host.dataset.traceStatementMounted='false';}});
  }
