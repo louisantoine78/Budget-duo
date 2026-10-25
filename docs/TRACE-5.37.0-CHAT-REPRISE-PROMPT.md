@@ -1,3 +1,13 @@
+# ADDENDUM — PROCHAINE ÉTAPE DE QUALIFICATION NATIVE TRACE 5.37.0
+
+Dernier HEAD de **code** vérifié au départ de ce lot : `1955fbbd0418342e119f9527bbde9c44b3db0cb6`. Résoudre le HEAD réel GitHub à chaque reprise. Branche autorisée **uniquement** `trace-5.37.0-international-accounts-fx` ; stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intangible. Aucune modification de données Supabase réelles, déploiement, Actions, fusion, PR ou script de production.
+
+Un véritable nouveau fichier `scripts/check-trace-537-release-gates.cjs` rassemble **les tests à lancer dans un checkout complet** : contrôle branche/snapshot Git, `node scripts/build-trace-preview-pwa.mjs --check` sans écriture, `node scripts/test-trace-native.mjs` et les trois intégrations PostgreSQL embarquées `trace-database`, `trace-personal-settings-ownership`, `trace-cas-writes`. Le runner isole l'environnement des secrets Supabase et reste NO-GO tant que tests manuels et GO explicite manquent. Dix tests V8 de ce runner ont été exécutés avec succès, **pas les vrais tests natifs**.
+
+L'environnement de chat actuel possède Node v22 mais aucun checkout GitHub/DNS ni PGlite. C'est le blocage concret. Ne pas prétendre avoir passé une base PostgreSQL ni un navigateur. Faire fonctionner ces tests **en environnement fictif uniquement**, puis travailler les résultats avant les autres chantiers d'intégration. Un SW de preview éventuellement périmé doit être regénéré par `scripts/build-trace-preview-pwa.mjs` depuis le checkout isolé puis vérifié, jamais édité à la main. Poursuivre les fonctionnalités étrangères, débit différé, Couple, UI premium, tests iPhone, backup/rollback avant publication. Commmits `[skip ci]`, NO-GO strict.
+
+---
+
 # ADDENDUM DE REPRISE — DOUBLONS OCR ET AFFICHAGE DES DEVISES (24 OCTOBRE 2026)
 
 Vérifie immédiatement le HEAD exact de `trace-5.37.0-international-accounts-fx` sur GitHub. Dernier HEAD **de code** de cette reprise : `fe29012e1e1033a92bae7014fd436089d06af0f3`; `main` stable = `02c70f50e7e51da79b77a91dde96a03c6c719909`, jamais modifiable.

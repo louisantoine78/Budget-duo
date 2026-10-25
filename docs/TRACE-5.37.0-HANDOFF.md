@@ -1,3 +1,17 @@
+## Nouvelle étape — unifier les tests natifs et les portes NO-GO (24 octobre 2026)
+
+**Commit de code : `1955fbbd0418342e119f9527bbde9c44b3db0cb6`** sur `trace-5.37.0-international-accounts-fx`, avec `[skip ci]`. Deux fichiers ajoutés :
+- `scripts/check-trace-537-release-gates.cjs` : point d'entrée local **en lecture seule** pour qualification automatisée, lancé depuis un clone complet et exclusivement sur la branche autorisée, avec `node scripts/check-trace-537-release-gates.cjs`. Vérifie d'abord la branche et si le snapshot Git est propre ; lance `node scripts/build-trace-preview-pwa.mjs --check` (jamais le générateur en mode écriture), `node scripts/test-trace-native.mjs`, vérifie la disponibilité de PGlite local puis exécute exactement trois suites isolées : `tests/trace-database.integration.cjs`, `tests/trace-personal-settings-ownership.integration.cjs` et `tests/trace-cas-writes.integration.cjs`. Aucune installation de dépendances, connexion distante, CI, migration sur Supabase ou déploiement. Les variables transmises aux sous-processus sont limitées à PATH/HOME/temp et `TRACE_PGLITE_MODULE` ; les secrets Supabase et NODE_OPTIONS sont exclus. Tout défaut = échec automatique.
+- `tests/trace-537-release-gates.test.cjs` : dix cas de **simulation V8** réussis (branche main interdite, variables d'environnement, absence de module PGlite, cache périmé, échec Node/PG, snapshot Git sale, absence d'écriture SW/CI, non-production même si automatisation verte). Ces tests ne prouvent **PAS** que les suites Node ou SQL ont réellement tourné.
+
+**Blocage d'exécution vérifié dans l'environnement de cette conversation** : Node v22.16.0 disponible, mais pas de checkout `.git` de TRACE dans le conteneur, résolution de `github.com` indisponible et `@electric-sql/pglite` absent. Les outils GitHub permettent uniquement la lecture/écriture de fichiers sur la branche. Donc les trois intégrations SQL et la suite native Node **restent non exécutées**. Aucun rapport fictif de succès ne doit masquer ce blocage.
+
+**Pour effectuer la prochaine qualification en checkout isolé :** récupérer la branche autorisée sans altérer `main`, mettre à disposition PGlite local (module `@electric-sql/pglite` ou `TRACE_PGLITE_MODULE` explicite), exécuter le script ci-dessus. Le générateur SW reste délibérément extérieur au gate en lecture seule ; si son `--check` échoue, régénérer le SW **uniquement** dans le labo, contrôler son diff avant de requalifier. Le verdict `automatedPassed:true` ne peut jamais se substituer aux contrôles manuels Chromium hors ligne, Safari iPhone, finances, débit différé, sauvegarde/restauration/rollback et GO explicite.
+
+Le `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` doit rester inchangé. Aucun SQL sur données réelles, PR/fusion, CI, SW production ou déploiement autorisé.
+
+---
+
 ## Lot du 24 octobre — consentement de doublons et affichage natif des captures
 
 **Production : NO-GO.** Nouveaux commits depuis le HANDOFF `68b01a3bb1aa8a81327730502b74f7742eea889a`, exclusivement sur `trace-5.37.0-international-accounts-fx`, tous `[skip ci]` :

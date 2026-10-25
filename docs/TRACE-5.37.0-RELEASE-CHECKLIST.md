@@ -1,3 +1,15 @@
+## Qualification native reproductible — nouveau point d'entrée (24 octobre 2026)
+
+- [x] Ajout du script **en lecture seule** `scripts/check-trace-537-release-gates.cjs` et de 10 tests de validation du gate réussis en V8 fictif.
+- [x] Garde de branche `trace-5.37.0-international-accounts-fx`, contrôle état Git et transmission d'un environnement sans secrets Supabase aux sous-processus.
+- [x] Le script prévoit les suites Node existantes, le test service-worker **`--check`**, puis les trois suites PostgreSQL/PGlite sur données fictives. Il ne génère aucun SW, ne déploie pas et ne lance pas de CI.
+- [ ] **BLOQUANT :** disposer d'un checkout complet et d'un PGlite local dans un environnement de test isolé ; ici seulement Node est disponible. Exécuter réellement `node scripts/check-trace-537-release-gates.cjs` ; conserver les sorties authentiques et traiter tous les échecs.
+- [ ] Reconstruire le SW laboratoire via son générateur puis contrôler `--check` depuis ce checkout (jamais SW prod).
+- [ ] Qualifier véritablement migrations SQL 07/08/09, Auth/RLS/CAS/concurrence ; puis Chromium/PWA offline, Safari iPhone et scénario de rollback.
+- [ ] NO-GO inchangé : résultat automatisé vert n'est jamais un GO de production à lui seul.
+
+---
+
 ## Captures internationales — attestation, doublons et devises natives (24 octobre 2026)
 
 **NO-GO.** Commit `465cfdc` (attestation de comparaison expirante), `3807d3e` (résistance absence module des natures et tests anciens), `fe29012` (affichage natif EUR/USD), tous sur la branche candidate `[skip ci]`.
