@@ -1,3 +1,18 @@
+# REPRISE — 25 OCTOBRE 2026 — FILTRAGE D'ACCÈS DE LA REVUE PDF DEBIT DIFFÉRÉ
+
+Résoudre le **vrai HEAD** au démarrage. HEAD de code vérifié après ce lot : `9ac3033f428668ac6e5209d57cbbb14786c0ebcd`. Branche d'écriture unique `trace-5.37.0-international-accounts-fx`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` inchangé. Tous commits `[skip ci]`, zéro PR, CI, fusion, déploiement, Supabase réel.
+
+**Avancement estimé — 57 % global, 43 % restant (incertitude ±10 points, indicative et non calculée à partir des tests).** Cet avancement n'est PAS un GO.
+
+- `922b5b67633f83b565e0062e391b20924cf0143b` : garde `TraceDeferredStatementReviewUI.eligible(account,linkedAccounts)` permettant l'interface de préparation PDF différé uniquement pour une **carte différée** associée à un courant actif compatible propriétaire/pays/devise, ou ce compte courant avec carte différée liée. Validation à l'ouverture et à la restitution de la preuve. `TraceMonthlyStatementUI` fournit ses comptes visibles ; un compte ordinaire est exclu. Nouvelle carte FR EUR à débit différé **fictive seulement** dans `trace-international-preview-fixtures-1.0.0.js`, sans activer la création différée en production. Tests d'éligibilité et d'expiration.
+- `9ac3033f428668ac6e5209d57cbbb14786c0ebcd` : correction de syntaxe async du nouveau test d'écran, `[skip ci]`.
+
+**Preuve de ce lot : 101/101 cas ciblés V8 réussis sur 9 suites authentiques du candidat** (17 write plan + 22 intake + 12 intake et vrais modules + 9 bridge + 7 intégration staged PDF/CSV + 5 labo UI + 5 vraie preview + 18 nouveau composant PDF + 6 écran mensuel complet). Les sources sont authentiques mais `node:test`, `fs`, `vm` et DOM sont **simulés** sous V8. **Aucune suite native Node du checkout entier, PGlite/PostgreSQL 07/08/09, Auth/RLS/CAS 2 sessions, Chromium, PDF bancaire réel, ni Safari iPhone** n'a été exécutée. Le bilan historique 219/219 V8 reste historique.
+
+Le SW de preview doit être régénéré exclusivement par `scripts/build-trace-preview-pwa.mjs` dans un checkout complet : état actuellement périmé. Le parcours PDF et la classification restent **strictement preview/local/lecture seule**, aucune permission de persister/valider les achats ou prélèvements ; n'en faire aucune publicité comme fonctionnalité de production. Prochaine priorité : runner natif et tests PG/Auth/RLS/CAS sur données fictives ; ensuite intégration prudente des vrais imports au journal `pending`, couverture FR/CA/international & Couple, flux financiers et remboursements/frais, maquettes premium, SW/offline, Safari iPhone, backup/restore/rollback avant GO exprès. **NO-GO.**
+
+---
+
 # REPRISE 25 OCTOBRE 2026 — ADAPTATEUR DE RELEVÉS STRUCTURÉS POUR LE DIFFÉRÉ
 
 **HEAD à revérifier au prochain lancement :** `7fba0e68bb58f5dc33f7d591ae37e3bba7e36708` (commit de test). Branche d'écriture **exclusivement** `trace-5.37.0-international-accounts-fx`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` intacte ; aucun déploiement, PR, fusion, CI, Supabase réel ou modification de production.

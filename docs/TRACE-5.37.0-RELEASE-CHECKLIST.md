@@ -1,3 +1,16 @@
+## Accès conditionnel à la préparation d'une preuve de débit différé (25 octobre 2026)
+
+- [x] `TraceDeferredStatementReviewUI` exige une carte au modèle bancaire `deferred`, liée à un compte courant non archivé même propriétaire/pays/devise, ou ce courant avec carte différée effectivement associée. Cartes ordinaires, comptes isolés, propriétaire différent et preuves hors preview sont exclus.
+- [x] Le contrôle mensuel `TraceMonthlyStatementUI` transmet les comptes bancaires visibles. Une perte d'éligibilité invalide la restitution de l'ancienne preuve locale.
+- [x] Fixture preview seule : carte de débit différé française fictive associée au courant EUR fictif. Aucune création réelle.
+- [x] `101/101` tests ciblés sous V8, 9 suites avec sources authentiques du candidat et Node/fs/vm/DOM **simulés** (17 + 22 + 12 + 9 + 7 + 5 + 5 + 18 + 6).
+- [x] Commits `922b5b6` et `9ac3033`, tous deux `[skip ci]` sur la branche candidate, main inchangée.
+- [ ] **CRITIQUE** : runner Node natif complet sur checkout isolé et PG/PGlite fictif migrations 07/08/09, Auth/RLS/CAS à deux clients, contrôles de concurrence et permissions ; aucune preuve de qualification serveur à ce stade.
+- [ ] Raccorder le parcours des documents à un véritable `pending` sécurisé et aux autres mouvements, avec refus des doublons/frais/refunds ambigus. Le parcours actuel reste prévisualisation et lecture seule.
+- [ ] Refaire le SW **de preview** via générateur officiel, QA Chromium/offline et Safari iPhone natif. Finaliser la couverture Couple, FX, budgets et design premium, sauvegarde/rollback, puis décision GO humaine explicite. **NO-GO**.
+
+---
+
 ## Raccordement des relevés PDF/CSV structurés à la revue différée (25 octobre 2026)
 
 - [x] Pont **local et sans écriture** `TraceDeferredStatementBridge.convert` : sources préalablement structurées PDF/CSV via `TraceStatementEvidence.stage`, `reviewedRows`, contrôle de toutes les lignes, classifications signées uniquement par snapshot local, identification source/version, revue de complétude humaine, montants natifs, compte/devise/dates/page/ligne/texte d'origine.

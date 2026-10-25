@@ -1,3 +1,19 @@
+## Lot du 25 octobre 2026 — parcours PDF différé limité aux comptes bancaires liés
+
+Commits `[skip ci]` : `922b5b67633f83b565e0062e391b20924cf0143b` (5 fichiers), puis `9ac3033f428668ac6e5209d57cbbb14786c0ebcd` (test écran asynchrone corrigé). Sur `trace-5.37.0-international-accounts-fx` uniquement ; `main` stable et production hors périmètre.
+
+**Problème corrigé :** la revue locale d'un relevé pouvait proposer une preuve de carte à débit différé pour une carte classique, sans lien de règlement différé. `TraceDeferredStatementReviewUI.eligible` n'autorise désormais que :
+- carte `paymentMode:'deferred'` liée à un compte courant actif, même propriétaire/pays/devise ;
+- compte courant avec **carte différée** active le désignant comme compte de règlement, avec les mêmes contrôles.
+
+`TraceMonthlyStatementUI` fournit uniquement les comptes visibles, l'interface vérifie de nouveau l'éligibilité à la récupération de la preuve. Une éligibilité perdue ne peut pas réanimer une attestation précédemment locale. `trace-international-preview-fixtures-1.0.0.js` comprend maintenant une carte différée EUR **strictement fictive** associée au courant français fictif ; aucun modèle bancaire réel, solde ou historique n'a été modifié. L'ensemble n'est chargé que dans la preview dédiée, sans nouvelle écriture financière.
+
+**Tests réellement exécutés :** 101/101 **scénarios V8** ciblés sur les vraies sources de cette branche dans des simulations de Node/fs/vm/DOM. Neuf suites : 17+22+12+9+7+5+5+18+6. Les suites du nouvel écran montent le véritable `TraceMonthlyStatementUI` avec DOM fictif et classent une ligne depuis un PDF fictif en mémoire. La suite native du dépôt, vrais navigateurs et PostgreSQL/PGlite **n'ont PAS été lancés**. Aucun GO. Estimation prudente d'avancement global : 57 %, incertitude ±10 points, fondée sur une appréciation qualitative des chantiers.
+
+**Blocages restants inchangés :** connexion à une vraie validation bancaire/serveur; Auth/RLS/CAS PostgreSQL fictif migrations 07/08/09 deux clients; conformité de tous les imports FR/CA multi-devises et OCR; achèvement différé et remboursements/frais avec écritures atomiques sécurisées; couple et patrimoine; design premium et mobile; reconstruire uniquement SW preview via générateur officiel; Chromium offline / vrai iPhone Safari; sauvegarde/restauration/rollback autorisés et GO explicite. L'outil `TraceDeferredStatementReviewUI` est **preview-only** et le SW actuel potentiellement périmé. **NO-GO production**.
+
+---
+
 ## Lot 25 octobre 2026 — chaîne de preuve du relevé préparé à la revue différée
 
 **Code candidat ajouté :**
