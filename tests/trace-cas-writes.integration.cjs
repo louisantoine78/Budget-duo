@@ -194,6 +194,21 @@ async function run(){
     [hid,'accounts','legacy-deferred-card']),/TRACE_DEFERRED_NOT_RELEASED/);
    assert.equal((await readDoc('transactions','legacy-deferred-purchase')).data.status,'pending');
   });
+  await check('untagged transactions and imports linked to an old deferred card fail server guard',async()=>{
+   for(const collection of ['transactions','imports','import_days','reconciliations']){
+    const id='deferred-reference-'+collection;
+    await assert.rejects(rpcSave(1,collection,id,{
+     id,accountId:'legacy-deferred-card',status:'pending'
+    },null),/TRACE_DEFERRED_NOT_RELEASED/);
+    assert.equal(await readDoc(collection,id),undefined);
+   }
+   // A foreign-card transfer leg is also forbidden, even if its spending
+   // classification and primary checking account look ordinary.
+   const transfer={id:'hidden-deferred-leg',type:'transfer',
+    accountId:'la',toAccountId:'legacy-deferred-card',status:'confirmed'};
+   await assert.rejects(rpcSave(1,'transactions',transfer.id,transfer,null),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+  });
   await check('ordinary pending transactions and credit cards still work',async()=>{
    const credit={id:'credit-fake',owner:'la',type:'card',
     country:'CA',currency:'CAD',paymentMode:'credit',settlementAccountId:'la'};
