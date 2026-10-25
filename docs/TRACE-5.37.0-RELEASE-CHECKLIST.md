@@ -1,3 +1,14 @@
+## Débit différé — contrôle des échéances en lecture seule (25 octobre 2026)
+
+- [x] `traceDeferredAccountReview(card)` branché sur la fiche de compte candidat pour `paymentMode:'deferred'` : lecture des achats, frais, remboursements et règlements documentés ; dette théorique et échéances natives visibles **sans écriture**.
+- [x] Refus de toute projection si date d'achat/budget/échéance, montant reçu ou pièce requise manque ; aucune conversion CAD automatique ni nouvelle dépense sur règlement.
+- [x] 12/12 nouveaux scénarios V8, 84/84 scénarios du moteur différé, 14/14 comptes, 13/13 UX premium, soit **123/123 contrôles simulés V8**, sans Node CLI/PG/Safari.
+- [ ] **Fonctionnalité complète non livrée :** création de carte à débit différé toujours désactivée, formulaires d'achat et règlement/associations bancaires non intégrés en écriture. Ne pas activer avant les tests PG/Node/UX et décision explicite.
+- [ ] Suite QA native via `scripts/check-trace-537-release-gates.cjs` avec checkout/PGlite ; reconstruire le SW de preview via générateur, vérifier Chromium/iPhone Safari et rollback.
+- [ ] **Statut NO-GO production.**
+
+---
+
 ## Capture bancaire — sens immuable CAD et international (24 octobre 2026)
 
 - [x] `smartApproveDraft` compare `bankDirection` OCR à la direction de la nature choisie pour **toutes les devises**, CAD inclus. Débit/credit opposés = refus avant sauvegarde.

@@ -1,3 +1,15 @@
+# ADDENDUM — INTÉGRATION READ-ONLY DU DÉBIT DIFFÉRÉ (25 OCT 2026)
+
+Résoudre le HEAD réel de `trace-5.37.0-international-accounts-fx` à l'ouverture. Dernier HEAD **de code** connu `1f6ab1ec7dcc6bba83efca8f8d8e17374a3ff795`. Main stable `02c70f50e7e51da79b77a91dde96a03c6c719909` interdit de modification ; aucun SW prod/CI/Supabase réel/déploiement/PR/fusion. Commits `[skip ci]`.
+
+**Avancée réelle** : branche candidat `v5-app-5.37.0.js` ajoute `traceDeferredAccountReview` dans la fiche des cartes `paymentMode:'deferred'`, utilisant le moteur `TraceDeferredDebit.simulate` déjà chargé uniquement dans la prévisualisation laboratoire. Affiche si et seulement si toutes les métadonnées sont explicites : solde natif théorique et échéances, avec règlement interne neutre budgétairement. Toutes les lignes pertinentes sont vérifiées ; un manque empêche un faux total. CSS ajouté. **12 nouveaux tests + 84 moteur existant + 14 fiches comptes + 13 UX premium = 123/123 tests sous V8 fictif**. AUCUN test Node CLI/SQL/PostgreSQL/Safari effectué.
+
+**Ne pas surestimer** : l'activation de nouveaux comptes différés demeure explicitement désactivée ; le parcours de saisie achat/date budget/échéance et les paiements bancaires datés, rapprochements, justificatifs et écritures persistées ne sont toujours pas intégrés/qualifiés. Le moteur peut être absent d'une page : la vue affiche alors indisponible. Le SW de prévisualisation peut être périmé après modification app/CSS ; reconstruire via script générateur en checkout complet, jamais éditer à la main.
+
+**Prochaines priorités** : vraie intégration différée sécurisée et données fictives, test native Node et SQL 07/08/09 Auth/RLS/CAS avec PGlite, couverture partage/devise Couple, QA PWA offline et Safari iPhone, backup/rollback. Toutes validations humaines avant production ; strict NO-GO.
+
+---
+
 # ADDENDUM — CREDIT/DÉBIT OCR TOUTES DEVISES (24 OCT 2026)
 
 Branche d'écriture exclusive `trace-5.37.0-international-accounts-fx`. Dernier HEAD de code vérifié : `9a3fcdbc633e43eb864dbf5fa10a52520c9fbff4`; résoudre le HEAD réel lors de toute reprise. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` à préserver. Aucun déploiement, CI, fusion, migration Supabase réel.

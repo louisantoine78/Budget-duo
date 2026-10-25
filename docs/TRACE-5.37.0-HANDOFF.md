@@ -1,3 +1,20 @@
+## Lot du 25 octobre 2026 — raccordement lecture seule du débit différé
+
+**Commit de code : `1f6ab1ec7dcc6bba83efca8f8d8e17374a3ff795`**, uniquement `trace-5.37.0-international-accounts-fx`, message `[skip ci]` ; `main` stable et production inchangées.
+
+Avancement fonctionnel sur **un chantier encore inachevé**, sans activer les écritures dangereuses :
+
+- Dans `v5-app-5.37.0.js`, nouveau `traceDeferredAccountReview(card)` branché à `openTraceAccountDetail` **seulement** pour les cartes `paymentMode === 'deferred'`. Il exploite le moteur existant `TraceDeferredDebit.simulate` déjà chargé dans `trace-international-preview.html` (laboratoire fictif). Il affiche, si les métadonnées sont explicitement complètes, dette native théorique, échéances dépassées, état de chaque lot, montant restant et montant réglé, sans créer de transaction ni modifier de budget/solde. CSS dédié compact dans `trace-international-1.0.0.css`.
+- L'adaptateur lit les transactions existantes, ne retient que les achats natifs confirmés avec `date`, `budgetDate` et `dueDate` renseignées, les frais `deferredKind:'card_fee'` avec échéance, remboursements `deferredPurchaseId` et transferts courant→carte avec `deferredPurchaseIds`, `deferredFeeIds` et **vrai montant reçu** `toBankAmount`. Les justificatifs des règlements partiels sont délégués au moteur strict. Aucun calendrier de prélèvement, taux FX ni paiement de carte inventé. Un seul mouvement pertinent incomplet rend l'ensemble **non projetable**, pour éviter un faux solde.
+- Le module est **délibérément absent des assets production stables** ; l'absence du moteur déclenche « Analyse indisponible », jamais une valeur inventée. L'activation des nouvelles cartes `deferred` dans l'interface demeure **désactivée** ; aucune écriture ni migration réelle n'est autorisée. Il s'agit d'une **intégration d'affichage read-only du candidat/labo**, pas d'une fonctionnalité de débit différé pleinement opérationnelle.
+- Nouveau `tests/trace-deferred-account-readonly-integration.test.cjs` : **12 scénarios V8** réussis sur le code candidat et le vrai moteur de simulation (achat EUR 40, virement confirmé, remboursement, absence date/solde/compte/currency, absence module, carte crédit classique, erreur engine, intégration à la fiche). Régressions V8 fictives validées : **84** scénarios moteur différé existant, **14** tests compte/compte principal (async exécutés), **13** tests ordre/UX premium ; **123/123 contrôles V8 au total** dans ces quatre suites, pas des tests natifs Node/PG/browser.
+
+**Étapes indispensables avant GO :** (1) achever le vrai schéma et les formulaires achat différé avec dates achat/budget/échéance et preuve d'import de règlement ; (2) relier correctement chaque ligne bancaire à un lot, frais/remboursements, sous garde de non-double comptage ; (3) autoriser les créations de cartes différées seulement APRÈS tests solides ; (4) reconstruire le SW du labo via `node scripts/build-trace-preview-pwa.mjs` depuis checkout complet (modification app+CSS = cache de preview potentiellement périmé), Node natif, PGlite migrations 07/08/09 Auth/RLS/CAS deux clients, Chromium hors ligne et Safari iPhone, backup/restore/rollback et GO humain explicite.
+
+**NO-GO inchangé.** Le conteneur de chat n'a ni checkout Github ni PGlite ; seules simulations V8 ont été possibles. Aucun `main`, `index.html`, `sw.js`, GitHub Actions, données Supabase réelles, PR, fusion, déploiement ou migration en base.
+
+---
+
 ## Lot du 24 octobre — sens bancaire immuable sur tous les comptes
 
 **Dernier commit de code : `9a3fcdbc633e43eb864dbf5fa10a52520c9fbff4`.** Branche exclusive `trace-5.37.0-international-accounts-fx`, message `[skip ci]`, main et production intacts.
