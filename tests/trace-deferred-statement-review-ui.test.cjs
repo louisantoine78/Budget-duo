@@ -133,5 +133,5 @@ test('unknown account type and account mismatch never mount',()=>{
 });
 test('read-only source code contains no network or persistence API calls',()=>{
  const src=fs.readFileSync(path.join(__dirname,'..',files[2]),'utf8');
- assert.doesNotMatch(src,/\bfetch\s*\(|XMLHttpRequest|indexedDB|localStorage|\.from\s*\(/);
+ assert.doesNotMatch(src,/\bfetch\s*\(|XMLHttpRequest|indexedDB|localStorage|\.rpc\s*\(/);
 });
