@@ -4274,6 +4274,7 @@ async function saveDocument(collection,item){
   const id=String(item.id),key=traceWriteKey(collection,id);
   return traceSerialWrite(key,async()=>{
    if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+   traceRefuseUnqualifiedDeferredWrite(collection,item);
    const expected=traceDocRevisions.has(key)?traceRevision(traceDocRevisions.get(key)):null;
    const {data,error}=await client.rpc('trace_cas_save_document',{
     p_household_id:household.id,p_collection:collection,p_item_id:id,

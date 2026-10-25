@@ -192,3 +192,21 @@ test('existing deferred card may not be silently switched to credit',async()=>{
   {id:'old-deferred',type:'card',paymentMode:'credit'}),/TRACE_DEFERRED_NOT_RELEASED/);
  assert.equal(calls.length,0);
 });
+
+test('queued write revalidates model if card becomes deferred before RPC',async()=>{
+ const {app,state,calls}=createContext();
+ state.accounts=[{id:'card-eur',type:'card',paymentMode:'credit'}];
+ const pending=app.saveDocument('transactions',{id:'queued',type:'expense',
+  accountId:'card-eur',amountCAD:40,status:'pending'});
+ state.accounts[0].paymentMode='deferred';
+ await assert.rejects(pending,/TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
+});
+test('queued write revalidates deferred metadata mutated before RPC',async()=>{
+ const {app,calls}=createContext();
+ const candidate={id:'queued2',type:'expense',accountId:'unlinked',amountCAD:40};
+ const pending=app.saveDocument('transactions',candidate);
+ candidate.deferredKind='purchase';
+ await assert.rejects(pending,/TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
+});
