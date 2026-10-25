@@ -16,7 +16,8 @@ as $guard$
  select case
   when p_collection = 'accounts' then
    p_data->>'paymentMode' = 'deferred'
-  when p_collection in ('transactions','imports','import_days','reconciliations') then
+  when p_collection in ('transactions','imports','import_days','reconciliations',
+                       'investment_operations') then
    coalesce(nullif(btrim(p_data->>'deferredKind'),''),'') <> ''
    or p_data->>'type' in ('deferred_purchase','deferred_settlement')
    or p_data->>'transferPurpose' = 'deferred_settlement'
@@ -37,7 +38,7 @@ as $guard$
       and bank.item_id in (
        p_data->>'accountId',p_data->>'cardAccountId',p_data->>'toAccountId',
        p_data->>'linkedCardAccountId',p_data->>'sourceAccountId',
-       p_data->>'destinationAccountId'
+       p_data->>'destinationAccountId',p_data->>'bankAccountId'
       )
    )
   else false end;

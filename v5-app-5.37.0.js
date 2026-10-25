@@ -32,10 +32,10 @@ function traceRefuseUnqualifiedDeferredWrite(collection,item){
    throw Error('TRACE_DEFERRED_NOT_RELEASED : modification de carte différée non activée.');
   return;
  }
- if(!['transactions','imports','import_days','reconciliations'].includes(collection)||
+ if(!['transactions','imports','import_days','reconciliations','investment_operations'].includes(collection)||
     !item||typeof item!=='object')return;
  const fields=['accountId','cardAccountId','toAccountId',
-  'linkedCardAccountId','sourceAccountId','destinationAccountId'];
+  'linkedCardAccountId','sourceAccountId','destinationAccountId','bankAccountId'];
  const mentionsDeferred=fields.some(field=>accounts.some(a=>
   deferred(a)&&item[field]!==undefined&&item[field]!==null&&
   String(item[field])===String(a.id)));

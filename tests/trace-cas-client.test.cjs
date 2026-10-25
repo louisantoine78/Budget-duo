@@ -310,3 +310,17 @@ test('legacy deferred card without type is refused on create and later mutation'
   /TRACE_DEFERRED_NOT_RELEASED/);
  assert.equal(calls.length,0);
 });
+
+
+test('investment operation referencing a deferred legacy bank ID is held before RPC',async()=>{
+ const {app,state,calls}=createContext();
+ state.accounts=[{id:'old-deferred',name:'Visa',paymentMode:'deferred',owner:'la'},
+  {id:'real-checking',type:'checking',owner:'la',paymentMode:'immediate'}];
+ await assert.rejects(app.saveDocument('investment_operations',{
+  id:'investment-deferred',type:'deposit',accountId:'portfolio-la',
+  bankAccountId:'old-deferred',status:'pending'}),/TRACE_DEFERRED_NOT_RELEASED/);
+ await app.saveDocument('investment_operations',{
+  id:'investment-checking',type:'deposit',accountId:'portfolio-la',
+  bankAccountId:'real-checking',status:'pending'});
+ assert.equal(calls.filter(x=>x.method==='trace_cas_save_document').length,1);
+});

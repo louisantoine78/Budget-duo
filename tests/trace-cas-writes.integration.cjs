@@ -231,6 +231,18 @@ async function run(){
    await assert.rejects(rpcSave(1,'transactions',transfer.id,transfer,null),
     /TRACE_DEFERRED_NOT_RELEASED/);
   });
+  await check('deferred bank account cannot enter investment operations through direct table write',async()=>{
+   const item={id:'investment-card-bypass',type:'deposit',status:'pending',
+    accountId:'pea-la',bankAccountId:'legacy-deferred-card'};
+   await assert.rejects(rpcSave(1,'investment_operations',item.id,item,null),
+    /TRACE_WRITE_FORBIDDEN|TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'investment_operations','direct-investment-card-bypass',
+      JSON.stringify({...item,id:'direct-investment-card-bypass'}),uid(1)]
+   ),/TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal(await readDoc('investment_operations','direct-investment-card-bypass'),undefined);
+  });
   await check('unlinked deferred allocation fields are quarantined by SQL',async()=>{
    const reserved={deferredPurchaseId:'purchase-x',deferredPurchaseIds:['purchase-x'],
     deferredFeeIds:['fee-x'],deferredSettlementMode:'partial',
