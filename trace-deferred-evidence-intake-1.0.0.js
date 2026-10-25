@@ -52,6 +52,8 @@
    settlementId:c.settlementId,status:c.status,
    reviewToken:c.reviewToken||null
   }));
+  const sourceBatchComplete=Array.isArray(checking.invalidDocuments)&&
+   checking.invalidDocuments.length===0;
   const purchaseReviewed=card.status==='manual_review_current';
   const settlementReviewed=settlements.length>0&&
    settlementStatuses.length===settlements.length&&
@@ -62,7 +64,9 @@
    purchaseReviewToken:card.reviewToken||null,
    settlementStatuses:Object.freeze(settlementStatuses),
    awaitingSettlement:settlements.length===0,
-   localEvidenceReviewed:purchaseReviewed&&settlementReviewed,
+   localEvidenceReviewed:purchaseReviewed&&settlementReviewed&&
+    sourceBatchComplete,
+   checkingSourcesComplete:sourceBatchComplete,
    // This status is only a local review marker. Auth, bank, server CAS and
    // source uniqueness cannot be validated in this browser module.
    bankAuthenticated:false,serverUniquenessChecked:false,

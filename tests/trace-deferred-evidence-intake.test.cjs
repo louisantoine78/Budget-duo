@@ -10,7 +10,7 @@ function harness({purchase='manual_review_current',settlement='manual_review_cur
   return {status:purchase,persistable:false,confirmed:false,createdTransactions:0,reviewToken:'token-card'};}},
   TraceDeferredBankReview:{compare(o){calls.push(['bank',o]);
    return bankOverride||{cases:o.settlements.map(s=>({settlementId:s.id,status:settlement,reviewToken:'token-bank'})),
-    writes:0,financialChanges:0,createdTransactions:0};}}};
+    writes:0,financialChanges:0,createdTransactions:0,invalidDocuments:[]};}}};
  if(evidenceOverride)window.TraceDeferredPurchaseEvidence.review=()=>evidenceOverride;
  vm.runInNewContext(fs.readFileSync(scripts,'utf8'),{window});
  const plan={kind:'deferred_write_plan',persistable:false,confirmed:false,
@@ -93,4 +93,13 @@ test('purchase and checking reviews remain independent at different snapshots',(
  assert.equal(h.calls[1][1].reviews[0].snapshot,'checking-v1');
  assert.equal(r.purchaseReviewToken,'token-card');
  assert.equal(r.settlementStatuses[0].reviewToken,'token-bank');
+});
+
+test('a broken unrelated checking statement prevents a successful combined review',()=>{
+ const h=harness({bankOverride:{cases:[{settlementId:'pay1',status:'manual_review_current'}],
+  invalidDocuments:[{statementId:'bad-extra'}],writes:0,financialChanges:0,createdTransactions:0}});
+ const r=h.review(h.input);
+ assert.equal(r.settlementStatuses[0].status,'manual_review_current');
+ assert.equal(r.checkingSourcesComplete,false);
+ assert.equal(r.localEvidenceReviewed,false);
 });
