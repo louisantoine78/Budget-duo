@@ -1,3 +1,18 @@
+# ADDENDUM DE REPRISE — DOUBLONS OCR ET AFFICHAGE DES DEVISES (24 OCTOBRE 2026)
+
+Vérifie immédiatement le HEAD exact de `trace-5.37.0-international-accounts-fx` sur GitHub. Dernier HEAD **de code** de cette reprise : `fe29012e1e1033a92bae7014fd436089d06af0f3`; `main` stable = `02c70f50e7e51da79b77a91dde96a03c6c719909`, jamais modifiable.
+
+Depuis `68b01a3bb1aa8a81327730502b74f7742eea889a`, trois commits :
+- `465cfdcdce8605371d848b9fdee8e82c4642211d` : validité de la comparaison des doublons liée au détail de la capture et de ses semblables, attestation expirante et bouton bloqué tant qu'absence confirmation.
+- `3807d3e9aa8aae8f404853f29b3723d4b3b0309b` : bouton de revue sans TraceMovement reste fail-closed ; fixtures anciennes V8 corrigées.
+- `fe29012e1e1033a92bae7014fd436089d06af0f3` : cartes OCR et preuves en devise **native** EUR/USD (prévisualisation du budget CAD jamais inventée sur montant natif), comptes CAD préservés.
+
+**93/93 vérifications sous V8 simulé** sur sources candidate (88 cas JS + 5 contrats SQL statiques) réussies après `fe29012`. Aucune exécution Node CLI, PostgreSQL, PGlite, navigateur, iPhone ou Supabase réel ; donc NO-GO. Aucun changement de `main`, assets production, workflows, CI, migration en base ni déploiement. Le conteneur ne dispose ni du checkout complet ni de PGlite ni de la résolution GitHub.
+
+Prochaines étapes : prioriser environnement natif isolé, Node complet et SQL migrations 07/08/09 (dont restrictions placements / CAS), reconstruction SW de preview via script officiel, tests navigateur hors ligne, Safari iPhone, flux internationaux restants, différé, devise Couple et design premium. Ne recommence pas la conception validée, ne déploie pas, ne touche pas au SQL hébergé ni à la branche main. Tous commits `[skip ci]`. Lire `docs/TRACE-5.37.0-HANDOFF.md` et checklist à jour en tête.
+
+---
+
 # ADDENDUM PRIORITAIRE — INTÉGRITÉ FX ET PATRIMOINE (24 OCTOBRE 2026)
 
 **Toujours résoudre le véritable HEAD GitHub avant de travailler.** Dernier HEAD de code vérifié avant cet addendum : `7adbb096b201d1840c7da5f20b06d62b8e8d465c`. Branche autorisée : `trace-5.37.0-international-accounts-fx`, jamais `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`.

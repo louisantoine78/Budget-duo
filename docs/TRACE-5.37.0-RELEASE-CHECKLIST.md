@@ -1,3 +1,17 @@
+## Captures internationales — attestation, doublons et devises natives (24 octobre 2026)
+
+**NO-GO.** Commit `465cfdc` (attestation de comparaison expirante), `3807d3e` (résistance absence module des natures et tests anciens), `fe29012` (affichage natif EUR/USD), tous sur la branche candidate `[skip ci]`.
+
+- [x] Case « opérations distinctes » invalidée sur changement des informations et des mouvements comparés ; bouton désactivé tant que la vérification des doublons n'a pas été faite.
+- [x] Les montants OCR/propositions de captures étrangères s'affichent dans la devise du compte ; aucun budget `40 CAD` présenté à la place d'un relevé `40 EUR`. Prévisualisation FX explicitement non évaluée.
+- [x] Absence du module financier pendant l'amorçage : bouton non confirmable.
+- [x] **93/93 vérifications V8 fictives** réexécutées, dont **5 statiques SQL**, mais aucune preuve de Node CLI, PostgreSQL/PGlite, Chromium, Safari ou deux clients.
+- [ ] Exécuter réellement le générateur SW, les tests Node complets, migrations 07/08/09, CAS/RLS Auth en base fictive et tests iPhone Safari avant GO.
+- [ ] Finir différé, modèles bancaires étrangers, compte/devise Couple, design premium, reprise et plan de rollback avant publication.
+- [ ] Aucune production, CI ou données Supabase réelles sans autorisation explicite.
+
+---
+
 ## Contrôle FX au centime et patrimoine — 24 octobre 2026
 
 **NO-GO maintenu.** Trois commits `e8abbc5`, `f9ffc6b`, `7adbb09`, uniquement sur la branche internationale avec `[skip ci]`.

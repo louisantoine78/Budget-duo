@@ -1,3 +1,23 @@
+## Lot du 24 octobre — consentement de doublons et affichage natif des captures
+
+**Production : NO-GO.** Nouveaux commits depuis le HANDOFF `68b01a3bb1aa8a81327730502b74f7742eea889a`, exclusivement sur `trace-5.37.0-international-accounts-fx`, tous `[skip ci]` :
+
+1. **`465cfdcdce8605371d848b9fdee8e82c4642211d`** : `trace-smart-inbox-3.5.0.js` attache désormais l'attestation « Deux opérations distinctes » à une signature de la capture (date, nom, montant, nature) et des mouvements comparés (id, statut, nature de l'évidence, montant). Toute modification significative ou changement des ressemblances invalide la case précédemment cochée. Le bouton de confirmation reste désactivé tant qu'une ressemblance n'a pas été personnellement comparée. Le blocage d'une transaction déjà enregistrée demeure. Les natures `legacyOnly` sont interdites dans l'UI. Huit tests ciblés ont été ajoutés dans `tests/trace-smart-duplicate-review-consent.test.cjs`.
+2. **`3807d3e9aa8aae8f404853f29b3723d4b3b0309b`** : le bouton « Confirmer » se verrouille sans erreur si le module des natures `TraceMovement` n'est pas initialisé. Les anciennes fixtures V8 d'interface ont été mises en cohérence avec le vrai contrat de ce module. Les huit suites V8 pertinentes ont été repassées.
+3. **`fe29012e1e1033a92bae7014fd436089d06af0f3`** : `rowForm` affiche les montants OCR dans la devise **native du compte** (EUR/USD, pas un faux `CAD`) y compris en extraction de date inconnue et preuve OCR suggérée. `synchronizeRow` ne présente plus une prévisualisation du budget en CAD calculée à tort depuis le montant EUR/USD sans FX vérifié. Pour une opération étrangère, il affiche le montant natif et signale que la contre-valeur CAD n'est calculée qu'au taux historique daté lors de la confirmation. Les comptes historiques CAD conservent leur présentation existante. Sept tests ajoutés `tests/trace-smart-foreign-native-amount-ui.test.cjs`.
+
+### Validation effective
+
+**93/93 vérifications ciblées sous V8 isolé**, réparties sur deux lots réexécutés après le dernier commit de code : **88 simulations/cas JavaScript** sur les vraies sources du candidat et moteurs financiers avec Node/FS/DOM/transports fictifs, plus **5 contrôles SQL purement statiques** sur la migration 09 candidate. Suites : doublons 8, UI native 7, anciens statuts capture 7, OCR étranger 18, FX centime 11, intégrité monétaire 11, CSV étranger 18, virements/cartes 8, garde SQL statique 5.
+
+**Ce n'est pas du Node CLI natif, ni SQL/PGlite/PostgreSQL réel, ni des tests navigateur/Chromium/Safari ou multi-clients.** Un nouveau parcours OCR dans Safari n'est donc pas qualifié. Le conteneur a Node v22 mais aucun checkout local, aucun DNS GitHub et aucune dépendance PGlite : les scripts `scripts/test-trace-native.mjs`, l'intégration SQL 07/08/09 et la génération SW ne peuvent toujours pas y être exécutés. Ne pas considérer `93/93` comme certification ni lancer production.
+
+**Protections préservées :** `main` stable 5.36.5 et code de production intacts, aucun accès ou écriture Supabase financière réelle, aucune CI, fusion, PR, migration hébergée ou déploiement, aucun changement des workflows.
+
+**Suite obligatoire :** checkout complet fictif et Node/PGlite, véritables migrations SQL 07/08/09 et test deux sessions/CAS/RLS, run `node scripts/test-trace-native.mjs`; régénérer `trace-international-preview-sw.js` exclusivement par `node scripts/build-trace-preview-pwa.mjs` puis `--check`, tester hors ligne Chromium/Safari natif iPhone, compléter parcours étrangers/différé/Couple/UX premium, sauvegarde/restauration/rollback sous autorisation explicite.
+
+---
+
 ## Lot du 24 octobre — intégrité FX zéro CAD et patrimoine non valorisable
 
 **NO-GO production maintenu.** Après le HEAD documentaire `32b320998b0d802a7f34f21a987e559d05806440`, trois commits de code ont été ajoutés sur la SEULE branche `trace-5.37.0-international-accounts-fx`, tous `[skip ci]` :
