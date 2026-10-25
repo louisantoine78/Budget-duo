@@ -29,9 +29,19 @@ async function run(){
   const hid=h.household_id;
   for(const file of ['05-trace-v5-foundation.sql','06-trace-import-day-states.sql',
     '07-trace-account-owner-write-guard.sql','08-trace-personal-settings-owner-guard.sql',
-    '09-trace-cas-versioned-writes.sql',
-    '10-trace-deferred-write-quarantine.sql'])
+    '09-trace-cas-versioned-writes.sql'])
    await db.exec(await fs.readFile(path.join(root,'migrations',file),'utf8'));
+  // Fictional legacy rows created before quarantine to exercise old-client
+  // update/delete attempts without ever using real bank data.
+  await db.query('insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [hid,'accounts','legacy-deferred-card',JSON.stringify({
+    id:'legacy-deferred-card',type:'card',paymentMode:'deferred',owner:'la',
+    country:'FR',currency:'EUR',settlementAccountId:'la'}),uid(1)]);
+  await db.query('insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [hid,'transactions','legacy-deferred-purchase',JSON.stringify({
+    id:'legacy-deferred-purchase',type:'expense',status:'pending',
+    deferredKind:'purchase',accountId:'legacy-deferred-card',bankAmount:40}),uid(1)]);
+  await db.exec(await fs.readFile(path.join(root,'migrations/10-trace-deferred-write-quarantine.sql'),'utf8');
   const rpcSave=(n,collection,id,data,rev)=>acting(n,tx=>tx.query(
    'select public.trace_cas_save_document($1,$2,$3,$4,$5) as revision',
    [hid,collection,id,JSON.stringify(data),rev]));
@@ -165,6 +175,24 @@ async function run(){
     'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
     [hid,'transactions','direct-deferred',JSON.stringify({...settlement,id:'direct-deferred'}),uid(1)]
    ),/TRACE_DEFERRED_NOT_RELEASED/);
+  });
+  await check('legacy deferred records cannot be modified, laundered or deleted',async()=>{
+   const oldCard=await readDoc('accounts','legacy-deferred-card');
+   const oldPurchase=await readDoc('transactions','legacy-deferred-purchase');
+   await assert.rejects(rpcSave(1,'transactions','legacy-deferred-purchase',{
+    id:'legacy-deferred-purchase',type:'expense',status:'confirmed',
+    accountId:'la',amountCAD:1},oldPurchase.revision),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(rpcSave(1,'accounts','legacy-deferred-card',{
+    ...oldCard.data,paymentMode:'credit'},oldCard.revision),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(rpcDelete(1,'transactions','legacy-deferred-purchase',
+    oldPurchase.revision),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'transactions','legacy-deferred-purchase']),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'accounts','legacy-deferred-card']),/TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal((await readDoc('transactions','legacy-deferred-purchase')).data.status,'pending');
   });
   await check('ordinary pending transactions and credit cards still work',async()=>{
    const credit={id:'credit-fake',owner:'la',type:'card',
