@@ -41,7 +41,7 @@ async function run(){
    [hid,'transactions','legacy-deferred-purchase',JSON.stringify({
     id:'legacy-deferred-purchase',type:'expense',status:'pending',
     deferredKind:'purchase',accountId:'legacy-deferred-card',bankAmount:40}),uid(1)]);
-  await db.exec(await fs.readFile(path.join(root,'migrations/10-trace-deferred-write-quarantine.sql'),'utf8');
+  await db.exec(await fs.readFile(path.join(root,'migrations/10-trace-deferred-write-quarantine.sql'),'utf8'));
   const rpcSave=(n,collection,id,data,rev)=>acting(n,tx=>tx.query(
    'select public.trace_cas_save_document($1,$2,$3,$4,$5) as revision',
    [hid,collection,id,JSON.stringify(data),rev]));
