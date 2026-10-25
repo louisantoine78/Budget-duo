@@ -39,9 +39,11 @@ function traceRefuseUnqualifiedDeferredWrite(collection,item){
   String(item[field])===String(a.id)));
  const explicitDeferred=item.deferredKind!==null&&
   item.deferredKind!==undefined&&String(item.deferredKind).trim()!==''||
-  item.settlementMode==='partial'||item.settlementMode==='full'&&
-  item.allocationDueDate!==undefined||
-  item.deferredBankEvidenceReviewed!==undefined;
+  ['deferred_settlement','deferred_purchase'].includes(item.type)||
+  item.transferPurpose==='deferred_settlement'||
+  ['partial','full'].includes(item.settlementMode)&&
+  (Array.isArray(item.purchaseIds)||Array.isArray(item.feeIds)||
+   item.allocationDueDate!==undefined)||item.deferredBankEvidenceReviewed!==undefined;
  if(mentionsDeferred||explicitDeferred)
   throw Error('TRACE_DEFERRED_NOT_RELEASED : écriture différée en attente de qualification bancaire/serveur.');
 }

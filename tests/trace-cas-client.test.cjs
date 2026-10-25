@@ -210,3 +210,18 @@ test('queued write revalidates deferred metadata mutated before RPC',async()=>{
  await assert.rejects(pending,/TRACE_DEFERRED_NOT_RELEASED/);
  assert.equal(calls.length,0);
 });
+
+test('deferred type and transfer purpose cannot bypass the gate with unknown account',async()=>{
+ const {app,calls}=createContext();
+ const records=[
+  {id:'future-p',type:'deferred_purchase',accountId:'unknown',status:'pending'},
+  {id:'future-s',type:'deferred_settlement',accountId:'unknown',status:'confirmed'},
+  {id:'future-t',type:'transfer',accountId:'unknown',
+   transferPurpose:'deferred_settlement',status:'confirmed'},
+  {id:'future-allocation',type:'transfer',accountId:'unknown',
+   settlementMode:'full',purchaseIds:['p1'],status:'confirmed'}
+ ];
+ for(const record of records)await assert.rejects(
+  app.saveDocument('transactions',record),/TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
+});
