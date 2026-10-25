@@ -92,3 +92,16 @@ test('account detail integrates readonly report before activity shortcuts',()=>{
  assert.match(tail,/traceDeferredAccountReview\(a\)/);
  assert.doesNotMatch(code,/saveDocument|state\.transactions\.push|updateDocument/);
 });
+
+test('explicitly tagged deferred purchase is included in card reconciliation',()=>{
+ const tagged={...purchase,deferredKind:'purchase'};
+ const s=scenario([tagged]);
+ assert.match(s.html,/Débit différé · échéances/);
+ assert.match(s.html,/40,00/);
+});
+test('unknown deferred transaction type is blocked instead of treated as purchase',()=>{
+ const unknown={...purchase,deferredKind:'unrecognized'};
+ const s=scenario([unknown]);
+ assert.match(s.html,/Informations bancaires incomplètes/);
+ assert.doesNotMatch(s.html,/Dette différée théorique/);
+});

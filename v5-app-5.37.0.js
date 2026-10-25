@@ -629,7 +629,8 @@ function traceDeferredAccountReview(card){
       t.status!=='confirmed'){incomplete++;continue;}
    fees.push({...common,type:'card_fee',cardAccountId:card.id,
     chargeDate:t.date,budgetDate:t.budgetDate,dueDate:t.dueDate});
-  }else if(t.type==='expense'&&t.accountId===card.id&&!t.deferredKind){
+  }else if(t.type==='expense'&&t.accountId===card.id&&
+     (!t.deferredKind||t.deferredKind==='purchase')){
    if(!I.calendarDate(t.budgetDate)||!I.calendarDate(t.dueDate)||
       t.status!=='confirmed'){incomplete++;continue;}
    purchases.push({...common,type:'deferred_purchase',cardAccountId:card.id,
