@@ -1,3 +1,18 @@
+## Lot du 24 octobre — détail des comptes : devises natives + CAD indicatif
+
+**Commit de code `5d7aa719cfc976da1ddeb3140bd1c04a9c20d8c6`**, uniquement sur `trace-5.37.0-international-accounts-fx`, `[skip ci]`. Cette reprise travaille sur les fonctionnalités visuelles approuvées, pas seulement sur les protections comptables.
+
+- `trace-international-ui-1.0.0.js` : la section de l'Accueil « Voir tous mes comptes et ma trésorerie globale » affiche chaque solde dans la **devise native bancaire**, plus, pour chaque compte étranger valorisable, la **contre-valeur CAD indicative** distincte avec date et source de la cotation. Aucune conversion fictive ou conversion implicite 1:1. Si taux indisponible, invalide, solde inconnu ou montant non représentable, affichage d'une conversion à vérifier plutôt que d'une somme trompeuse. Les données textuelles de source des taux sont échappées dans le HTML.
+- Si un taux présent dans le cache est inutilisable pour valoriser un solde natif connu, la demande de taux historique est maintenant déclenchée, sous réserve des gardes de requête déjà présents dans `requestInternationalRates`. Les soldes natifs manquants ne déclenchent pas de requête FX inutile. Le libellé précise qu'un taux peut venir de la Banque du Canada **ou d'une saisie manuelle**.
+- `trace-international-1.0.0.css` : affichage lisible sur écran étroit en deux niveaux hiérarchiques : nom/devise native et petite ligne de conversion, montant natif maintenu à droite.
+- Nouveau `tests/trace-international-home-native-cad-conversion.test.cjs` : 8/8 tests V8 fictifs sur le **vrai moteur FX** + UI (EUR 40 -> CAD 64 à taux fictif 1,60, date/source, taux manquant/invalide, zéro natif, texte malveillant échappé, autre titulaire exclu, solde inconnu, structure responsive). Régression `tests/trace-home-account-switch.test.cjs` : 9/9 V8 réussis, y compris bascule de compte sans changement du principal. **17/17 tests de ces deux suites sous V8 mock Node/VM, pas dans Node CLI natif.**
+
+**Statut toujours NO-GO :** aucun checkout complet utilisable dans le conteneur, DNS GitHub indisponible, PGlite/PostgreSQL absent ; seules lectures/commits GitHub connectés et simulations V8 isolées possibles ici. Aucune migration SQL 07/08/09 réellement lancée, aucune suite native complète, aucun Chromium/Safari ou iPhone réel. Toute modification du JS de laboratoire peut périmer le service worker de preview : reconstruire via `node scripts/build-trace-preview-pwa.mjs` puis `--check` dans un checkout de laboratoire avant tests PWA.
+
+**Prochaines étapes :** (1) obtention du checkout isolé, exécution `node scripts/check-trace-537-release-gates.cjs`, Node natif, PGlite/Auth/RLS/CAS fictifs, (2) remise à jour SW preview exclusivement via le générateur et tests Chromium/iPhone, (3) fin des flux de débit différé, imports étrangers, devise personnelle/Couple, Accueil/Activité/Patrimoine premium et contrôles de réconciliation, (4) sauvegarde/restauration/rollback et validation GO avec autorisation explicite. `main`, code de prod 5.36.5, workflows et données Supabase réelles intacts.
+
+---
+
 ## Nouvelle étape — unifier les tests natifs et les portes NO-GO (24 octobre 2026)
 
 **Commit de code : `1955fbbd0418342e119f9527bbde9c44b3db0cb6`** sur `trace-5.37.0-international-accounts-fx`, avec `[skip ci]`. Deux fichiers ajoutés :

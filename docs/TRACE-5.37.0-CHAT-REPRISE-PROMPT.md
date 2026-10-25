@@ -1,3 +1,15 @@
+# ADDENDUM — VUE COMPTES NATIVE + CAD (24 OCTOBRE 2026)
+
+Dernier HEAD **code** vérifié au moment de cette reprise : `5d7aa719cfc976da1ddeb3140bd1c04a9c20d8c6`. Résoudre le HEAD GitHub réel à chaque nouvelle session. `main` stable = `02c70f50e7e51da79b77a91dde96a03c6c719909`, branche candidate exclusive `trace-5.37.0-international-accounts-fx`, commits `[skip ci]`.
+
+Le nouveau commit `5d7aa719cfc976da1ddeb3140bd1c04a9c20d8c6` implémente dans l'Accueil « Tous mes comptes » les montants bancaires natifs + valeurs CAD indicatives séparées avec date/source du taux, état inconnu sans FX, et style compact mobile. Les taux manuels sont présentés honnêtement, sans confusion avec les taux Banque du Canada. Les taux en cache invalides sont redemandés via les gardes existants. Nouveau test UX 8/8 et régression bascule rapide de compte 9/9, **17/17 seulement dans V8 simulan t Node/VM**.
+
+Le script de qualification native `scripts/check-trace-537-release-gates.cjs` est déjà commité ; mais **non exécuté réellement** : conteneur sans checkout GitHub local, DNS GitHub ni PGlite. Le SW de preview est potentiellement périmé. Les suites Node complètes, migrations PG 07/08/09, navigateur, Safari et tests multisessions manquent toujours. **NO-GO**.
+
+Prochaine priorité: tests Node/SQL sur clone isolé avec PGlite fictif, puis régénération SW preview via script, navigateur et iPhone, poursuite flux internationaux/différé/Couple et UX premium, sauvegarde et rollback. Ne toucher ni `main` ni données Supabase réelles ni CI/déploiement sans autorisation.
+
+---
+
 # ADDENDUM — PROCHAINE ÉTAPE DE QUALIFICATION NATIVE TRACE 5.37.0
 
 Dernier HEAD de **code** vérifié au départ de ce lot : `1955fbbd0418342e119f9527bbde9c44b3db0cb6`. Résoudre le HEAD réel GitHub à chaque reprise. Branche autorisée **uniquement** `trace-5.37.0-international-accounts-fx` ; stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intangible. Aucune modification de données Supabase réelles, déploiement, Actions, fusion, PR ou script de production.

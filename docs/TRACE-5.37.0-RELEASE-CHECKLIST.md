@@ -1,3 +1,15 @@
+## Comptes sur l'Accueil — contre-valeur CAD indicative (24 octobre 2026)
+
+- [x] `trace-international-ui-1.0.0.js` : soldes natifs préservés et CAD **indicatif** explicite, taux daté et sourcé par compte, signalement « à vérifier » sans conversion fiable.
+- [x] Source de taux manuelle ou Banque du Canada distinguée honnêtement ; toute source externe affichée avec échappement HTML.
+- [x] Le moteur de demande de taux n'ignore plus une quote en cache invalide si un solde natif étranger est connu.
+- [x] Mise en forme compacte mobile dans `trace-international-1.0.0.css`.
+- [x] Nouveaux tests UX/FX 8/8 et régression de bascule de compte 9/9, soit **17/17 contrôles V8 fictifs**, pas des tests natifs navigateur.
+- [ ] **CRITIQUE** — exécuter Node, PGlite/PostgreSQL fictifs, migrations 07/08/09 via `scripts/check-trace-537-release-gates.cjs` ; ne pas déployer en cas d'échec.
+- [ ] Reconstruire SW preview via générateur, vérifier offline/Chromium, Safari iPhone et tous les parcours premium/différé/Couple/rollback. NO-GO inchangé.
+
+---
+
 ## Qualification native reproductible — nouveau point d'entrée (24 octobre 2026)
 
 - [x] Ajout du script **en lecture seule** `scripts/check-trace-537-release-gates.cjs` et de 10 tests de validation du gate réussis en V8 fictif.
