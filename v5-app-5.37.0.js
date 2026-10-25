@@ -495,10 +495,14 @@ function openHomeReviewAccount(id){
  showTab('import');window.TraceImportCalendar?.selectAccount?.(id);
 }
 function renderHomeReview(){
- const rows=homeReviewAccounts(),total=rows.reduce((n,r)=>n+r.total,0);
+ const rows=homeReviewAccounts(),total=rows.reduce((n,r)=>n+r.total,0),
+  ocrToReview=rows.reduce((n,r)=>n+r.unresolved,0);
  const badge=$('#pendingCountBadge'),summary=$('#pendingText'),root=$('#homeReviewAccounts');
  if(badge)badge.textContent=String(total);
- if(summary)summary.textContent=total?total+' opération'+(total>1?'s':'')+' à vérifier · '+rows.filter(x=>x.total).length+' compte'+(rows.filter(x=>x.total).length>1?'s':''):'Tout est à jour';
+ if(summary)summary.textContent=(total?total+' opération'+(total>1?'s':'')+
+  ' à vérifier · '+rows.filter(x=>x.total).length+' compte'+(rows.filter(x=>x.total).length>1?'s':''):
+  ocrToReview?'Des lignes OCR demandent une vérification':'Tout est à jour')+
+  (ocrToReview?' · '+ocrToReview+' ligne'+(ocrToReview>1?'s':'')+' OCR à contrôler':'');
  if(!root)return;
  if(!rows.length){
   root.innerHTML='<p class="empty-note">Ajoute un compte courant ou une carte depuis Profil → Mes comptes.</p>';return;

@@ -70,3 +70,12 @@ test('repeated refresh only rebuilds shortcuts once and keeps accessible group',
  assert.equal((ctx.root.innerHTML.match(/data-home-next-action="/g)||[]).length,3);
  assert.match(ctx.root.innerHTML,/aria-label="Actions pour tenir les comptes à jour"/);
 });
+
+test('unresolved OCR-only days never display a false all-clear message',()=>{
+ const ctx=createContext({importDays:[{accountId:'cad-checking',unresolvedCount:3}]});
+ ctx.renderHomeReview();
+ assert.equal(ctx.nodes['#pendingCountBadge'].textContent,'0');
+ assert.match(ctx.nodes['#pendingText'].textContent,/3 lignes OCR à contrôler/);
+ assert.doesNotMatch(ctx.nodes['#pendingText'].textContent,/Tout est à jour/);
+ assert.match(ctx.root.innerHTML,/3 ligne\(s\) OCR à revérifier/);
+});
