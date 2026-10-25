@@ -160,8 +160,8 @@ test('transfers targeting deferred card and imports from it are held locally',as
   ['transactions',{id:'transfer-1',type:'transfer',accountId:'current-eur',
    toAccountId:'card-eur',status:'confirmed'}],
   ['transactions',{id:'direct-1',type:'expense',accountId:'card-eur',status:'pending'}],
-  ['smartImports',{id:'inbox-1',accountId:'card-eur',status:'pending'}],
-  ['importDays',{id:'day-1',accountId:'card-eur'}],
+  ['imports',{id:'inbox-1',accountId:'card-eur',status:'pending'}],
+  ['import_days',{id:'day-1',accountId:'card-eur'}],
   ['reconciliations',{id:'reconcile-1',cardAccountId:'card-eur'}]
  ])await assert.rejects(app.saveDocument(collection,item),/TRACE_DEFERRED_NOT_RELEASED/);
  assert.equal(calls.length,0);
