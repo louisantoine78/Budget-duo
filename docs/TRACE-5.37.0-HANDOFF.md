@@ -1,3 +1,16 @@
+## 25 octobre 2026 — reprise : alias différés et collections de suppression
+
+**SHA code :** `023c9130861df6c48eefb5c525ac6dbe9ce97577` — `fix(trace): guard deferred allocation aliases and persisted collection deletions [skip ci]` (branche internationale uniquement). Nouveau HEAD documentaire à résoudre après ce bloc.
+
+- Défaut réel supplémentaire de `removeDocument` : les anciennes clés `smartImports` et `importDays` empêchaient de retrouver les imports/jours persistés sous `imports` et `import_days` avant le refus de suppression. Aligner les deux et contrôler aussi `reconciliations`. La garde SQL demeure indispensable, car le client ne suffit pas à faire respecter les autorisations.
+- Garde `traceRefuseUnqualifiedDeferredWrite` + candidate SQL 10 renforcées contre les champs `deferredPurchaseId`, `deferredPurchaseIds`, `deferredFeeIds`, `deferredSettlementMode`, `deferredDueDate`, `deferredBankEvidence`. Le client vérifie la présence effective du champ ; SQL utilise `jsonb ?| array[...]`. Même avec un compte non chargé, les alias réservés sont mis en quarantaine.
+- `tests/trace-cas-client.test.cjs` : 2 tests nouveaux pour alias internes et refus de suppression des collections réelles. `tests/trace-cas-writes.integration.cjs` : scénario fictif nouveau sur alias différés en RPC + écriture directe, **non exécuté**.
+- **Preuve du cycle : 22/22 vrais scénarios client exécutés en V8 avec Node/assert/RPC/DOM simulés**, zéro échec. Syntaxe JavaScript compilée ; **aucun SQL natif ni Node CLI complet**. Environnement toujours sans DNS GitHub/npm côté conteneur et sans PGlite ; fichier PG seulement relu et compilé en JS.
+- **Porte 07–10 inchangée : BLOQUANTE.** Tests Auth/RLS/CAS à deux sessions, refus direct, quarantaines historiques, validation serveur des doubles preuves, modèle de rollback restant à qualifier. `main`, workflows, Supabase réel et production inchangés. **NO-GO**.
+- **Avancement qualitatif : 57 % environ (±10 points).** Le prochain lot prioritaire est un checkout isolé PostgreSQL/PGlite, puis intégration des parcours Couple/imports et visuels premium existants, SW preview par générateur, Chromium/iPhone.
+
+---
+
 ## 25 octobre 2026 — défaut de noms de collections CAS, corrigé ; relais de conversation
 
 Les collections réellement utilisées par `saveDocument` dans `v5-app-5.37.0.js` sont **`imports`** et **`import_days`**, comme dans la liste blanche du RPC 09. La protection cliente `traceRefuseUnqualifiedDeferredWrite` employait par erreur les noms des structures mémoire `smartImports` / `importDays`, omettant ainsi certaines écritures d'imports : **défaut concret corrigé**, sans aucune écriture réelle.

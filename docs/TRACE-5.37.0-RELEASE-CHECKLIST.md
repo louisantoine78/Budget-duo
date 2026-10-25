@@ -1,3 +1,14 @@
+## 25 octobre 2026 — reprise : suppression, alias différés, test V8
+
+- [x] **Commit `023c9130861df6c48eefb5c525ac6dbe9ce97577` uniquement branche 5.37.0 avec `[skip ci]`** : côté client, contrôle de suppression rétabli pour `imports`/`import_days` (recherche mémoire correspondante) et `reconciliations` ; alias d'allocation différée couverts sans carte chargée.
+- [x] **SQL 10 candidat non appliqué** renforcé par les clés internes `deferredPurchaseId`, `deferredPurchaseIds`, `deferredFeeIds`, `deferredSettlementMode`, `deferredDueDate`, `deferredBankEvidence` ; scénario fictif ajouté au test PG non exécuté.
+- [x] **22/22 tests client CAS sous V8 avec vrais sources/tests et dépendances Node/RPC simulées.** Compilation JavaScript des trois fichiers modifiés réussie. Aucune confirmation native Node/PGlite/PG/PostgREST.
+- [ ] **BLOQUANT** : checkout complet + PGlite, `node scripts/check-trace-537-release-gates.cjs`, `node tests/trace-cas-writes.integration.cjs` et autres tests DB 07–10, anciens comptes et transactions, Auth/RLS/CAS à deux sessions, grants directs, refus de métadonnées et double preuve.
+- [ ] **BLOQUANT** : fermeture du cutover bancaire, parcours Couple/FX/imports et UX premium, rebuild officiel du SW de preview, Chromium offline, iPhone Safari réel, sauvegarde/restauration et rollback autorisé.
+- [ ] Production reste **NO-GO**, global **57 % qualitatif (±10)**, aucune fusion/PR/deploy/CI/Supabase réel.
+
+---
+
 ## 25 octobre 2026 — contrôle des collections persistées et barrière de sortie PostgreSQL
 
 - [x] Correctif `traceRefuseUnqualifiedDeferredWrite` : collections CAS effectives `imports` et `import_days` protégées à la place des noms mémoire `smartImports` / `importDays`.

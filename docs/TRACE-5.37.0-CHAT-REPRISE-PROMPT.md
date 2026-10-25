@@ -1,3 +1,17 @@
+# MISE À JOUR PRIORITAIRE — REPRISE DU 25 OCTOBRE 2026, GARDES DIFFÉRÉS COMPLÉMENTAIRES
+
+**HEAD de code vérifié après reprise :** `023c9130861df6c48eefb5c525ac6dbe9ce97577` ; ce bloc documentaire ajoute ensuite un nouveau HEAD à relire. Branche exclusive `trace-5.37.0-international-accounts-fx`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, sans aucune écriture. Tous commits `[skip ci]`. Aucun déploiement, merge, PR, activation CI, ni écriture/lecture financière Supabase réelle.
+
+**Travaux réellement commités :** le client `v5-app-5.37.0.js` a été corrigé dans `removeDocument` : recherche des `imports` dans `state.smartImports`, des `import_days` dans `state.importDays`, et des `reconciliations` dans `state.reconciliations`, avant la demande de suppression. L'ancien code utilisait encore `smartImports` et `importDays` (identifiants mémoire, pas collections persistées), créant un défaut du contrôle préalable. La garde client et `migrations/10-trace-deferred-write-quarantine.sql` couvrent désormais aussi les alias internes d'allocation différée `deferredPurchaseId`, `deferredPurchaseIds`, `deferredFeeIds`, `deferredSettlementMode`, `deferredDueDate`, `deferredBankEvidence`, y compris si la carte n'est pas présente dans le cache. Champs présents même vides vérifiés au client et en SQL. Tests client et scénarios PG fictifs ajoutés ; **migration 10 toujours candidate et non appliquée**.
+
+**Preuve fraîche et limitée :** 22/22 cas de `tests/trace-cas-client.test.cjs` réussis dans V8 en utilisant la vraie source 5.37.0 et le vrai fichier test, avec `node:fs`, `node:test`, assertions, RPC et DOM **simulés**. Syntaxe des trois fichiers JS modifiés compilée sous V8. **Ce n'est PAS une exécution Node CLI native, PG/PGlite, Auth/RLS/CAS à deux vraies sessions, Chromium ou Safari.** Le scénario ajouté à `tests/trace-cas-writes.integration.cjs` n'a pas été exécuté : PGlite absent, `github.com` et `registry.npmjs.org` non résolus depuis le conteneur, pas de checkout complet. `scripts/check-trace-537-release-gates.cjs` non lancé sur checkout. Aucune preuve d'exécution SQL 07–10.
+
+**À faire sans attente de décision :** obtenir checkout fictif isolé + PGlite ; exécuter script portes de sortie et tests DB 07–10, permissions/anciens enregistrements/grants directs/deux utilisateurs et corriger les défaillances. Qualifier les allocations atomiques et doubles preuves serveur avant ouverture du différé. En parallèle finaliser multi-devises/Couple, imports/validation, interface premium sur les 5 onglets, SW de preview uniquement via générateur, Chromium offline, vrai iPhone Safari, sauvegarde/restauration/rollback. Production **NO-GO** jusqu'à accord exprès.
+
+**Avancement global qualitatif maintenu 57 % (±10 points), 43 % restant** : ce durcissement améliore la sécurité candidate mais n'autorise pas d'augmentation artificielle tant que PostgreSQL et les parcours intégrés restent non qualifiés.
+
+---
+
 # RELAIS PRIORITAIRE — FIN DE CONVERSATION DU 25 OCTOBRE 2026 — TRACE INTERNATIONAL 5.37.0
 
 **Branche exclusivement autorisée :** `trace-5.37.0-international-accounts-fx` sur `louisantoine78/Budget-duo`. **HEAD technique connu à vérifier avant toute modification :** `1f8ae90e94ac040a1ddd16eadb861d107ace571f` suivi du commit des présentes docs. `main` 5.36.5 demeure sur `02c70f50e7e51da79b77a91dde96a03c6c719909`. **Interdit :** écriture main, merge, PR, CI/Actions, production, déploiement, Supabase réel. Tous commits `[skip ci]`.
