@@ -278,3 +278,15 @@
 .trace-deferred-forecast-result{margin-top:10px;background:#eef5ef;border:1px solid #d8e9dc;border-radius:12px;padding:10px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .trace-deferred-forecast-result p{margin:7px 0}
 @media(max-width:420px){.trace-deferred-forecast-grid{grid-template-columns:1fr}.trace-deferred-forecast{padding:12px}}
+
+/* TRACE 5.37 — compact premium Home action shortcuts (preview candidate).
+   Read-only entry points to existing imports, reconciliation, reminders. */
+.trace-home-next-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 6px}
+.trace-home-next-action{display:flex;align-items:center;gap:9px;min-width:0;min-height:56px;padding:10px 9px;border:1px solid #d8e7dd;border-radius:15px;background:linear-gradient(145deg,#fcfefb,#f5faf6);color:#215644;text-align:left;box-shadow:0 3px 12px rgba(17,65,46,.035);cursor:pointer}
+.trace-home-next-action>span:first-child{flex:0 0 27px;display:grid;place-items:center;width:27px;height:27px;border-radius:9px;background:#e5f2e9;color:#23644d;font-size:16px;font-weight:750}
+.trace-home-next-action>span:last-child{display:grid;gap:3px;min-width:0}
+.trace-home-next-action strong{font-size:12px;font-weight:800;white-space:nowrap}
+.trace-home-next-action small{font-size:10px;line-height:1.25;color:#658273;overflow-wrap:anywhere}
+.trace-home-next-action:focus-visible{outline:3px solid #27836a;outline-offset:2px}
+@media(max-width:380px){.trace-home-next-actions{gap:6px}.trace-home-next-action{display:grid;justify-items:center;align-content:center;gap:6px;min-height:70px;padding:8px 3px;text-align:center}.trace-home-next-action>span:last-child{justify-items:center}.trace-home-next-action strong{font-size:11px}.trace-home-next-action small{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.trace-home-next-action{transition:none}}

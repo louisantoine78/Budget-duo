@@ -511,8 +511,20 @@ function renderHomeReview(){
    '<span class="trace-home-review-info"><strong>'+esc(title)+'</strong><small>'+esc(a.name)+'</small><small>'+esc(sub+add)+'</small></span>'+
    '<span class="trace-home-review-count" aria-label="'+a.total+' opération(s) à vérifier">'+a.total+'</span>'+
    '<span class="trace-home-review-chevron" aria-hidden="true">›</span></button>';
- }).join('');
+ }).join('')+
+  '<div class="trace-home-next-actions" role="group" aria-label="Actions pour tenir les comptes à jour">'+
+  '<button type="button" class="trace-home-next-action" data-home-next-action="imports">'+
+  '<span aria-hidden="true">↓</span><span><strong>Importer</strong><small>Relevés et captures</small></span></button>'+
+  '<button type="button" class="trace-home-next-action" data-home-next-action="reconcile">'+
+  '<span aria-hidden="true">✓</span><span><strong>Rapprocher</strong><small>Vérifier les soldes</small></span></button>'+
+  '<button type="button" class="trace-home-next-action" data-home-next-action="reminders">'+
+  '<span aria-hidden="true">◷</span><span><strong>Rappels</strong><small>Gérer mes alertes</small></span></button></div>';
  root.querySelectorAll('[data-home-review-account]').forEach(btn=>btn.onclick=()=>openHomeReviewAccount(btn.dataset.homeReviewAccount));
+ root.querySelectorAll('[data-home-next-action]').forEach(btn=>btn.onclick=()=>{
+  if(btn.dataset.homeNextAction==='imports'){navigate('activity');showTab('import');}
+  else if(btn.dataset.homeNextAction==='reconcile')openReconcileSettings();
+  else if(btn.dataset.homeNextAction==='reminders')openNotificationSettings();
+ });
 }
 window.TraceHomeReview={refresh:renderHomeReview};
 
