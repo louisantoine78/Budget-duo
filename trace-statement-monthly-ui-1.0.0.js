@@ -300,7 +300,8 @@
       accountId=selected?.id;
      localDeferred=root.TraceDeferredStatementReviewUI?.mount?.({
       host:control,staged:reviewedStage,approvals,file:sourceFile,
-      account:selected,active:()=>file===sourceFile&&staged===reviewedStage&&
+      account:selected,linkedAccounts:getAccounts(),
+      active:()=>file===sourceFile&&staged===reviewedStage&&
        verified===reviewedVersion&&accountNode.value===accountId&&
        selectedAccount()?.id===accountId&&!scanning})||null;
     }

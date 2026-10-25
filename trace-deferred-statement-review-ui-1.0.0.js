@@ -29,10 +29,23 @@
    throw Error('Fichier PDF modifié ou signature invalide.');
   return hex(await root.crypto.subtle.digest('SHA-256',buffer));
  }
- function mount({host,staged,approvals,file,account,active}={}){
+ function eligible(account,linkedAccounts){
+  if(!account||!Array.isArray(linkedAccounts)||linkedAccounts.length>1500||
+     !['card','checking'].includes(account.type)||account.archived)return false;
+  const currency=String(account.currency||'').toUpperCase();
+  const country=String(account.country||'').toUpperCase();
+  const linked=x=>x&&!x.archived&&x.id!==account.id&&
+   x.owner===account.owner&&String(x.currency||'').toUpperCase()===currency&&
+   String(x.country||'').toUpperCase()===country;
+  if(account.type==='card')return account.paymentMode==='deferred'&&
+   linkedAccounts.some(x=>linked(x)&&x.type==='checking'&&x.id===account.settlementAccountId);
+  return linkedAccounts.some(x=>linked(x)&&x.type==='card'&&
+   x.paymentMode==='deferred'&&x.settlementAccountId===account.id);
+ }
+ function mount({host,staged,approvals,file,account,linkedAccounts,active}={}){
   if(!preview()||!host||typeof host.querySelectorAll!=='function'||
      typeof active!=='function'||!file||!staged||
-     !['card','checking'].includes(account?.type)||!root.TraceDeferredStatementBridge?.convert||
+     !eligible(account,linkedAccounts)||!root.TraceDeferredStatementBridge?.convert||
      !root.TraceStatementEvidence?.reviewedRows)return null;
   const kind=account.type,currency=String(account.currency||'CAD').toUpperCase();
   if(account.id!==staged.accountId||currency!==staged.currency||
@@ -62,7 +75,7 @@
   const get=s=>host.querySelector(s),button=get('[data-deferred-prepare]'),
    result=get('[data-deferred-result]'),attestation=get('[data-deferred-complete]');
   const reset=()=>{chosenStatement=null;prepared=null;result.textContent=warning;};
-  const valid=()=>preview()&&active()&&
+  const valid=()=>preview()&&active()&&eligible(account,linkedAccounts)&&
    account.id===staged.accountId&&currency===staged.currency;
   // A reclassification or withdrawn completeness approval always invalidates
   // any previously prepared local result.
@@ -108,8 +121,10 @@
   };
   const getLocalStatement=()=>{
    try{
-    if(!chosenStatement||!prepared||busy||!valid()||!attestation.checked||
-       staged.statementKey!==prepared.statementKey)return null;
+    if(!chosenStatement||!prepared||busy)return null;
+    if(!valid()||!attestation.checked||staged.statementKey!==prepared.statementKey){
+     reset();return null;
+    }
     const selectors=[...host.querySelectorAll('[data-deferred-classify]')];
     if(selectors.length!==prepared.choices.length||
        selectors.some((s,i)=>s.value!==prepared.choices[i])||
@@ -121,5 +136,5 @@
   };
   return Object.freeze({getLocalStatement,clear:reset});
  }
- root.TraceDeferredStatementReviewUI=Object.freeze({mount,digest});
+ root.TraceDeferredStatementReviewUI=Object.freeze({mount,digest,eligible});
 })(typeof window!=='undefined'?window:globalThis);

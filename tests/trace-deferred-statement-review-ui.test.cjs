@@ -41,8 +41,16 @@ function setup(options={}){
   },
   get innerHTML(){return html;}
  };
+ const linkedAccounts=options.linkedAccounts||[account,
+  ...(account.type==='card'?[{id:'account-current',owner:account.owner,type:'checking',
+   currency:account.currency,country:account.country}]:
+   [{id:'deferred-card',owner:account.owner,type:'card',paymentMode:'deferred',
+    settlementAccountId:account.id,currency:account.currency,country:account.country}])];
+ if(account.type==='card'&&!options.account?.paymentMode){
+  account.paymentMode='deferred';account.settlementAccountId='account-current';
+ }
  const review=root.TraceDeferredStatementReviewUI.mount({
-  host,staged,approvals,file,account,active:()=>active});
+  host,staged,approvals,file,account,linkedAccounts,active:()=>active});
  return{root,review,host,staged,approvals,file,selectors:()=>selectors,
   result:()=>nodes['[data-deferred-result]'],
   button:()=>nodes['[data-deferred-prepare]'],
@@ -148,4 +156,22 @@ test('silently changed classification or attestation blocks retrieving an old pr
  assert.equal(h.review.getLocalStatement(),null);
  const j=setup();j.choose();await j.button().onclick();
  j.attest().checked=false;assert.equal(j.review.getLocalStatement(),null);
+});
+
+test('only linked deferred bank accounts may offer the proof action',()=>{
+ const card=setup({account:{paymentMode:'credit',settlementAccountId:'account-current'}});
+ assert.equal(card.review,null);
+ assert.equal(setup({kind:'checking',linkedAccounts:[]}).review,null);
+ const wrong=setup({kind:'checking',linkedAccounts:[
+  {id:'deferred-card',type:'card',owner:'partner',currency:'EUR',
+   paymentMode:'deferred',settlementAccountId:'account'}]});
+ assert.equal(wrong.review,null);
+});
+test('restoring eligibility does not resurrect a previously reviewed document',async()=>{
+ const f=setup();f.choose();await f.button().onclick();
+ assert.ok(f.review.getLocalStatement());
+ f.root.__TRACE_INTERNATIONAL_PREVIEW__=false;
+ assert.equal(f.review.getLocalStatement(),null);
+ f.root.__TRACE_INTERNATIONAL_PREVIEW__=true;
+ assert.equal(f.review.getLocalStatement(),null);
 });

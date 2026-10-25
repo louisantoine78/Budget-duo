@@ -90,8 +90,9 @@ function fixture(){
  for(const script of scripts)vm.runInNewContext(fs.readFileSync(
   path.join(__dirname,'..',script),'utf8'),{window:root});
  const account={id:'fr-deferred-card',name:'Carte française fictive',
-  owner:'la',type:'card',currency:'EUR',country:'FR',paymentMode:'deferred'};
- const ui=root.TraceMonthlyStatementUI.mount({host,accounts:()=>[account],
+  owner:'la',type:'card',currency:'EUR',country:'FR',paymentMode:'deferred',settlementAccountId:'current'};
+ const current={id:'current',owner:'la',type:'checking',currency:'EUR',country:'FR'};
+ const ui=root.TraceMonthlyStatementUI.mount({host,accounts:()=>[account,current],
   transactions:()=>[],amountOnAccount:()=>null,currentMonth:'2026-10'});
  const file={name:'fiction.pdf',type:'application/pdf',size:bytes.length,
   slice:(a,b)=>({arrayBuffer:async()=>bytes.slice(a,b).buffer}),
@@ -157,4 +158,13 @@ test('all temporary proof state is discarded when UI is disposed',async()=>{
  f.ui.dispose();
  assert.equal(f.ui.getDeferredStatement(),null);
  assert.equal(f.ui.getReport(),null);
+});
+
+test('ordinary credit card cannot receive a deferred proof',()=>{
+ const f=fixture();await f.begin();
+ assert.equal(f.root.TraceDeferredStatementReviewUI.eligible({
+  id:'ordinary',type:'card',owner:'la',country:'FR',currency:'EUR',
+  paymentMode:'credit',settlementAccountId:'current'},[
+  {id:'current',type:'checking',owner:'la',country:'FR',currency:'EUR'}
+ ]),false);
 });
