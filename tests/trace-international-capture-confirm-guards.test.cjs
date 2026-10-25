@@ -84,7 +84,8 @@ test('foreign smart-inbox approval button is visibly disabled while CAD remains 
   '.smart-direction':{value:'out'},'.smart-name':{value:'Café'}};
  const el={dataset:{bankDirection:''},querySelector:key=>inputs[key]};
  const bridge=()=>({accounts:()=>[bank]});
- const window={TraceImportGuide:{allowed:()=>true,cardStatementSettlementLabel:()=>false}};
+ const window={TraceImportGuide:{allowed:()=>true,cardStatementSettlementLabel:()=>false},
+  TraceMovement:{get:type=>({id:type,type,legacyOnly:false})}};
  const apply=new Function('bridge','account','window',
   approval+'return applyApprovalConstraints;')(bridge,'bank',window);
  apply(el);

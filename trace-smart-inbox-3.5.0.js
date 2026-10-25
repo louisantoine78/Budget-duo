@@ -262,7 +262,7 @@ function applyApprovalConstraints(el){
   dir=el.querySelector('.smart-direction')?.value,name=el.querySelector('.smart-name')?.value;
  if(!btn)return;
  const cardMatch=bank?.type==='card'&&(type==='card_payment_received'||guide.cardStatementSettlementLabel(name)),
-  def=window.TraceMovement.get(type),
+  def=window.TraceMovement?.get?.(type),
   valid=Boolean(def&&!def.legacyOnly&&type&&guide.allowed(type,bank?.type,dir)),
   duplicateCheck=el.querySelector('.smart-duplicate-confirm'),
   duplicateReviewed=!duplicateCheck||duplicateCheck.checked,
@@ -276,6 +276,7 @@ function applyApprovalConstraints(el){
   foreignReviewed=safeForeignPurchase&&!!el.querySelector('.smart-foreign-nature-confirm')?.checked;
  btn.disabled=btn.dataset.duplicateBlocked==='yes'||!duplicateReviewed||!valid||cardMatch||(foreign&&!foreignReviewed);
  btn.textContent=btn.dataset.duplicateBlocked==='yes'?'Déjà comptabilisée':
+  !duplicateReviewed?'Comparer les doublons avant de confirmer':
   foreign?(safeForeignPurchase?'Confirmer cet achat étranger':'À vérifier · devise étrangère'):
   cardMatch?'Rapproche ce paiement pour éviter un doublon':'Confirmer l’opération';
 }

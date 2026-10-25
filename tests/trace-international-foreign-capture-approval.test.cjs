@@ -114,7 +114,7 @@ test('UI enables foreign purchase only after consent; ambiguous labels stay disa
   '.smart-direction':{value:'out'},'.smart-name':{value:'Librairie'},
   '.smart-foreign-nature-confirm':checkbox};
  const el={dataset:{bankDirection:''},querySelector:key=>q[key]},bridge=()=>({accounts:()=>[bank],currentOwner:()=> 'la'});
- const window={};new Function('window',guide)(window);
+ const window={};new Function('window',guide)(window);new Function('window',movement)(window);
  const apply=new Function('bridge','account','window',ui.slice(start,end)+'return applyApprovalConstraints;')(bridge,'fr',window);
  apply(el);assert.equal(button.disabled,true);
  checkbox.checked=true;apply(el);assert.equal(button.disabled,false);
@@ -160,7 +160,7 @@ test('foreign UI rejects captured credit independently of selected expense type'
    '.smart-foreign-nature-confirm':confirmed};
  const el={dataset:{bankDirection:'in'},querySelector:key=>fields[key]},
   bridge=()=>({accounts:()=>[bank],currentOwner:()=> 'la'});
- const window={};new Function('window',guide)(window);
+ const window={};new Function('window',guide)(window);new Function('window',movement)(window);
  const fn=new Function('bridge','account','window',
   ui.slice(start,end)+'return applyApprovalConstraints;')(bridge,'fr',window);
  fn(el);assert.equal(button.disabled,true);
