@@ -38,7 +38,7 @@
   if(account.id!==staged.accountId||currency!==staged.currency||
      !Array.isArray(staged.ready)||staged.ready.length===0||
      staged.issues?.length||!active())return null;
-  let chosenStatement=null,busy=false;
+  let chosenStatement=null,prepared=null,busy=false;
   host.innerHTML='<div class="trace-statement-stage" data-local-deferred-review>'+
    '<h3>Préparer un justificatif pour débit différé</h3>'+
    '<p>Étape facultative en laboratoire : classe chaque ligne du PDF déjà relue. '+
@@ -61,7 +61,7 @@
    '<p data-deferred-result role="status" aria-live="polite">'+esc(warning)+'</p></div>';
   const get=s=>host.querySelector(s),button=get('[data-deferred-prepare]'),
    result=get('[data-deferred-result]'),attestation=get('[data-deferred-complete]');
-  const reset=()=>{chosenStatement=null;result.textContent=warning;};
+  const reset=()=>{chosenStatement=null;prepared=null;result.textContent=warning;};
   const valid=()=>preview()&&active()&&
    account.id===staged.accountId&&currency===staged.currency;
   // A reclassification or withdrawn completeness approval always invalidates
@@ -99,13 +99,25 @@
        proposal.writes!==0||proposal.bankAuthenticated!==false||
        !proposal.statement)throw Error(proposal.reason||'Justificatif incomplet.');
     chosenStatement=proposal.statement;
+    prepared={statementKey:snapshot,choices:chosen,
+     approvals:approvalsSnapshot};
     result.textContent='Justificatif local préparé : '+chosenStatement.rows.length+
      ' ligne(s), devise '+currency+'. '+warning;
    }catch(e){reset();result.textContent=String(e?.message||'Revue interrompue.');}
    finally{busy=false;button.disabled=false;}
   };
-  return Object.freeze({getLocalStatement:()=>valid()&&!busy?chosenStatement:null,
-   clear:reset});
+  const getLocalStatement=()=>{
+   if(!chosenStatement||!prepared||busy||!valid()||!attestation.checked||
+      staged.statementKey!==prepared.statementKey||
+      [...host.querySelectorAll('[data-deferred-classify]')].some((s,i)=>
+       s.value!==prepared.choices[i])||
+      root.TraceStatementEvidence.reviewedRows(staged,prepared.approvals).status!=='reviewed'){
+    if(chosenStatement)reset();
+    return null;
+   }
+   return chosenStatement;
+  };
+  return Object.freeze({getLocalStatement,clear:reset});
  }
  root.TraceDeferredStatementReviewUI=Object.freeze({mount,digest});
 })(typeof window!=='undefined'?window:globalThis);

@@ -135,3 +135,17 @@ test('read-only source code contains no network or persistence API calls',()=>{
  const src=fs.readFileSync(path.join(__dirname,'..',files[2]),'utf8');
  assert.doesNotMatch(src,/\bfetch\s*\(|XMLHttpRequest|indexedDB|localStorage|\.rpc\s*\(/);
 });
+
+test('a silently altered staged bank amount invalidates an already prepared proof',async()=>{
+ const h=setup();h.choose();await h.button().onclick();
+ assert.ok(h.review.getLocalStatement());
+ h.staged.ready[0].amount=9999;
+ assert.equal(h.review.getLocalStatement(),null);
+});
+test('silently changed classification or attestation blocks retrieving an old proof',async()=>{
+ const h=setup();h.choose();await h.button().onclick();
+ h.selectors()[0].value='card_fee';
+ assert.equal(h.review.getLocalStatement(),null);
+ const j=setup();j.choose();await j.button().onclick();
+ j.attest().checked=false;assert.equal(j.review.getLocalStatement(),null);
+});
