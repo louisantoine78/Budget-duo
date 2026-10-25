@@ -27,13 +27,18 @@
   str(s.currency)&&['csv','pdf_extracted'].includes(s.sourceType)&&
   s.complete===true&&date(s.fromDate)&&date(s.toDate)&&
   s.fromDate<=s.toDate&&Array.isArray(s.rows)&&s.rows.length<=2000&&
-  s.rows.every(row=>row&&str(row.lineId)&&date(row.purchaseDate)&&
-   row.purchaseDate>=s.fromDate&&row.purchaseDate<=s.toDate&&
-   row.type==='card_purchase'&&['debit','credit'].includes(row.direction)&&
-   ['confirmed','pending'].includes(row.status)&&
-   cents(row.amount)!==null&&
-   (!row.currency||String(row.currency).toUpperCase()===
-    String(s.currency).toUpperCase())));
+  s.rows.every(row=>{
+   const kind=row?.type,when=kind==='card_purchase'?
+    row.purchaseDate:(row?.debitDate??row?.purchaseDate);
+   return row&&str(row.lineId)&&
+    ['card_purchase','card_refund','card_payment','card_fee'].includes(kind)&&
+    date(when)&&when>=s.fromDate&&when<=s.toDate&&
+    ['debit','credit'].includes(row.direction)&&
+    ['confirmed','pending'].includes(row.status)&&
+    cents(row.amount)!==null&&
+    (!row.currency||String(row.currency).toUpperCase()===
+     String(s.currency).toUpperCase());
+  }));
  function checkPlan(plan){
   const t=plan?.document;
   if(plan?.kind!=='deferred_write_plan'||plan.persistable!==false||

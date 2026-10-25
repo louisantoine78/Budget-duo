@@ -158,3 +158,30 @@ test('inputs and source lines remain unchanged and outputs cannot write',()=>{
  assert.equal(Object.isFrozen(r),true);
  assert.equal(r.persistable,false);
 });
+
+test('a mixed card statement with card purchase, refund, payment and fee is valid',()=>{
+ const c=context({sourceOverrides:{rows:[row(),
+  {lineId:'refund-1',type:'card_refund',debitDate:'2026-10-16',
+   direction:'credit',status:'confirmed',amount:'6'},
+  {lineId:'settle-1',type:'card_payment',debitDate:'2026-10-28',
+   direction:'credit',status:'confirmed',amount:'100'},
+  {lineId:'fee-1',type:'card_fee',debitDate:'2026-10-18',
+   direction:'debit',status:'confirmed',amount:'2.30'}
+ ]}});
+ assert.equal(c.review().status,'needs_human_review');
+});
+test('refund, payment or fee line cannot be evidence of a card purchase',()=>{
+ for(const type of ['card_refund','card_payment','card_fee']){
+  const c=context({sourceOverrides:{rows:[row(),
+   {lineId:'other',type,debitDate:'2026-10-12',
+    direction:type==='card_fee'?'debit':'credit',status:'confirmed',amount:'40'}]}});
+  assert.equal(c.review({selection:{statementId:c.doc.statementId,
+   lineId:'other'}}).status,'mismatched_bank_line');
+ }
+});
+test('an invalid nonpurchase row date invalidates the full statement',()=>{
+ const c=context({sourceOverrides:{rows:[row(),
+  {lineId:'other',type:'card_refund',debitDate:'2026-02-30',
+   direction:'credit',status:'confirmed',amount:'10'}]}});
+ assert.equal(c.review().status,'source_incomplete');
+});
