@@ -82,7 +82,7 @@ test('foreign smart-inbox approval button is visibly disabled while CAD remains 
  const btn={disabled:false,textContent:'',dataset:{duplicateBlocked:'no'}};
  const inputs={'.smart-approve':btn,'.smart-type':{value:'expense'},
   '.smart-direction':{value:'out'},'.smart-name':{value:'Café'}};
- const el={querySelector:key=>inputs[key]};
+ const el={dataset:{bankDirection:''},querySelector:key=>inputs[key]};
  const bridge=()=>({accounts:()=>[bank]});
  const window={TraceImportGuide:{allowed:()=>true,cardStatementSettlementLabel:()=>false}};
  const apply=new Function('bridge','account','window',
