@@ -1,3 +1,17 @@
+## Lot du 24 octobre — sens bancaire immuable sur tous les comptes
+
+**Dernier commit de code : `9a3fcdbc633e43eb864dbf5fa10a52520c9fbff4`.** Branche exclusive `trace-5.37.0-international-accounts-fx`, message `[skip ci]`, main et production intacts.
+
+**Problème financier identifié puis corrigé :** la validation des captures OCR étrangères refusait déjà un crédit du relevé déguisé en dépense, mais une capture **CAD** avec une direction bancaire connue `bankDirection:'in'` pouvait, dans certains cas, être requalifiée en `expense` puis comptabilisée en sortie. Inversement un débit CAD pouvait être classé comme revenu. Le garde d'enregistrement `smartApproveDraft` compare désormais, pour **CAD comme pour EUR/USD**, le sens immuable `bankDirection` capturé et le sens bancaire attendu d'après la nature du mouvement, et refuse toute contradiction **avant toute écriture**. L'interface `trace-smart-inbox-3.5.0.js` applique le même contrôle au bouton : message explicite « Sens bancaire incompatible · À vérifier ». Une direction OCR inconnue reste soumise aux contrôles déjà présents et n'est pas inventée.
+
+**Tests effectifs :** ajout de quatre scénarios CAD au fichier `tests/trace-international-foreign-capture-approval.test.cjs`, dont contrôle refus crédit→dépense, débit→revenu, acceptation dépense CAD avec débit cohérent, verrouillage UI. **97/97 vérifications ciblées V8 fictives** sur neuf suites après commit : 22 OCR étranger+CAD, 8 consentement doublons, 7 montants UI, 7 vieux gardes de capture, 18 CSV, 8 carte/virement, 11 garde FX au centime, 11 intégrité monétaire, 5 **SQL statiques**. Ces contrôles simulent Node, DOM et persistance ; ils ne sont ni des tests Node CLI réels ni du PostgreSQL/PGlite/Chromium/Safari.
+
+**État de release : NO-GO.** Les parcours débit différé sont toujours isolés du client utilisable, la conception UI premium n'est pas entièrement intégrée, les migrations 07/08/09 doivent être testées en SQL réel fictif (RLS/Auth/CAS, deux clients), le SW labo est à régénérer avec son script et à tester offline/Chromium, iPhone Safari et restauration/rollback manquent. Le runner `scripts/check-trace-537-release-gates.cjs` existe mais ne peut toujours pas être exécuté dans cette conversation faute de checkout local/GitHub DNS/PGlite. Ne pas annoncer de calendrier artificiellement précis ni de production imminente sans preuves. Aucun déploiement/merge/PR, modification de `main`, workflows ou Supabase financier réel.
+
+**Suite :** prioriser l'intégration du débit différé, audit des écritures bancaires réelles et de la devise Couple, parcours premium ; parallèlement établir checkout isolé pour lancer gates natives et SQL, puis tests Safari et rollback. Toute écriture GitHub reste candidate `[skip ci]`.
+
+---
+
 ## Lot du 24 octobre — détail des comptes : devises natives + CAD indicatif
 
 **Commit de code `5d7aa719cfc976da1ddeb3140bd1c04a9c20d8c6`**, uniquement sur `trace-5.37.0-international-accounts-fx`, `[skip ci]`. Cette reprise travaille sur les fonctionnalités visuelles approuvées, pas seulement sur les protections comptables.

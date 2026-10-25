@@ -1,3 +1,12 @@
+## Capture bancaire — sens immuable CAD et international (24 octobre 2026)
+
+- [x] `smartApproveDraft` compare `bankDirection` OCR à la direction de la nature choisie pour **toutes les devises**, CAD inclus. Débit/credit opposés = refus avant sauvegarde.
+- [x] Bouton UI verrouillé en cas de sens contradictoire, explication visible. Sens OCR absent non supposé.
+- [x] Quatre scénarios CAD supplémentaires, et **97/97 contrôles V8 ciblés** repassés (92 simulations JS + 5 vérifications **SQL statiques**). Aucune exécution Node CLI/PG/browser native.
+- [ ] **NO-GO** : exécuter le runner natif et PG 07/08/09 fictifs ; intégrer le différé et terminer Couple/premium, PWA et Safari, valider rollback.
+
+---
+
 ## Comptes sur l'Accueil — contre-valeur CAD indicative (24 octobre 2026)
 
 - [x] `trace-international-ui-1.0.0.js` : soldes natifs préservés et CAD **indicatif** explicite, taux daté et sourcé par compte, signalement « à vérifier » sans conversion fiable.

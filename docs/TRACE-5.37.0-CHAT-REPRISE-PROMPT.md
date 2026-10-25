@@ -1,3 +1,13 @@
+# ADDENDUM — CREDIT/DÉBIT OCR TOUTES DEVISES (24 OCT 2026)
+
+Branche d'écriture exclusive `trace-5.37.0-international-accounts-fx`. Dernier HEAD de code vérifié : `9a3fcdbc633e43eb864dbf5fa10a52520c9fbff4`; résoudre le HEAD réel lors de toute reprise. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909` à préserver. Aucun déploiement, CI, fusion, migration Supabase réel.
+
+Le commit `9a3fcdbc633e43eb864dbf5fa10a52520c9fbff4` **corrige une incohérence financière CAD** : les captures dont l'OCR source a identifié un crédit (`bankDirection=in`) ne peuvent plus être postées comme dépenses, et un débit ne peut plus être posté comme revenu. Vérification au niveau `smartApproveDraft` et bouton UI pour CAD et comptes internationaux. L'absence de direction OCR reste inconnue. Quatre cas ajoutés et **97/97 tests V8 fictifs ciblés** réussis (dont cinq tests de forme SQL statiques). Ceci ne constitue pas une exécution de PostgreSQL, Node CLI, Safari ou vrai client.
+
+Le runner read-only `scripts/check-trace-537-release-gates.cjs` est sur la branche mais impossible à exécuter dans l'environnement actuel (absence checkout GitHub, DNS GitHub et PGlite). NO-GO strict. Les chantiers principaux encore ouverts : intégration client du débit différé, flux multi-devises et Couple, finition des vues Accueil/Budget/Activité/Patrimoine premium, Node/PGlite SQL 07/08/09/2 clients, PWA offline, Chromium/iPhone Safari, sauvegarde/restauration/rollback et autorisation humaine explicite. Ne jamais annoncer une date précise ou un GO sans preuves. Commits `[skip ci]`.
+
+---
+
 # ADDENDUM — VUE COMPTES NATIVE + CAD (24 OCTOBRE 2026)
 
 Dernier HEAD **code** vérifié au moment de cette reprise : `5d7aa719cfc976da1ddeb3140bd1c04a9c20d8c6`. Résoudre le HEAD GitHub réel à chaque nouvelle session. `main` stable = `02c70f50e7e51da79b77a91dde96a03c6c719909`, branche candidate exclusive `trace-5.37.0-international-accounts-fx`, commits `[skip ci]`.
