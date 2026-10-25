@@ -43,7 +43,7 @@ function fixture(){
      const row={values,
       querySelector(selector){
        if(selector==='.trace-statement-row-title strong')return{set textContent(v){}};
-       const m=/^\\[data-field="([^"]+)"\\]$/.exec(selector);
+       const m=/^\[data-field="([^"]+)"\]$/.exec(selector);
        return m?{get value(){return values[m[1]];},
         set value(v){values[m[1]]=v;}}:null;
       },
