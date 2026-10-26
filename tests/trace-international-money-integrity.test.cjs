@@ -140,3 +140,18 @@ test('large opposite bank balances cannot disguise unsafe checking totals as kno
  assert.equal(snap.card,null);
  assert.equal(snap.net,null);
 });
+
+
+test('ordinary floating-point cent sums stay rounded to two CAD decimals',()=>{
+ const second={...ca,id:'second-cad'};
+ const snap=I.snapshot({accounts:[ca,second],owner:'la',mainId:'ca',
+  estimates:{ca:0.1,'second-cad':0.2}});
+ assert.equal(snap.checking,0.1);
+ assert.equal(snap.net,0.1);
+ assert.equal(snap.globalCAD,0.3);
+ assert.equal(snap.complete,true);
+ const credit={...ca,id:'card-small',type:'card',settlementAccountId:'ca'};
+ const paid=I.snapshot({accounts:[ca,credit],owner:'la',mainId:'ca',
+  estimates:{ca:0.3,'card-small':-0.2}});
+ assert.equal(paid.net,0.1);
+});
