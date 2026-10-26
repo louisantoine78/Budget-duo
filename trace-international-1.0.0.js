@@ -109,8 +109,26 @@
   });
   const componentComplete=balances.length>0&&balances.every(a=>a.balance!==null&&a.cad!==null)&&
    !cardsToReview.length;
-  const cadSum=componentComplete?balances.reduce((n,a)=>n+a.cad,0):null;
-  const totalCAD=cadSum===null||exactMoney(cadSum)===null?null:round(cadSum);
+  // The CAD wealth sum must remain exact at *every* step. Otherwise large
+  // checking assets and card liabilities could cancel to a deceptively
+  // precise zero despite unsafe intermediate cent totals.
+  const safeCadSum=rows=>{
+   let cents=0;
+   for(const b of rows){
+    const value=exactMoney(b.cad);
+    if(value===null)return null;
+    const candidate=exactMoney((cents+Math.round(value*100))/100);
+    if(candidate===null)return null;
+    cents=Math.round(candidate*100);
+   }
+   return cents/100;
+  };
+  const bankRows=balances.filter(b=>active.some(a=>a.id===b.id&&a.type==='checking'));
+  const cardRows=balances.filter(b=>active.some(a=>a.id===b.id&&a.type==='card'));
+  const checkingCAD=componentComplete?safeCadSum(bankRows):null;
+  const cardsCAD=componentComplete?safeCadSum(cardRows):null;
+  const totalCAD=checkingCAD===null||cardsCAD===null?null:
+   safeCadSum([{cad:checkingCAD},{cad:cardsCAD}]);
   const complete=componentComplete&&totalCAD!==null;
   const incompletePrimary=invalidPrimary||missing.length||ambiguousCards.length||
    mixedLinkedCurrencies.length||cardsToReview.some(a=>included.includes(a));
