@@ -14,7 +14,8 @@ const EXPECTED='trace-5.37.0-international-accounts-fx';
 const PG_TESTS=Object.freeze([
  'tests/trace-database.integration.cjs',
  'tests/trace-personal-settings-ownership.integration.cjs',
- 'tests/trace-cas-writes.integration.cjs'
+ 'tests/trace-cas-writes.integration.cjs',
+ 'tests/trace-cas-exclusive-cutover.integration.cjs'
 ]);
 const MANUAL=Object.freeze([
  'Real two-client CAS/RLS/Auth tests reviewed after isolated PostgreSQL QA',
