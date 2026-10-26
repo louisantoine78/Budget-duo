@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — INDEX UNIQUE DES LIGNES CSV BANCAIRES
+
+**HEAD à revérifier** sur `trace-5.37.0-international-accounts-fx`. Stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun merge, PR, workflow, déploiement, migration hébergée, Supabase réel, reset ni donnée financière personnelle. `[skip ci]` pour chaque commit.
+
+**Nouveau développement candidat dans migration 11 :** index unique partiel `trace_csv_unparsed_source_unique` sur foyer/owner/accountId/nom de fichier/numéro de ligne ENTIER (pour traiter 4, "04", "000004" comme même ligne), précontrôle qui refuse les preuves antérieures malformées ou les collisions au lieu de les écraser ; borne `accountId<=240`. Commits SQL `9de886e`, `71f0b96`. Tests PostgreSQL ajoutés mais NON exécutés dans `tests/trace-cas-writes.integration.cjs` : deux IDs sur même source, numéro rembourré, écriture directe, distinction ligne suivante et compte propriétaire différent (`102491f`, `97c334e`, `19fa718`). Contrats statiques `1d62ffb`.
+
+**Niveau de preuve :** 19/19 tests V8 statiques/lexicaux réussis avec modules Node simulés ; syntaxe V8 du harnais PG réussie. **Zéro exécution SQL PostgreSQL/PGlite**, pas d'exécution native Node `node --test` sur checkout intégral ni tests navigateur/Safari. Conteneur sans moteur PG, `npm` sans DNS. Le correctif administrateur pour cascade différée de migration 10 reste candidat non qualifié.
+
+**Étape prioritaire :** obtenir moteur PostgreSQL/PGlite local isolé fictif, exécuter 05–11 et trois suites d'intégration, vérifier index collision `23505`, ancien SQL direct, cascade admin / suppression légitime, RLS/Auth/CAS/Realtime/restore ; corriger les erreurs réelles avant release. Poursuivre ensuite les fonctionnalités financières et l'UX premium validées. **58 % ±10, NO-GO.**
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — CASCADE ADMINISTRATIVE / DÉBIT DIFFÉRÉ
 
 **Reprise** : revérifier HEAD de `trace-5.37.0-international-accounts-fx`. Stable main `02c70f50e7e51da79b77a91dde96a03c6c719909` inchangé. Aucun merge, PR, CI, déploiement, Supabase réel, reset ni migrations exécutées sur environnement hébergé. Commits exclusivement `[skip ci]`.
