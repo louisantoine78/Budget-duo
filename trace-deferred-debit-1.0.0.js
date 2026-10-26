@@ -109,8 +109,13 @@
      String(card.currency||'').toUpperCase()!=='EUR')
    throw Error('Calendrier réservé à une carte différée française active liée à un compte EUR.');
  };
- const proposeScheduleRevision=({card,asOfDate,effectiveDate,debitDay,closingDay=null}={})=>{
+ const proposeScheduleRevision=({card,checking,owner,asOfDate,effectiveDate,debitDay,closingDay=null}={})=>{
   frenchDeferred(card);
+  if(!owner||owner!==card.owner||!checking||checking.archived||
+     checking.type!=='checking'||checking.id!==card.settlementAccountId||
+     checking.owner!==owner||checking.country!=='FR'||
+     String(checking.currency||'').toUpperCase()!=='EUR')
+   throw Error('Compte courant français EUR du même titulaire requis pour le calendrier différé.');
   const today=date(asOfDate),start=date(effectiveDate);
   if(!today||!start||start<=today)
    throw Error('La règle doit prendre effet à une date future valide.');
