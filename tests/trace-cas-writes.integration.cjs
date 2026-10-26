@@ -227,6 +227,37 @@ async function run(){
    ),/TRACE_DEFERRED_NOT_RELEASED/);
    assert.equal(await readDoc('accounts','deferred-direct'),undefined);
   });
+  await check('deferred calendar aliases cannot be posted as ordinary cards',async()=>{
+   const fields={deferredDebitDay:28,deferredClosingDay:20,
+    deferredScheduleVersions:[{effectiveDate:'2026-11-01',debitDay:28,closingDay:20}]};
+   for(const [key,value] of Object.entries(fields)){
+    for(const mode of ['credit',null]){
+     const id='forged-'+key+'-'+(mode||'missing');
+     const doc={id,owner:'la',type:'card',country:'FR',currency:'EUR',
+      settlementAccountId:'la',...(mode?{paymentMode:mode}:{}),[key]:value};
+     await assert.rejects(rpcSave(1,'accounts',id,doc,null),/TRACE_DEFERRED_NOT_RELEASED/);
+     assert.equal(await readDoc('accounts',id),undefined);
+    }
+   }
+   const direct={id:'forged-calendar-direct',owner:'la',type:'card',
+    paymentMode:'credit',country:'FR',currency:'EUR',
+    deferredScheduleVersions:[{effectiveDate:'2026-11-01',debitDay:28,closingDay:20}]};
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'accounts',direct.id,JSON.stringify(direct),uid(1)]),/TRACE_DEFERRED_NOT_RELEASED/);
+   const canadian={id:'control-canadian-card',owner:'la',type:'card',
+    paymentMode:'credit',country:'CA',currency:'CAD',settlementAccountId:'la'};
+   assert.equal((await rpcSave(1,'accounts',canadian.id,canadian,null)).rows[0].revision,0);
+  });
+  await check('deferred due-date aliases do not masquerade as ordinary transfers',async()=>{
+   for(const key of ['scheduledDueDate','allocationDueDate']){
+    const doc={id:'forged-'+key,type:'transfer',accountId:'la',
+     status:'pending',[key]:'2026-11-05'};
+    await assert.rejects(rpcSave(1,'transactions',doc.id,doc,null),
+     /TRACE_DEFERRED_NOT_RELEASED/);
+    assert.equal(await readDoc('transactions',doc.id),undefined);
+   }
+  });
   await check('type-free legacy deferred cards remain quarantined',async()=>{
    const card=await readDoc('accounts','legacy-typeless-deferred');
    assert.equal(card.data.paymentMode,'deferred');
