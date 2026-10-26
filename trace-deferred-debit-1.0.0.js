@@ -337,5 +337,35 @@
      bankSource:s.bankSource})),
    writes:0,financialChanges:0};
  }
- root.TraceDeferredDebit=Object.freeze({simulate,monthlyDebitSchedule});
+ // Read-only, ONE deferred card. A supplied TRACE account estimate is not
+ // a certified bank balance. No ledger mutation or payment can occur here.
+ function projectCheckingBalance({checkingBalance,...scenario}={}){
+  const n=checkingBalance,minor=typeof n==='number'?Math.round(n*100):NaN;
+  if(!Number.isFinite(n)||Math.abs(n)>1e7||
+     !Number.isSafeInteger(minor)||Math.abs(n*100-minor)>=1e-6)
+   throw Error('Solde courant natif exact et vérifiable requis.');
+  const r=simulate(scenario),unpaid=Math.round(r.liability*100);
+  const batched=r.batches.reduce((sum,b)=>{
+   const c=Math.round(b.remainingAmount*100);
+   if(!Number.isSafeInteger(c)||c<0||
+      Math.abs(b.remainingAmount*100-c)>=1e-6)
+    throw Error('Échéance différée incohérente.');
+   return sum+c;
+  },0);
+  if(!Number.isSafeInteger(unpaid)||unpaid<0||unpaid!==batched)
+   throw Error('Dette différée non rapprochable aux échéances.');
+  const after=minor-unpaid;
+  if(!Number.isSafeInteger(after)||Math.abs(after)>1e9)
+   throw Error('Solde prévisionnel hors limite de sécurité.');
+  return{cardAccountId:r.cardAccountId,checkingAccountId:r.checkingAccountId,
+   currency:r.currency,asOfDate:r.asOfDate,
+   checkingBalance:minor/100,deferredUnpaid:unpaid/100,
+   projectedCheckingBalance:after/100,overdue:r.overdue,
+   scheduledDebits:r.batches.filter(b=>b.remainingAmount>0).map(b=>({
+    dueDate:b.dueDate,remainingAmount:b.remainingAmount,status:b.status
+   })),
+   scope:'single_deferred_card',balanceSource:'trace_estimate_unverified',
+   writes:0,financialChanges:0};
+ }
+ root.TraceDeferredDebit=Object.freeze({simulate,monthlyDebitSchedule,projectCheckingBalance});
 })(typeof window!=='undefined'?window:globalThis);
