@@ -47,7 +47,7 @@ test('missing exchange rate yields incomplete global total rather than mixing cu
  assert.equal(out.globalCAD,null);assert.equal(out.complete,false);assert.equal(out.missing.length,1);
 });
 test('card repayment credits card once at actual destination amount',()=>{
- const tx={type:'transfer',accountId:'checkingCAD',toAccountId:'checkingEUR',amountCAD:150,bankAmount:150,toBankAmount:95};
+ const tx={type:'transfer',accountId:'checkingCAD',toAccountId:'checkingEUR',amountCAD:150,bankAmount:150,toBankAmount:95,toBankCurrency:'EUR'};
  assert.equal(I.amountOnAccount(tx,CAD),150);assert.equal(I.amountOnAccount(tx,EUR,'destination'),95);
 });
 test('foreign destination without confirmed bank amount cannot be guessed',()=>{
