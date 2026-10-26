@@ -1,3 +1,17 @@
+## 25 octobre 2026 — capture fidèle des intentions de sauvegarde du client CAS
+
+**NO-GO**. Correctif client `cfd340c` `[skip ci]` : chaque `saveDocument()` fige immédiatement une copie profonde JSON de la requête financière, avant son entrée dans la file `traceSerialWrite`. Les vérifications de quarantaine bancaire différée sont réexécutées sur le modèle actuel ET sur cette copie, empêchant à la fois les changements de montants involontaires et le blanchiment d'opérations différées.
+
+- [x] Tests comportementaux candidats `3e0016a`, `2147f10` : deux demandes CAS successives avec montants 40/41 malgré mutation ultérieure à 900, notes imbriquées indépendantes, refus metadata différée et JSON non sérialisable.
+- [x] **55/55 tests de contrat/JS exécutés sous V8** avec les véritables sources du dépôt et des modules Node simulés, dont adaptateur CAS client et RPC fictives ; syntaxe V8 du harnais PG.
+- [ ] Exécuter `node --test tests/trace-cas-client.test.cjs` sur un véritable checkout et compléter tests navigateur Safari iPhone (actions simultanées, perte réseau, service worker, édition).
+- [ ] Qualifier migrations 05–11 et les suites PostgreSQL/PGlite isolées avec jeux de données fictifs : concurrence CAS, Auth/RLS, révisions, FIFO, partage Couple, opérations de placement historiques, preuve CSV, cascade différée et restauration.
+- [ ] Reprendre fermeture éventuelle des droits d'écriture directe après cutover vérifié ; aucun GO tant que ces barrières sont ouvertes.
+
+Aucune banque réelle, Supabase, `main`, CI, workflow, PR, publication ou service worker de production touchés. Avancement 58 % ±10.
+
+---
+
 ## 25 octobre 2026 — ancien compte bancaire des placements : contrôle CAS bidirectionnel
 
 **NO-GO maintenu.** Migration 09 candidate : contrôle du compte bancaire original d'une opération de placement à la modification ET à la suppression. Le compte `bankAccountId` ancien doit encore être la propriété du membre actif et être un courant `checking` (si renseigné). La vérification du compte/portefeuille **nouveau** reste présente. Cette protection n'éteint pas les anciennes écritures directes ; un cutover serveur reste obligatoire après qualification.
