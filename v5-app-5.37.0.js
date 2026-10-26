@@ -877,6 +877,46 @@ function bindTraceDeferredPurchaseForm(card){
   }
  };
 }
+function traceAccountBankProofNotice(account,lastReconciliationDate=null){
+ // Explain unknown native bank balances without inventing a currency,
+ // editing a document or exposing a partner's other account records.
+ const I=window.TraceInternational,code=I.currency(account);
+ const since=lastReconciliationDate||
+  state.household.accountOpeningBalanceDates?.[account.id]||'';
+ const candidate=t=>t&&t.status==='confirmed'&&
+  t.type!=='card_statement_evidence'&&
+  (t.accountId===account.id||t.toAccountId===account.id)&&
+  (!since||String(t.date||'')>since);
+ const issues=state.transactions.filter(candidate).filter(t=>{
+  if(t.type==='transfer'&&t.accountId===account.id&&t.toAccountId===account.id)
+   return true;
+  const leg=t.toAccountId===account.id?'destination':'source';
+  return I.amountOnAccount(t,account,leg)===null;
+ }).map(t=>({id:t.id,name:t.name||'Opération bancaire',date:t.date||'Date inconnue'}));
+ // Only bank-side investment deposits/withdrawals matter; if an already
+ // confirmed linked transaction carries that bank leg it is checked above.
+ for(const o of state.investmentOperations||[]){
+  if(!o||o.bankAccountId!==account.id||
+     !['deposit','withdrawal'].includes(o.type)||
+     (o.status&&o.status!=='confirmed')||
+     (since&&String(o.date||'')<=since))continue;
+  if(o.linkedTransactionId&&state.transactions.some(t=>
+    t.id===o.linkedTransactionId&&candidate(t)))continue;
+  if(I.investmentBankAmount(o,account)===null)
+   issues.push({id:o.id,name:'Opération de placement',date:o.date||'Date inconnue'});
+ }
+ if(!issues.length)return'';
+ const details=issues.slice(0,3).map(t=>
+  '<li>'+esc(t.name)+' · '+esc(t.date)+'</li>').join('');
+ return '<section class="trace-bank-proof-review" aria-label="Mouvements bancaires à vérifier">'+
+  '<h3>Justificatifs bancaires à vérifier</h3>'+
+  '<p><strong>'+issues.length+' mouvement(s)</strong> peuvent empêcher le calcul du solde '+
+  esc(code)+'. Vérifie le compte d’origine et de destination, la devise et le montant '+
+  'réellement débité ou reçu.</p><ul>'+details+'</ul>'+
+  (issues.length>3?'<p>Et '+(issues.length-3)+' autre(s) mouvement(s).</p>':'')+
+  '<small>Consultation uniquement · aucun montant, taux, rapprochement ou budget modifié. '+
+  'Utilise « Voir toutes les opérations » pour retrouver les pièces concernées.</small></section>';
+}
 function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
  const a=state.accounts.find(x=>x.id===id&&['la','partner'].includes(x.owner)&&
   ['checking','card'].includes(accountType(x))&&
@@ -913,6 +953,7 @@ function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
     related.map(x=>shortAccountLabel(x)).join(', '):'Aucun lien indiqué')+'</b></div>'+
   '<div><span>Dernier rapprochement</span><b>'+esc(reconcile?.date||'À effectuer')+'</b></div>'+
   '</div>'+
+  traceAccountBankProofNotice(a,reconcile?.date||null)+
   traceDeferredAccountReview(a)+
   traceDeferredPurchaseForm(a)+
   (a.owner===me&&!a.archived&&accountType(a)==='checking'?
