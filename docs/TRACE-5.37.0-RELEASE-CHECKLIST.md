@@ -1,3 +1,18 @@
+## 25 octobre 2026 — Couverture Couple international et patrimoine global au centime
+
+- [x] Vue Couple mixte : contrôler sommes de courants, dettes cartes et solde net, ne jamais masquer un overflow par une compensation opposée (`eb8bf44c`, `9196905e`).
+- [x] Effacer l'alerte d'avoir carte après correction, sans réécrire de mouvement ou taux bancaire.
+- [x] Moteur `TraceInternational.snapshot` : groupes courants et cartes et patrimoine CAD global contrôlés séparément en centimes sûrs (`75ab7b5a`).
+- [x] Tests synthèse Couple fictive et global CAD : `1d115b92`, `eb408e41`.
+- [x] **114/114 tests V8** sur le vrai JavaScript et des modules Node/DOM/RPC simulés : 22 financiers, 8 Couple, 13 UI comptes, 27 CAS, 11 release gates, 33 statiques SQL (5 contrat12 + 28 autres). Deux harnais PG syntaxe JS V8 PASS.
+- [ ] **BLOQUANT** : exécuter migrations 05–12 et 4 suites sur vrai moteur PostgreSQL/PGlite *isolé fictif* : grants, Auth/RLS/CAS, CSV, suppression et restauration foyer, débit différé, transferts et paiements.
+- [ ] Recette Safari iPhone sur interface premium, comptes CAD/EUR/USD, conversions datées, budgets couple, connexion/hors-ligne, imports PDF/OCR/CSV.
+- [ ] Autorisation humaine GO explicite avant toute fusion ou déploiement, et plan transition anciens clients.
+
+Tous commits `[skip ci]`. Aucun `main`, CI, déploiement ou Supabase réel touchés ; ~58 % ±10, production **NO-GO**.
+
+---
+
 ## 25 octobre 2026 — garde de précision sur solde d'ouverture + mouvements + patrimoine Couple
 
 - [x] `accountEstimate()` : cumuls banque/placements vérifiés avec `I.exactMoney()` par mouvement, **avec le solde d'ouverture inclus dans chaque vérification** ; tout dépassement non sûr reste inconnu et ne peut être annulé silencieusement par un mouvement ultérieur. Commits `5f63f9c`, `3cf397e`.
