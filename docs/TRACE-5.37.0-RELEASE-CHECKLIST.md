@@ -1,3 +1,15 @@
+## 25 octobre 2026 — Accueil multi-comptes : absence de solde périmé et alertes cartes expliquées
+
+- [x] Compte courant archivé ou absent : vider les chiffres de l'ancien compte, afficher « À configurer », supprimer les alertes carte obsolètes sans opération financière (`daa260b`).
+- [x] Dettes non valorisables : expliquer à l'utilisateur les cartes liées dans une devise différente et les cartes sans compte de règlement clairement identifié ; aucun rapprochement ou taux inventé (`ec256fc`).
+- [x] **13/13 tests fake-DOM V8 réussis** sur le composant réel, incluant nouvelles régressions (`0952ad4`, `140d893`).
+- [ ] Safari iPhone physique, réactivité des boutons et états visuels après chargement réel, changements de principal, relance hors ligne.
+- [ ] PostgreSQL/PGlite local avec données fictives : migrations 05–12 et quatre suites d'intégration, puis décision sur compatibilité des anciens clients et plans rollback. **Non exécuté actuellement**.
+
+Aucun commit main, migration hébergée, CI, déploiement ou modification Supabase réel. Progression ~58 % ±10, NO-GO.
+
+---
+
 ## Rectificatif 25 octobre — vérification centimes après bornage
 
 - [x] `41481110` et `5dcbf143` `[skip ci]` : conserver les arrondis à 2 décimales des cumuls valides ; test 0,10+0,20=0,30 et 0,30−0,20=0,10.
