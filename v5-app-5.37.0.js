@@ -1002,18 +1002,34 @@ function internationalHome(){
    host.onclick=event=>event.stopPropagation();
    const checking=snap.balances.filter(x=>accounts.find(a=>a.id===x.id)?.type==='checking');
    const cards=snap.balances.filter(x=>accounts.find(a=>a.id===x.id)?.type==='card');
+   // The global snapshot already rejects unsafe total CAD cents. Apply the
+   // same fail-closed precision check to the component cash and card amounts
+   // shown alongside it: even individually valid accounts may overflow.
+   const sumCAD=rows=>{
+    let cents=0;
+    for(const value of rows){
+     const verified=I.exactMoney(value);
+     if(verified===null)return null;
+     const next=I.exactMoney((cents+Math.round(verified*100))/100);
+     if(next===null)return null;
+     cents=Math.round(next*100);
+    }
+    return cents/100;
+   };
    const checkComplete=checking.length>0&&checking.every(x=>x.cad!==null);
    const cardsComplete=cards.every(x=>x.cad!==null)&&!snap.cardsToReview.length;
-   const checkingCAD=checkComplete?Math.round(checking.reduce((n,x)=>n+x.cad,0)*100)/100:null;
-   const cardDebt=cardsComplete?Math.round(cards.reduce((n,x)=>n+Math.max(0,-x.cad),0)*100)/100:null;
+   const checkingCAD=checkComplete?sumCAD(checking.map(x=>x.cad)):null;
+   const cardDebt=cardsComplete?sumCAD(cards.map(x=>Math.max(0,-x.cad))):null;
    $('#homeBalance').textContent=snap.complete?I.money(snap.globalCAD,'CAD'):'Situation à vérifier';
    $('#homeChecking').textContent=checkingCAD===null?'—':I.money(checkingCAD,'CAD');
    $('#homeCard').textContent=cardDebt===null?'À vérifier':I.money(cardDebt,'CAD')+' de dette';
    $('#reconcileBadge').textContent=snap.complete?'Couple · toutes devises':'Conversion / soldes à vérifier';
    const warning=$('#homeCardWarning');
-   if(warning&&snap.cardsToReview.length){
-    warning.hidden=false;
-    warning.textContent='Un avoir de carte apparent doit être vérifié avant de calculer la trésorerie du couple.';
+   if(warning){
+    const creditToReview=snap.cardsToReview.length>0;
+    warning.hidden=!creditToReview;
+    warning.textContent=creditToReview?
+     'Un avoir de carte apparent doit être vérifié avant de calculer la trésorerie du couple.':'';
    }
    host.innerHTML='<details class="trace-intl-details"><summary>Voir les comptes du foyer · '+accounts.length+' compte(s)</summary>'+
     '<div class="trace-intl-accounts">'+snap.balances.map(x=>
