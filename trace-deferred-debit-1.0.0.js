@@ -27,6 +27,61 @@
   return Number.isFinite(n)&&n>0&&n<=1e7&&
    Number.isSafeInteger(rounded)&&Math.abs(n*100-rounded)<1e-6?rounded:null;
  };
+
+ // Monthly recurrence is a PLANNED calendar date, never bank evidence.
+ // Card settings carry day-of-month (1..31); short months use their last day.
+ // The cutoff is optional: without it, a future debit date can be displayed,
+ // but purchases CANNOT be allocated to a due batch.
+ const dayNumber=(v,required=false)=>{
+  if(v===null||v===undefined||v===''){
+   if(required)throw Error('Jour mensuel de prélèvement requis (1 à 31).');
+   return null;
+  }
+  const s=String(v).trim();
+  if(!/^(?:[1-9]|[12][0-9]|3[01])$/.test(s))
+   throw Error('Jour mensuel invalide : choisis une valeur de 1 à 31.');
+  return Number(s);
+ };
+ const monthDay=(year,month,day)=>{
+  const max=new Date(Date.UTC(year,month,0)).getUTCDate();
+  return String(year).padStart(4,'0')+'-'+String(month).padStart(2,'0')+'-'+
+   String(Math.min(day,max)).padStart(2,'0');
+ };
+ const addMonth=(year,month,step=1)=>{
+  const index=year*12+month-1+step;
+  return{year:Math.floor(index/12),month:index%12+1};
+ };
+ const monthlyDebitSchedule=({purchaseDate,debitDay,closingDay=null}={})=>{
+  const purchase=date(purchaseDate),debit=dayNumber(debitDay,true),
+   closing=dayNumber(closingDay,false);
+  if(!purchase)throw Error('Date d’achat invalide pour le calendrier différé.');
+  const year=Number(purchase.slice(0,4)),month=Number(purchase.slice(5,7));
+  if(!closing){
+   // Informational NEXT date only. The purchase is NOT allocated to it.
+   let next=monthDay(year,month,debit);
+   if(next<purchase){
+    const p=addMonth(year,month);next=monthDay(p.year,p.month,debit);
+   }
+   return{debitDay:debit,closingDay:null,cutoffDate:null,
+    nextDebitDate:next,dueDate:null,allocationVerified:false};
+  }
+  // An item after the cycle closing date belongs to the following cycle.
+  let cutoff=monthDay(year,month,closing),period={year,month};
+  if(purchase>cutoff){
+   period=addMonth(year,month);
+   cutoff=monthDay(period.year,period.month,closing);
+  }
+  // A debit on the cutoff day is never assumed settled the same day.
+  // Find the first scheduled debit strictly AFTER the cycle closes.
+  let due=monthDay(period.year,period.month,debit),cursor=period;
+  for(let i=0;i<3&&due<=cutoff;i++){
+   cursor=addMonth(cursor.year,cursor.month);
+   due=monthDay(cursor.year,cursor.month,debit);
+  }
+  if(due<=cutoff)throw Error('Échéance mensuelle impossible à calculer.');
+  return{debitDay:debit,closingDay:closing,cutoffDate:cutoff,
+   nextDebitDate:due,dueDate:due,allocationVerified:true};
+ };
  const month=d=>d.slice(0,7);
  const amount=v=>v/100;
  function simulate({card,checking,purchases=[],refunds=[],fees=[],settlements=[],asOfDate}={}){
@@ -282,5 +337,5 @@
      bankSource:s.bankSource})),
    writes:0,financialChanges:0};
  }
- root.TraceDeferredDebit=Object.freeze({simulate});
+ root.TraceDeferredDebit=Object.freeze({simulate,monthlyDebitSchedule});
 })(typeof window!=='undefined'?window:globalThis);
