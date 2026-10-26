@@ -16,6 +16,11 @@ as $guard$
  select case
   when p_collection = 'accounts' then
    p_data->>'paymentMode' = 'deferred'
+   -- Reserve deferred calendar fields independently of paymentMode, preventing
+   -- forged credit-card documents from bypassing quarantine before release.
+   or p_data ?| array[
+    'deferredDebitDay','deferredClosingDay','deferredScheduleVersions'
+   ]
   when p_collection in ('transactions','imports','import_days','reconciliations',
                        'investment_operations') then
    coalesce(nullif(btrim(p_data->>'deferredKind'),''),'') <> ''
@@ -24,7 +29,7 @@ as $guard$
    or p_data ?| array[
     'deferredPurchaseId','deferredPurchaseIds','deferredFeeIds',
     'deferredSettlementMode','deferredDueDate','deferredBankEvidence',
-    'deferredBankEvidenceReviewed'
+    'deferredBankEvidenceReviewed','scheduledDueDate','allocationDueDate'
    ]
    or p_data ? 'purchaseIds'
    or p_data ? 'feeIds'
