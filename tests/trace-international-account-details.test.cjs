@@ -371,6 +371,24 @@ async function main(){
   assert.doesNotMatch(html,/data-trace-bank-proof-open="bad-day"/);
   assert.equal(f.calls.save,0);
  });
+
+ await test('mismatched card repayment warns on both bank accounts read-only',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.push({
+   id:'unequal-card-payment',accountId:'ca',toAccountId:'card',
+   type:'transfer',status:'confirmed',date:'2026-10-21',
+   bankAmount:100,bankCurrency:'CAD',toBankAmount:80,
+   toBankCurrency:'CAD',amountCAD:100,name:'Paiement incohérent'
+  });
+  const prior=JSON.stringify(f.state);
+  f.openTraceAccountDetail('ca');
+  assert.match(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.match(f.$('#sheetBody').innerHTML,/Paiement incohérent/);
+  f.openTraceAccountDetail('card');
+  assert.match(f.$('#sheetBody').innerHTML,/Paiement incohérent/);
+  assert.equal(JSON.stringify(f.state),prior);
+  assert.equal(f.calls.save,0);
+ });
  await test('bank proof provides an accessible scoped Activity link without saving',()=>{
   const f=fixture({strictEvidence:true}),before=JSON.stringify(f.state);
   f.openTraceAccountDetail('fr');

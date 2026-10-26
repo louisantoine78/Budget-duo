@@ -301,6 +301,25 @@ function traceLinkedBankTransactionCovers(o,account,boundary){
  return booked!==null&&invested!==null&&
   I.exactMoney(booked)===I.exactMoney(invested)?true:null;
 }
+// Shared read-only bank guard. A credit-card payment must debit checking
+// and credit card debt by identical native cents, exactly once. Historical
+// invalid payments are flagged; no correction, write or FX rate is invented.
+function traceCardRepaymentMismatch(t){
+ if(!t||t.type!=='transfer')return false;
+ const I=window.TraceInternational,
+  target=state.accounts.find(a=>a.id===t.toAccountId);
+ if(!target||accountType(target)!=='card')
+  return t.transferPurpose==='card_repayment';
+ const source=state.accounts.find(a=>a.id===t.accountId);
+ if(!source||accountType(source)!=='checking'||source.owner!==target.owner||
+    I.currency(source)!==I.currency(target)||
+    (target.settlementAccountId&&target.settlementAccountId!==source.id))
+  return true;
+ const debit=I.amountOnAccount(t,source,'source'),
+  credit=I.amountOnAccount(t,target,'destination'),
+  fee=I.exactMoney(t.transferFeeAmount??0);
+ return debit===null||credit===null||debit!==credit||fee!==0;
+}
 function accountEstimate(a){
  const I=window.TraceInternational,code=I.currency(a);
  const r=state.reconciliations.filter(x=>x.accountId===a.id&&
@@ -318,6 +337,7 @@ function accountEstimate(a){
  const movement=state.transactions.filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
   if(t.type==='card_statement_evidence')return x;
   if(!I.calendarDate(t.date))return NaN; // Invalid bank day cannot be positioned in the ledger.
+  if(traceCardRepaymentMismatch(t))return NaN; // Card repayment bank legs disagree.
   // A legacy malformed self-transfer has BOTH bank legs on one account.
   // Counting only its receiving leg invents cash; block reconciliation
   // until the account mapping is reviewed instead of guessing the net.
@@ -927,7 +947,7 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
   (t.accountId===account.id||t.toAccountId===account.id)&&
   afterEvidenceBoundary(t.date);
  const issues=state.transactions.filter(candidate).filter(t=>{
-  if(!I.calendarDate(t.date))return true;
+  if(!I.calendarDate(t.date)||traceCardRepaymentMismatch(t))return true;
   if(t.type==='transfer'&&t.accountId===account.id&&t.toAccountId===account.id)
    return true;
   const leg=t.toAccountId===account.id?'destination':'source';

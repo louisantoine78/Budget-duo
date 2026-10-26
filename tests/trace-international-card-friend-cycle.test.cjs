@@ -151,4 +151,39 @@ test('no bank opening must stay unknown rather than treating missing cash as zer
  delete x.state.household.accountOpeningBalances.ca;
  assert.equal(x.balance('ca'),null);
 });
+
+test('historical mismatched Mastercard payment makes both balances unknown',()=>{
+ const mismatch={...mastercard,id:'wrong-card-credit',amountCAD:100,
+  toBankAmount:80,bankAmount:100,transferFeeAmount:0};
+ const x=scenario([purchase,mismatch]);
+ assert.equal(x.balance('ca'),null);
+ assert.equal(x.balance('mc'),null);
+});
+test('historic credit-card transfer with fee cannot be silently counted as debt repayment',()=>{
+ const wrongFee={...mastercard,id:'fee-on-card-pay',bankAmount:100,
+  toBankAmount:100,transferFeeAmount:1};
+ const x=scenario([purchase,wrongFee]);
+ assert.equal(x.balance('ca'),null);
+ assert.equal(x.balance('mc'),null);
+});
+test('old CAD card payment lacking native bank fields retains legacy equal cash legs',()=>{
+ const old={...mastercard,id:'legacy-card-payment'};
+ delete old.toBankAmount;
+ const x=scenario([purchase,old]);
+ assert.equal(x.balance('ca'),900);
+ assert.equal(x.balance('mc'),-20);
+});
+test('bad card settlement before an authenticated later reconciliation does not poison later cash',()=>{
+ const oldBad={...mastercard,id:'old-unequal-card',date:'2026-10-11',
+  bankAmount:100,toBankAmount:70};
+ const after=scenario([purchase,oldBad],[{
+  id:'checking-reconciled',accountId:'ca',date:'2026-10-12',
+  status:'confirmed',currency:'CAD',actualBalance:800
+ },{
+  id:'card-reconciled',accountId:'mc',date:'2026-10-12',
+  status:'confirmed',currency:'CAD',actualBalance:-50,cardBalanceKind:'debt'
+ }]);
+ assert.equal(after.balance('ca'),800);
+ assert.equal(after.balance('mc'),-50);
+});
 console.log(count+' fictional Mastercard/friends lifecycle checks passed');
