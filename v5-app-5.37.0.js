@@ -1020,10 +1020,15 @@ function internationalHome(){
    const cardsComplete=cards.every(x=>x.cad!==null)&&!snap.cardsToReview.length;
    const checkingCAD=checkComplete?sumCAD(checking.map(x=>x.cad)):null;
    const cardDebt=cardsComplete?sumCAD(cards.map(x=>Math.max(0,-x.cad))):null;
-   $('#homeBalance').textContent=snap.complete?I.money(snap.globalCAD,'CAD'):'Situation à vérifier';
+   const coupleNet=snap.complete&&checkingCAD!==null&&cardDebt!==null?
+    I.exactMoney(checkingCAD-cardDebt):null;
+   // An otherwise safe global sum must not mask an overflowing component
+   // debt or current-account group through cancellation.
+   const coupleVerified=coupleNet!==null;
+   $('#homeBalance').textContent=coupleVerified?I.money(coupleNet,'CAD'):'Situation à vérifier';
    $('#homeChecking').textContent=checkingCAD===null?'—':I.money(checkingCAD,'CAD');
    $('#homeCard').textContent=cardDebt===null?'À vérifier':I.money(cardDebt,'CAD')+' de dette';
-   $('#reconcileBadge').textContent=snap.complete?'Couple · toutes devises':'Conversion / soldes à vérifier';
+   $('#reconcileBadge').textContent=coupleVerified?'Couple · toutes devises':'Conversion / soldes à vérifier';
    const warning=$('#homeCardWarning');
    if(warning){
     const creditToReview=snap.cardsToReview.length>0;
@@ -1035,8 +1040,8 @@ function internationalHome(){
     '<div class="trace-intl-accounts">'+snap.balances.map(x=>
     '<div class="trace-intl-row"><span>'+esc(x.name)+' <small>'+x.nativeCurrency+'</small></span><b>'+
     (x.balance===null?'Solde inconnu':I.money(x.balance,x.nativeCurrency))+'</b></div>').join('')+'</div>'+
-    '<p class="trace-intl-grand">'+(snap.complete?'Situation nette · '+I.money(snap.globalCAD,'CAD'):
-     'Situation incomplète · solde, taux ou carte à contrôler')+'</p>'+
+    '<p class="trace-intl-grand">'+(coupleVerified?'Situation nette · '+I.money(coupleNet,'CAD'):
+     'Situation incomplète · solde, taux, précision ou carte à contrôler')+'</p>'+
     '<p class="trace-intl-foot">Conversion indicative en CAD · taux : '+
     (missingCurrency.map(c=>internationalQuotes[c]?.date?c+' '+internationalQuotes[c].date:c+' manquant').join(' · '))+
     ' · Épargne et placements dans Patrimoine.</p></details>';
