@@ -74,6 +74,30 @@ test('reimports of one physical card row are not reviewed twice',()=>{
  const c=context(),copy=statement({statementId:'renamed',importId:'other'});
  assert.equal(c.review({statements:[c.doc,copy]}).status,'duplicate_import');
 });
+
+test('reused card import ID invalidates a prior human approval despite renamed source and rows',()=>{
+ const c=context(),first=c.review();
+ const approval={planId:c.plan.document.id,reviewedBy:'la',
+  statementId:c.doc.statementId,lineId:'line-10',
+  approved:true,snapshot:first.reviewToken};
+ const copy=statement({statementId:'new-statement',sourceId:'different-file',
+  rows:[row({lineId:'line-99',purchaseDate:'2026-10-17',amount:'2.00'})]});
+ const r=c.review({statements:[c.doc,copy],receipts:[approval]});
+ assert.equal(r.status,'duplicate_import');
+ assert.equal(r.persistable,false);assert.equal(r.createdTransactions,0);
+});
+test('reused physical card file with new import and different row still rejects local proof',()=>{
+ const c=context(),other=statement({statementId:'new-statement',
+  importId:'different-import',rows:[row({lineId:'line-99',
+  purchaseDate:'2026-10-17',amount:'2.00'})]});
+ assert.equal(c.review({statements:[c.doc,other]}).status,'duplicate_import');
+});
+test('independent card statement with a distinct import/source remains reviewable',()=>{
+ const c=context(),other=statement({statementId:'other-card-doc',
+  sourceId:'other-file',importId:'other-import',
+  rows:[row({lineId:'other-row',purchaseDate:'2026-10-17',amount:'2.00'})]});
+ assert.equal(c.review({statements:[c.doc,other]}).status,'needs_human_review');
+});
 test('two bank rows with same amount and date are ambiguous without more evidence',()=>{
  const c=context({sourceOverrides:{rows:[row(),row({lineId:'line-11',name:'Different shop'})]}});
  assert.equal(c.review().status,'ambiguous_card_lines');

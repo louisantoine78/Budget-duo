@@ -78,6 +78,14 @@
      !validDoc(s)))return result('source_incomplete');
   const allValid=statements.every(validDoc);
   if(!allValid)return result('source_incomplete');
+  // No second card statement in the same review may claim the same source
+  // or imported document, even after its statementId and lineId are renamed.
+  const sources=new Set(),imports=new Set();
+  for(const statement of statements){
+   if(sources.has(statement.sourceId)||imports.has(statement.importId))
+    return result('duplicate_import');
+   sources.add(statement.sourceId);imports.add(statement.importId);
+  }
   const matches=doc.rows.filter(row=>row.lineId===selectLine);
   if(matches.length!==1)return result(matches.length?'duplicate_line':'missing_line');
   const row=matches[0];
