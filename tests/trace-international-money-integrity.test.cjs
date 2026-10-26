@@ -331,3 +331,53 @@ test('foreign outgoing bank leg with no native currency makes ledger unknown',()
  tx.bankCurrency='EUR';
  assert.equal(estimate(fr),60);
 });
+
+
+test('repairing an undocumented EUR transfer receipt invalidates stale import evidence',()=>{
+ const base={id:'fx-correction',type:'transfer',status:'confirmed',
+  accountId:ca.id,toAccountId:fr.id,date:day,name:'Virement France',
+  amountCAD:100,bankAmount:100,bankCurrency:'CAD',toBankAmount:60,
+  currency:'CAD',importFingerprint:'source-match'};
+ const repaired=I.resolveTransferEdit({transaction:base,from:ca,to:fr,
+  bankAmount:100,receivedAmount:60,name:base.name});
+ assert.equal(repaired.toBankAmount,60);
+ assert.equal(repaired.toBankCurrency,'EUR');
+ assert.equal(repaired.importFingerprint,null);
+ assert.equal(base.importFingerprint,'source-match');
+ assert.equal(base.toBankCurrency,undefined);
+});
+test('unchanged confirmed FX legs retain import fingerprint and linked transaction references',()=>{
+ const base={id:'fx-stable',type:'transfer',status:'confirmed',
+  accountId:ca.id,toAccountId:fr.id,date:day,name:'Virement France',
+  amountCAD:100,bankAmount:100,bankCurrency:'CAD',toBankAmount:60,
+  toBankCurrency:'EUR',currency:'CAD',importFingerprint:'source-match',
+  linkedTransactionId:'linked-proof'};
+ const next=I.resolveTransferEdit({transaction:base,from:ca,to:fr,
+  bankAmount:100,receivedAmount:60,name:base.name});
+ assert.equal(next.importFingerprint,'source-match');
+ assert.equal(next.linkedTransactionId,'linked-proof');
+ assert.equal(JSON.stringify(base).includes('linked-proof'),true);
+});
+test('corrected foreign source bank denomination invalidates original import match',()=>{
+ const base={id:'source-fx',type:'transfer',status:'confirmed',
+  accountId:fr.id,toAccountId:ca.id,date:day,name:'Virement retour',
+  bankAmount:46.2,bankCurrency:'CAD',amountCAD:73.92,
+  toBankAmount:70,toBankCurrency:'CAD',currency:'EUR',
+  importFingerprint:'old-proof'};
+ const next=I.resolveTransferEdit({transaction:base,from:fr,to:ca,
+  bankAmount:46.2,receivedAmount:70,quote});
+ assert.equal(next.bankCurrency,'EUR');
+ assert.equal(next.toBankCurrency,'CAD');
+ assert.equal(next.importFingerprint,null);
+});
+test('historical CAD-to-CAD currency omission alone does not invalidate a correct import match',()=>{
+ const other={...ca,id:'other-ca'};
+ const tx={type:'transfer',status:'confirmed',date:day,accountId:ca.id,
+  toAccountId:other.id,name:'Virement interne',amountCAD:40,
+  bankAmount:40,toBankAmount:40,importFingerprint:'legacy-match'};
+ const next=I.resolveTransferEdit({transaction:tx,from:ca,to:other,
+  bankAmount:40,receivedAmount:40});
+ assert.equal(next.bankCurrency,'CAD');
+ assert.equal(next.toBankCurrency,'CAD');
+ assert.equal(next.importFingerprint,'legacy-match');
+});
