@@ -1,3 +1,15 @@
+## 25 octobre 2026 — confidentialité CSV : sonde de sécurité et restauration DBA
+
+- [x] `2e675a6492fcd317fd47b91dcd8d97214e6e8606` : migration candidate 11 modifiée pour garder possible la restauration sans JWT par session administrative réelle `current_user=session_user='postgres'` ; session `authenticated` sans JWT refusée.
+- [x] `452f265162f8dd6b93cde2a13e58182195949ca6` : SQL candidate ajoute `trace_csv_evidence_guard_ready()` (SECURITY INVOKER, contrôle RLS+policy SELECT restrictive+trigger activé). Client candidate appelle la sonde avant stockage/clôture de preuves sensibles. Absence de la fonction ou erreur/refus bloque la sauvegarde. **Cette sonde n'est pas une validation de sécurité** sans test Postgres effectif.
+- [x] `e3cfdda7d23ccd70ddb87a92d3c45162db0e8611`, `7230365b49685b2458d1e7f30cb54d1de3550444` : tests V8 du refus sans protection et de la modification des preuves/comptes pendant la sonde ; contrats statiques SQL ; `85/85` tests V8 ciblés sans échec.
+- [x] `498ea5f99f3a47bd994a7e78a29be7d13436dca8` : tests d'intégration PostgreSQL préparés pour policy/trigger désactivés et réapplication de la migration (retour à READY), NON EXÉCUTÉS.
+- [ ] **BLOQUANT NATIF :** obtenir checkout local complet (le conteneur n'a pas de GitHub DNS), Node, PGlite/PostgreSQL fictif, exécuter migrations 05–11 et `tests/trace-cas-writes.integration.cjs`; valider RLS réel, CAS concurrent, direct grants, séparations entre foyers et propriétaires, entrée sans JWT, DBA restore. **Aucun accès aux données Supabase réelles.**
+- [ ] Tests Realtime `REPLICA IDENTITY FULL` avec deux clients, backup/restore/effacement, charge CSV lots de 100, iPhone Safari et rendu premium, imports PDF/multi-devises, SW preview reconstruit officiellement + test `--check` et GO humain.
+- [ ] Dernier bilan `85/85` représente vrais tests JS sous V8 avec modules DOM/Node/RPC simulés et 8 contrats SQL **statiques** ; **zéro SQL natif exécuté**. Production NO-GO, global 58 % ±10 points, `main` inchangée.
+
+---
+
 ## 25 octobre 2026 — propriétaire des preuves CSV et limite des imports illisibles
 
 - [x] Commits `27c521e0a5d0fef59949cdde926c85349bcc69c9`, `47dab520cd78f5259f75f815d0b5a479c4281eaf` : migration `migrations/11-trace-csv-unparsed-owner-privacy.sql` proposée, **NON APPLIQUÉE** ; RLS restrictive SELECT membre propriétaire sur `imports.csv_unparsed` ; trigger de protection des écritures directes/CAS, vérifiant membre et compte, empêchant modification de l'extrait et suppression des preuves, seule clôture explicitement revue autorisée.

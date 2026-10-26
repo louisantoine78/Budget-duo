@@ -1,3 +1,19 @@
+## 25 octobre 2026 — barrière serveur de confidentialité avant stockage CSV
+
+**Commits techniques** : `2e675a6492fcd317fd47b91dcd8d97214e6e8606`, `452f265162f8dd6b93cde2a13e58182195949ca6`, `e3cfdda7d23ccd70ddb87a92d3c45162db0e8611`, `7230365b49685b2458d1e7f30cb54d1de3550444`, `498ea5f99f3a47bd994a7e78a29be7d13436dca8`. Branche unique 5.37 International, tous `[skip ci]`.
+
+**Qualité côté client :** avant tout stockage d'une preuve `imports.kind=csv_unparsed` ou clôture `reviewed`, RPC `trace_csv_evidence_guard_ready` doit renvoyer exactement TRUE. Si migration 11 absente / RPC indisponible / policy ou trigger désactivés / erreur réseau, refus d'écriture et message explicite. Après chaque attente RPC, revalider les comptes et sources de la prévisualisation ou l'extrait de la revue. Les autres CSV, déjà interprétables, restent sur l'ancien parcours `pending`. Aucune transaction ni dépense créée par le contrôle d'une preuve illisible. UI labo fictive exempte du contrôle SQL car aucune persistance. Test CSV et revue en attente asynchrone ajouté.
+
+**SQL migration 11 candidate (NON APPLIQUÉE) :** fonction de sonde `security invoker` inspecte la présence de RLS, policy SELECT restrictive et trigger activé ; permissions EXECUTE retirées à PUBLIC et anon, accordées aux authentifiés. Le trigger `trace_guard_csv_unparsed_evidence` permet désormais la maintenance/restauration sans JWT seulement en session PostgreSQL où `current_user=session_user='postgres'`, pas en session authenticated sans JWT ni via RPC utilisateur. Les 2 nouvelles situations et les désactivations temporaires de la policy/trigger ont des tests fictifs PGlite ajoutés mais **non exécutés**.
+
+**Environnement vérifié :** Node v22.16 disponible mais pas de repo local, ni PostgreSQL/PGlite ni DNS GitHub/npm. Pas de SQL natif possible ici ; aucune connexion à un projet Supabase existant. Ne pas confondre les tests JS avec des preuves RLS.
+
+**Tests V8 du dernier HEAD : `85/85`** (22+6+7+5+24+6+7+8), dont 8 vérifications statiques SQL, avec vraies sources et mocks. Vrais tests `node --test`, suite PGlite, sécurité Realtime, pairage authentifié, performance et Safari **à exécuter** dans un checkout isolé.
+
+**Prochaine étape obligatoire :** lancer `tests/trace-cas-writes.integration.cjs` sur PostgreSQL fictif, qualifier Auth/RLS/CAS et les privilèges DBA, puis réaliser la vérification Realtime et la recette réelle multi-comptes. `scripts/check-trace-537-release-gates.cjs` reste le garde-fou général (read-only); SW preview à régénérer exclusivement avec le générateur officiel. Les chiffres globaux restent à 58 % qualitatif, production **NO-GO**.
+
+---
+
 ## 25 octobre 2026 — migration candidate 11, séparation des preuves CSV entre titulaires
 
 **HEAD de code de ce lot :** `ce0fae9030c280a7d5f620b7aa2ee99c171a6b43` avant commit documentation. Sur branche internationale, commits `[skip ci]`, aucune intervention sur `main`.
