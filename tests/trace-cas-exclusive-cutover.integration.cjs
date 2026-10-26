@@ -48,6 +48,17 @@ async function run(){
     "select has_table_privilege('authenticated','public.documents','INSERT') as allowed")).rows[0].allowed,true);
   });
   for(const n of [10,11])await migration(n);
+  await check('cutover refuses removed CSV uniqueness before revoking any write grants',async()=>{
+   await db.exec('drop index public.trace_csv_unparsed_source_unique');
+   assert.equal((await asUser(1,tx=>tx.query(
+    'select public.trace_csv_evidence_guard_ready() as ok'))).rows[0].ok,false);
+   await assert.rejects(migration(12),/TRACE_CAS_CUTOVER_BLOCKED/);
+   assert.equal((await db.query(
+    "select has_table_privilege('authenticated','public.documents','INSERT') as allowed")).rows[0].allowed,true);
+   await migration(11);
+   assert.equal((await asUser(1,tx=>tx.query(
+    'select public.trace_csv_evidence_guard_ready() as ok'))).rows[0].ok,true);
+  });
   const save=(n,collection,id,data,rev)=>asUser(n,tx=>tx.query(
    'select public.trace_cas_save_document($1,$2,$3,$4,$5) as revision',
    [hid,collection,id,JSON.stringify(data),rev]));
