@@ -20,7 +20,7 @@ test('missing, whitespace, boolean and nonfinite native amounts never become a n
   const snap=I.snapshot({accounts:[ca],owner:'la',mainId:'ca',estimates:{ca:bad}});
   assert.equal(snap.net,null);assert.equal(snap.globalCAD,null);assert.equal(snap.complete,false);
  }
- assert.equal(I.amountOnAccount({bankAmount:0},fr),0);
+ assert.equal(I.amountOnAccount({bankAmount:0,bankCurrency:'EUR'},fr),0);
  assert.equal(I.snapshot({accounts:[ca],estimates:{ca:0}}).net,0);
 });
 test('source and destination amounts must agree with the explicitly declared account currency',()=>{
@@ -291,4 +291,43 @@ test('unknown currency of a foreign receipt stops the bank ledger, not an assume
  assert.equal(estimate(fr),73.75);
  tx.toBankCurrency='USD';
  assert.equal(estimate(fr),null);
+});
+
+
+test('foreign bank source must carry its native denomination before booking',()=>{
+ assert.equal(I.amountOnAccount({bankAmount:40},fr),null);
+ assert.equal(I.amountOnAccount({bankAmount:40,bankCurrency:''},fr),null);
+ assert.equal(I.amountOnAccount({bankAmount:40,bankCurrency:'USD'},fr),null);
+ assert.equal(I.amountOnAccount({bankAmount:40,bankCurrency:'EUR'},fr),40);
+ assert.equal(I.amountOnAccount({bankAmount:40},ca),40);
+ assert.equal(I.amountOnAccount({amountCAD:40},ca),40);
+});
+test('foreign investment bank leg cannot silently inherit unlabelled euros',()=>{
+ assert.equal(I.investmentBankAmount({bankAmount:46.2},fr),null);
+ assert.equal(I.investmentBankAmount({bankAmount:46.2,bankCurrency:'CAD'},fr),null);
+ assert.equal(I.investmentBankAmount({bankAmount:46.2,bankCurrency:'EUR'},fr),46.2);
+ assert.equal(I.investmentBankAmount({bankAmountCAD:46.2},ca),46.2);
+});
+test('foreign investment receipt requires its own currency even when the bank matches',()=>{
+ const investment={id:'pea',type:'broker',owner:'la',currency:'EUR'};
+ const movement={bankCurrency:'EUR',bankAmount:46.2,investmentAmount:46.2};
+ assert.equal(I.amountOnInvestment(movement,investment,fr),null);
+ assert.equal(I.amountOnInvestment({...movement,investmentCurrency:'CAD'},investment,fr),null);
+ assert.equal(I.amountOnInvestment({...movement,investmentCurrency:'EUR'},investment,fr),46.2);
+ // A foreign savings leg without an explicitly separate investment amount
+ // may only use the proved, same-currency bank leg.
+ assert.equal(I.amountOnInvestment({bankCurrency:'EUR',bankAmount:46.2},investment,fr),46.2);
+});
+test('foreign outgoing bank leg with no native currency makes ledger unknown',()=>{
+ const tx={id:'foreign-debit',date:day,type:'expense',status:'confirmed',
+  accountId:'fr',bankAmount:40,amountCAD:64};
+ const state={household:{accountOpeningBalances:{fr:100}},
+  reconciliations:[],transactions:[tx],investmentOperations:[]};
+ const estimate=extract('accountEstimate','bank',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  openingBoundary:()=>({date:'2026-10-01',mode:'start'}),
+  afterBoundary:(date,b)=>date>b.date});
+ assert.equal(estimate(fr),null);
+ tx.bankCurrency='EUR';
+ assert.equal(estimate(fr),60);
 });
