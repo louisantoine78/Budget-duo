@@ -302,3 +302,17 @@
 .trace-csv-review-confirm{display:flex;gap:9px;align-items:flex-start;font-size:13px;line-height:1.45;margin:12px 0}
 .trace-csv-review-confirm input{width:18px;height:18px;flex:0 0 18px}
 @media(max-width:380px){.trace-csv-review-queue{padding:10px}.trace-csv-review-entry{min-height:56px}}
+
+/* FX provenance review in bank-account details: read-only, safe on iPhone. */
+.trace-bank-proof-review{margin:14px 0;padding:14px 16px;border:1px solid #e3d5b1;
+ border-radius:16px;background:#fffaf0;color:#5c4b2c}
+.trace-bank-proof-review h3{margin:0 0 7px;font-size:14px;line-height:1.35;
+ color:#655021;font-weight:780}
+.trace-bank-proof-review p{margin:6px 0;font-size:12px;line-height:1.5;
+ overflow-wrap:anywhere}
+.trace-bank-proof-review ul{margin:9px 0;padding-left:18px;font-size:12px;
+ line-height:1.5;overflow-wrap:anywhere}
+.trace-bank-proof-review li+li{margin-top:4px}
+.trace-bank-proof-review small{display:block;margin-top:9px;font-size:11px;
+ line-height:1.45;color:#73674b}
+@media(max-width:380px){.trace-bank-proof-review{padding:12px;border-radius:13px}}
