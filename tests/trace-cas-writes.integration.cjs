@@ -365,6 +365,20 @@ async function run(){
    const next={...original,id:'csv-distinct-row-5',sourceIndex:5};
    assert.equal((await rpcSave(1,'imports',next.id,next,null)).rows[0].revision,0);
    assert.equal((await readDoc('imports',next.id)).data.sourceIndex,5);
+   await assert.rejects(acting(1,tx=>tx.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'imports','csv-direct-forged-duplicate',
+     JSON.stringify({...original,id:'csv-direct-forged-duplicate'}),uid(1)])),
+    /trace_csv_unparsed_source_unique|duplicate key|23505/i);
+   // A separate partner-owned checking account has its own statement source,
+   // even with the same exact CSV filename and physical row number.
+   const partnerSource={...original,id:'partner-own-same-row',owner:'partner',
+    accountId:'partner',rawText:'Different account, same row number'};
+   assert.equal((await rpcSave(2,'imports',partnerSource.id,partnerSource,null)).rows[0].revision,0);
+   const ownerView=(await acting(1,tx=>tx.query(
+    'select item_id from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'imports',partnerSource.id]))).rows;
+   assert.equal(ownerView.length,0,'partner source may not leak to first member');
   });
   await check('partner cannot forge owner or linked bank account in private CSV evidence',async()=>{
    const forged={id:'forged-source',kind:'csv_unparsed',status:'pending_review',
