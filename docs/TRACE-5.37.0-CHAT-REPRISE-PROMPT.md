@@ -1,3 +1,17 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — NOUVEAU CHANTIER CAS EXCLUSIF / MIGRATION 12
+
+**Revérifier en premier lieu le HEAD live** de `trace-5.37.0-international-accounts-fx`; main stable confirmée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Enchaîner les développements sans revalidation à chaque lot mais ne jamais toucher à main, Supabase réel, comptes bancaires, PR, merge, CI/Actions, SW de production ni déploiement. Tous les commits `[skip ci]`.
+
+**Acquis MAJEUR de ce lot :** candidate `migrations/12-trace-cas-exclusive-write-cutover.sql` (`a714bdc`, `35c8e61`) exige CAS RPC, RLS sur foyer/docs, cinq triggers 08–11, preuve CSV activée et UNIQUE avant d'enlever les droits SQL directs `INSERT,UPDATE,DELETE` sur `documents` en table/colonnes, ainsi que tout `UPDATE` direct sur `households` (nom inclus). Assertions des privilèges effectifs vérifiées dans la même transaction. Aucun JSON financier modifié. **NE PAS APPLIQUER** : les clients 5.36.x seront incompatibles sans coordination et 05–12 ne sont pas qualifiées sur vrai moteur.
+
+**Nouvelle suite native candidate** `tests/trace-cas-exclusive-cutover.integration.cjs` créée : préflight fail-closed (10/11 absentes, perte index CSV), droits directs refusés des deux membres, RPC CAS normales encore permises, ancien/sans accès refusés, settings et index inchangés, refus renommage direct, idempotence. Quatrième suite maintenant obligatoirement incluse au gate de release `scripts/check-trace-537-release-gates.cjs` avec tests négatifs de statut. `tests/trace-cas-exclusive-cutover-contract.test.cjs` contient 5 contrats structurels.
+
+**Tests réellement exécutés** : **71/71 V8** sur source GitHub et dépendances Node simulées (vrai adaptateur client, faux RPC, faux sous-processus, contrats SQL). Syntaxe V8 des deux harnais PGlite valide. **PAS** de `node --test` natif, pas de moteur PostgreSQL/PGlite local installé (DNS npm inaccessible), pas de test RLS/SQL réel, Realtime, Safari ou essai de restauration récente. Ne pas annoncer GO ni hausser le % sur ces seules preuves.
+
+**Suite critique** : obtenir PostgreSQL/PGlite LOCAL avec données entièrement fictives, exécuter migrations 05–12 avec les 4 suites d'intégration, corriger les erreurs SQL natives. Faire la transition versions 5.36.x→5.37 des clients sans casse puis continuer FX, Couple, cartes, premium UX/Safari, backup/rollback/Realtime. Maintenir **NO-GO / ~58 % ±10** jusqu'aux qualifications.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — RACE CONDITION SUR LES ÉCRITURES CLIENT CAS
 
 **Reprendre sur le HEAD actuel** de `trace-5.37.0-international-accounts-fx` (revérifier GitHub au début, ne pas réutiliser aveuglément l'ancien SHA). `main` connue stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Chaque commit `[skip ci]`. Aucune donnée Supabase réelle ni migration hébergée, aucune opération budgétaire client, aucun PR/merge/CI/workflow/déploiement, aucune mise à jour de main ni service worker de production.
