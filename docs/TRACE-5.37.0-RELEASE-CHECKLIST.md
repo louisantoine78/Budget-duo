@@ -1,3 +1,15 @@
+## 26 octobre 2026 — Unicité des justificatifs du débit différé
+
+- [x] `8b506189` : `sourceId` et `importId` uniques **dans tout le lot** des preuves différées, y compris plusieurs relevés carte ou courant.
+- [x] `572d32e8` : le comparateur courant signale l'import original et sa copie même si les lignes ont changé ; conserve le statut `duplicate_import`, ne certifie pas la revue.
+- [x] `5a064166` : le comparateur carte expire les approbations d'achat en présence d'un import/source réutilisé dans le lot.
+- [x] **147/147 scénarios V8** exécutés après les 3 commits : banque32, preuve achat27, assemblage27, modules réels16, bridge9, intégration locale7, budget12, préparation17 ; parsing du JS principal réussi. Modules Node simulés, non exécution native complète.
+- [ ] Tests natifs `node --test` sur checkout complet et quatre suites PostgreSQL/PGlite sur migrations 05–12 en données fictives. Migration 12 NON APPLIQUÉE.
+- [ ] Safari iPhone/PWA offline, parcours PDF/CSV/OCR, Couple/FX/différé/Patrimoine, UX premium, coexistence v5.36.x, sauvegarde/restauration et rollback.
+- [ ] **Production NO-GO** ; estimation prudente **58 % ±10** inchangée. Aucun merge, main, PR, CI/Actions, déploiement ou Supabase réel touché.
+
+---
+
 ## 26 octobre 2026 — Vérification des preuves de débit différé
 
 - [x] `f47c85a9` : carte et compte courant exigent des preuves avec `sourceId` et `importId` distincts ; `feeIds` explicite/valide, pas de désactivation du plafond d'un règlement partiel faute de métadonnées de frais.

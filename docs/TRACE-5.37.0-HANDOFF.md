@@ -1,3 +1,19 @@
+## 26 octobre 2026 — Unicité des sources dans les relevés carte et compte courant
+
+Branche exclusive : `trace-5.37.0-international-accounts-fx`. HEAD de code/tests contrôlé AVANT ce commit de docs : `5a06416690ff890fae7d5cd69fb03cbbbb80dd47` ; base avant ce lot : `afd56d4e7eac8b9c5b74534ef39e22d8084094fe`. Lire le HEAD réel de nouveau à la reprise. Stable `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`, jamais modifiée. Tous commits `[skip ci]`; zéro PR, fusion, CI/Actions, déploiement, migration SQL exécutée ou écriture Supabase réelle.
+
+**`8b506189`** : `trace-deferred-evidence-intake-1.0.0.js` exige maintenant que chaque `sourceId` et chaque `importId` soit unique à travers **l'intégralité** des preuves présentées, y compris à l'intérieur des relevés de carte et, séparément, à l'intérieur des relevés de compte courant. Le contrôle existant entre carte/courant est conservé. Deux suites V8 locales 27+16 scénarios avaient passé immédiatement après le correctif.
+
+**`572d32e8`** : le comparateur `trace-deferred-bank-review-1.0.0.js` détecte les documents réutilisant un `sourceId` ou `importId` avec des identifiants de relevé et de ligne différents. Il signale **les deux** documents dans `invalidDocuments` (`reason:duplicate_identity`) et renvoie `duplicate_import` pour la ligne ciblée, sans casser les anciens statuts de l'UI. Aucun événement financier généré, aucune approbation bancaire créée. Suite comparateur V8 32/32.
+
+**`5a064166`** : la preuve d'achat sur carte `trace-deferred-purchase-evidence-1.0.0.js` rejette toute réutilisation de source physique ou identité d'import dans l'ensemble des documents présentés, même quand la date, le `statementId` et le `lineId` ont été renommés. Une revue manuelle antérieure ne garde pas son état favorable après l'ajout du doublon. Suite achat V8 27/27.
+
+**Preuve sur le code GitHub après les trois correctifs : 147/147 tests V8** sur 8 suites : banque différée 32, achat carte 27, assembleur 27, assembleur avec moteurs réels 16, pont de relevé 9, intégration locale relevé 7, mois budgétaire différé 12, plan d'écriture différé 17. Parsing du JS principal `v5-app-5.37.0.js` PASS. Tests avec dépendances Node/fs/vm simulées dans V8 ; **ce n'est pas `node --test` natif sur clone ni un vrai PostgreSQL/PGlite ni Safari iPhone**. Les 207 V8 tests finance/UX du lot antérieur n'ont pas été rejoués dans ce lot et ne doivent pas être additionnés pour le qualifier.
+
+**Maintenir NO-GO**, avancement indicatif inchangé **~58 % ±10 points** ; aucune migration 05–12 exécutée en PostgreSQL isolé, migration 12 NON APPLIQUÉE. Prochaine priorité : checkout complet+PGlite local fictif pour 4 suites RLS/Auth/CAS/CSV et cutover 12 ; ensuite suite Node native, Safari/PWA iPhone, imports PDF/CSV/OCR et FX/Couple, patrimoine, UX premium, tests coexistence v5.36.x, sauvegarde/restauration/rollback, puis GO humain.
+
+---
+
 ## 26 octobre 2026 — Débit différé : preuve documentaire distincte et sens bancaire strict
 
 **Branche exclusive :** `trace-5.37.0-international-accounts-fx` ; HEAD code avant mise à jour documentaire `8def77b8d419a59ef26c8c492c5fffcec6c34f76`, base précédente `1729f45dc36ae3d977bd3e2b5c42ba1b9bd9d1c6`. Ne jamais supposer le HEAD de cette note toujours actuel : le relire via GitHub à la reprise. `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits `[skip ci]`, aucune PR/fusion/workflow/déploiement, aucune écriture Supabase réelle et aucune migration SQL.

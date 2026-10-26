@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — DOUBLONS D'IMPORT DANS TOUT LE LOT DE PREUVES
+
+HEAD vérifié des **trois commits de code/tests** de cette reprise : `5a06416690ff890fae7d5cd69fb03cbbbb80dd47` sur `trace-5.37.0-international-accounts-fx`; base de départ `afd56d4e7eac8b9c5b74534ef39e22d8084094fe`. Toujours résoudre le HEAD en début de prochaine conversation. Stable `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits `[skip ci]`, aucun workflow, merge/PR, déploiement, migration hébergée ou écriture Supabase réel.
+
+**Modifications :** `8b506189` bloque les `sourceId` et `importId` réutilisés dans le lot complet de documents carte et compte courant, y compris **au sein d'une même catégorie de relevés**. `572d32e8` refuse dans le comparateur courant les imports dupliqués malgré renommage des identifiants de document/ligne, invalide original et copie, préserve le statut public `duplicate_import`. `5a064166` refuse dans la preuve d'achat carte tout doublon de source ou d'import et expire une attestation antérieure en présence du doublon.
+
+**Régressions : 147/147 tests V8** après ces trois commits, huit suites (32+27+27+16+9+7+12+17), code GitHub actuel et modules métiers réels, mocks des APIs Node/fs/vm. Parsing app PASS. **Ce ne sont pas des tests Node CLI natifs sur un clone, PostgreSQL/PGlite, ni Safari physique**. Aucune écriture financière. Migrations SQL 05–12 encore non exécutées en PostgreSQL ; migration12 NON APPLIQUÉE. Production **NO-GO**, estimation **~58 % ±10**.
+
+**Prochaine étape impérative :** exécuter les 4 suites PostgreSQL/PGlite isolées sur faux foyer et les migrations candidates, sans jamais utiliser Supabase réel ; qualifier intégralité des tests natifs, iPhone Safari/PWA, PDF/CSV/OCR, retard/débit différé, Couple/FX/Patrimoine et rollback. Ne pas changer `main` ni engager de déploiement sans GO humain explicite.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — CONTRATS DE PREUVE DU DÉBIT DIFFÉRÉ
 
 À la passation, le dernier HEAD **code** connu est `8def77b8d419a59ef26c8c492c5fffcec6c34f76` sur `trace-5.37.0-international-accounts-fx` (base avant ce lot `1729f45dc36ae3d977bd3e2b5c42ba1b9bd9d1c6`). Résoudre le HEAD réel sur GitHub lors de la prochaine reprise. `main` connue stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun workflow CI/Actions, PR/fusion, déploiement, migration SQL, écriture Supabase réelle ; commits `[skip ci]` uniquement.
