@@ -1,3 +1,19 @@
+## 26 octobre 2026 — Porte de publication : intégrité AVANT et APRÈS tests
+
+Branche exclusive : `trace-5.37.0-international-accounts-fx`. **HEAD code/test contrôlé avant ce document :** `7e49a21c8eeb02bd963a43289c2eb29c0a504b37`. Base de ce lot `2aefb6b04787a68b7c0e9e9c76b0aa9f9de60746` (le HEAD a évolué dans d'autres reprises ; toujours re-vérifier). `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`, inchangée. Pas de PR, merge, Actions/CI, déploiement ni écriture Supabase. Commits `[skip ci]` uniquement.
+
+**`e45ffa93` : arrêt sûr AVANT toute exécution des scripts de QA.** `scripts/check-trace-537-release-gates.cjs` vérifie d'abord branche exacte, ancêtre mission, immutabilité des fichiers stables, `[skip ci]` dans l'historique de mission, configuration Vercel `deploymentEnabled:false`, fichiers suivis et non suivis ; si l'un échoue, aucun script Node candidat, preview ni PostgreSQL/PGlite n'est exécuté. Tests de régression dédiés.
+
+**`66b08851` : protection complète des dépendances de la version stable 5.36.5.** `PROTECTED` contient 51 pathspecs : les 41 dépendances locales repérées dans les balises `<script src>`/`<link href>` de `index.html`, les ressources PWA, `app.js`, `cloud.js`, `config.js`, `supabase-schema.sql`, `assets/`, `.github` et autres points d'entrée. Comparaison GitHub depuis la base mission : aucun de ces fichiers protégés modifié sur la branche candidate. Deux scénarios ajoutés vérifient la couverture des fichiers stables réellement chargés.
+
+**`7e49a21c` : revalidation APRÈS les tests.** Le garde en lecture seule mémorise le SHA complet `git rev-parse HEAD`, impose un SHA valide, puis recontrôle exactement le même HEAD, la même branche et `git status --porcelain` sans nouvelle modification. Changement de branche/commit ou génération de fichiers candidats : **NO-GO**, même avec tous les tests techniques verts. Un `node_modules/` local non suivi reste autorisé à fournir PGlite, sans devenir une preuve SQL. Cinq nouveaux scénarios.
+
+**Vérifications effectivement exécutées : 35/35 tests V8 du contrôleur de publication**, avec les vrais `scripts/check-trace-537-release-gates.cjs` et `tests/trace-537-release-gates.test.cjs` issus du dépôt, et un processus Git/Node **simulé**. Pas de clone complet Node ni d'exécution des quatre suites PostgreSQL, pas de Safari iPhone. Node v22.16.0 présent dans l'environnement de travail, mais PGlite et les exécutables PG nécessaires non disponibles. Le précédent lot 147/147 V8 débit différé n'a pas été reroulé ici ; le présent changement ne touche pas au moteur financier.
+
+**Production NO-GO, progrès estimé ~58 % ±10 points**. Blocages inchangés : checkout local isolé complet et PGlite 0.4.5 pour quatre suites PG sur migrations 05–12, distinction explicite findings RLS/CAS historiques vs garde-fous candidats, QA Node complète, Safari iPhone/PWA offline, FX/Couple, imports PDF/CSV/OCR, expérience premium, sauvegarde/restauration, coexistence stable 5.36.5. Ne pas appliquer la migration 12 à Supabase réel.
+
+---
+
 ## 26 octobre 2026 — Deux verrous de qualification : origine du candidat et fraîcheur des preuves
 
 **HEAD code/tests vérifié avant cet ajout** : `6298b3ae0dcc0ecb902e4399b600225d97767cf7`. Branche exclusive `trace-5.37.0-international-accounts-fx`, point de départ de ce lot `5b814d28b838d3b837d5329b7ee642db2d4aee86`. Stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` toujours intouchée. **[skip ci]** sur chaque commit ; pas de PR, fusion, déploiement, Actions, migration SQL ou écriture Supabase réelle.

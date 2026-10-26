@@ -1,3 +1,18 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — GATE DE RELEASE IMMUTABLE
+
+**HEAD code/test vérifié :** `7e49a21c8eeb02bd963a43289c2eb29c0a504b37`, **branche autorisée uniquement** `trace-5.37.0-international-accounts-fx`. Base de ce lot `2aefb6b04787a68b7c0e9e9c76b0aa9f9de60746`. Résoudre à nouveau le vrai SHA à chaque nouvelle conversation, notamment en cas de travaux parallèles. `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+
+Trois commits `[skip ci]` sans PR, merge, CI, déploiement ni Supabase réel :
+- `e45ffa93` : **fail-fast** avant l'exécution des tests si le code candidat n'est pas digne de confiance (branche, ancêtre, historique `[skip ci]`, fichiers stables, Vercel, propreté Git).
+- `66b08851` : `PROTECTED` élargi à **51 pathspecs**, couvrant les **41 scripts/styles/ressources locales du `index.html` stable 5.36.5**, autres points d'entrée, schéma/ressources et workflows. La comparaison des commits mission n'a trouvé aucune modification de ces ressources stables.
+- `7e49a21c` : mémorise SHA `HEAD` avant les tests, puis compare SHA, branche et état Git final : une mutation invalide la QA.
+
+**35/35 tests V8 exécutés**, y compris les nouveaux échecs d'intégrité avant/après les tests, sur fichiers du dépôt avec commandes Git/Node simulées. Aucune qualification PostgreSQL/PGlite, Node natif sur checkout complet, ou Safari physique. Aucun changement du moteur financier dans ce lot. Les 147 tests V8 de débit différé proviennent d'un lot précédent et n'ont pas été reroulés ici.
+
+**Blocages :** obtenir un environnement PGlite local fictif pour les quatre suites SQL des migrations 05–12 ; aucun PGlite installé dans ce runtime. Distinction des findings SQL RLS/CAS historiques et protections candidates obligatoire. Après validation des SQL : vraie suite Node, Safari iPhone/PWA, imports, FX/Couple, parcours premium et rollback. Migration 12 **NON APPLIQUÉE** ; production **NO-GO**, progression ~58 % ±10. Ne toucher ni à `main`, ni aux données Supabase réelles.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — QUALIFICATION EXACTE DU HEAD ET PROTECTION DE LA BRANCHE
 
 **Dernier HEAD code/test vérifié : `6298b3ae0dcc0ecb902e4399b600225d97767cf7`** sur `trace-5.37.0-international-accounts-fx`. Résoudre à nouveau le HEAD à toute reprise. Base au début de ce lot : `5b814d28b838d3b837d5329b7ee642db2d4aee86`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Pas de PR, merge, workflow CI/Actions, déploiement, modification de production ni vraie base SQL ; commits `[skip ci]` uniquement.

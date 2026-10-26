@@ -1,3 +1,15 @@
+## 26 octobre 2026 — Intégrité reproductible du candidat
+
+- [x] `e45ffa93` : toutes les vérifications de provenance et d'état Git/Vercel doivent passer **AVANT** l'exécution de scripts Node, preview ou PostgreSQL.
+- [x] `66b08851` : comparaison des **51 pathspecs protégés**, comprenant l'ensemble des dépendances locales JS/CSS/manifest de `index.html` stable 5.36.5, schéma et assets ; aucun fichier stable protégé changé depuis la base mission GitHub.
+- [x] `7e49a21c` : SHA de HEAD, branche et état du checkout revérifiés **APRÈS** les suites ; mutation pendant QA = résultat bloquant.
+- [x] **35/35 scénarios V8** du garde de release, processus Git/Node simulés ; pas de Node natif sur clone ni de PostgreSQL/PGlite.
+- [ ] Checkout complet **isolé** et PGlite local 0.4.5 : quatre suites PostgreSQL migrations 05–12, y compris écart RLS/CAS historique et coupure 12 ; migration 12 **NON APPLIQUÉE**.
+- [ ] Node natif complet, Safari iPhone/PWA offline, PDF/CSV/OCR, FX/Couple/cartes/différé/Patrimoine, UX premium, sauvegarde/restauration, cohabitation v5.36.x.
+- [ ] Production **NO-GO**, ~58 % ±10 conservateur. `main`, Supabase réel, CI/Actions, PR/merge et déploiements intacts.
+
+---
+
 ## 26 octobre 2026 — Authenticité du candidat et non-péremption des rapports
 
 - [x] `9e620688` : vérifications `git merge-base` depuis la base mission, `git diff --quiet` sur fichiers de production et workflows, `[skip ci]` sur tout l'historique de la mission, `vercel.json` interdisant le déploiement de la branche internationale.
