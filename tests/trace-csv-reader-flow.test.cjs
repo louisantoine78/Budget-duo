@@ -311,3 +311,30 @@ test('overlong CSV bank row is retained with explicit incomplete-evidence flag',
  assert.equal(s.evidenceWrites[0].rawTruncated,true);
  assert.equal(s.writes.length,0);
 });
+
+test('same 650-character visible excerpt with a different hidden tail is a CSV source collision',async()=>{
+ const prefix='ABCDEFGHIJ'.repeat(80);
+ const make=tail=>'Date,Description,Montant\n20/10/2026,'+prefix+tail+',??\n';
+ const first=scenario({content:make('AAA')});first.preview();
+ first.node('#csvInvalidAcknowledged').checked=true;await first.commit();
+ assert.equal(first.evidenceWrites.length,1);
+ assert.equal(first.evidenceWrites[0].rawTruncated,true);
+ const next=scenario({content:make('BBB'),importRows:first.state.smartImports});
+ next.preview();
+ assert.match(next.node('#csvPreviewResult').innerHTML,/Import suspendu/);
+ assert.equal(next.writes.length,0);
+ assert.equal(next.evidenceWrites.length,0);
+ assert.equal(first.evidenceWrites[0].rawText,
+   first.state.smartImports[0].rawText);
+});
+test('exact long CSV source still imports idempotently with full-content fingerprint',async()=>{
+ const huge='G'.repeat(750);
+ const content='Date,Description,Montant\n20/10/2026,'+huge+',??\n';
+ const first=scenario({content});first.preview();
+ first.node('#csvInvalidAcknowledged').checked=true;await first.commit();
+ const second=scenario({content,importRows:first.state.smartImports});
+ second.preview();second.node('#csvInvalidAcknowledged').checked=true;await second.commit();
+ assert.equal(second.evidenceWrites.length,0);
+ assert.equal(second.writes.length,0);
+ assert.match(first.evidenceWrites[0].rawFingerprint,/^[0-9a-f]{16}$/);
+});

@@ -120,3 +120,14 @@ test('changing truncation evidence after opening review blocks closure',async()=
  assert.equal(s.saves.length,0);
  assert.match(s.el('#csvReviewError').textContent,/a changé/);
 });
+
+test('full-content evidence fingerprint changed while sheet open blocks review',async()=>{
+ const s=scenario({items:[{id:'hashed',kind:'csv_unparsed',status:'pending_review',
+  owner:'la',accountId:'la-bank',sourceFileName:'octobre.csv',sourceIndex:7,
+  rawText:'first 650 chars',rawTruncated:true,rawFingerprint:'0123456789abcdef'}]});
+ s.renderCsvUnparsedReviewQueue();s.buttons.get('hashed').onclick();
+ s.state.smartImports[0].rawFingerprint='fedcba9876543210';
+ s.el('#csvReviewChecked').checked=true;await s.el('#csvReviewConfirm').onclick();
+ assert.equal(s.saves.length,0);
+ assert.match(s.el('#csvReviewError').textContent,/a changé/);
+});

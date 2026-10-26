@@ -2852,6 +2852,16 @@ async function csvEnsurePrivateAuditReady(){
 // Invalid CSV bank lines are import evidence ONLY: no transaction, balance,
 // budget, or calendar-day certification. A stable source ID makes retries
 // CAS-idempotent across devices without silently merging different evidence.
+// Non-cryptographic FNV-1a 64 bit: accident/collision detection on the full
+// raw CSV line. NOT a signature, authentication, or banking proof.
+function csvRawEvidenceFingerprint(raw){
+ let h=0xcbf29ce484222325n;
+ for(let i=0;i<raw.length;i++){
+  h^=BigInt(raw.charCodeAt(i));
+  h=BigInt.asUintN(64,h*0x100000001b3n);
+ }
+ return h.toString(16).padStart(16,'0');
+}
 function csvUnparsedRecord(accountId,sourceName,index,cells,owner){
  const label=String(sourceName||''),account=String(accountId||'');
  if(!account||!label||!Number.isSafeInteger(index)||index<2||!Array.isArray(cells))
@@ -2865,6 +2875,7 @@ function csvUnparsedRecord(accountId,sourceName,index,cells,owner){
  return{id,kind:'csv_unparsed',status:'pending_review',source:'csv',
   owner,accountId:account,sourceFileName:label,sourceIndex:index,
   rawText:raw.slice(0,650),rawTruncated:raw.length>650,
+  rawFingerprint:csvRawEvidenceFingerprint(raw),
   createdAt:new Date().toISOString()};
 }
 function csvConflictingUnparsedEvidence(row,imports){
@@ -2883,7 +2894,9 @@ function csvUnparsedSourceConflict(item,imports,transactions){
    prior.sourceFileName!==item.sourceFileName||
    Number(prior.sourceIndex)!==item.sourceIndex||
    prior.rawText!==item.rawText||
-   Boolean(prior.rawTruncated)!==Boolean(item.rawTruncated)));
+   Boolean(prior.rawTruncated)!==Boolean(item.rawTruncated)||
+   ((prior.rawTruncated||item.rawTruncated)&&
+    String(prior.rawFingerprint||'')!==String(item.rawFingerprint||''))));
 }
 
 // Read-only review of a statement row against bank movements already in TRACE.
@@ -3915,7 +3928,7 @@ function openCsvUnparsedReview(id){
   x.status==='pending_review'&&x.owner===me&&visibleBankAccounts(me).some(a=>a.id===x.accountId));
  if(!d)return;
  const reviewedSnapshot=JSON.stringify([d.id,d.status,d.owner,d.accountId,
-  d.sourceFileName,d.sourceIndex,d.rawText,Boolean(d.rawTruncated)]);
+  d.sourceFileName,d.sourceIndex,d.rawText,Boolean(d.rawTruncated),d.rawFingerprint||'']);
  openSheet('Ligne CSV à contrôler',
   '<p class="trace-intl-help">Cette ligne du relevé n’a pas pu être interprétée. Vérifie le CSV original et, si nécessaire, ajoute une transaction séparément depuis TRACE. La revue ne crée ni dépense, ni revenu.</p>'+
   '<p><b>'+esc(d.sourceFileName)+'</b> · ligne '+Number(d.sourceIndex)+
@@ -3935,7 +3948,7 @@ function openCsvUnparsedReview(id){
   if(!fresh||fresh.status!=='pending_review'||fresh.owner!==me||
      !visibleBankAccounts(me).some(a=>a.id===fresh.accountId)||
      JSON.stringify([fresh.id,fresh.status,fresh.owner,fresh.accountId,
-      fresh.sourceFileName,fresh.sourceIndex,fresh.rawText,Boolean(fresh.rawTruncated)])!==reviewedSnapshot){
+      fresh.sourceFileName,fresh.sourceIndex,fresh.rawText,Boolean(fresh.rawTruncated),fresh.rawFingerprint||''])!==reviewedSnapshot){
    $('#csvReviewError').textContent='Cette ligne a changé. Rouvre la liste pour la contrôler.';return;
   }
   const btn=$('#csvReviewConfirm');btn.disabled=true;
@@ -3943,7 +3956,7 @@ function openCsvUnparsedReview(id){
    await csvEnsurePrivateAuditReady();
    const current=state.smartImports.find(x=>x.id===d.id);
    if(!current||JSON.stringify([current.id,current.status,current.owner,current.accountId,
-    current.sourceFileName,current.sourceIndex,current.rawText,Boolean(current.rawTruncated)])!==reviewedSnapshot)
+    current.sourceFileName,current.sourceIndex,current.rawText,Boolean(current.rawTruncated),current.rawFingerprint||''])!==reviewedSnapshot)
     throw Error('Cette preuve a changé pendant la vérification. Rouvre-la.');
    const next={...current,status:'reviewed',reviewedBy:me,reviewedAt:new Date().toISOString()};
    await saveDocument('imports',next);
