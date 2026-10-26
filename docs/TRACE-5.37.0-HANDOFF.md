@@ -1,3 +1,24 @@
+## 25 octobre 2026 — migration candidate 11, séparation des preuves CSV entre titulaires
+
+**HEAD de code de ce lot :** `ce0fae9030c280a7d5f620b7aa2ee99c171a6b43` avant commit documentation. Sur branche internationale, commits `[skip ci]`, aucune intervention sur `main`.
+
+**Motif :** `imports.csv_unparsed` contient des extraits de mouvements bancaires non interprétés, persistants dans le foyer. L'UI 5.37 empêche les autres membres de voir leurs listes, mais elle ne garantit aucune confidentialité réseau. Le modèle `documents` d'origine partage ses SELECT au foyer et les RPC CAS 09 `SECURITY DEFINER` n'imposaient aucune validation spécifique sur `imports`. L'audit a identifié un risque de lecture et de modification par le partenaire.
+
+**Implémentation candidate NON APPLIQUÉE :**
+- `migrations/11-trace-csv-unparsed-owner-privacy.sql` créé (prérequiert 05–10, pas de reset) avec politique restrictive SELECT propriétaire spécifique à `imports.kind='csv_unparsed'` ; vieux `smart_draft` et opérations partagées restent inchangés. Code de politique aligné sur les principes Supabase `TO authenticated`, `auth.uid()` et sélection membre foyer.
+- Trigger `trace_guard_csv_unparsed_evidence` vérifiant JWT `auth.uid()`, propriétaire du compte, données source et transitions de revue, y compris pour RPC `SECURITY DEFINER` et écritures directes legacy, avant INSERT/UPDATE/DELETE. Un membre ne peut créer ou modifier la preuve bancaire d'un autre, changer `owner` / `accountId` / `rawText` / `sourceFileName`, ni effacer physiquement la preuve via une session. Conservation du seul changement de statut `pending_review → reviewed`, avec `reviewedBy` du membre. Source hors budget et hors transaction.
+- `tests/trace-cas-writes.integration.cjs` inclut cinq nouvelles vérifications PGlite fictives, encore **non exécutées**, avec deux utilisateurs d'un foyer, preuve privée, smart_draft partagé, tentatives directes et via RPC, revue/DELETE et migration 11 réappliquée. Correctif d'argument JSONB dans la fixture.
+- Limite `CSV_UNPARSED_REVIEW_LIMIT=100` plus message refusant les fichiers avec plus de 100 lignes illisibles, sans écrire ni trancher sur les 1000 lignes CSV interprétées ; donne priorité à la correction du mapping plutôt qu'à des centaines de RPC.
+- Nouveau `tests/trace-csv-evidence-server-contract.test.cjs` : six assertions **statiques** non SQL.
+
+**Résultat : `77/77` scénarios réussis sous V8 uniquement** (18/6/7/5/24/6/5 + 6 tests statiques SQL). Aucun PGlite/PostgreSQL natif, aucun serveur Supabase, auth JWT, RLS, Realtime, Safari, test Node CLI complet, backup ou restauration. Le fichier migration candidat n'a pas été généré par Supabase CLI (outil/checkout absent) ; le contrôler soigneusement avant toute application.
+
+**Risques ouverts :** SELECT RLS propriétaire non validé, comportement sous `SECURITY DEFINER`, risques de Realtime `REPLICA IDENTITY FULL`, autres vues/backups, rétention/effacement et restauration admin (trigger refuse les écritures sans `auth.uid()`), sémantique collaborateur vs confidentialité des membres, synchronisation entre deux clients, limites/performance au-delà de 100 erreurs, SW preview à générer officiellement, contrôle PDF et UX iPhone. La migration n'implique aucune protection serveur avant application officielle et tests réels.
+
+**Prochaine priorité :** obtenir un checkout local complet avec PGlite et la suite native + test deux utilisateurs, puis corriger tout échec sur base fictive avant de discuter un déploiement. En parallèle Couple/FX, imports premium, UX mobile. Global estimé **58 %**, production **NO-GO**.
+
+---
+
 ## 25 octobre 2026 — conservation et clôture humaine des lignes CSV illisibles
 
 **HEAD technique avant mise à jour :** `bdb16d12350ade57c9ccebf50a220bcf913c20e9`. Branche de travail unique, pas de changement `main`.

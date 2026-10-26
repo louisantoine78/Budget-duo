@@ -1,3 +1,16 @@
+## 25 octobre 2026 — propriétaire des preuves CSV et limite des imports illisibles
+
+- [x] Commits `27c521e0a5d0fef59949cdde926c85349bcc69c9`, `47dab520cd78f5259f75f815d0b5a479c4281eaf` : migration `migrations/11-trace-csv-unparsed-owner-privacy.sql` proposée, **NON APPLIQUÉE** ; RLS restrictive SELECT membre propriétaire sur `imports.csv_unparsed` ; trigger de protection des écritures directes/CAS, vérifiant membre et compte, empêchant modification de l'extrait et suppression des preuves, seule clôture explicitement revue autorisée.
+- [x] `d5626c77fe2f9d9ea01e2057338c7acebec411bc`, `86c2632a374452603e4d23a466f40f5244b64122` : 5 scénarios PostgreSQL fictifs ajoutés à l'intégration existante et fixture JSONB corrigée. **Tests écrits, PAS exécutés sur PostgreSQL.**
+- [x] `9a97a700f1291627b48a1fd7428f2a09e01938c7` : refuse les fichiers avec plus de 100 lignes CSV illisibles avec raison/action explicite, pas d'écriture partielle. Test ajouté.
+- [x] `ce0fae9030c280a7d5f620b7aa2ee99c171a6b43` : 6 tests de contrat SQL statique ; qualification `77/77` sous V8 simulé (71 tests client + 6 statiques SQL), faux services Node/DOM/RPC, aucun PG réel.
+- [ ] **BLOQUANT :** migrer fictivement 05–11 sur PostgreSQL/PGlite, exécuter `tests/trace-cas-writes.integration.cjs`, RLS pour deux membres et deux foyers, direct table grants, RPC `SECURITY DEFINER`, écritures simultanées, délégation de suppression/effacement, et rollback. Ne pas présenter cette sécurité comme appliquée en production.
+- [ ] Vérifier Supabase Realtime sur `documents` (`replica identity full`) et voies indirectes de lecture (vues/exports/backups) ; clarifier rétention des preuves bancaires et besoin d'effacement côté utilisateur, restauration admin sous trigger strict.
+- [ ] Tests vrais navigateurs, lots de 100/101 lignes et 1000 valides, Safari iPhone, SW labo via script constructeur officiel `build-trace-preview-pwa.mjs --check`, PDF mensuel, Couple/FX, patrimoine, débit différé, sauvegarde avant GO.
+- [ ] **NO-GO production ; état global qualitatif `58 % ±10`.** Main/5.36.5 intacts. Aucun déploiement ni changement Supabase réel.
+
+---
+
 ## 25 octobre 2026 — suivi persistant des lignes CSV non interprétées
 
 - [x] `b13297ce7baf5926c2c0183a54f56c7cc0108ac9` : écrit des **preuves non financières** après consentement dans `imports` (`kind=csv_unparsed`, `status=pending_review`, source CSV, banque, titulaire, index, texte borné). Sans transaction, montant CAD, dépense, revenu ni journée certifiée. Peut conserver un CSV entièrement illisible. Identifiant stable de source, collisions bloquées.
