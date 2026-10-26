@@ -403,6 +403,40 @@ async function run(){
    assert.equal(await probe(),true);
    assert.equal((await readDoc('imports','csv_unparsed_own')).data.status,'reviewed');
   });
+  await check('CSV audit evidence remains private across two separate fictitious households',async()=>{
+   const other=(await acting(3,tx=>tx.query(
+    "select * from public.create_household('Other fictional foyer','Third')"))).rows[0];
+   const otherId=other.household_id;
+   const checking={id:'other-bank',owner:'la',type:'checking',country:'FR',currency:'EUR'};
+   await acting(3,tx=>tx.query(
+    'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+    [otherId,'accounts',checking.id,JSON.stringify(checking),null]));
+   const line={id:'csv_unparsed_other',kind:'csv_unparsed',status:'pending_review',
+    owner:'la',accountId:'other-bank',source:'csv',sourceFileName:'fictional.csv',
+    sourceIndex:2,rawText:'Other fictitious EUR movement',createdAt:'2026-10-25T12:00:00Z'};
+   await acting(3,tx=>tx.query(
+    'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+    [otherId,'imports',line.id,JSON.stringify(line),null]));
+   const query='select data from public.documents where household_id=$1 and collection=$2 and item_id=$3';
+   const own=(await acting(3,tx=>tx.query(query,[otherId,'imports',line.id]))).rows;
+   assert.equal(own.length,1);
+   for(const n of [1,2]){
+    const foreign=(await acting(n,tx=>tx.query(query,[otherId,'imports',line.id]))).rows;
+    assert.equal(foreign.length,0,'a different household cannot see CSV source');
+    await assert.rejects(acting(n,tx=>tx.query(
+     'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+     [otherId,'imports','cross-foyer',{...line,id:'cross-foyer'},null])),
+     /TRACE_WRITE_FORBIDDEN/);
+   }
+   // A controlled ADMINISTRATIVE household deletion cascades through the
+   // evidence row. The user-facing DELETE RPC still refuses direct deletes.
+   // This is an isolated third household with no real banking data.
+   const admin=(await db.query('select current_user as actor, session_user as login')).rows[0];
+   assert.equal(admin.actor,'postgres');assert.equal(admin.login,'postgres');
+   await db.query('delete from public.households where id=$1',[otherId]);
+   const remaining=(await db.query(query,[otherId,'imports',line.id])).rows;
+   assert.equal(remaining.length,0);
+  });
   await check('CSV privacy migration can be reapplied without rewriting evidence',async()=>{
    const before=(await readDoc('imports','csv_unparsed_own')).data;
    await db.exec(await fs.readFile(path.join(root,
