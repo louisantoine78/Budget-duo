@@ -105,3 +105,32 @@ test('new primary selection resets the ephemeral view',()=>{
  assert.equal(h.nodes.balance.textContent,'900.00 EUR');
  assert.equal(h.events.primaryChanges.length,0);
 });
+
+test('archiving the last checking account clears stale cash and restores the status badge',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();h.click('fr');
+ assert.equal(h.nodes.balance.textContent,'900.00 EUR');
+ assert.equal(h.nodes.badge.textContent,'Consultation · compte secondaire');
+ h.args.accounts=h.args.accounts.map(a=>a.type==='checking'?{...a,archived:true}:a);
+ h.render();
+ assert.equal(h.host.innerHTML,'');
+ assert.equal(h.nodes.balance.textContent,'À configurer');
+ assert.equal(h.nodes.checking.textContent,'—');
+ assert.equal(h.nodes.card.textContent,'—');
+ assert.equal(h.nodes.warning.hidden,true);
+ assert.equal(h.nodes.badge.textContent,'Rapproché');
+ assert.equal(h.events.primaryChanges.length,0);
+ assert.equal(h.events.writes,0);
+});
+test('account removal clears a previous positive-card warning without reusing old cash',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:20}});
+ h.render();
+ assert.equal(h.nodes.warning.hidden,false);
+ h.args.accounts=h.args.accounts.filter(a=>a.type==='card');
+ h.render();
+ assert.equal(h.nodes.warning.hidden,true);
+ assert.equal(h.nodes.warning.textContent,'');
+ assert.equal(h.nodes.balance.textContent,'À configurer');
+ assert.equal(h.nodes.checking.textContent,'—');
+ assert.equal(h.nodes.card.textContent,'—');
+});
