@@ -1,3 +1,5 @@
+> **Complément vérifié — 25 octobre 2026 :** commit `c8e27041a6fd02e11ebc022607ead8bf064f469a` (`[skip ci]`) : le test de suppression refusée vérifie désormais également que la ligne `household_members` et la sauvegarde `trace_v5_backups` survivent à la transaction avortée. **12/12 tests de contrat/lexique exécutés sous V8 avec `node:fs`, `node:path`, `node:assert` et `node:test` simulés, sur sources GitHub actuelles ; aucune exécution PostgreSQL ni suite Node native.** Les tests d'effacement PG restent NON exécutés et représentent un NO-GO.
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — BLOCAGE D'EFFACEMENT DES FOYERS HISTORIQUES
 
 **HEAD à revérifier à la reprise** : ne jamais supposer le SHA de cet addendum. Branche exclusive `trace-5.37.0-international-accounts-fx`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, commits `[skip ci]`. Interdits inchangés : PR, merge, CI, déploiement, migration réelle, Supabase réel et tout reset.
