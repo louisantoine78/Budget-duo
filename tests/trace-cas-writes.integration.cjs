@@ -48,6 +48,7 @@ async function run(){
     id:'legacy-typeless-deferred',name:'Ancienne Mastercard',
     paymentMode:'deferred',owner:'la',currency:'EUR'}),uid(1)]);
   await db.exec(await fs.readFile(path.join(root,'migrations/10-trace-deferred-write-quarantine.sql'),'utf8'));
+  await db.exec(await fs.readFile(path.join(root,'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
   const rpcSave=(n,collection,id,data,rev)=>acting(n,tx=>tx.query(
    'select public.trace_cas_save_document($1,$2,$3,$4,$5) as revision',
    [hid,collection,id,JSON.stringify(data),rev]));
@@ -284,6 +285,77 @@ async function run(){
    await acting(1,tx=>tx.query("update public.documents set data=data||'{\"memo\":\"legacy\"}'::jsonb, updated_by=$1 where household_id=$2 and collection='transactions' and item_id='shared'",[uid(1),hid]));
    assert.equal((await readDoc('transactions','shared')).revision,old+1);
    await assert.rejects(rpcSave(1,'transactions','shared',{id:'shared',amountCAD:1},old),/TRACE_WRITE_CONFLICT/);
+  });
+
+  await check('owner CSV evidence is private on authenticated SELECT but shared imports remain unchanged',async()=>{
+   const item={id:'csv_unparsed_own',kind:'csv_unparsed',
+    status:'pending_review',owner:'la',accountId:'la',
+    source:'csv',sourceFileName:'octobre.csv',sourceIndex:4,
+    rawText:'2026-10-20 | Achats | non lisible',createdAt:'2026-10-25T12:00:00Z'};
+   assert.equal((await rpcSave(1,'imports',item.id,item,null)).rows[0].revision,0);
+   const mine=await acting(1,tx=>tx.query(
+    "select item_id from public.documents where household_id=$1 and collection='imports' and item_id=$2",
+    [hid,item.id]));
+   const partnerView=await acting(2,tx=>tx.query(
+    "select item_id from public.documents where household_id=$1 and collection='imports' and item_id=$2",
+    [hid,item.id]));
+   assert.equal(mine.rows.length,1);
+   assert.equal(partnerView.rows.length,0);
+   assert.equal((await readDoc('imports',item.id)).data.rawText,item.rawText);
+   const shared={id:'old-shared-draft',kind:'smart_draft',status:'pending'};
+   await rpcSave(1,'imports',shared.id,shared,null);
+   const oldView=await acting(2,tx=>tx.query(
+    "select item_id from public.documents where household_id=$1 and collection='imports' and item_id=$2",
+    [hid,shared.id]));
+   assert.equal(oldView.rows.length,1);
+  });
+  await check('partner cannot forge owner or linked bank account in private CSV evidence',async()=>{
+   const forged={id:'forged-source',kind:'csv_unparsed',status:'pending_review',
+    owner:'la',accountId:'la',source:'csv',sourceFileName:'octobre.csv',
+    sourceIndex:5,rawText:'bank line',createdAt:'2026-10-25T12:00:00Z'};
+   await assert.rejects(rpcSave(2,'imports',forged.id,forged,null),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(2,'imports','forged-account',
+    {...forged,id:'forged-account',owner:'partner',accountId:'la'},null),
+    /TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(acting(2,tx=>tx.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'imports','direct-forged',{...forged,id:'direct-forged'},uid(2)])),
+    /TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   assert.equal(await readDoc('imports','forged-source'),undefined);
+  });
+  await check('private CSV original cannot be changed or reassigned after insert',async()=>{
+   const item=(await readDoc('imports','csv_unparsed_own')).data;
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,rawText:'different bank line'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,kind:'smart_draft'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,accountId:'partner',owner:'partner'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(2,'imports',item.id,
+    {...item,status:'reviewed',reviewedBy:'partner'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   assert.equal((await readDoc('imports',item.id)).revision,0);
+  });
+  await check('manual review is the only permitted state change; deletions blocked',async()=>{
+   const item=(await readDoc('imports','csv_unparsed_own')).data;
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,status:'reviewed',reviewedBy:'partner',
+      reviewedAt:'2026-10-25T13:00:00Z'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   const next={...item,status:'reviewed',reviewedBy:'la',
+    reviewedAt:'2026-10-25T13:00:00Z'};
+   assert.equal((await rpcSave(1,'imports',item.id,next,0)).rows[0].revision,1);
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,status:'pending_review'},1),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(acting(1,tx=>tx.query(
+    'delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'imports',item.id])),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcDelete(1,'imports',item.id,1),/TRACE_WRITE_FORBIDDEN/);
+   assert.equal((await readDoc('imports',item.id)).data.status,'reviewed');
+  });
+  await check('CSV privacy migration can be reapplied without rewriting evidence',async()=>{
+   const before=(await readDoc('imports','csv_unparsed_own')).data;
+   await db.exec(await fs.readFile(path.join(root,
+     'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
+   assert.deepEqual((await readDoc('imports','csv_unparsed_own')).data,before);
   });
   await check('reapplying migration leaves documents and revisions unchanged',async()=>{
    const before=(await db.query('select collection,item_id,data,revision from public.documents order by collection,item_id')).rows;
