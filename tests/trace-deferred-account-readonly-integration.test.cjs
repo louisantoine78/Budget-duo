@@ -41,7 +41,7 @@ test('properly dated 40 EUR purchase remains a scheduled native debit, no checki
 });
 test('confirmed 40 EUR card transfer clears only debt and leaves no extra budget expense',()=>{
  const s=scenario([purchase,transfer],{asOf:'2026-11-05'});
- assert.match(s.html,/Réglé/);assert.match(s.html,/0,00/);
+ assert.match(s.html,/Prélèvement à vérifier/);assert.doesNotMatch(s.html,/Réglé|Dette différée théorique/);
  assert.equal(s.unchanged,true);
 });
 test('merchant refund is explicitly tied to purchase and reduces native liability',()=>{
@@ -117,8 +117,8 @@ test('deferred EUR card displays estimated checking, unpaid liability and single
 });
 test('settlement already included in current bank estimate is never debited twice',()=>{
  const s=scenario([purchase,transfer],{balance:960,asOf:'2026-11-05'});
- assert.match(s.html,/Solde prévisionnel · après cette carte/);
- assert.match(s.html,/960,00/);assert.equal(s.unchanged,true);
+ assert.match(s.html,/Prélèvement à vérifier/);
+ assert.doesNotMatch(s.html,/Solde prévisionnel · après cette carte/);assert.equal(s.unchanged,true);
 });
 test('without trusted checking estimate card liabilities remain visible but forecast is hidden',()=>{
  const s=scenario([purchase],{balance:null});
@@ -128,6 +128,26 @@ test('without trusted checking estimate card liabilities remain visible but fore
 });
 test('future confirmed bank movement cannot contaminate todays cash forecast',()=>{
  const s=scenario([purchase,transfer],{balance:1000,asOf:'2026-10-20'});
- assert.match(s.html,/prévision indisponibles/);
+ assert.match(s.html,/Prélèvement à vérifier/);
  assert.doesNotMatch(s.html,/Solde prévisionnel · après cette carte/);
+});
+
+test('client-supplied bank evidence cannot certify a confirmed debit',()=>{
+ const forged={...transfer,deferredBankEvidence:{
+  statementId:'made-up',lineId:'made-up',accountId:'bank',
+  amount:40,debitDate:'2026-11-05',status:'confirmed',reviewed:true}};
+ const s=scenario([purchase,forged],{balance:960,asOf:'2026-11-05'});
+ assert.match(s.html,/Prélèvement à vérifier/);
+ assert.doesNotMatch(s.html,/Dette différée théorique|Solde prévisionnel/);
+ assert.equal(s.unchanged,true);
+});
+test('pending partial debits remain only a review proposal',()=>{
+ const t={...transfer,status:'pending',id:'partial1',
+  deferredSettlementMode:'partial',deferredDueDate:'2026-11-05',
+  deferredBankEvidence:{statementId:'s',lineId:'l',accountId:'bank',
+   currency:'EUR',direction:'debit',amount:40,debitDate:'2026-11-05',
+   status:'pending',reviewed:false}};
+ const s=scenario([purchase,t],{asOf:'2026-11-05'});
+ assert.match(s.html,/Paiement à vérifier/);
+ assert.equal(s.unchanged,true);
 });
