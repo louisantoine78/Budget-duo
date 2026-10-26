@@ -40,7 +40,7 @@
   // For an installment allocated ONLY to this purchase with no card fees,
   // even the sum of several debits cannot exceed the purchase's native cost.
   // Mixed allocations and refunds still require a complete ledger validation.
-  let exclusivePaidCents=0;
+  let exclusivePaidCents=0,fullBatchEvidenceComplete=true;
   const cents=v=>{
    if(typeof v!=='number'&&typeof v!=='string')return null;
    if(typeof v==='string'&&!/^\d{1,8}(?:\.\d{1,2})?$/.test(v))return null;
@@ -67,8 +67,20 @@
     const paid=cents(s.amount);
     if(paid===null||nativeCap===null||
        exclusivePaidCents+paid>nativeCap)error();
+    // Without the other charges/credits, a "full" payment must actually
+    // equal this purchase in native cents, on its declared due batch.
+    if(s.settlementMode==='full'&&
+       (paid!==nativeCap||s.scheduledDueDate!==plan.document.dueDate||
+        exclusivePaidCents!==0))
+     error();
     exclusivePaidCents+=paid;
    }
+   // For a full payment spanning purchases or fees, this single-purchase
+   // intake cannot attest the COMPLETE due batch. Require a later ledger-wide
+   // server check; never advertise it as locally fully reviewed.
+   if(s.settlementMode==='full'&&
+      (s.purchaseIds.length!==1||s.feeIds.length!==0))
+    fullBatchEvidenceComplete=false;
   }
   const card=purchase.review({plan,statements:cardStatements,
    selection:cardSelection,receipts:cardReceipts,otherClaims:purchaseClaims});
@@ -81,7 +93,11 @@
      checking.financialChanges!==0||checking.createdTransactions!==0)error();
   const settlementStatuses=checking.cases.map(c=>Object.freeze({
    settlementId:c.settlementId,status:c.status,
-   reviewToken:c.reviewToken||null
+   reviewToken:c.reviewToken||null,
+   scheduledDueDate:c.scheduledDueDate||null,
+   observedDebitDate:c.observedDebitDate||null,
+   bankDateDeviationDays:Number.isInteger(c.bankDateDeviationDays)?
+    c.bankDateDeviationDays:null
   }));
   const sourceBatchComplete=Array.isArray(checking.invalidDocuments)&&
    checking.invalidDocuments.length===0;
@@ -96,7 +112,8 @@
    settlementStatuses:Object.freeze(settlementStatuses),
    awaitingSettlement:settlements.length===0,
    localEvidenceReviewed:purchaseReviewed&&settlementReviewed&&
-    sourceBatchComplete,
+    sourceBatchComplete&&fullBatchEvidenceComplete,
+   fullBatchEvidenceComplete,
    checkingSourcesComplete:sourceBatchComplete,
    // This status is only a local review marker. Auth, bank, server CAS and
    // source uniqueness cannot be validated in this browser module.
