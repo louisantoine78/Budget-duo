@@ -1,3 +1,17 @@
+## Lot suivant — preuve FX et diagnostic bancaire utilisable
+
+- [x] Révision d'un virement : nouvelle devise native source ou reçue invalide l'empreinte d'import historique ; vrai virement CAD→CAD inchangé conserve la preuve, pas de deuxième revenu/dépense (`eaaccd8`, `164af90`).
+- [x] Un transfert confirmé vers le même compte ne produit plus de solde bancaire fictif ; mouvement malformé = solde à vérifier, virement réel CAD→EUR correctement valorisé (`d8828e1`, `b52a872`).
+- [x] Fiche bancaire premium : signalement en lecture seule des documents confirmés FX / banque / investissements sans preuves de devise ou montant, des transferts auto-référencés ; rapprochements et jour d'ouverture respectés ; aucun changement de données, style responsive (`2604cf1`, `557181e`, `175ec87`, `64c1883`).
+- [x] 6 nouveaux scénarios fake-DOM dans `tests/trace-international-account-details.test.cjs` (`55e56e5`, `21cd0eb`) ; 20/20 réussis sur cette suite. Au total **275 scénarios V8 réussis en lots** sur le périmètre financier, UI, CAS, legacy, contrats de sécurité/gates, avec modules Node/DOM/RPC simulés. Les deux harnais PG passent leur syntaxe JS V8, pas leur exécution SQL.
+- [ ] **BLOQUANT : PostgreSQL/PGlite natif isolé** (binaries et npm réseau absents du conteneur) ; migrations 05–12 et les 4 suites de qualification Auth/RLS/CAS/CSV/débit différé/restauration restent non exécutées.
+- [ ] Vérifier iPhone Safari réel, ergonomie de correction des preuves anciennes, interfaces premium, banque multi pays, montants historiques et projet de transition des clients 5.36.x avant toute activation de migration 12.
+- [ ] Publier uniquement après validation explicite et procédure de restauration. **Production NO-GO ; ~58% ±10 points.**
+
+Aucune modification `main`, ni Supabase réel, déploiement ou CI.
+
+---
+
 ## 25 octobre 2026 — toutes les jambes bancaires internationales doivent prouver leur devise
 
 - [x] Jambe de réception `toBankAmount` : montant étranger ou venant d'une autre devise sans `toBankCurrency` explicite devient **inconnu**, jamais arbitrairement EUR/CAD (`662a98a`).
