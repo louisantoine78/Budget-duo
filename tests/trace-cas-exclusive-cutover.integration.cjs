@@ -93,7 +93,7 @@ async function run(){
    assert.equal(x.can_delete,false);
    assert.equal(x.can_patch_data,false);
    assert.equal(x.can_patch_settings,false);
-   assert.equal(x.can_rename,true);
+   assert.equal(x.can_rename,false);
   });
   await check('both members cannot bypass CAS through legacy documents writes',async()=>{
    for(const n of [1,2]){
@@ -135,9 +135,10 @@ async function run(){
     primaryBankAccountByOwner:{la:'checking-partner'}},
     Number(before.settings_revision)+1),/TRACE_SETTINGS_FORBIDDEN/);
   });
-  await check('direct display-name edit may remain while partner account RLS is preserved',async()=>{
-   await asUser(1,tx=>tx.query('update public.households set name=$1 where id=$2',
-    ['Foyer fictif renommé',hid]));
+  await check('direct household rename is blocked while partner read RLS remains intact',async()=>{
+   await assert.rejects(asUser(1,tx=>tx.query(
+    'update public.households set name=$1 where id=$2',
+    ['Foyer fictif renommé',hid])),/permission denied/i);
    const rows=(await asUser(1,tx=>tx.query(
     "select item_id from public.documents where household_id=$1 and collection='accounts'",
     [hid]))).rows;
