@@ -1,3 +1,17 @@
+## 25 octobre 2026 — cascade administrative du foyer différé : correctif candidat, PAS qualifié PG
+
+**Branche** : `trace-5.37.0-international-accounts-fx`. **Commits [skip ci]** : `724ab694cc57becbbb3c443ef65bcd5e3cc6ac68` (migration 10), `4cb1c4a175eb94702a1a904eac52a596dee4603a`, `301e6757bf37404ff8d1e26b31dc16590b9f0d44`, `73a1de575de013889e2b2be75bbad9bccd5672bb` (test intégré), `d21a881d40ecfadbe46cd6f6013e776a81e1d3f3` (contrats statiques). Préserver intégralement main `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+
+**Correctif ciblé candidat :** `migrations/10-trace-deferred-write-quarantine.sql` conserve le refus des INSERT/UPDATE/DELETE individuels d'opérations à débit différé, mais n'interdit plus intentionnellement la cascade d'un foyer **si et seulement si** : `tg_op='DELETE'`, `auth.uid() IS NULL`, `current_user='postgres' AND session_user='postgres'`, et absence effective de la ligne `public.households` par `old.household_id` dans la transaction. Les vérifications d'existence du parent se font en `SECURITY DEFINER`, évitant de confondre absence du parent et invisibilité due à la RLS du client. Aucun RPC d'effacement utilisateur n'est ajouté. La candidate reste NON APPLIQUÉE.
+
+**Tests PostgreSQL préparés (NON EXÉCUTÉS) :** dans `tests/trace-cas-writes.integration.cjs`, foyer fictif indépendant utilisateur 4 : ancienne carte différée EUR et achat créés avant migration 10 ; compte courant et preuve CSV privée créés par RPC après 11. Le chemin attendu est maintenant : supprimer directement une carte différée (refus) ; supprimer le foyer depuis `authenticated` (permission denied) ; supprimer depuis session admin portant un JWT (refus) ; supprimer administrativement sans JWT (cascade entière) et vérifier `households`, `household_members`, `documents`, `trace_v5_backups` à zéro pour ce foyer. Tous ces résultats sont **des assertions écrites**, pas un comportement observé dans PostgreSQL.
+
+**Preuve de cette session :** `17/17` contrats statiques/lexicaux passés sous V8 avec modules `node:fs`, `node:path`, `node:assert`, `node:test` simulés et les vrais fichiers candidats ; syntaxe JS du test PGlite compilée sous V8. Aucun PostgreSQL/PGlite installé, DNS inaccessible depuis le conteneur ; pas de tests PG natifs, migration compilée sur PostgreSQL, navigateur ou Safari. Le contrat statique N'EST PAS une qualification SQL.
+
+**Gates toujours ouverts :** tester la visibilité du parent durant cascade FK sur un vrai moteur, chaque privilège, RLS / deux partenaires / deux foyers / JWT absent, suppression/rollback et données sauvegardées, Realtime ; construire ultérieurement une suppression légitime autorisée pour les membres sans affaiblir les protections. Aucun déploiement, workflow, PR, merge ni accès à Supabase réel. Débit différé **toujours en quarantaine**, production NO-GO, progression qualitative 58 % ±10 points.
+
+---
+
 > **Complément vérifié — 25 octobre 2026 :** commit `c8e27041a6fd02e11ebc022607ead8bf064f469a` (`[skip ci]`) : le test de suppression refusée vérifie désormais également que la ligne `household_members` et la sauvegarde `trace_v5_backups` survivent à la transaction avortée. **12/12 tests de contrat/lexique exécutés sous V8 avec `node:fs`, `node:path`, `node:assert` et `node:test` simulés, sur sources GitHub actuelles ; aucune exécution PostgreSQL ni suite Node native.** Les tests d'effacement PG restent NON exécutés et représentent un NO-GO.
 
 ## 25 octobre 2026 — reprise sécurisée : effacement foyer différé et intégrité CSV (non qualifié PG)
