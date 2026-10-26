@@ -1,3 +1,17 @@
+## 25 octobre 2026 — reprise sécurisée : effacement foyer différé et intégrité CSV (non qualifié PG)
+
+**Commits candidats [skip ci]** : `c195aeeb6ba5ec43200f1bfc4ea3812919ed1e47`, `666c86668e8ec31a65b9473f6e9ff832e419324e`, `333c2c98f2ee378f46fe53034ce5b1c565ef6d08`. Branche internationale seulement ; `main`, Supabase réel, CI/Actions, preview PWA, déploiement et migrations appliquées inchangés.
+
+**Audit et nouveaux tests dans `tests/trace-cas-writes.integration.cjs`** :
+- Ajout d'un **quatrième membre fictif** dans un foyer autonome. Deux documents historiques (carte EUR à débit différé + achat) sont créés AVANT l'application de la migration 10, à la manière d'une migration d'historique. La suppression **administrative** du foyer après migrations 10–11 est attendue en **échec `TRACE_DEFERRED_NOT_RELEASED`** avec foyer et deux documents conservés. Ce test caractérise un **blocage existant**, pas une validation de l'effacement ! La suppression directe par membre authentifié reste non autorisée par les privilèges du schéma de base. **GO impossible sans concevoir, autoriser puis qualifier le chemin d'effacement légitime**, aussi bien que la restauration / le rollback.
+- Ajout des rejets serveur attendus pour noms CSV >110 caractères, lignes >650 caractères, index non numériques ou hors 2–1001 ; contrôle d'immuabilité `rawFingerprint` (simple FNV-1a 64 bits non cryptographique) et `rawTruncated` même après création.
+- Correction immédiate de la fixture du quatrième utilisateur vers une requête SQL paramétrée (`uid(4)`) plutôt qu'une interpolation littérale de chaîne.
+- **Vérification EFFECTIVE** : compilation syntaxique du fichier d'intégration dans le moteur V8 de l'outil connecté, après le dernier commit. **NON EXÉCUTÉS** : PGlite/PostgreSQL SQL, RLS/JWT, CAS simultané, Realtime, restauration réelle, tests Node natifs sur checkout complet, navigateur/Safari iPhone. Aucun moteur PG disponible dans le conteneur, DNS GitHub indisponible. Ne pas inscrire ces nouveaux cas parmi les tests PG réussis.
+
+**Suites à exécuter sur checkout et moteur fictifs isolés** : `TRACE_PGLITE_MODULE=<module_local> node tests/trace-cas-writes.integration.cjs`, `node tests/trace-database.integration.cjs`, `node tests/trace-personal-settings-ownership.integration.cjs` ; tester séparément suppression autorisée, CAS, ancien canal d'écriture, deux membres, deux foyers, JWT et RLS ; convertir le test de reproduction `KNOWN NO-GO` en test d'effacement réussi **uniquement après correctif sûr et vérification native**. Garder 10/11 **candidates**, les écritures différées **en quarantaine** et la production **NO-GO**. Estimation globale inchangée **58 % ±10**.
+
+---
+
 ## 25 octobre 2026 — preuve CSV longue et intégrité multi-foyer (code candidat)
 
 Dernier HEAD **avant commit doc** `9ef4e4e37831bf235f6ffb45aa7408915551ec83`, branche exclusive `trace-5.37.0-international-accounts-fx`. `main` et 5.36.5 non touchés.
