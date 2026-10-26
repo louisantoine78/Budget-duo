@@ -27,6 +27,12 @@ async function run(){
   const h=(await acting(1,tx=>tx.query("select * from public.create_household('Fake','A')"))).rows[0];
   await acting(2,tx=>tx.query('select * from public.join_household($1,$2)',[h.invite_code,'B']));
   const hid=h.household_id;
+  // Fourth fictional user and separate household preserve a legacy deferred
+  // card through the candidate migrations to detect household-erasure deadlocks.
+  await db.exec("insert into auth.users(id) values ('${uid(4)}')");
+  const deferredHouse=(await acting(4,tx=>tx.query(
+   "select * from public.create_household('Archive fictive','D')"))).rows[0];
+  const deferredHouseId=deferredHouse.household_id;
   for(const file of ['05-trace-v5-foundation.sql','06-trace-import-day-states.sql',
     '07-trace-account-owner-write-guard.sql','08-trace-personal-settings-owner-guard.sql',
     '09-trace-cas-versioned-writes.sql'])
@@ -47,6 +53,16 @@ async function run(){
    [hid,'accounts','legacy-typeless-deferred',JSON.stringify({
     id:'legacy-typeless-deferred',name:'Ancienne Mastercard',
     paymentMode:'deferred',owner:'la',currency:'EUR'}),uid(1)]);
+  await db.query(
+   'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [deferredHouseId,'accounts','historical-deferred',JSON.stringify({
+    id:'historical-deferred',owner:'la',type:'card',paymentMode:'deferred',
+    currency:'EUR',country:'FR'}),uid(4)]);
+  await db.query(
+   'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [deferredHouseId,'transactions','historical-purchase',JSON.stringify({
+    id:'historical-purchase',accountId:'historical-deferred',
+    deferredKind:'purchase',status:'pending',bankAmount:19.95}),uid(4)]);
   await db.exec(await fs.readFile(path.join(root,'migrations/10-trace-deferred-write-quarantine.sql'),'utf8'));
   await db.exec(await fs.readFile(path.join(root,'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
   const rpcSave=(n,collection,id,data,rev)=>acting(n,tx=>tx.query(
@@ -436,6 +452,25 @@ async function run(){
    await db.query('delete from public.households where id=$1',[otherId]);
    const remaining=(await db.query(query,[otherId,'imports',line.id])).rows;
    assert.equal(remaining.length,0);
+  });
+  await check('KNOWN NO-GO: historic deferred documents block administrator household erasure',async()=>{
+   // This characterizes an unresolved SQL blocker, NOT successful erasure.
+   const count=async()=> (await db.query(
+    'select count(*)::integer as n from public.documents where household_id=$1',
+    [deferredHouseId])).rows[0].n;
+   assert.equal(await count(),2);
+   await assert.rejects(
+    db.query('delete from public.households where id=$1',[deferredHouseId]),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal(await count(),2,'failed cascade must not partially erase bank history');
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.households where id=$1',
+    [deferredHouseId])).rows[0].n,1);
+  });
+  await check('KNOWN NO-GO: member has no authorized self-service household erasure',async()=>{
+   await assert.rejects(acting(4,tx=>tx.query(
+    'delete from public.households where id=$1',[deferredHouseId])),
+    /permission denied/i);
   });
   await check('CSV privacy migration can be reapplied without rewriting evidence',async()=>{
    const before=(await readDoc('imports','csv_unparsed_own')).data;
