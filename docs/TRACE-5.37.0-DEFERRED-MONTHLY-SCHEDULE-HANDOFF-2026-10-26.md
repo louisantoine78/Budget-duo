@@ -67,3 +67,33 @@ Commits de cette reprise sur la branche exclusivement (tous `[skip ci]`) :
 **N'ont PAS été exécutés :** tests natifs Node sur un checkout intégral, migrations 05–12 sous PostgreSQL/PGlite, tests navigateur, Safari, hébergement Supabase, concurrence à deux sessions. Le conteneur ne dispose pas d'un checkout Git accessible (DNS GitHub inaccessible) ni de PGlite, mais le connecteur GitHub permet lectures/commits de la branche.
 
 Aucun changement de `main`, aucune PR, fusion, action GitHub déclenchée manuellement, déploiement, migration appliquée ou lecture/écriture Supabase réelle. **Production NO-GO.** Avancement indicatif global inchangé : **environ 58 % ±10 points**, à recalibrer uniquement après qualifications d'intégration effectives.
+
+
+## 26 octobre 2026 — règles prospectives datées et simulation dans les réglages
+
+**Code HEAD de ce lot :** `b2ae4ccd401f306241de2c52faa5b39fac2e606a`. Base documentaire précédente : `3470934b77be89a5b5a7c3d8b65d2d500dbda94f`.
+
+### Implémenté sur la branche candidate, sans sauvegarde bancaire
+
+- Le moteur pur `TraceDeferredDebit.proposeScheduleRevision` prépare une version de calendrier datée pour **une carte française différée active en EUR liée au compte courant EUR du même titulaire**. Il exige une date de prise d'effet future, interdit une révision dans le cycle de relevé actuellement ouvert lorsque l'ancienne clôture est connue et refuse un deuxième changement déjà programmé.
+- `TraceDeferredDebit.scheduleForPurchase` sélectionne la règle en vigueur **à la date de l'achat** à partir de `deferredScheduleVersions`. Un achat antérieur à la première version reste sans attribution automatique. Les achats et échéances historiques réellement enregistrés ne sont jamais réécrits par ces modules.
+- Les anciens réglages `deferredDebitDay/deferredClosingDay` sans date d'effet historique bloquent l'établissement automatique de nouveaux calendriers versionnés, en attendant une revue bancaire. Une clôture manquante ne permet pas de créer de lot exigible automatique. Les jours 29/30/31 suivent la règle de fin de mois validée.
+- Dans les paramètres de la carte différée française, choix **en simulation seulement** du nouveau jour de prélèvement, du jour de clôture et de la date de prise d'effet. Le résultat est calculé en lecture seule, ou refusé avec un message précis. Aucune commande de sauvegarde du calendrier n'est exposée.
+- Les contrôles explicites de propriétaire, compte lié, devise et pays sont vérifiés avant la proposition. Une carte canadienne classique, étrangère, archivée, orpheline ou d'un autre titulaire est exclue.
+
+### Commits supplémentaires (tous `[skip ci]`)
+
+- `9af7876d909df16f50643984669a33f9c53e9ccf` : moteur de calendriers successifs à prise d'effet.
+- `5b5bedfda5ebaf210d3f97cb02401b5aa91e2552` : tests du moteur versionné.
+- `f5ec3ab9f4af9797597577ba16696c13d65a81db` : prévisualisation des paramètres futurs de chaque carte.
+- `0f337ddde3ceaa32be9286dc99a4954964bc8d64` : tests de l'interface de prévisualisation.
+- `fbc374d20b4e16929f31d697906fcc13b72198ea` : vérification pure du vrai compte courant EUR lié et du titulaire.
+- `6ff77b0ab0c0522b32767baa892ccc9bdf7df291` : tests de propriété/devise/pays.
+- `ad33e62322d62d8a7d4db0633f616ff44f9103a8` : raccordement de cette vérification à l'UI.
+- `b2ae4ccd401f306241de2c52faa5b39fac2e606a` : blocage UI du compte non lié.
+
+**Validation réexécutée au dernier HEAD : 224/224 contrôles V8 simulés sur 11 suites, aucune erreur**, dont 13 nouveaux scénarios de calendrier versionné, 7 scénarios UI, 84 moteur comptable, 17 calendrier simple, 11 projection cash, 18 rapprochement lecture seule, 24 prévision d'achat, 16 cycle de vie, 17 plan d'écriture, 12 budget différé et 5 contrôles **purement textuels** de la migration 10. Syntaxe de `v5-app-5.37.0.js` analysée avec V8. Modules Node `fs/path/vm/node:test` simulés par un harnais, **pas** de Node natif sur checkout complet. La prévisualisation HTML référence déjà `trace-deferred-debit-1.0.0.js`, mais son cache SW n'est pas requalifié.
+
+**BLOQUANTS inchangés :** `proposeScheduleRevision` produit uniquement `persistable:false`, `confirmed:false`, `writes:0` ; les versions ne sont pas enregistrées dans des documents propriétaires ou une base réelle. `resolveAccountEdit` possède encore une validation indépendante des jours sans contrat de prise d'effet SQL ; il ne faut **pas** lever `TRACE_DEFERRED_NOT_RELEASED` avant migration/protocole serveur, verrouillage CAS, RLS, authentification, tests de révisions concurrentes, provenance des deux relevés et gestion des changements bancaires de date réelle. Les tests Node natifs, migration 10–12 réellement jouée PostgreSQL/PGlite, PWA/Chromium/Safari iPhone et Supabase isolé à deux clients restent **NON EXÉCUTÉS** dans ce lot. Migration 12 non appliquée.
+
+Production **NO-GO** ; `main` intacte ; aucune PR, fusion, Action déclenchée manuellement, déploiement, ni manipulation Supabase réel. Pour la prochaine reprise résoudre le HEAD à nouveau, régénérer et vérifier le SW laboratoire uniquement via le générateur, poursuivre les qualifications SQL/RLS/CAS sur environnement fictif, puis connecter la persistance prospectivement **seulement après** preuve des gardes serveur. Estimation globale ~58 % ±10 points.
