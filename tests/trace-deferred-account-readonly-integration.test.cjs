@@ -23,11 +23,11 @@ function scenario(rows=[purchase],options={}){
  const state={accounts:[checking,card],transactions:rows.map(t=>({...t}))};
  if(options.noChecking)state.accounts=[card];
  const before=JSON.stringify(state),saves={called:0};
- const factory=new Function('state','window','accountType','localDateISO','esc',code+
+ const factory=new Function('state','window','accountType','localDateISO','esc','accountEstimate',code+
   'return traceDeferredAccountReview;');
  const fn=factory(state,window,a=>a?.type,()=>options.asOf||'2026-10-20',
   s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
-  '"':'&quot;',"'":'&#39;'}[c])));
+  '"':'&quot;',"'":'&#39;'}[c])),()=>options.balance??null);
  const html=fn(options.card||card);
  return{html,unchanged:JSON.stringify(state)===before};
 }
@@ -104,4 +104,30 @@ test('unknown deferred transaction type is blocked instead of treated as purchas
  const s=scenario([unknown]);
  assert.match(s.html,/Informations bancaires incomplètes/);
  assert.doesNotMatch(s.html,/Dette différée théorique/);
+});
+
+
+test('deferred EUR card displays estimated checking, unpaid liability and single-card forecast',()=>{
+ const s=scenario([purchase],{balance:1000});
+ assert.match(s.html,/Compte courant · solde calculé TRACE/);
+ assert.match(s.html,/Différé restant à prélever · cette carte/);
+ assert.match(s.html,/Solde prévisionnel · après cette carte/);
+ assert.match(s.html,/960,00/);assert.match(s.html,/non attesté en temps réel/);
+ assert.equal(s.unchanged,true);
+});
+test('settlement already included in current bank estimate is never debited twice',()=>{
+ const s=scenario([purchase,transfer],{balance:960,asOf:'2026-11-05'});
+ assert.match(s.html,/Solde prévisionnel · après cette carte/);
+ assert.match(s.html,/960,00/);assert.equal(s.unchanged,true);
+});
+test('without trusted checking estimate card liabilities remain visible but forecast is hidden',()=>{
+ const s=scenario([purchase],{balance:null});
+ assert.match(s.html,/Dette différée théorique/);
+ assert.match(s.html,/prévision indisponibles/);
+ assert.doesNotMatch(s.html,/Solde prévisionnel · après cette carte/);
+});
+test('future confirmed bank movement cannot contaminate todays cash forecast',()=>{
+ const s=scenario([purchase,transfer],{balance:1000,asOf:'2026-10-20'});
+ assert.match(s.html,/prévision indisponibles/);
+ assert.doesNotMatch(s.html,/Solde prévisionnel · après cette carte/);
 });
