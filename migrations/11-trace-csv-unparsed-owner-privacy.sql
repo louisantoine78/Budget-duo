@@ -193,6 +193,16 @@ as $ready$
    where n.nspname='public' and c.relname='documents'
      and t.tgname='trace_csv_unparsed_evidence_guard'
      and not t.tgisinternal and t.tgenabled in ('O','A')
+ ) and exists (
+   -- Readiness must fail if the server uniqueness barrier was dropped or is
+   -- invalid: the client must not store another ambiguous bank source row.
+   select 1 from pg_catalog.pg_index i
+   join pg_catalog.pg_class idx on idx.oid=i.indexrelid
+   join pg_catalog.pg_class tbl on tbl.oid=i.indrelid
+   join pg_catalog.pg_namespace n on n.oid=tbl.relnamespace
+   where n.nspname='public' and tbl.relname='documents'
+     and idx.relname='trace_csv_unparsed_source_unique'
+     and i.indisunique and i.indisvalid and i.indisready
  );
 $ready$;
 revoke all on function public.trace_csv_evidence_guard_ready() from public, anon;
