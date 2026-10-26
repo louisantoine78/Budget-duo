@@ -37,7 +37,13 @@ begin
  if not before_evidence and not after_evidence then
   if tg_op = 'DELETE' then return old; else return new; end if;
  end if;
+ -- Restore and explicit maintenance by the database owner must remain
+ -- possible without inventing a user JWT. This is NOT an exemption for
+ -- authenticated clients or SECURITY DEFINER RPCs carrying a caller JWT.
  if auth.uid() is null then
+  if current_user = 'postgres' and session_user = 'postgres' then
+   if tg_op = 'DELETE' then return old; else return new; end if;
+  end if;
   raise exception 'TRACE_CSV_EVIDENCE_FORBIDDEN: signed-in user required'
    using errcode='42501';
  end if;

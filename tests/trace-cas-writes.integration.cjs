@@ -351,6 +351,36 @@ async function run(){
    await assert.rejects(rpcDelete(1,'imports',item.id,1),/TRACE_WRITE_FORBIDDEN/);
    assert.equal((await readDoc('imports',item.id)).data.status,'reviewed');
   });
+  await check('privileged maintenance can restore a CSV snapshot without user JWT',async()=>{
+   // Only the actual PostgreSQL administrator can use this path. No user
+   // token, no set role authenticated and no SECURITY DEFINER user RPC.
+   const restored={id:'csv-unparsed-maintenance',kind:'csv_unparsed',
+    status:'pending_review',owner:'la',accountId:'la',source:'csv',
+    sourceFileName:'archive.csv',sourceIndex:2,rawText:'old statement line'};
+   const adminRole=(await db.query('select current_user as actor, session_user as login')).rows[0];
+   assert.equal(adminRole.actor,adminRole.login);
+   assert.equal(adminRole.actor,'postgres');
+   await db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'imports',restored.id,JSON.stringify(restored),uid(1)]);
+   assert.equal((await readDoc('imports',restored.id)).data.rawText,'old statement line');
+   await db.query('delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'imports',restored.id]);
+   assert.equal(await readDoc('imports',restored.id),undefined);
+  });
+  await check('missing-JWT authenticated user cannot exploit admin maintenance path',async()=>{
+   // Even without an injected uid, the session role remains authenticated.
+   await assert.rejects(db.transaction(async tx=>{
+    await tx.exec('set local role authenticated');
+    return tx.query(
+     'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+     [hid,'imports','no-jwt',JSON.stringify({
+      id:'no-jwt',kind:'csv_unparsed',status:'pending_review',owner:'la',
+      accountId:'la',source:'csv',sourceFileName:'test.csv',sourceIndex:3,
+      rawText:'bad client line'}),uid(1)]);
+   }),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   assert.equal(await readDoc('imports','no-jwt'),undefined);
+  });
   await check('CSV privacy migration can be reapplied without rewriting evidence',async()=>{
    const before=(await readDoc('imports','csv_unparsed_own')).data;
    await db.exec(await fs.readFile(path.join(root,
