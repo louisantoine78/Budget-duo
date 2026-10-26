@@ -1,3 +1,14 @@
+## 26 octobre 2026 — Vérification des preuves de débit différé
+
+- [x] `f47c85a9` : carte et compte courant exigent des preuves avec `sourceId` et `importId` distincts ; `feeIds` explicite/valide, pas de désactivation du plafond d'un règlement partiel faute de métadonnées de frais.
+- [x] `8def77b8` : une ligne typée achat/frais/remboursement carte ou débit/crédit de compte courant est refusée si son sens bancaire est contradictoire ; elle ne peut pas être utilisée comme justificatif local fiable.
+- [x] **137/137 V8** sur les 8 suites reportées ci-dessus : relevé courant 29, preuve achat 24, assemblage 25, modules réels 14, passerelle 9, intégration locale relevé 7, budget différé 12, plan d'écriture 17. Modules métiers réels, dépendances Node simulées.
+- [ ] **Bloquant** : quatre suites PostgreSQL/PGlite natives sur migrations 05–12 avec données fictives, puis toute la suite Node réelle sur checkout isolé. Migration 12 NON APPLIQUÉE.
+- [ ] Safari iPhone réel et PWA offline, vérification des imports PDF/CSV/OCR, transfert entre devises, Couple, patrimoine, UX premium et restauration/rollback.
+- [ ] Production NO-GO ; 58 % ±10 estimés et inchangés. Aucun workflow, CI, déploiement, merge, PR, `main` ou Supabase réel modifié.
+
+---
+
 ## 26 octobre 2026 — Preuve des dates et centimes des placements
 
 - [x] `23422265` : une transaction confirmée liée mais déplacée sur un autre compte déclenche le verrouillage du solde ; une date bancaire active invalide, de transaction ou d'opération de placement, bloque le calcul et est expliquée dans la fiche compte.

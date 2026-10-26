@@ -1,3 +1,17 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — CONTRATS DE PREUVE DU DÉBIT DIFFÉRÉ
+
+À la passation, le dernier HEAD **code** connu est `8def77b8d419a59ef26c8c492c5fffcec6c34f76` sur `trace-5.37.0-international-accounts-fx` (base avant ce lot `1729f45dc36ae3d977bd3e2b5c42ba1b9bd9d1c6`). Résoudre le HEAD réel sur GitHub lors de la prochaine reprise. `main` connue stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun workflow CI/Actions, PR/fusion, déploiement, migration SQL, écriture Supabase réelle ; commits `[skip ci]` uniquement.
+
+**Travaux réalisés** :
+- `f47c85a9` vérifie que `sourceId` **et** `importId` ne sont pas réutilisés entre relevé carte et relevé compte courant ; demande une liste `feeIds` explicite/valide pour tous les paiements afin d'empêcher la levée accidentelle du plafond d'un règlement partiel mono-achat sans frais.
+- `8def77b8` invalide les lignes de relevé typées incohérentes : `checking_debit` ne peut être un crédit, `checking_credit` ne peut être un débit, et toutes les lignes de carte `card_purchase/card_refund/card_payment/card_fee` doivent avoir un sens bancaire compatible, **y compris les autres lignes du document**.
+
+**Tests exécutés** : **137/137 V8** après ce lot, répartis sur huit suites de débit différé/relevés (29+24+25+14+9+7+12+17). Réelles sources GitHub et modules métiers, APIs Node/fs/vm simulées. Les 207 V8 du lot précédent ne sont pas une preuve supplémentaire reroulée après ce commit. **Ni Node natif checkout complet, ni PostgreSQL/PGlite, ni Safari physique.** Migrations 05–12 non testées PostgreSQL, migration 12 NON APPLIQUÉE. Production NO-GO, progrès prudent 58 % ±10.
+
+**Next :** récupérer un checkout local complet et un moteur PG/PGlite isolé pour les quatre suites Auth/RLS/CAS/cutover, vérifier ensuite Node natif, imports CSV/PDF/OCR, Safari iPhone, paiement différé vrai, couples/FX, rollback et coexistence clients 5.36.x. Aucune modification de `main` ni production sans GO humain explicite.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — PLACEMENTS ET BANQUE : DATES, COMPTES, CENTIMES
 
 **HEAD de code/test au moment de la passation : `032e1db585917b6048eb1be8ce1ac0ce44fdacbb`**, branche `trace-5.37.0-international-accounts-fx`. Résoudre à nouveau le HEAD dans la prochaine conversation. Base avant ces deux correctifs `ad4ade07275c2b161dbea9d3b5bc86b8855007c8`. `main` inchangée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits strictement `[skip ci]`. Zéro CI/Actions, PR, fusion, déploiement, migrations/SQL ou Supabase réel.
