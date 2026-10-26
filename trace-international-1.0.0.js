@@ -8,6 +8,7 @@
  const numeric=value=>(typeof value==='number'||typeof value==='string'&&
   /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim()))&&Number.isFinite(Number(value));
  const exactMoney=value=>numeric(value)&&
+  Number.isSafeInteger(Math.round(Number(value)*100))&&
   Math.abs(Number(value)*100-Math.round(Number(value)*100))<1e-5?Number(value):null;
  const calendarDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))&&
   Number.isFinite(+new Date(value+'T12:00:00Z'))&&
@@ -53,7 +54,9 @@
   return code==='CAD'?exactMoney(t.amountCAD):null;
  };
  const fxValue=(native,code,quote)=>{
-  if(!numeric(native)||!valid(code))return null;
+  // Callers may use fxValue outside the account snapshot: never turn a
+  // fractional-cent or unsafe source amount into a rounded real balance.
+  if(exactMoney(native)===null||!valid(code))return null;
   const value=code==='CAD'?Number(native):
    verifiedQuote(quote,code)?Number(native)*Number(quote.cadPerUnit):null;
   // A finite quote can still overflow when multiplied by an account balance.
@@ -83,6 +86,10 @@
     candidates.length===1&&candidates[0].id===main.id&&currency(a)===currency(main)&&country(a)===country(main))));
   const check=included.filter(a=>a.type==='checking').reduce((v,a)=>v+Number(estimates[a.id]||0),0);
   const debt=included.filter(a=>a.type==='card').reduce((v,a)=>v+Math.min(0,Number(estimates[a.id]||0)),0);
+  // An accumulation can overflow safe cent precision even if every native
+  // account individually passed validation. Never publish rounded fictitious
+  // wealth or budget cash as a known value when this occurs.
+  const safeChecking=exactMoney(check),safeDebt=exactMoney(debt);
   const missing=included.filter(a=>estimates[a.id]===null||estimates[a.id]===undefined);
   // A card linked to the primary account can have another currency: never
   // subtract USD/EUR debt directly from a CAD/EUR current-account balance.
@@ -99,14 +106,16 @@
    const cad=converted===0&&native!==0?null:converted;
    return{id:a.id,name:a.name||'',nativeCurrency:code,balance:native??null,cad};
   });
-  const complete=balances.length>0&&balances.every(a=>a.balance!==null&&a.cad!==null)&&
+  const componentComplete=balances.length>0&&balances.every(a=>a.balance!==null&&a.cad!==null)&&
    !cardsToReview.length;
-  const totalCAD=complete?round(balances.reduce((n,a)=>n+a.cad,0)):null;
+  const totalCAD=componentComplete?exactMoney(balances.reduce((n,a)=>n+a.cad,0)):null;
+  const complete=componentComplete&&totalCAD!==null;
   const incompletePrimary=invalidPrimary||missing.length||ambiguousCards.length||
    mixedLinkedCurrencies.length||cardsToReview.some(a=>included.includes(a));
-  return{main,currency:currency(main),checking:missing.length||invalidPrimary?null:check,
-   card:incompletePrimary?null:debt,
-   net:incompletePrimary?null:round(check+debt),
+  const safeNet=exactMoney(check+debt);
+  return{main,currency:currency(main),checking:missing.length||invalidPrimary?null:safeChecking,
+   card:incompletePrimary?null:safeDebt,
+   net:incompletePrimary?null:safeNet,
    ambiguousCards,mixedLinkedCurrencies,cardsToReview,balances,globalCAD:totalCAD,complete,
    missing:balances.filter(b=>b.balance===null||b.cad===null||cardsToReview.some(a=>a.id===b.id))};
  };
