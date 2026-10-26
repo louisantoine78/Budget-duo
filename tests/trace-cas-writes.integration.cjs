@@ -65,6 +65,21 @@ async function run(){
     deferredKind:'purchase',status:'pending',bankAmount:19.95}),uid(4)]);
   await db.exec(await fs.readFile(path.join(root,'migrations/10-trace-deferred-write-quarantine.sql'),'utf8'));
   await db.exec(await fs.readFile(path.join(root,'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
+  // Complete the fourth fixture AFTER 11 using the same CAS RPC as a client:
+  // an ordinary checking account plus a private CSV evidence record.
+  // The later administrative cascade must clear both quarantined deferred
+  // records and bank evidence, without opening individual-delete paths.
+  const otherChecking={id:'archive-checking',owner:'la',type:'checking',
+   country:'FR',currency:'EUR'};
+  const otherEvidence={id:'archive-csv-source',kind:'csv_unparsed',
+   owner:'la',accountId:'archive-checking',status:'pending_review',
+   source:'csv',sourceFileName:'fictional-archive.csv',sourceIndex:2,
+   rawText:'2026-10-25 | Fictional line requiring review'};
+  for(const [collection,data] of [
+   ['accounts',otherChecking],['imports',otherEvidence]
+  ]) await acting(4,tx=>tx.query(
+   'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+   [deferredHouseId,collection,data.id,JSON.stringify(data),null]));
   const rpcSave=(n,collection,id,data,rev)=>acting(n,tx=>tx.query(
    'select public.trace_cas_save_document($1,$2,$3,$4,$5) as revision',
    [hid,collection,id,JSON.stringify(data),rev]));
@@ -500,7 +515,7 @@ async function run(){
    const before=(await db.query(
     'select count(*)::integer as n from public.documents where household_id=$1',
     [deferredHouseId])).rows[0].n;
-   assert.equal(before,2);
+   assert.equal(before,4);
    const admin=(await db.query('select current_user as actor, session_user as login, auth.uid() as uid')).rows[0];
    assert.equal(admin.actor,'postgres');assert.equal(admin.login,'postgres');
    assert.equal(admin.uid,null);
