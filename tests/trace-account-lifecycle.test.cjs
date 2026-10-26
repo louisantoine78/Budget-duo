@@ -52,3 +52,58 @@ test('duplicate active names, unsupported currency and invalid metadata are reje
  assert.throws(()=>edit(fr,{currency:'JPY'}),/devise du compte/);
  assert.throws(()=>edit(fr,{name:' '}),/Vérifie/);
 });
+
+
+test('deferred card stores a monthly debit day and optional cutoff as per-card settings',()=>{
+ const deferred={...card,id:'visa-fr',name:'Visa FR',currency:'EUR',country:'FR',
+  settlementAccountId:'fr',paymentMode:'deferred'};
+ const before=JSON.stringify(deferred);
+ const prepared=edit(deferred,{deferredDebitDay:'28',deferredClosingDay:'20'},
+  {accounts:[...accounts,deferred]});
+ assert.equal(prepared.deferredDebitDay,28);
+ assert.equal(prepared.deferredClosingDay,20);
+ assert.equal(JSON.stringify(deferred),before);
+ assert.equal(card.deferredDebitDay,undefined);
+});
+test('monthly debit day alone is allowed, but a due cycle remains unknown',()=>{
+ const deferred={...card,id:'visa-fr',name:'Visa FR',currency:'EUR',country:'FR',
+  settlementAccountId:'fr',paymentMode:'deferred'};
+ const result=edit(deferred,{deferredDebitDay:'31'},
+  {accounts:[...accounts,deferred]});
+ assert.equal(result.deferredDebitDay,31);
+ assert.equal(result.deferredClosingDay,null);
+});
+test('invalid monthly days are rejected before any account document can be prepared',()=>{
+ const deferred={...card,id:'visa-fr',name:'Visa FR',currency:'EUR',country:'FR',
+  settlementAccountId:'fr',paymentMode:'deferred'};
+ for(const day of [0,32,-3,2.2,'2.2','21foo','01',true,{},'NaN'])
+  assert.throws(()=>edit(deferred,{deferredDebitDay:day},
+   {accounts:[...accounts,deferred]}),/calendrier différé/);
+ for(const day of [0,32,'30mars',false])
+  assert.throws(()=>edit(deferred,{deferredDebitDay:28,deferredClosingDay:day},
+   {accounts:[...accounts,deferred]}),/calendrier différé/);
+});
+test('closing date alone is refused, avoiding silent purchase-batch allocation',()=>{
+ const deferred={...card,id:'visa-fr',name:'Visa FR',currency:'EUR',country:'FR',
+  settlementAccountId:'fr',paymentMode:'deferred'};
+ assert.throws(()=>edit(deferred,{deferredClosingDay:20},
+  {accounts:[...accounts,deferred]}),/jour de clôture exige/);
+});
+test('ordinary Canadian credit card cannot silently acquire deferred schedule metadata',()=>{
+ assert.throws(()=>edit(card,{deferredDebitDay:28}),/réservé aux cartes/);
+ assert.throws(()=>edit(card,{deferredClosingDay:20}),/réservé aux cartes/);
+});
+test('renaming a deferred card does not recalculate historical due dates or bank evidence',()=>{
+ const deferred={...card,id:'visa-fr',name:'Visa FR',currency:'EUR',country:'FR',
+  settlementAccountId:'fr',paymentMode:'deferred',deferredDebitDay:5,
+  deferredClosingDay:20};
+ const historic={id:'historical-eur',cardAccountId:deferred.id,
+  purchaseDate:'2026-09-10',dueDate:'2026-10-05',amountCAD:64};
+ const before=JSON.stringify([deferred,historic]);
+ const edited=edit(deferred,{name:'Visa FR renommée'},
+  {accounts:[...accounts,deferred],transactions:[historic]});
+ assert.equal(edited.deferredDebitDay,5);
+ assert.equal(edited.deferredClosingDay,20);
+ assert.equal(historic.dueDate,'2026-10-05');
+ assert.equal(JSON.stringify([deferred,historic]),before);
+});

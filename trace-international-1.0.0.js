@@ -219,6 +219,27 @@
   }else if(accounts.some(a=>a.type==='card'&&!a.archived&&a.settlementAccountId===account.id&&
    (currency(a)!==code||country(a)!==bankCountry)))
    throw Error('Réassocie les cartes liées avant de changer le pays ou la devise de ce compte.');
+  // Planned per-card day settings. The candidate's deferred account write
+  // quarantine remains active; this pure validation NEVER saves a document.
+  if(account.type==='card'&&account.paymentMode==='deferred'){
+   const day=v=>{
+    if(v===undefined||v===null||v==='')return null;
+    const s=String(v).trim();
+    if(!/^(?:[1-9]|[12][0-9]|3[01])$/.test(s))
+     throw Error('Jour du calendrier différé invalide (1 à 31).');
+    return Number(s);
+   };
+   const debitDay=day(input.deferredDebitDay===undefined?
+      account.deferredDebitDay:input.deferredDebitDay),
+    closingDay=day(input.deferredClosingDay===undefined?
+      account.deferredClosingDay:input.deferredClosingDay);
+   if(closingDay!==null&&debitDay===null)
+    throw Error('Le jour de clôture exige un jour de prélèvement.');
+   next.deferredDebitDay=debitDay;
+   next.deferredClosingDay=closingDay;
+  }else if(input.deferredDebitDay!==undefined||
+     input.deferredClosingDay!==undefined)
+   throw Error('Le calendrier différé est réservé aux cartes à débit différé.');
   return next;
  };
  const resolveAccountArchive=({account,accounts=[],owner,primaryId,archived=true,date}={})=>{
