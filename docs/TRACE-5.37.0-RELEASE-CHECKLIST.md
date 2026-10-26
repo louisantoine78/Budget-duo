@@ -1,3 +1,17 @@
+## 25 octobre 2026 — la sonde CSV exige un index unique en état valide
+
+**Production NO-GO.** `trace_csv_evidence_guard_ready()` exige désormais `trace_csv_unparsed_source_unique` sur la table documents avec `pg_index.indisunique AND indisvalid AND indisready`. Migration 11 encore **candidate et non appliquée**. Les tests fictifs PostgreSQL simulent la perte de l'index et la réapplication de migration pour contrôler que la capacité de stockage privé s'interrompt puis reprend.
+
+- [x] Correctif et tests enregistrés dans `a5f207b`, `ae8ca41`, `dcf149b` (`[skip ci]`).
+- [x] **20/20 tests statiques/lexicaux exécutés sous V8**, dépendances Node simulées ; compilation du harnais PG sous V8.
+- [ ] Exécuter ces tests sur **vrai PG/PGlite**, valider l'index unique sur source normalisée, son RPC d'état, son échec/reprise, le cas direct SQL et les différents foyers/comptes.
+- [ ] Tester également CAS/auth/RLS/concurrence, anciennes écritures directes, privacy/realtime, effacement et restauration du foyer y compris banque différée, backups et rollback.
+- [ ] Finir FX/Couple/PDF/OCR, interface premium et tests Safari iPhone et obtenir autorisation de mise en production.
+
+**Aucun test natif PostgreSQL ni navigateur nouveau réussi pendant ce lot.** Référence 58 % ±10, NO-GO.
+
+---
+
 ## 25 octobre 2026 — preuve CSV : collision serveur et source normalisée
 
 **NO-GO.** Migration 11 candidate : index unique partiel `trace_csv_unparsed_source_unique` ajouté (source = foyer + propriétaire + compte + nom de fichier exact + ligne numérique). Le garde refuse `accountId` >240 caractères ; précontrôle migration des preuves antérieures avec identités manquantes ou numéros invalides. Faille résiduelle à valider : création de doublons avec ID différent par RPC ou écriture directe legacy, désormais **censée échouer** en PostgreSQL par violation d'unicité.
