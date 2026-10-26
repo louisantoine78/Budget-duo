@@ -16,12 +16,15 @@
   const d=root.document,get=id=>d.getElementById(id);
   const container=get('traceDeferredSandbox'),amount=get('traceDeferredAmount'),
    pending=get('traceDeferredPending'),withFee=get('traceDeferredFee'),
-   withRefund=get('traceDeferredRefund'),run=get('traceDeferredRun'),
+   withRefund=get('traceDeferredRefund'),
+   actualDate=get('traceDeferredActualDate'),dateNote=get('traceDeferredDates'),
+   run=get('traceDeferredRun'),
    review=get('traceDeferredReview'),budget=get('traceDeferredBudget'),
    paid=get('traceDeferredPaid'),remaining=get('traceDeferredRemaining'),
    transfer=get('traceDeferredBank'),message=get('traceDeferredMessage');
   if(!container||!amount||!pending||!withFee||!withRefund||!run||
-     !review||!budget||!paid||!remaining||!transfer||!message)return;
+     !review||!budget||!paid||!remaining||!transfer||!message||
+   !actualDate||!dateNote)return;
   const engine=root.TraceDeferredDebit?.simulate,
    comparator=root.TraceDeferredBankReview;
   if(typeof engine!=='function'||typeof comparator?.compare!=='function'){
@@ -47,6 +50,19 @@
   function simulate(manualReview){
    try{
     const value=isoAmount(amount.value),isPending=!!pending.checked,
+     actual=String(actualDate.value||''),
+     parsed=/^\d{4}-\d{2}-\d{2}$/.test(actual)?
+      new Date(actual+'T12:00:00Z'):null;
+    if(!parsed||!Number.isFinite(+parsed)||
+       parsed.toISOString().slice(0,10)!==actual||
+       actual<purchase.purchaseDate)
+     throw Error('Date réelle invalide ou antérieure à l’achat fictif.');
+    const deviation=Math.round((Date.parse(actual+'T12:00:00Z')-
+     Date.parse('2026-11-05T12:00:00Z'))/86400000);
+    const month=actual.slice(0,7),
+     year=Number(actual.slice(0,4)),number=Number(actual.slice(5,7)),
+     monthLast=new Date(Date.UTC(year,number,0)).getUTCDate(),
+     monthEnd=month+'-'+String(monthLast).padStart(2,'0'),
      fees=withFee.checked?[fee]:[],refunds=withRefund.checked?[refund]:[],
      max=40+(withFee.checked?2.30:0)-(withRefund.checked?10.01:0);
     if(Math.round(value*100)>Math.round(max*100))
@@ -54,19 +70,19 @@
     const status=isPending?'pending':'confirmed',
      evidence={statementId:'demo-statement',lineId:'demo-line',
       accountId:checking.id,currency:'EUR',direction:'debit',
-      amount:value,debitDate:'2026-11-05',status,reviewed:!isPending},
+      amount:value,debitDate:actual,status,reviewed:!isPending},
      settlement={id:'demo-payment',type:'transfer',settlementMode:'partial',
       allocationDueDate:'2026-11-05',cardAccountId:card.id,
-      checkingAccountId:checking.id,currency:'EUR',debitDate:'2026-11-05',
+      checkingAccountId:checking.id,currency:'EUR',debitDate:actual,
       status,amount:value,purchaseIds:[purchase.id],
       feeIds:fees.map(f=>f.id),bankEvidence:evidence},
      result=engine({card,checking,purchases:[purchase],fees,refunds,
-      settlements:[settlement],asOfDate:'2026-11-05'}),
+      settlements:[settlement],asOfDate:actual}),
      statement={statementId:'demo-statement',importId:'demo-import',
       sourceId:'demo-physical-pdf',sourceVersion:'demo-version-v1',
       sourceType:'pdf_extracted',accountId:checking.id,currency:'EUR',
-      fromDate:'2026-11-01',toDate:'2026-11-30',complete:true,
-      rows:[{lineId:'demo-line',debitDate:'2026-11-05',direction:'debit',
+      fromDate:month+'-01',toDate:monthEnd,complete:true,
+      rows:[{lineId:'demo-line',debitDate:actual,direction:'debit',
        amount:value,status,sourcePage:1,originalText:'Extrait fictif'}]},
      receipts=manualReview&&!isPending?[{
       settlementId:settlement.id,approved:true,
@@ -77,6 +93,10 @@
     paid.textContent=euro(result.batches[0].paidAmount);
     remaining.textContent=euro(result.batches[0].remainingAmount);
     transfer.textContent=euro(result.checkingBalanceChange);
+    dateNote.textContent='Échéance prévue : 2026-11-05 · relevé fictif : '+
+     actual+' · '+(deviation===0?'aucun décalage':
+      (deviation>0?'+':'')+deviation+' jour(s)')+
+     '. Aucune date bancaire inventée ni mouvement enregistré.';
     message.textContent=isPending?
      'Paiement en attente : le compte courant et la dette restent inchangés.':
      check.cases[0].status==='manual_review_current'?
@@ -94,7 +114,7 @@
   }
   run.addEventListener('click',()=>simulate(false));
   review.addEventListener('click',()=>simulate(true));
-  for(const control of [amount,pending,withFee,withRefund])
+  for(const control of [amount,pending,withFee,withRefund,actualDate])
    control.addEventListener('change',()=>simulate(false));
   simulate(false);
  }
