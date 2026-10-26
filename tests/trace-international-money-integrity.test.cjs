@@ -381,3 +381,32 @@ test('historical CAD-to-CAD currency omission alone does not invalidate a correc
  assert.equal(next.toBankCurrency,'CAD');
  assert.equal(next.importFingerprint,'legacy-match');
 });
+
+
+test('malformed confirmed self-transfer cannot credit one side and invent bank liquidity',()=>{
+ const transfer={id:'self-transfer',date:day,type:'transfer',status:'confirmed',
+  accountId:'ca',toAccountId:'ca',bankCurrency:'CAD',toBankCurrency:'CAD',
+  bankAmount:40,toBankAmount:40,amountCAD:40};
+ const state={household:{accountOpeningBalances:{ca:100}},
+  reconciliations:[],investmentOperations:[],transactions:[transfer]};
+ const estimate=extract('accountEstimate','bank',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  openingBoundary:()=>({date:'2026-10-01',mode:'start'}),
+  afterBoundary:(date,b)=>date>b.date});
+ assert.equal(estimate(ca),null);
+ transfer.status='pending';
+ assert.equal(estimate(ca),100);
+});
+test('a valid cross-currency transfer has exactly one debit and one native receipt',()=>{
+ const transfer={id:'proper-fx',date:day,type:'transfer',status:'confirmed',
+  accountId:'ca',toAccountId:'fr',bankCurrency:'CAD',bankAmount:40,
+  toBankCurrency:'EUR',toBankAmount:25,amountCAD:40};
+ const state={household:{accountOpeningBalances:{ca:100,fr:5}},
+  reconciliations:[],investmentOperations:[],transactions:[transfer]};
+ const estimate=extract('accountEstimate','bank',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  openingBoundary:()=>({date:'2026-10-01',mode:'start'}),
+  afterBoundary:(date,b)=>date>b.date});
+ assert.equal(estimate(ca),60);
+ assert.equal(estimate(fr),30);
+});
