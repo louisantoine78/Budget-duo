@@ -1,3 +1,15 @@
+## 25 octobre 2026 — renforcement final du cutover CSV : index réellement actif requis (non qualifié SQL)
+
+Nouveaux commits `a5f207b76df1d8a0ea064861ee16304b944c5122`, `ae8ca410663802795cb18e23ca35ffc2fa296176`, `dcf149be7dfba9a38778bcdd41c483e5a5fc46dc`, tous `[skip ci]`. Le RPC de disponibilité `public.trace_csv_evidence_guard_ready()` (migration **candidate 11**) exige désormais, en plus de la RLS, de la policy et du trigger, un index `trace_csv_unparsed_source_unique` avec `indisunique`, `indisvalid` et `indisready` vrais. Cette sonde est un **marqueur de bascule fail-closed**, pas une preuve cryptographique, de concurrence ou de sécurité PostgreSQL déjà qualifiée.
+
+Le test PGlite candidat `tests/trace-cas-writes.integration.cjs` désactive ensuite volontairement cette barrière par `DROP INDEX` dans un laboratoire fictif, vérifie que la sonde devient FALSE puis exige sa restauration après réapplication de la migration 11. **Test PostgreSQL écrit, jamais exécuté**. Un nouveau contrat statique valide la présence de ces contrôles.
+
+**Résultat de l'itération (dernière exécution)** : **20/20 contrats statiques et lexicaux sous V8**, sur les vraies sources des migrations candidates et les vrais fichiers tests, modules Node simulés ; compilation syntaxique JS du harnais PG réussie. **Zéro exécution PostgreSQL/PGlite, zéro `node --test` natif du checkout complet**, et aucun navigateur/Safari physique. L'environnement actuel n'a ni PostgreSQL/PostgREST/PGlite ni accès npm (DNS). RLS, RPC CAS, cascade différée, index réellement créé, restauration, Realtime restent **NON QUALIFIÉS**. Ne jamais solliciter le Supabase réel pour remplacer le laboratoire.
+
+`main` et production inchangées, candidats 05–11 non déployés, débit différé en quarantaine, avancement **58 % ±10**, décision **NO-GO**. Reprise : exécuter sur PG/PGlite fictif les trois suites d'intégration 05–11, corriger les échecs puis poursuivre les fonctionnalités et la recette premium iPhone.
+
+---
+
 ## 25 octobre 2026 — unicité serveur des preuves CSV par ligne bancaire (code candidat, SQL non exécuté)
 
 **HEAD à résoudre à chaque reprise.** Exclusivement `trace-5.37.0-international-accounts-fx` ; `main` `02c70f50e7e51da79b77a91dde96a03c6c719909` intouchée. Commits nouveaux `[skip ci]` : `9de886e2fbcd2b26d0b217fdeb42fb1538e235e5`, `71f0b96bc874931e5adb2529714ac5f4b569c5c4` (migration 11), `102491f5c596ec946047506726c750f39952e596`, `97c334e625fa7ceef83c39d6db1a6779a8c9df66`, `19fa718c7fdc684aa547d7c85643b3482c766ebd` (tests PG préparés) et `1d62ffbb8d76c7b0e04d8af2e9904bf9f3927b3a` (contrats statiques).
