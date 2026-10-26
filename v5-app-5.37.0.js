@@ -472,7 +472,10 @@ function homeReviewAccounts(){
   const existing=notConfirmed.filter(t=>t.accountId===a.id).length;
   const drafts=state.smartImports.filter(d=>d.kind==='smart_draft'&&d.status==='pending'&&d.accountId===a.id&&!existingIds.has('t_'+d.id)).length;
   const unresolved=state.importDays.filter(d=>d.accountId===a.id).reduce((n,d)=>n+Math.max(0,Number(d.unresolvedCount)||0),0);
-  return{id:a.id,name:shortAccountLabel(a),type:accountType(a),drafts,existing,unresolved,total:drafts+existing};
+  const csvReview=state.smartImports.filter(d=>d.kind==='csv_unparsed'&&
+   d.status==='pending_review'&&d.owner===me&&d.accountId===a.id).length;
+  return{id:a.id,name:shortAccountLabel(a),type:accountType(a),drafts,existing,unresolved,
+   csvReview,total:drafts+existing+csvReview};
  });
 }
 function openHomeReviewAccount(id){
@@ -509,7 +512,9 @@ function renderHomeReview(){
  }
  root.innerHTML=rows.map(a=>{
   const title=a.type==='checking'?'Compte courant':a.type==='card'?'Carte de crédit':a.name;
-  const sub=a.total?[a.drafts?a.drafts+' import(s) à confirmer':'',a.existing?a.existing+' transaction(s) à compléter':''].filter(Boolean).join(' · '):'Aucune opération en attente';
+  const sub=a.total?[a.drafts?a.drafts+' import(s) à confirmer':'',
+   a.existing?a.existing+' transaction(s) à compléter':'',
+   a.csvReview?a.csvReview+' ligne(s) CSV non interprétée(s)':''].filter(Boolean).join(' · '):'Aucune opération en attente';
   const add=a.unresolved?' · '+a.unresolved+' ligne(s) OCR à revérifier':'';
   return '<button type="button" class="trace-home-review-account'+(a.total?' has-pending':'')+'" data-home-review-account="'+esc(a.id)+'">'+
    '<span class="trace-home-review-info"><strong>'+esc(title)+'</strong><small>'+esc(a.name)+'</small><small>'+esc(sub+add)+'</small></span>'+
@@ -3867,7 +3872,63 @@ function openActivityCategory(month,categoryId){
  closeSheet();navigate('activity');renderActivity();showTab('transactions');
 }
 
+// TRACE 5.37 — manual CSV evidence follow-up. This is NOT a ledger posting.
+function openCsvUnparsedReview(id){
+ const d=state.smartImports.find(x=>x.id===id&&x.kind==='csv_unparsed'&&
+  x.status==='pending_review'&&x.owner===me&&visibleBankAccounts(me).some(a=>a.id===x.accountId));
+ if(!d)return;
+ openSheet('Ligne CSV à contrôler',
+  '<p class="trace-intl-help">Cette ligne du relevé n’a pas pu être interprétée. Vérifie le CSV original et, si nécessaire, ajoute une transaction séparément depuis TRACE. La revue ne crée ni dépense, ni revenu.</p>'+
+  '<p><b>'+esc(d.sourceFileName)+'</b> · ligne '+Number(d.sourceIndex)+
+  ' · '+esc(shortAccountLabel(state.accounts.find(a=>a.id===d.accountId)))+'</p>'+
+  '<div class="trace-csv-review-original">'+esc(d.rawText||'Aucun extrait disponible')+'</div>'+
+  '<label class="trace-csv-review-confirm"><input type="checkbox" id="csvReviewChecked">J’ai vérifié cette ligne dans le relevé bancaire et traité séparément toute opération manquante.</label>'+
+  '<p id="csvReviewError" role="alert" class="trace-bank-setup-error"></p>'+
+  '<button type="button" class="primary full" id="csvReviewConfirm">Marquer comme revue (aucune opération créée)</button>'+
+  '<button type="button" class="secondary full" id="csvReviewCancel" style="margin-top:8px">Revenir aux imports</button>');
+ $('#csvReviewCancel').onclick=closeSheet;
+ $('#csvReviewConfirm').onclick=async()=>{
+  if(!$('#csvReviewChecked').checked){
+   $('#csvReviewError').textContent='Vérifie le relevé et confirme ce contrôle avant de clôturer la ligne.';return;
+  }
+  const fresh=state.smartImports.find(x=>x.id===d.id);
+  if(!fresh||fresh.status!=='pending_review'||fresh.owner!==me||
+     !visibleBankAccounts(me).some(a=>a.id===fresh.accountId)||
+     fresh.rawText!==d.rawText){
+   $('#csvReviewError').textContent='Cette ligne a changé. Rouvre la liste pour la contrôler.';return;
+  }
+  const btn=$('#csvReviewConfirm');btn.disabled=true;
+  try{
+   const next={...fresh,status:'reviewed',reviewedBy:me,reviewedAt:new Date().toISOString()};
+   await saveDocument('imports',next);
+   Object.assign(fresh,next);closeSheet();renderAll();navigate('activity');showTab('import');
+  }catch(error){btn.disabled=false;$('#csvReviewError').textContent=String(error.message||error);}
+ };
+}
+function renderCsvUnparsedReviewQueue(){
+ const parent=$('#activityImport');if(!parent)return;
+ if(!$('#traceCsvReviewQueue'))
+  parent.insertAdjacentHTML('afterbegin','<section id="traceCsvReviewQueue" class="trace-csv-review-queue"></section>');
+ const root=$('#traceCsvReviewQueue');if(!root)return;
+ const available=new Set(visibleBankAccounts(me).map(a=>a.id));
+ const items=state.smartImports.filter(d=>d.kind==='csv_unparsed'&&
+  d.status==='pending_review'&&d.owner===me&&available.has(d.accountId));
+ if(!items.length){root.innerHTML='';root.hidden=true;return;}
+ root.hidden=false;
+ root.innerHTML='<h3>Lignes CSV non interprétées · '+items.length+'</h3>'+
+  '<p>À rapprocher manuellement de tes relevés. Ces extraits sont conservés sans transaction, sans budget et sans certification d’une journée.</p>'+
+  items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).map(d=>
+   '<button type="button" class="trace-csv-review-entry" data-csv-unparsed-open="'+esc(d.id)+'">'+
+   '<span><b>'+esc(d.sourceFileName)+' · ligne '+Number(d.sourceIndex)+'</b>'+
+   '<small>'+esc(shortAccountLabel(state.accounts.find(a=>a.id===d.accountId)))+
+   ' · '+esc(String(d.rawText||'').slice(0,110))+'</small></span><span aria-hidden="true">›</span></button>'
+  ).join('');
+ root.querySelectorAll('[data-csv-unparsed-open]').forEach(btn=>
+  btn.onclick=()=>openCsvUnparsedReview(btn.dataset.csvUnparsedOpen));
+}
+
 function renderActivity(){
+ renderCsvUnparsedReviewQueue();
  traceActivityControls();
  const ts=traceActivityRows();
  const confirmed=ts.filter(t=>t.status==='confirmed');
