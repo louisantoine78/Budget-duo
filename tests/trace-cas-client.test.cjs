@@ -88,6 +88,12 @@ test('queued CAS saves the amount and nested metadata from each call, not later 
  assert.equal(saved.get(app.traceWriteKey('transactions',tx.id)).data.amountCAD,41);
  assert.equal(saved.get(app.traceWriteKey('transactions',tx.id)).revision,1);
 });
+test('unserializable financial payload refuses RPC rather than sending a partial record',async()=>{
+ const {app,calls}=createContext();
+ await assert.rejects(app.saveDocument('transactions',{
+  id:'unserializable-money',amountCAD:40n}),/BigInt|serialize/i);
+ assert.equal(calls.length,0);
+});
 test('queued write snapshots JSON but still blocks metadata promoted to deferred',async()=>{
  const {app,calls}=createContext();
  const row={id:'late-deferred',type:'expense',amountCAD:20,
