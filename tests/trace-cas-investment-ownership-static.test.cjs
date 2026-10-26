@@ -32,3 +32,21 @@ test('fictional integration scenarios cover cross-member mutation and deletion',
  assert.match(suite,/bankAccountId:'partner'/);
  assert.match(suite,/rpcDelete\(2,'investment_operations','op-la',0\)/);
 });
+
+test('CAS update checks bank ownership on the ORIGINAL stored investment row',()=>{
+ assert.match(save,/original_bank\.item_id = d\.data->>'bankAccountId'/);
+ assert.match(save,/original_bank\.data->>'owner' = actor_slot/);
+ assert.match(save,/original_bank\.data->>'type' = 'checking'/);
+ assert.match(save,/nullif\(d\.data->>'bankAccountId',''\) is null/);
+});
+test('CAS delete also checks the original bank and does not rely on edited JSON',()=>{
+ assert.match(deletion,/original_bank\.item_id = d\.data->>'bankAccountId'/);
+ assert.match(deletion,/original_bank\.data->>'owner' = actor_slot/);
+ assert.match(deletion,/original_bank\.data->>'type' = 'checking'/);
+});
+test('isolated PG candidate reproduces a legacy cross-owner bank leg and missing account',()=>{
+ assert.match(suite,/CAS cannot launder historical investment bank legs owned by another member/);
+ assert.match(suite,/legacy-investment-foreign-bank/);
+ assert.match(suite,/legacy-investment-missing-bank/);
+ assert.match(suite,/rpcDelete\(1,'investment_operations',legacy\.id,0\)/);
+});
