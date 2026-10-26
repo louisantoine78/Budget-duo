@@ -266,6 +266,15 @@ function accountType(a){
  if(/saving|épargne|epargne/.test(s))return'saving';
  return'other';
 }
+/* Reuse bank legs only when their linked transaction genuinely participates
+ * in the current balance window. Statement evidence is not a cash movement. */
+function traceLinkedBankTransactionCovers(o,account,boundary){
+ return !!o.linkedTransactionId&&state.transactions.some(t=>
+  t.id===o.linkedTransactionId&&t.status==='confirmed'&&
+  t.type!=='card_statement_evidence'&&
+  (t.accountId===account.id||t.toAccountId===account.id)&&
+  afterBoundary(t.date,boundary));
+}
 function accountEstimate(a){
  const I=window.TraceInternational,code=I.currency(a);
  const r=state.reconciliations.filter(x=>x.accountId===a.id&&
@@ -311,8 +320,7 @@ function accountEstimate(a){
  const investMovement=state.investmentOperations.filter(o=>o.bankAccountId===a.id&&
    (!o.status||o.status==='confirmed')&&afterBoundary(o.date,boundary)).reduce((v,o)=>{
     if(!['deposit','withdrawal'].includes(o.type))return v;
-    if(o.linkedTransactionId&&state.transactions.some(t=>t.id===o.linkedTransactionId&&
-     t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)))return v;
+    if(traceLinkedBankTransactionCovers(o,a,boundary))return v;
     const native=I.investmentBankAmount(o,a);
     if(native===null||!Number.isFinite(v))return NaN;
     const subtotal=I.exactMoney(v+(o.type==='deposit'?-native:native));
@@ -881,10 +889,9 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
  // Explain unknown native bank balances without inventing a currency,
  // editing a document or exposing a partner's other account records.
  const I=window.TraceInternational,code=I.currency(account);
- const since=lastReconciliationDate||
-  state.household.accountOpeningBalanceDates?.[account.id]||'';
- const afterEvidenceBoundary=date=>!since||
-  (lastReconciliationDate?String(date||'')>since:String(date||'')>=since);
+ const boundary=lastReconciliationDate?
+  {date:lastReconciliationDate,mode:'end'}:openingBoundary(account.id);
+ const afterEvidenceBoundary=date=>afterBoundary(date,boundary);
  const candidate=t=>t&&t.status==='confirmed'&&
   t.type!=='card_statement_evidence'&&
   (t.accountId===account.id||t.toAccountId===account.id)&&
@@ -902,9 +909,7 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
      !['deposit','withdrawal'].includes(o.type)||
      (o.status&&o.status!=='confirmed')||
      !afterEvidenceBoundary(o.date))continue;
-  if(o.linkedTransactionId&&state.transactions.some(t=>
-    t.id===o.linkedTransactionId&&t.status==='confirmed'&&
-    (t.accountId===account.id||t.toAccountId===account.id)))continue;
+  if(traceLinkedBankTransactionCovers(o,account,boundary))continue;
   if(I.investmentBankAmount(o,account)===null)
    issues.push({id:o.id,name:'Opération de placement',date:o.date||'Date inconnue'});
  }

@@ -7,6 +7,10 @@ const i=app.indexOf('/* TRACE 5.37 UX — read-only account overview and detail'
  j=app.indexOf('\nfunction internationalHome(){',i);
 assert.ok(i>0&&j>i);
 const accountModule=app.slice(i,j);
+const helperFrom=app.indexOf('function traceLinkedBankTransactionCovers('),
+ helperTo=app.indexOf('\nfunction accountEstimate(a){',helperFrom);
+assert.ok(helperFrom>0&&helperTo>helperFrom);
+const linkHelper=app.slice(helperFrom,helperTo);
 function fixture(opts={}){
  const state={accounts:[
   {id:'ca',owner:'la',name:'Compte CA',type:'checking',currency:'CAD'},
@@ -23,7 +27,12 @@ function fixture(opts={}){
  const calls={save:0,render:0,navigate:0,activity:0,close:0,title:''},els=new Map(),
  $=k=>{if(!els.has(k))els.set(k,{textContent:'',innerHTML:'',onclick:null,disabled:false});return els.get(k)};
  let scope=opts.scope||'mine';
- const deps={state,me:'la',homeScope:scope,activityAccountFilter:'all',activityMonth:'2026-10',
+ const deps={state,
+  openingBoundary:id=>({date:state.household.accountOpeningBalanceDates?.[id]||
+    state.household.referenceDate||'',mode:
+    state.household.accountOpeningBalanceModes?.[id]==='end'?'end':'start'}),
+  afterBoundary:(date,b)=>!b?.date||(b.mode==='end'?String(date||'')>b.date:String(date||'')>=b.date),
+  me:'la',homeScope:scope,activityAccountFilter:'all',activityMonth:'2026-10',
   accountType:a=>a.type,accountEstimate:a=>a.id==='fr'?(opts.noBalance?null:100):
    a.id==='ca'?500:a.id==='card'?-100:200,
   internationalQuotes:opts.rate?{EUR:{date:'2026-10-23',cadPerUnit:1.6}}:{},
@@ -52,11 +61,11 @@ function fixture(opts={}){
   showTab(){},traceNotice(){},
   saveHouseholdSettings:async()=>{calls.save++;if(opts.fail)throw Error('failure')}
  };
- const fn=new Function(...Object.keys(deps),accountModule+
+ const fn=new Function(...Object.keys(deps),linkHelper+'\n'+accountModule+
  '\nreturn {openAccountsOverview,openTraceAccountDetail,openTraceAccountActivity,'+
  'confirmTracePrimaryAccount,traceAccountNative,traceAccountCAD,traceAccountOperations,'+
  'getFilter:()=>activityAccountFilter,getMonth:()=>activityMonth};');
- return {...fn(...Object.values(deps)),state,calls,$};
+ return {...fn(...Object.values(deps)),state,calls,$,window:deps.window};
 }
 let n=0;
 async function test(label,fn){await fn();n++;console.log('PASS '+label)}
@@ -231,6 +240,73 @@ async function main(){
   assert.match(f.$('#sheetBody').innerHTML,/2026-10-22/);
   assert.equal(f.calls.save,0);
  });
+
+ await test('end-of-day opening excludes same-day FX proof alert',()=>{
+  const f=fixture({strictEvidence:true});f.state.reconciliations=[];
+  f.state.household.accountOpeningBalanceDates={fr:'2026-10-21'};
+  f.state.household.accountOpeningBalanceModes={fr:'end'};
+  f.state.transactions.push({id:'end-day',accountId:'fr',status:'confirmed',
+   type:'expense',date:'2026-10-21',name:'Same-day purchase',bankAmount:15});
+  f.openTraceAccountDetail('fr');
+  assert.doesNotMatch(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('statement-only link cannot hide missing investment bank evidence',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.state.transactions.push({id:'marker',type:'card_statement_evidence',
+   status:'confirmed',accountId:'fr',date:'2026-10-12'});
+  f.state.investmentOperations=[{id:'i',bankAccountId:'fr',linkedTransactionId:'marker',
+   type:'deposit',status:'confirmed',date:'2026-10-19',bankAmount:46.2}];
+  f.openTraceAccountDetail('fr');
+  assert.match(f.$('#sheetBody').innerHTML,/Opération de placement/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('pre-reconciliation link cannot hide missing bank proof',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.state.transactions.push({id:'old-linked',type:'expense',
+   status:'confirmed',accountId:'fr',date:'2026-10-01',bankAmount:46.2,bankCurrency:'EUR'});
+  f.state.investmentOperations=[{id:'i',bankAccountId:'fr',linkedTransactionId:'old-linked',
+   type:'deposit',status:'confirmed',date:'2026-10-19',bankAmount:46.2}];
+  f.openTraceAccountDetail('fr');
+  assert.match(f.$('#sheetBody').innerHTML,/Opération de placement/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('true linked debit is never reported twice',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.state.transactions.push({id:'real-linked',type:'expense',accountId:'fr',
+   status:'confirmed',date:'2026-10-12',bankAmount:46.2,bankCurrency:'EUR'});
+  f.state.investmentOperations=[{id:'i',bankAccountId:'fr',linkedTransactionId:'real-linked',
+   type:'deposit',status:'confirmed',date:'2026-10-19',bankAmount:46.2}];
+  f.openTraceAccountDetail('fr');
+  assert.doesNotMatch(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('real accountEstimate handles bank statement, old link and genuine debit',()=>{
+  const from=app.indexOf('function traceLinkedBankTransactionCovers('),
+   to=app.indexOf('\nfunction bank(s){',from);
+  assert.ok(from>0&&to>from);
+  const make=new Function('state','window','accountType','openingBoundary','afterBoundary',
+   app.slice(from,to)+'\nreturn accountEstimate;');
+  const f=fixture({strictEvidence:true}),fr=f.state.accounts.find(a=>a.id==='fr');
+  const estimate=make(f.state,f.window,a=>a.type,
+   id=>({date:'2026-10-01',mode:'start'}),
+   (date,b)=>!b?.date||(b.mode==='end'?date>b.date:date>=b.date));
+  f.state.transactions=[];
+  const linked={id:'t',accountId:'fr',date:'2026-10-11',status:'confirmed',
+   type:'card_statement_evidence',bankAmount:46.2,bankCurrency:'EUR'};
+  f.state.transactions.push(linked);
+  f.state.investmentOperations=[{id:'i',bankAccountId:'fr',
+   linkedTransactionId:'t',type:'deposit',status:'confirmed',
+   date:'2026-10-19',bankAmount:46.2,bankCurrency:'EUR'}];
+  assert.equal(estimate(fr),53.8);
+  linked.type='expense';assert.equal(estimate(fr),53.8);
+  linked.date='2026-10-01';assert.equal(estimate(fr),53.8);
+  assert.equal(f.calls.save,0);
+ });
+
  await test('premium sheets and missing-rate safeguards exist',()=>{
   assert.match(css,/\.trace-account-detail-hero/);
   assert.match(css,/\.trace-account-activity-filter/);
