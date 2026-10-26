@@ -84,6 +84,12 @@ function runGate({spawn=spawnSync,root=ROOT,env=process.env,
   if(changed.length)results.push({id:'clean_snapshot',passed:false,
    message:'Fichiers modifiés ou non suivis : QA non reproductible sur HEAD.'});
  }
+ // Fail CLOSED before executing ANY candidate Node or SQL code. A changed
+ // production entry, untrusted commit history, dirty tests/migrations, missing
+ // Vercel protection or a failed git probe invalidates this checkout.
+ if(results.some(r=>!r.passed))
+  return{automatedPassed:false,releaseReady:false,results,
+   manualRequired:MANUAL};
  // --check is deliberately read-only and fails on stale SW.
  exec('preview_sw_fresh',node,['scripts/build-trace-preview-pwa.mjs','--check'],30000);
  const native=exec('native_node_suite',node,['scripts/test-trace-native.mjs'],600000);

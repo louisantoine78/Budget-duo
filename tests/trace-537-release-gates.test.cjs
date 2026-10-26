@@ -178,3 +178,30 @@ test('valid candidate invariants permit automated QA but never override manual N
  assert.equal(q.automatedPassed,true);assert.equal(q.releaseReady,false);
  assert.ok(q.results.some(x=>x.id==='candidate_auto_deploy_disabled'&&x.passed));
 });
+
+
+test('provenance failures stop before any candidate test, PGlite or preview execution',()=>{
+ for(const opts of [
+  {baseAncestor:false},{protectedChanged:true},
+  {commits:'unqualified commit without marker\n'},
+  {commits:''},{vercelDisabled:false},{vercelMissing:true},
+  {dirty:true},{untracked:'?? migrations/probe.sql\n'},{gitStatusFail:true}
+ ]){
+  const q=scenario(opts);
+  assert.equal(q.automatedPassed,false);
+  assert.equal(q.releaseReady,false);
+  assert.equal(q.calls.some(c=>c.cmd!=='git'),false);
+  assert.equal(q.calls.some(c=>PG_TESTS.includes(c.args[0])),false);
+ }
+});
+test('a failed prerequisite never probes PGlite or invokes the native suite',()=>{
+ const q=scenario({protectedChanged:true,pgProbe:0});
+ assert.equal(q.calls.some(c=>c.args.includes('scripts/test-trace-native.mjs')),false);
+ assert.equal(q.calls.some(c=>c.args.includes('require.resolve(process.argv[1])')),false);
+});
+test('clean authorized candidate still exercises all isolated gates, not production',()=>{
+ const q=scenario();
+ assert.equal(q.automatedPassed,true);
+ assert.equal(q.releaseReady,false);
+ assert.equal(q.calls.filter(c=>PG_TESTS.includes(c.args[0])).length,4);
+});
