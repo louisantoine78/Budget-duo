@@ -1,3 +1,18 @@
+## 26 octobre 2026 — suite autonome : tests isolés et navigation ciblée des preuves bancaires
+
+**Branche exclusive :** `trace-5.37.0-international-accounts-fx`. HEAD de code à cette passation `95b57664d3b3476e74bee254dfd3aa980539ade0`. `main` revérifiée inchangée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Les trois commits de code/tests de ce passage portent `[skip ci]` : `38dfbd13`, `50f0301b`, `95b57664`. Ni PR, ni merge, ni CI/Actions, ni déploiement, ni Supabase hébergé, ni données financières réelles.
+
+**Correctifs réels :**
+- `38dfbd13` : trois harnais de régression qui isolent `accountEstimate` chargent son helper partagé `traceLinkedBankTransactionCovers`; le test intégré Mastercard/amis injecte également `traceBudgetPostingMonth` pour le débit différé. Suites V8 exécutées avec modules simulés : **10/10 banque/placements, 15/15 Mastercard/amis, 19/19 invariants financiers = 44/44**.
+- `50f0301b` : l'alerte « Justificatifs bancaires à vérifier » présente des boutons ciblés seulement pour les **transactions bancaires**, permettant l'ouverture d'Activité filtrée au bon compte ET au bon mois, sans aucune écriture, même lorsqu'il existe une transaction plus récente dans un autre mois. Les placements non résolus restent des indications de lecture seule vers Patrimoine. Styles tactile/iPhone (min. 44px, focus visible). **32/32 tests UX ciblés V8**.
+- `95b57664` : tri des justificatifs non résolus par date valide la plus récente et suppression de liens trompeurs pour les dates bancaires invalides. Faux calendrier de test aligné sur la stricte validation du vrai moteur (refus 2026-02-31). **34/34 tests UX ciblés V8** sur les sources après ce dernier commit.
+
+**Précision sur les preuves :** V8 des véritables sources GitHub, avec faux Node/DOM/VM, **pas de commande `node --test` native sur un checkout complet**. Contrôle de parsing V8 du fichier applicatif 5.37, du test UX et du script de release réussi. Le runtime local a Node.js mais ni `postgres`, ni `psql`, ni PGlite installé ; le réseau GitHub/npm n'est pas accessible. **Aucun vrai PostgreSQL/PGlite ni Safari iPhone exécuté**. Quatre suites d'intégration PG migrations 05–12 et recette Safari toujours BLOQUANTES, migration 12 NON APPLIQUÉE, production **NO-GO**, avancement conservateur **≈58 % ±10 points**.
+
+**Suite prioritaire :** disposer d'un checkout isolé avec PGlite/PostgreSQL installé ; faire passer les quatre suites Auth/RLS/CAS/CSV/différé/restauration sur données entièrement fictives, puis Node native suite, Safari iPhone physique et flux FX/Couple/PDF/CSV/UX premium. Préparer transitions anciens clients 5.36.x et plan de restauration ; aucun GO sans décision humaine explicite.
+
+---
+
 ## 26 octobre 2026 — lien de preuve placement et fenêtre bancaire alignés (nouveau lot)
 
 **HEAD code/test vérifié :** `fd2ee4b297ed009cf99db14df60e4f099d41cd8e`, branche exclusive `trace-5.37.0-international-accounts-fx`. Départ `3a9a0acbb19ac08327bbd9fd2abff24591d5dcc7`. Commits `a2a1db79265f4ee494c9c66a145d9282eb082e6b` (code + 5 tests) et `fd2ee4b297ed009cf99db14df60e4f099d41cd8e` (harnais régression) tous deux `[skip ci]`.

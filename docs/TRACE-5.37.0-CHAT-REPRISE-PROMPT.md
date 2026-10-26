@@ -1,3 +1,13 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — ACTIONS DE PREUVE BANCAIRE DANS ACTIVITÉ
+
+**HEAD de code confirmé avant la mise à jour des docs :** `95b57664d3b3476e74bee254dfd3aa980539ade0`, sur `trace-5.37.0-international-accounts-fx`. Revérifier le HEAD au démarrage. `main` confirmée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Uniquement commits `[skip ci]`, zéro PR/merge, CI/Actions, déploiement, SW production ou Supabase réel.
+
+**Travail achevé :** `38dfbd13` répare les derniers harnais isolés `accountEstimate` et l'injection du mois de débit différé (10+15+19 = **44/44 tests V8**). `50f0301b` ajoute des liens tactiles sécurisés pour retrouver les transactions problématiques depuis l'alerte bancaire dans Activité, avec compte et mois ciblés ; les placements restent en lecture seule et dirigés conceptuellement vers Patrimoine. `95b57664` trie les preuves par date décroissante valide et ne crée jamais un lien pour une date impossible. Faux `calendarDate` corrigé dans la suite UX. **34/34 tests UX V8** sur le dernier code, et syntaxe V8 des fichiers app/test/release confirmée. Ce ne sont PAS des tests Node natifs complets ni Safari physique.
+
+**Blocage prioritaire** : aucun moteur PG/PGlite local installé, aucun réseau git/npm ; exécuter les quatre suites PG migrations 05–12 sur clone fictif lorsque moteur et checkout isolé disponibles. La migration 12 reste NON APPLIQUÉE et production strictement **NO-GO** (~58 % ±10). Ensuite qualification Safari physique, sécurité RLS/CAS, flux Couple/FX, import PDF/CSV/OCR, rollback et transition 5.36.x. Aucun effacement ou modification de données bancaires réelles.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — QUALIFICATION JUSTIFICATIFS + PLACEMENTS
 
 **Dernier commit code/test confirmé :** `fd2ee4b297ed009cf99db14df60e4f099d41cd8e` sur `trace-5.37.0-international-accounts-fx`. Revérifier le HEAD live avant tout nouveau travail (des commits documentaires peuvent suivre). Depuis `3a9a0acb`, correctif `a2a1db79` : les liens entre opérations de placement et banques ne permettent plus à une simple pièce de relevé ou à une transaction d'avant rapprochement de masquer un vrai montant ou une alerte. Les soldes d'ouverture de fin de journée sont correctement respectés par l'encart bancaire. Test UI augmenté à 28 cas. `fd2ee4b2` aligne les harnais isolés financiers et legacy.

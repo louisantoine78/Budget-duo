@@ -1,3 +1,15 @@
+## 26 octobre 2026 — reprise UX banques et protections de harnais
+
+- [x] Harnais banque/placements, Mastercard/amis et financiers alignés avec `traceLinkedBankTransactionCovers`; injection `traceBudgetPostingMonth` dans les scénarios intégrés ; **44/44 tests V8** après `38dfbd13`.
+- [x] Justificatifs bancaires cliquables vers Activité filtrée au **bon compte et au bon mois**, uniquement lorsqu'ils désignent une transaction. Placements signalés séparément, sans fausse promesse de redirection ; style tap/focus mobile ; `50f0301b`.
+- [x] Plus récents justificatifs visibles en premier ; date invalide non cliquable ; faux calendrier strict, `95b57664` ; **34/34 UX V8** sur HEAD du code.
+- [x] Parsing V8 des sources `v5-app-5.37.0.js`, du test UX et du script release confirmé ; branche vérifiée, `main` `02c70f50` intacte.
+- [ ] **BLOQUANT :** PostgreSQL/PGlite natif isolé non disponible, migrations 05–12 et quatre suites d'intégration non exécutées, migration 12 toujours non appliquée.
+- [ ] Node natif de checkout complet, recette iPhone Safari, parcours réel tactile, FX/Couple, CSV/PDF/OCR et restauration/rollback avant décision de sortie.
+- [ ] GO humain explicite exigé ; **production NO-GO**, avancement ≈58 % ±10. Aucun `main`, CI, Supabase réel, merge, PR ou déploiement modifié.
+
+---
+
 ## 26 octobre 2026 — preuve bancaire / placements : qualification de régression
 
 - [x] `accountEstimate` et `traceAccountBankProofNotice` ignorent les liens d'investissement vers une simple preuve de relevé ou vers une transaction déjà couverte par le dernier rapprochement valide ; contrôle partagé `traceLinkedBankTransactionCovers` (`a2a1db79`).
