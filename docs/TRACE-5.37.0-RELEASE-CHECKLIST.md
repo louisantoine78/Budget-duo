@@ -1,3 +1,16 @@
+## 26 octobre 2026 — diagnostic bancaire : dernier rapprochement valide uniquement
+
+- [x] L'encart compte « Justificatifs bancaires à vérifier » et `accountEstimate` utilisent le même dernier rapprochement **complet** (date valide, statut confirmé, devise native correspondante, montant `actualBalance` exact) : un rapprochement incomplet ou dans la mauvaise devise ne peut plus cacher une anomalie FX (`e8df42b`).
+- [x] 3 nouveaux scénarios de rapprochement incomplet / devise incorrecte / rapprochement EUR complet (`92a0683`).
+- [x] V8 sur sources GitHub actuelles, modules Node/DOM simulés : **23/23 UX comptes**, **34/34 finance**, **45/45 legacy**, soit 102/102 sur ce passage.
+- [ ] Exécution native du test et recette Safari iPhone, y compris accès au bon mouvement depuis Activité.
+- [ ] Quatre suites natives PostgreSQL/PGlite sur migrations 05–12, Auth/RLS, CAS, historiques et rollback — **non exécutées**.
+- [ ] GO production explicitement autorisé uniquement après qualification complète.
+
+`main` et Supabase réels inchangés, aucun déploiement ou CI. Avancement conservateur 58 % ±10, NO-GO.
+
+---
+
 ## Lot suivant — preuve FX et diagnostic bancaire utilisable
 
 - [x] Révision d'un virement : nouvelle devise native source ou reçue invalide l'empreinte d'import historique ; vrai virement CAD→CAD inchangé conserve la preuve, pas de deuxième revenu/dépense (`eaaccd8`, `164af90`).
