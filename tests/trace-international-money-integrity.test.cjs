@@ -62,6 +62,52 @@ test('transfer receipt and included fee retain real cent values without fraction
  assert.throws(()=>I.resolveTransferEdit({transaction,from:ca,to:fr,bankAmount:150,receivedAmount:95,feeAmount:2.005}),/centime|Frais/);
  assert.equal(JSON.stringify(transaction),before);
 });
+
+test('card repayment editing preserves identical native checking and credit-card legs',()=>{
+ const from={id:'ca-demo',owner:'la',country:'CA',currency:'CAD',type:'checking'};
+ const to={id:'mc-demo',owner:'la',country:'CA',currency:'CAD',type:'card',
+  settlementAccountId:from.id};
+ const transaction={id:'mc-750',status:'confirmed',type:'transfer',
+  transferPurpose:'card_repayment',accountId:from.id,toAccountId:to.id,
+  date:day,name:'Paiement Mastercard',bankAmount:750,toBankAmount:750,
+  bankCurrency:'CAD',toBankCurrency:'CAD',amountCAD:750,
+  importFingerprint:'matched-evidence'};
+ const original=JSON.stringify(transaction);
+ assert.throws(()=>I.resolveTransferEdit({transaction,from,to,
+  bankAmount:750,receivedAmount:700}),/Paiement carte incohérent/);
+ assert.throws(()=>I.resolveTransferEdit({transaction,from,to,
+  bankAmount:750,receivedAmount:750,feeAmount:1}),/Paiement carte incohérent/);
+ assert.equal(JSON.stringify(transaction),original);
+ const good=I.resolveTransferEdit({transaction,from,to,
+  bankAmount:750,receivedAmount:750,feeAmount:0});
+ assert.equal(good.bankAmount,750);
+ assert.equal(good.toBankAmount,750);
+ assert.equal(good.transferFeeAmount,0);
+ assert.equal(good.importFingerprint,'matched-evidence');
+});
+test('editing preexisting uneven credit-card payment cannot silently save it',()=>{
+ const from={id:'ca-old',owner:'la',country:'CA',currency:'CAD',type:'checking'};
+ const to={id:'mc-old',owner:'la',country:'CA',currency:'CAD',type:'card',
+  settlementAccountId:from.id};
+ const transaction={id:'uneven',type:'transfer',status:'confirmed',
+  accountId:from.id,toAccountId:to.id,date:day,name:'Paiement carte',
+  bankAmount:750,toBankAmount:700,amountCAD:750};
+ assert.throws(()=>I.resolveTransferEdit({transaction,from,to,
+  bankAmount:750,receivedAmount:700}),/Paiement carte incohérent/);
+});
+test('independent same-currency checking transfer still supports documented bank fee',()=>{
+ const from={id:'a',owner:'la',country:'CA',currency:'CAD',type:'checking'};
+ const to={id:'b',owner:'la',country:'CA',currency:'CAD',type:'checking'};
+ const transaction={id:'wire',type:'transfer',status:'confirmed',date:day,
+  accountId:from.id,toAccountId:to.id,name:'Virement interne',
+  amountCAD:100,bankAmount:100,toBankAmount:98};
+ const good=I.resolveTransferEdit({transaction,from,to,
+  bankAmount:100,receivedAmount:98,feeAmount:2});
+ assert.equal(good.bankAmount,100);assert.equal(good.toBankAmount,98);
+ assert.equal(good.transferFeeAmount,2);
+ assert.equal(good.transferFeeIncludedInDebit,true);
+});
+
 test('an impossible requested quote date is rejected before any HTTP transport call',async()=>{
  let calls=0;const transport=()=>{calls++;throw Error('Transport must not run')};
  await assert.rejects(I.fetchDailyRate('EUR','2026-02-31',transport),/Date/);

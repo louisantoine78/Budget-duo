@@ -349,6 +349,10 @@
    const fee=feeInput===''?0:exactMoney(feeInput);
    if(fee===null||fee<0||fee>booking.bankAmount)
     throw Error('Frais de virement invalides : ils sont inclus dans le montant débité');
+   // A credit-card repayment has one checking debit and exactly one
+   // equal card credit. The normal create flow already enforces this.
+   if(to.type==='card'&&(fee!==0||received!==booking.bankAmount))
+    throw Error('Paiement carte incohérent : les montants débité et crédité doivent être identiques, sans frais de virement.');
    const nextName=name===null?String(transaction.name||''):String(name||'').trim();
   if(nextName.length<2||nextName.length>85)throw Error('Libellé bancaire invalide');
   const next={...transaction,...booking,name:nextName,toBankAmount:received,toBankCurrency:currency(to),
