@@ -89,7 +89,8 @@
   // An accumulation can overflow safe cent precision even if every native
   // account individually passed validation. Never publish rounded fictitious
   // wealth or budget cash as a known value when this occurs.
-  const safeChecking=exactMoney(check),safeDebt=exactMoney(debt);
+  const safeChecking=exactMoney(check)===null?null:round(check),
+   safeDebt=exactMoney(debt)===null?null:round(debt);
   const missing=included.filter(a=>estimates[a.id]===null||estimates[a.id]===undefined);
   // A card linked to the primary account can have another currency: never
   // subtract USD/EUR debt directly from a CAD/EUR current-account balance.
@@ -108,11 +109,14 @@
   });
   const componentComplete=balances.length>0&&balances.every(a=>a.balance!==null&&a.cad!==null)&&
    !cardsToReview.length;
-  const totalCAD=componentComplete?exactMoney(balances.reduce((n,a)=>n+a.cad,0)):null;
+  const cadSum=componentComplete?balances.reduce((n,a)=>n+a.cad,0):null;
+  const totalCAD=cadSum===null||exactMoney(cadSum)===null?null:round(cadSum);
   const complete=componentComplete&&totalCAD!==null;
   const incompletePrimary=invalidPrimary||missing.length||ambiguousCards.length||
    mixedLinkedCurrencies.length||cardsToReview.some(a=>included.includes(a));
-  const safeNet=safeChecking===null||safeDebt===null?null:exactMoney(check+debt);
+  const netSum=check+debt;
+  const safeNet=safeChecking===null||safeDebt===null||exactMoney(netSum)===null?
+   null:round(netSum);
   return{main,currency:currency(main),checking:missing.length||invalidPrimary?null:safeChecking,
    card:incompletePrimary?null:safeDebt,
    net:incompletePrimary?null:safeNet,
