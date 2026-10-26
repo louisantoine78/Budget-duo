@@ -50,6 +50,22 @@ set search_path = ''
 as $deferred_guard$
 begin
  if tg_op = 'DELETE' then
+  -- PostgreSQL ON DELETE CASCADE invokes this documents trigger AFTER the
+  -- parent household row has been deleted in the same transaction.
+  -- Permit that path ONLY for the actual PostgreSQL administrator without a
+  -- user JWT. This does NOT authorize a direct DELETE of any bank document,
+  -- a client/RPC erase, or any ordinary legacy deferred edit/write.
+  -- The parent-existence check executes as SECURITY DEFINER (not through
+  -- the member's potentially incomplete RLS view of households).
+  -- MUST qualify on isolated native PostgreSQL before any real migration.
+  if auth.uid() is null
+    and current_user = 'postgres' and session_user = 'postgres'
+    and not exists (
+      select 1 from public.households h
+      where h.id = old.household_id
+    ) then
+   return old;
+  end if;
   if public.trace_is_unreleased_deferred_doc(old.household_id,old.collection,old.data) then
    raise exception 'TRACE_DEFERRED_NOT_RELEASED: deferred deletion disabled'
      using errcode='23514';
