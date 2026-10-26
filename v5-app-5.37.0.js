@@ -928,9 +928,15 @@ function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
  const currency=window.TraceInternational.currency(a);
  const related=state.accounts.filter(x=>x.id!==a.id&&!x.archived&&
   x.owner===a.owner&&(x.settlementAccountId===a.id||a.settlementAccountId===x.id));
+ // Use precisely the same eligible reconciliation anchor as accountEstimate.
+ // A record missing its native balance or carrying the wrong currency is NOT
+ // evidence that prior bank movements were checked. Never let it hide a
+ // missing-FX warning in this read-only account detail.
+ const I=window.TraceInternational;
  const reconcile=state.reconciliations.filter(x=>x.accountId===a.id&&
   x.confirmed!==false&&(!x.status||['confirmed','complete','matched'].includes(x.status))&&
-  /^\d{4}-\d\d-\d\d$/.test(String(x.date||'')))
+  I.calendarDate(x.date)&&String(x.currency||'CAD').toUpperCase()===currency&&
+  I.exactMoney(x.actualBalance)!==null)
   .sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
  const latest=traceAccountOperations(a.id).slice(0,2);
  const txLine=t=>{
