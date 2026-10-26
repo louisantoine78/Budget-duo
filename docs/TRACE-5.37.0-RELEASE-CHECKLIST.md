@@ -1,3 +1,19 @@
+## 25 octobre 2026 — toutes les jambes bancaires internationales doivent prouver leur devise
+
+- [x] Jambe de réception `toBankAmount` : montant étranger ou venant d'une autre devise sans `toBankCurrency` explicite devient **inconnu**, jamais arbitrairement EUR/CAD (`662a98a`).
+- [x] Jambe source `bankAmount` d'un compte étranger : `bankCurrency` obligatoire ; règle étendue aux opérations de placement et aux réceptions explicites `investmentAmount` des comptes d'investissement non CAD (`d738ba8`).
+- [x] Les anciennes opérations CAD→CAD restent compatibles en conservant leurs valeurs historiques CAD, sans reconvertir les budgets.
+- [x] Tests cross-currency, paiements carte, 50 USD/46,20 EUR, épargne/placements et régression des soldes historiques ajoutés/maintenus (`967ac7d`, `ca65696`, `eac0c39`, `32f4c58`).
+- [x] Harnais comptable 5.36.5 corrigé pour injection de `traceBudgetPostingMonth`; ajout scénario débit différé octobre→novembre `7b56ff1`.
+- [x] **249/249 tests V8** exécutés et réussis sur sources GitHub : moteur, UI, CAS client, vrais extraits d'import intelligent, contrats statiques SQL et scénarios historiques, avec dépendances simulées. Suites PG : parsing JS seulement.
+- [ ] Faire l'inventaire des éventuels anciens documents internationaux sans preuve de devise **dans une base fictive**, prévoir revue manuelle sans aucun taux ni devise inventé, pas de rétroconversion.
+- [ ] **BLOQUANT** : quatre suites PG sur moteur PostgreSQL/PGlite natif isolé, migrations 05–12, Auth/RLS/CAS/CSV/débit différé et rollback ; **non exécutées**.
+- [ ] Recette iPhone Safari, offline/PWA, flux réel fictif et UI premium ; GO explicite requis. **NO-GO**.
+
+Aucune mutation main/Supabase réel, aucun déploiement ni CI déclenchée ; ~58 % ±10.
+
+---
+
 ## 25 octobre 2026 — Couverture Couple international et patrimoine global au centime
 
 - [x] Vue Couple mixte : contrôler sommes de courants, dettes cartes et solde net, ne jamais masquer un overflow par une compensation opposée (`eb8bf44c`, `9196905e`).
