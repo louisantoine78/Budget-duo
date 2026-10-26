@@ -170,6 +170,32 @@ async function main(){
   assert.match(f.$('#sheetBody').innerHTML,/1 mouvement\(s\)/);
   assert.equal(f.calls.save,0);
  });
+ await test('opening-day foreign proof is included in the diagnostic',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.household.accountOpeningBalanceDates={fr:'2026-10-21'};
+  f.state.reconciliations=[];
+  f.state.transactions.push({id:'opening-day-fx',accountId:'fr',
+   status:'confirmed',type:'expense',date:'2026-10-21',
+   name:'Opening-day purchase',bankAmount:15});
+  f.openTraceAccountDetail('fr');
+  assert.match(f.$('#sheetBody').innerHTML,/Opening-day purchase/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('reconciliation day is excluded but next-day invalid leg is flagged',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.reconciliations.push({accountId:'ca',date:'2026-10-18',status:'confirmed'});
+  f.state.transactions.push({id:'same-day',accountId:'ca',toAccountId:'ca',
+   type:'transfer',status:'confirmed',date:'2026-10-18',name:'Already reconciled',
+   bankAmount:40,toBankAmount:40});
+  f.openTraceAccountDetail('ca');
+  assert.doesNotMatch(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  f.state.transactions.push({id:'day-after',accountId:'ca',toAccountId:'ca',
+   type:'transfer',status:'confirmed',date:'2026-10-19',name:'After reconciliation',
+   bankAmount:40,toBankAmount:40});
+  f.openTraceAccountDetail('ca');
+  assert.match(f.$('#sheetBody').innerHTML,/After reconciliation/);
+  assert.doesNotMatch(f.$('#sheetBody').innerHTML,/Already reconciled ·/);
+ });
  await test('premium sheets and missing-rate safeguards exist',()=>{
   assert.match(css,/\.trace-account-detail-hero/);
   assert.match(css,/\.trace-account-activity-filter/);
