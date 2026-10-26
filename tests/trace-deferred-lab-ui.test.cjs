@@ -8,7 +8,8 @@ function harness(options={}){
  function el(id){
   if(!els.has(id)){
    const listeners={};
-   els.set(id,{id,value:id==='traceDeferredAmount'?'12.35':'',
+   els.set(id,{id,value:id==='traceDeferredAmount'?'12.35':
+    id==='traceDeferredActualDate'?'2026-11-05':'',
     checked:false,disabled:false,textContent:'',dataset:{},
     addEventListener(name,fn){listeners[name]=fn;},
     change(){listeners.change?.();},click(){listeners.click?.();}});
@@ -85,3 +86,38 @@ test('no app data, database or network dependencies are referenced',()=>{
  assert.doesNotMatch(ui,/supabase|localStorage|indexedDB|fetch\(|XMLHttpRequest|client\./i);
 });
 console.log(count+' fictional deferred lab UI scenarios passed');
+
+test('late bank date is explicit, not an extra budget purchase',()=>{
+ const {els,requests}=harness();
+ els('traceDeferredActualDate').value='2026-11-08';
+ els('traceDeferredActualDate').change();
+ assert.equal(els('traceDeferredSandbox').dataset.simulated,'true');
+ assert.match(els('traceDeferredDates').textContent,/\+3 jour/);
+ assert.match(els('traceDeferredBudget').textContent,/40/);
+ assert.match(els('traceDeferredPaid').textContent,/12,35/);
+ assert.match(els('traceDeferredBank').textContent,/-12,35/);
+ assert.equal(requests(),0);
+});
+test('early bank debit remains distinct from planned maturity date',()=>{
+ const {els}=harness();
+ els('traceDeferredActualDate').value='2026-11-04';
+ els('traceDeferredActualDate').change();
+ assert.match(els('traceDeferredDates').textContent,/-1 jour/);
+ assert.match(els('traceDeferredRemaining').textContent,/27,65/);
+});
+test('invalid real bank dates fail closed and never fabricate a balance',()=>{
+ const {els}=harness();
+ for(const value of ['2026-02-30','2026-10-01','']){
+  els('traceDeferredActualDate').value=value;
+  els('traceDeferredActualDate').change();
+  assert.equal(els('traceDeferredSandbox').dataset.simulated,'false');
+  assert.equal(els('traceDeferredPaid').textContent,'—');
+ }
+});
+test('edit of observed bank date invalidates a prior human review',()=>{
+ const {els}=harness();els('traceDeferredReview').click();
+ assert.equal(els('traceDeferredSandbox').dataset.reviewStatus,'manual_review_current');
+ els('traceDeferredActualDate').value='2026-11-08';
+ els('traceDeferredActualDate').change();
+ assert.equal(els('traceDeferredSandbox').dataset.reviewStatus,'needs_human_review');
+});
