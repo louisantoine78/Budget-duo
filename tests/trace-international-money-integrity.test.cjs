@@ -101,3 +101,38 @@ test('foreign investment bank legs reject fractional cents and retain real EUR d
  assert.equal(I.investmentBankAmount({bankAmount:40.005,bankCurrency:'EUR'},fr),null);
  assert.equal(I.investmentBankAmount({bankAmount:40,bankCurrency:'EUR'},fr),40);
 });
+
+
+test('unsafe cents may never be used as booked bank money or FX valuations',()=>{
+ const tooLarge=1e14;
+ assert.equal(I.exactMoney(tooLarge),null);
+ assert.equal(I.amountOnAccount({bankAmount:tooLarge,bankCurrency:'EUR'},fr),null);
+ assert.equal(I.amountOnAccount({bankAmount:tooLarge,bankCurrency:'CAD'},ca),null);
+ assert.equal(I.fxValue(tooLarge,'CAD'),null);
+ assert.equal(I.fxValue(40.005,'CAD'),null);
+ assert.throws(()=>I.resolveBooking({account:ca,bankAmount:tooLarge,date:day}),/Montant bancaire/);
+ assert.equal(I.exactMoney(46.2),46.2);
+ assert.equal(I.fxValue(46.2,'EUR',quote),73.92);
+});
+test('snapshot refuses unsafe aggregate cash even when every account is individually valid',()=>{
+ const one=6e13;
+ assert.equal(I.exactMoney(one),one);
+ const second={...ca,id:'ca2'};
+ const snap=I.snapshot({accounts:[ca,second],owner:'la',mainId:'ca',
+  estimates:{ca:one,ca2:one}});
+ assert.equal(snap.net,null);
+ assert.equal(snap.globalCAD,null);
+ assert.equal(snap.complete,false);
+ assert.equal(snap.checking,null);
+});
+test('large opposite bank balances cannot disguise unsafe checking totals as known net',()=>{
+ const one=6e13;
+ const two={...ca,id:'ca2'};
+ const debt1={...ca,id:'debt1',type:'card',settlementAccountId:'ca'};
+ const debt2={...ca,id:'debt2',type:'card',settlementAccountId:'ca'};
+ const snap=I.snapshot({accounts:[ca,two,debt1,debt2],owner:'la',mainId:'ca',
+  estimates:{ca:one,ca2:one,debt1:-one,debt2:-one}});
+ assert.equal(snap.net,null);
+ assert.equal(snap.checking,null);
+ assert.equal(snap.card,null);
+});
