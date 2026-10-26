@@ -388,6 +388,21 @@ async function run(){
    }),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
    assert.equal(await readDoc('imports','no-jwt'),undefined);
   });
+  await check('readiness must fail if policy or trigger is disabled, and recover on reapply',async()=>{
+   const probe=async()=> (await acting(1,tx=>tx.query(
+    'select public.trace_csv_evidence_guard_ready() as ready'))).rows[0].ready;
+   assert.equal(await probe(),true);
+   await db.exec('alter table public.documents disable trigger trace_csv_unparsed_evidence_guard');
+   assert.equal(await probe(),false);
+   await db.exec('alter table public.documents enable trigger trace_csv_unparsed_evidence_guard');
+   assert.equal(await probe(),true);
+   await db.exec('drop policy trace_csv_unparsed_private_select on public.documents');
+   assert.equal(await probe(),false);
+   await db.exec(await fs.readFile(path.join(root,
+     'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
+   assert.equal(await probe(),true);
+   assert.equal((await readDoc('imports','csv_unparsed_own')).data.status,'reviewed');
+  });
   await check('CSV privacy migration can be reapplied without rewriting evidence',async()=>{
    const before=(await readDoc('imports','csv_unparsed_own')).data;
    await db.exec(await fs.readFile(path.join(root,
