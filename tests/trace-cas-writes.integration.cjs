@@ -29,7 +29,7 @@ async function run(){
   const hid=h.household_id;
   // Fourth fictional user and separate household preserve a legacy deferred
   // card through the candidate migrations to detect household-erasure deadlocks.
-  await db.exec("insert into auth.users(id) values ('${uid(4)}')");
+  await db.query('insert into auth.users(id) values ($1)',[uid(4)]);
   const deferredHouse=(await acting(4,tx=>tx.query(
    "select * from public.create_household('Archive fictive','D')"))).rows[0];
   const deferredHouseId=deferredHouse.household_id;
