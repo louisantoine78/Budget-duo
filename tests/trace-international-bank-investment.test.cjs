@@ -15,7 +15,8 @@ function estimate(bank,opening,transactions=[],investmentOperations=[]){
  assert.ok(helperStart>0&&helperStart<from);
  return new Function('state','window','accountType','openingBoundary','afterBoundary',
  app.slice(helperStart,from)+'\nreturn ('+app.slice(from,to)+');')(state,root,a=>a.type,
- ()=>({date:'2026-10-01',mode:'start'}),()=>true)(bank);
+ ()=>({date:'2026-10-01',mode:'start'}),
+ (date,b)=>b?.mode==='end'?String(date)>b.date:String(date)>=b.date)(bank);
 }
 test('CAD legacy 300 debit',()=>assert.equal(I.investmentBankAmount({bankAmountCAD:300},CAD),300));
 test('EUR native bank debit',()=>assert.equal(I.investmentBankAmount({bankAmount:46.2,bankCurrency:'EUR',bankAmountCAD:73.92},EUR),46.2));
@@ -95,5 +96,30 @@ test('two investments cannot both claim one confirmed CAD bank debit',()=>{
  // Separate deposit legs without duplicated links remain ordinary cash debits.
  assert.equal(estimate(CAD,1000,[],[
   {...first,linkedTransactionId:null},{...second,linkedTransactionId:null}]),800);
+});
+
+test('linked bank proof moved to another account cannot debit the old account silently',()=>{
+ const tx={id:'moved',type:'external_transfer',accountId:'elsewhere',
+  status:'confirmed',date:'2026-10-12',amountCAD:300};
+ const op={bankAccountId:'cad',type:'deposit',status:'confirmed',
+  date:'2026-10-12',bankAmountCAD:300,linkedTransactionId:'moved'};
+ assert.equal(estimate(CAD,1000,[tx],[op]),null);
+});
+test('invalid active bank date blocks fictional cash balance',()=>{
+ assert.equal(estimate(CAD,1000,[{id:'invalid',accountId:'cad',type:'expense',
+  status:'confirmed',date:'2026-13-01',amountCAD:100}],[]),null);
+});
+test('impossible active investment date never creates cash',()=>{
+ assert.equal(estimate(CAD,1000,[],[{bankAccountId:'cad',type:'deposit',
+  status:'confirmed',date:'2026-11-31',bankAmountCAD:100}]),null);
+});
+test('pending or pre-opening links remain independently booked with verified amount',()=>{
+ const tx={id:'old',type:'external_transfer',accountId:'elsewhere',
+  status:'confirmed',date:'2026-09-01',amountCAD:300};
+ const op={bankAccountId:'cad',type:'deposit',status:'confirmed',
+  date:'2026-10-12',bankAmountCAD:300,linkedTransactionId:'old'};
+ assert.equal(estimate(CAD,1000,[tx],[op]),700);
+ tx.date='2026-10-12';tx.status='pending';
+ assert.equal(estimate(CAD,1000,[tx],[op]),700);
 });
 console.log(count+' bank-native investment tests passed');

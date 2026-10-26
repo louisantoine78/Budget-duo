@@ -274,9 +274,12 @@ function traceLinkedBankTransactionCovers(o,account,boundary){
  const I=window.TraceInternational;
  const t=state.transactions.find(t=>t.id===o.linkedTransactionId&&
   t.status==='confirmed'&&t.type!=='card_statement_evidence'&&
-  (t.accountId===account.id||t.toAccountId===account.id)&&
   afterBoundary(t.date,boundary));
  if(!t)return false; // Pending, old or statement-only links are not counted.
+ // A confirmed bank movement reassigned to a different account is conflicting
+ // evidence, not permission to silently debit the old bank account.
+ if(t.accountId!==account.id&&t.toAccountId!==account.id)return null;
+ if(!I.calendarDate(t.date)||!I.calendarDate(o.date))return null;
  // One confirmed bank leg cannot fund two different placement movements.
  // Detect a second eligible claimant before a matching amount could hide it.
  if((state.investmentOperations||[]).some(other=>other!==o&&
@@ -314,6 +317,7 @@ function accountEstimate(a){
  if(base===null||!I.calendarDate(boundary.date))return null;
  const movement=state.transactions.filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
   if(t.type==='card_statement_evidence')return x;
+  if(!I.calendarDate(t.date))return NaN; // Invalid bank day cannot be positioned in the ledger.
   // A legacy malformed self-transfer has BOTH bank legs on one account.
   // Counting only its receiving leg invents cash; block reconciliation
   // until the account mapping is reviewed instead of guessing the net.
@@ -343,6 +347,7 @@ function accountEstimate(a){
  const investMovement=state.investmentOperations.filter(o=>o.bankAccountId===a.id&&
    (!o.status||o.status==='confirmed')&&afterBoundary(o.date,boundary)).reduce((v,o)=>{
     if(!['deposit','withdrawal'].includes(o.type))return v;
+    if(!I.calendarDate(o.date))return NaN;
     const covered=traceLinkedBankTransactionCovers(o,a,boundary);
     if(covered===null)return NaN; // Linked bank evidence contradicts the investment.
     if(covered)return v;
@@ -922,6 +927,7 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
   (t.accountId===account.id||t.toAccountId===account.id)&&
   afterEvidenceBoundary(t.date);
  const issues=state.transactions.filter(candidate).filter(t=>{
+  if(!I.calendarDate(t.date))return true;
   if(t.type==='transfer'&&t.accountId===account.id&&t.toAccountId===account.id)
    return true;
   const leg=t.toAccountId===account.id?'destination':'source';
@@ -936,7 +942,7 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
      !afterEvidenceBoundary(o.date))continue;
   const covered=traceLinkedBankTransactionCovers(o,account,boundary);
   if(covered===true)continue;
-  if(covered===null||I.investmentBankAmount(o,account)===null)
+  if(covered===null||!I.calendarDate(o.date)||I.investmentBankAmount(o,account)===null)
    issues.push({id:o.id,name:'Opération de placement',date:o.date||'Date inconnue',kind:'investment'});
  }
  if(!issues.length)return'';

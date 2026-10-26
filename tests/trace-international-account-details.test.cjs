@@ -346,6 +346,31 @@ async function main(){
   assert.match(html,/Opération de placement/);
   assert.equal(f.calls.save,0);assert.equal(JSON.stringify(f.state),original);
  });
+
+ await test('wrong-account confirmed bank link triggers read-only investment review',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.state.transactions.push({id:'moved-proof',accountId:'ca',type:'external_transfer',
+   status:'confirmed',date:'2026-10-13',bankCurrency:'CAD',bankAmount:46.2});
+  f.state.investmentOperations=[{id:'mislinked',bankAccountId:'fr',
+   type:'deposit',status:'confirmed',date:'2026-10-14',bankAmount:46.2,
+   bankCurrency:'EUR',linkedTransactionId:'moved-proof'}];
+  const before=JSON.stringify(f.state);
+  f.openTraceAccountDetail('fr');
+  assert.match(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.match(f.$('#sheetBody').innerHTML,/Opération de placement/);
+  assert.equal(f.calls.save,0);assert.equal(JSON.stringify(f.state),before);
+ });
+ await test('impossible confirmed bank date alerts and cannot open false Activity month',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.push({id:'bad-day',accountId:'ca',type:'expense',
+   status:'confirmed',date:'2026-13-22',amountCAD:14,name:'Date impossible'});
+  f.openTraceAccountDetail('ca');
+  const html=f.$('#sheetBody').innerHTML;
+  assert.match(html,/Date impossible/);
+  assert.doesNotMatch(html,/data-trace-bank-proof-open="bad-day"/);
+  assert.equal(f.calls.save,0);
+ });
  await test('bank proof provides an accessible scoped Activity link without saving',()=>{
   const f=fixture({strictEvidence:true}),before=JSON.stringify(f.state);
   f.openTraceAccountDetail('fr');
