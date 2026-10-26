@@ -155,3 +155,84 @@ test('ordinary floating-point cent sums stay rounded to two CAD decimals',()=>{
   estimates:{ca:0.3,'card-small':-0.2}});
  assert.equal(paid.net,0.1);
 });
+
+
+test('historical checking balance keeps normal cent addition and subtraction exact',()=>{
+ const state={household:{accountOpeningBalances:{ca:0.1}},
+  transactions:[
+   {id:'income-cents',status:'confirmed',type:'income',accountId:'ca',date:day,
+    bankCurrency:'CAD',bankAmount:0.2},
+   {id:'purchase-cents',status:'confirmed',type:'expense',accountId:'ca',date:day,
+    bankCurrency:'CAD',bankAmount:0.1}
+  ],reconciliations:[],investmentOperations:[]};
+ const estimate=extract('accountEstimate','bank',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  openingBoundary:()=>({date:'2026-10-01',mode:'start'}),
+  afterBoundary:(date,b)=>date>b.date});
+ assert.equal(estimate(ca),0.2);
+});
+test('unsafe intermediate bank balance cannot be hidden by a later opposite transaction',()=>{
+ const large=6e13;
+ const state={household:{accountOpeningBalances:{ca:large}},reconciliations:[],
+  transactions:[
+   {id:'large-in',type:'income',status:'confirmed',accountId:'ca',date:day,
+    bankCurrency:'CAD',bankAmount:large},
+   {id:'large-out',type:'expense',status:'confirmed',accountId:'ca',date:day,
+    bankCurrency:'CAD',bankAmount:large}
+  ],investmentOperations:[]};
+ const estimate=extract('accountEstimate','bank',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  openingBoundary:()=>({date:'2026-10-01',mode:'start'}),
+  afterBoundary:(date,b)=>date>b.date});
+ assert.equal(estimate(ca),null);
+});
+test('unsafe investment and checking subtotals never cancel into a fabricated bank balance',()=>{
+ const large=6e13;
+ const state={household:{accountOpeningBalances:{ca:large}},reconciliations:[],
+  transactions:[],
+  investmentOperations:[
+   {id:'invest-withdraw-large',type:'withdrawal',status:'confirmed',
+    bankAccountId:'ca',date:day,bankCurrency:'CAD',bankAmount:large},
+   {id:'invest-deposit-large',type:'deposit',status:'confirmed',
+    bankAccountId:'ca',date:day,bankCurrency:'CAD',bankAmount:large}
+  ]};
+ const estimate=extract('accountEstimate','bank',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  openingBoundary:()=>({date:'2026-10-01',mode:'start'}),
+  afterBoundary:(date,b)=>date>b.date});
+ assert.equal(estimate(ca),null);
+});
+test('Couple CAD aggregation refuses unsafe cash or card sums without false net certainty',()=>{
+ const large=6e13,partner={...ca,id:'partner-ca',owner:'partner'};
+ const card1={...ca,id:'card-one',type:'card'};
+ const card2={...ca,id:'card-two',type:'card'};
+ const balances={ca:large,'partner-ca':large,'card-one':-large,'card-two':-large};
+ const state={accounts:[ca,partner,card1,card2]};
+ const bank=extract('bank','sharingMovement',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  accountEstimate:a=>balances[a.id]});
+ const couple=bank('couple');
+ assert.equal(couple.checking,null);
+ assert.equal(couple.cardDebt,null);
+ assert.equal(couple.card,null);
+ assert.equal(couple.net,null);
+ // The same fixture viewed for one member still has an exact single current
+ // account, while an unsafe pair of own cards cannot fake usable cash.
+ const mine=bank('la');
+ assert.equal(mine.checking,large);
+ assert.equal(mine.cardDebt,null);
+ assert.equal(mine.net,null);
+});
+test('Couple CAD aggregates still present valid amounts at cent precision',()=>{
+ const partner={...ca,id:'partner-ca',owner:'partner'};
+ const card={...ca,id:'card-la',type:'card'};
+ const state={accounts:[ca,partner,card]};
+ const estimates={ca:0.1,'partner-ca':0.2,'card-la':-0.1};
+ const bank=extract('bank','sharingMovement',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  accountEstimate:a=>estimates[a.id]});
+ const couple=bank('couple');
+ assert.equal(couple.checking,0.3);
+ assert.equal(couple.cardDebt,0.1);
+ assert.equal(couple.net,0.2);
+});
