@@ -1,3 +1,13 @@
+# ADDENDUM — 26 OCTOBRE 2026 — REPRISE FINIE DU DIAGNOSTIC BANCAIRE
+
+Revérifier HEAD live de `trace-5.37.0-international-accounts-fx` ; stable `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Ne jamais toucher main, CI/Actions, PR/merge, PWA/SW prod, migrations hébergées, Supabase et données réelles ; chaque commit `[skip ci]`.
+
+**Nouveau vrai correctif** `e8df42b` : dans `openTraceAccountDetail`, l'alerte FX/justificatifs n'est plus supprimée par un rapprochement récent sans solde réel ou dans la mauvaise devise. Aligner avec `accountEstimate` : date `TraceInternational.calendarDate`, `TraceInternational.exactMoney(actualBalance)`, devise native `currency||CAD`, statut confirmé. Aucune modification des données. Tests `92a0683` incluent 3 cas supplémentaires et un faux moteur `calendarDate/exactMoney`. **102/102 tests V8 vérifiés** : 23 fiche compte, 34 financiers, 45 historique CAD, vrai code GitHub avec Node/DOM simulés. Ne pas annoncer Node CLI, Safari ou PostgreSQL exécutés.
+
+**Prochaine priorité** : moteur PG/PGlite isolé fictif, quatre suites de qualification migrations 05–12, puis tests iPhone, réconciliation/imports et dernière finition UX premium. Migration12 non appliquée et NO-GO prod. ~58 % ±10.
+
+---
+
 # ADDENDUM — nouveau lot : empreintes FX, auto-transferts, alertes compte
 
 Reprendre depuis le vrai HEAD de `trace-5.37.0-international-accounts-fx`. `main` connue stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, ne jamais changer. Commits `[skip ci]`, aucun PR/merge/CI/Actions, déploiement, migrations hébergées ou données Supabase réelles.
