@@ -475,30 +475,42 @@ async function run(){
    const remaining=(await db.query(query,[otherId,'imports',line.id])).rows;
    assert.equal(remaining.length,0);
   });
-  await check('KNOWN NO-GO: historic deferred documents block administrator household erasure',async()=>{
-   // This characterizes an unresolved SQL blocker, NOT successful erasure.
-   const count=async()=> (await db.query(
-    'select count(*)::integer as n from public.documents where household_id=$1',
-    [deferredHouseId])).rows[0].n;
-   assert.equal(await count(),2);
+  await check('deferred card cannot be directly deleted by administrator without household deletion',async()=>{
+   const before=(await readDoc('accounts','legacy-deferred-card')).data;
+   const admin=(await db.query('select current_user as actor, session_user as login')).rows[0];
+   assert.equal(admin.actor,'postgres');assert.equal(admin.login,'postgres');
    await assert.rejects(
-    db.query('delete from public.households where id=$1',[deferredHouseId]),
+    db.query('delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+     [hid,'accounts','legacy-deferred-card']),
     /TRACE_DEFERRED_NOT_RELEASED/);
-   assert.equal(await count(),2,'failed cascade must not partially erase bank history');
-   assert.equal((await db.query(
-    'select count(*)::integer as n from public.households where id=$1',
-    [deferredHouseId])).rows[0].n,1);
-   assert.equal((await db.query(
-    'select count(*)::integer as n from public.household_members where household_id=$1',
-    [deferredHouseId])).rows[0].n,1,'member must survive failed cascade');
-   assert.equal((await db.query(
-    'select count(*)::integer as n from public.trace_v5_backups where household_id=$1',
-    [deferredHouseId])).rows[0].n,1,'historic snapshot must survive failed cascade');
+   assert.deepEqual((await readDoc('accounts','legacy-deferred-card')).data,before);
   });
-  await check('KNOWN NO-GO: member has no authorized self-service household erasure',async()=>{
+  await check('household member cannot delete the entire deferred household directly',async()=>{
    await assert.rejects(acting(4,tx=>tx.query(
     'delete from public.households where id=$1',[deferredHouseId])),
     /permission denied/i);
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.households where id=$1',
+    [deferredHouseId])).rows[0].n,1);
+  });
+  await check('administrative household erasure cascades through historical deferred records',async()=>{
+   // The admin role alone may erase this separate fictional household.
+   // Normal deferred edits/deletes still fail. A member-level erasure RPC
+   // would require its own authentication and authorization qualification.
+   const before=(await db.query(
+    'select count(*)::integer as n from public.documents where household_id=$1',
+    [deferredHouseId])).rows[0].n;
+   assert.equal(before,2);
+   const admin=(await db.query('select current_user as actor, session_user as login, auth.uid() as uid')).rows[0];
+   assert.equal(admin.actor,'postgres');assert.equal(admin.login,'postgres');
+   assert.equal(admin.uid,null);
+   await db.query('delete from public.households where id=$1',[deferredHouseId]);
+   for(const table of ['households','household_members','documents','trace_v5_backups']){
+    const key=table==='households'?'id':'household_id';
+    const left=(await db.query('select count(*)::integer as n from public.'+table+
+      ' where '+key+'=$1',[deferredHouseId])).rows[0].n;
+    assert.equal(left,0,table+' was not fully erased in administrative cascade');
+   }
   });
   await check('CSV privacy migration can be reapplied without rewriting evidence',async()=>{
    const before=(await readDoc('imports','csv_unparsed_own')).data;
