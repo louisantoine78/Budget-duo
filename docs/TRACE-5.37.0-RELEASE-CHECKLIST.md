@@ -1,3 +1,15 @@
+## 25 octobre 2026 — garde de précision sur solde d'ouverture + mouvements + patrimoine Couple
+
+- [x] `accountEstimate()` : cumuls banque/placements vérifiés avec `I.exactMoney()` par mouvement, **avec le solde d'ouverture inclus dans chaque vérification** ; tout dépassement non sûr reste inconnu et ne peut être annulé silencieusement par un mouvement ultérieur. Commits `5f63f9c`, `3cf397e`.
+- [x] `bank(s)` : sommation CAD des comptes du couple, dettes et avoirs cartes refuse dépassements intermédiaires, sans effet sur les comptes EUR ni les opérations réelles.
+- [x] 5 tests financiers fictifs de cumuls et compensations, `bee1bb1c`.
+- [x] **93/93 V8** vérifiés sur sources GitHub avec imports Node simulés, répartis 20 finance, 13 UI, 27 CAS, 33 contrats SQL. Syntaxe V8 des 2 harnais PG vérifiée.
+- [ ] Valider ce moteur sur Safari/iPhone, import réel fictif, rapprochements et multi comptes avec une suite Node native complète.
+- [ ] Exécuter migrations 05–12 sur PostgreSQL/PGlite isolé, 4 suites PG, Auth/RLS/CAS, rollback, CSV, débit différé, membres du couple ; **NON EXÉCUTÉ**.
+- [ ] Préparer la publication uniquement après une preuve complète et autorisation explicite. **NO-GO**. Aucun main / Supabase / déploiement touché.
+
+---
+
 ## 25 octobre 2026 — Accueil multi-comptes : absence de solde périmé et alertes cartes expliquées
 
 - [x] Compte courant archivé ou absent : vider les chiffres de l'ancien compte, afficher « À configurer », supprimer les alertes carte obsolètes sans opération financière (`daa260b`).
