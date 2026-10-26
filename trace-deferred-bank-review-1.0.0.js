@@ -68,12 +68,29 @@
      settlements.length>5000||reviews.length>5000)
    throw Error('Entrées de comparaison invalides.');
   const indexed=new Map(),physical=new Map(),claims=new Map(),ids=new Map(),
-   approvals=new Map(),invalidDocuments=[],allRows=[];
+   approvals=new Map(),invalidDocuments=[],allRows=[],
+   seenSources=new Map(),seenImports=new Map(),duplicatedDocuments=new Set();
   for(const d of statements){
    if(!goodDoc(d)){
     invalidDocuments.push({statementId:String(d?.statementId||''),
      importId:String(d?.importId||'')});continue;
    }
+   // Statement/line renaming does not make a reimport independent evidence.
+   // Taint BOTH identities so a previously reviewed first import is no
+   // longer locally certified when its duplicate arrives later in the batch.
+   const aliases=[seenSources.get(d.sourceId),seenImports.get(d.importId)].filter(Boolean);
+   for(const prior of aliases){
+    duplicatedDocuments.add(prior.statementId);
+    duplicatedDocuments.add(d.statementId);
+    for(const conflicted of [prior,d]){
+     if(!invalidDocuments.some(x=>x.reason==='duplicate_identity'&&
+        x.statementId===conflicted.statementId&&x.importId===conflicted.importId))
+      invalidDocuments.push({statementId:conflicted.statementId,
+       importId:conflicted.importId,reason:'duplicate_identity'});
+    }
+   }
+   if(!seenSources.has(d.sourceId))seenSources.set(d.sourceId,d);
+   if(!seenImports.has(d.importId))seenImports.set(d.importId,d);
    for(const r of d.rows){
     const item={doc:d,row:r},ident=key(d.accountId,d.statementId,r.lineId),
      source=key(d.accountId,d.sourceId,r.lineId);
@@ -105,9 +122,10 @@
     const k=key(e.accountId,e.statementId,e.lineId),found=indexed.get(k)||[];
     if(ids.get(id)>1)item.status='duplicate_settlement_id';
     else if(claims.get(k)>1)item.status='conflicting_claim';
-    else if(invalidDocuments.some(d=>d.statementId===e.statementId))
-     item.status='source_incomplete';
-    else if(found.length>1)item.status='duplicate_import';
+    else if(invalidDocuments.some(d=>d.statementId===e.statementId&&
+      d.reason!=='duplicate_identity'))item.status='source_incomplete';
+    else if(duplicatedDocuments.has(e.statementId)||found.length>1)
+     item.status='duplicate_import';
     else if(!found.length)item.status='missing_line';
     else{
      const {doc:d,row:r}=found[0],p=key(d.accountId,d.sourceId,r.lineId);

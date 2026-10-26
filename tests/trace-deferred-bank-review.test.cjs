@@ -189,4 +189,31 @@ test('a correctly typed checking debit remains only locally reviewable',()=>{
  assert.equal(result.cases[0].status,'manual_review_current');
  assert.equal(result.createdTransactions,0);
 });
+
+test('renamed rows and sources cannot reuse a checking import as fresh evidence',()=>{
+ const original=doc(),copy=doc({statementId:'renamed-statement',
+  sourceId:'different-physical-source',rows:[row({lineId:'different-bank-row'})]});
+ const s=settlement(),snapshot=reviewSnapshot({statement:original,settlement:s});
+ const result=run([original,copy],[s],[{settlementId:s.id,approved:true,snapshot}]);
+ assert.equal(result.cases[0].status,'duplicate_import');
+ assert.equal(result.invalidDocuments.some(d=>d.statementId===original.statementId),true);
+ assert.equal(result.invalidDocuments.some(d=>d.statementId===copy.statementId),true);
+ assert.equal(result.writes,0);assert.equal(result.financialChanges,0);
+});
+test('renamed import and line IDs cannot reuse a physical checking source',()=>{
+ const original=doc(),copy=doc({statementId:'renamed-statement',
+  importId:'different-import-id',rows:[row({lineId:'another-row'})]});
+ const result=run([original,copy]);
+ assert.equal(result.cases[0].status,'duplicate_import');
+ assert.ok(result.invalidDocuments.length>=2);
+});
+test('an independent additional checking source leaves existing manual review valid',()=>{
+ const original=doc(),copy=doc({statementId:'separate-statement',
+  sourceId:'other-source',importId:'other-import',rows:[row({lineId:'unrelated'})]});
+ const s=settlement(),snapshot=reviewSnapshot({statement:original,settlement:s});
+ const result=run([original,copy],[s],[{settlementId:s.id,approved:true,snapshot}]);
+ assert.equal(result.cases[0].status,'manual_review_current');
+ assert.equal(result.invalidDocuments.length,0);
+ assert.equal(result.createdTransactions,0);
+});
 console.log(passed+' deferred bank review scenarios passed');
