@@ -284,7 +284,7 @@ async function main(){
   f.state.transactions.push({id:'real-linked',type:'expense',accountId:'fr',
    status:'confirmed',date:'2026-10-12',bankAmount:46.2,bankCurrency:'EUR'});
   f.state.investmentOperations=[{id:'i',bankAccountId:'fr',linkedTransactionId:'real-linked',
-   type:'deposit',status:'confirmed',date:'2026-10-19',bankAmount:46.2}];
+   type:'deposit',status:'confirmed',date:'2026-10-19',bankAmount:46.2,bankCurrency:'EUR'}];
   f.openTraceAccountDetail('fr');
   assert.doesNotMatch(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
   assert.equal(f.calls.save,0);
@@ -313,6 +313,21 @@ async function main(){
  });
 
 
+
+ await test('mismatched linked investment is flagged but never written from account detail',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.state.transactions.push({id:'linked-wrong',accountId:'fr',type:'expense',
+   status:'confirmed',date:'2026-10-12',bankAmount:46.2,bankCurrency:'EUR'});
+  f.state.investmentOperations=[{id:'invest-wrong',bankAccountId:'fr',
+   linkedTransactionId:'linked-wrong',type:'deposit',date:'2026-10-13',
+   bankAmount:46.21,bankCurrency:'EUR'}];
+  const before=JSON.stringify(f.state);
+  f.openTraceAccountDetail('fr');
+  assert.match(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.match(f.$('#sheetBody').innerHTML,/Opération de placement/);
+  assert.equal(f.calls.save,0);assert.equal(JSON.stringify(f.state),before);
+ });
  await test('bank proof provides an accessible scoped Activity link without saving',()=>{
   const f=fixture({strictEvidence:true}),before=JSON.stringify(f.state);
   f.openTraceAccountDetail('fr');

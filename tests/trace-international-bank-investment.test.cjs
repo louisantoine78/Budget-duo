@@ -39,4 +39,49 @@ test('foreign investment link requires explicit bank-native amount',()=>{
  assert.ok(app.includes('bankCurrency,bankAmount,bankAmountCAD'));
  assert.ok(!app.includes('la liaison bancaire est bloquée'));
 });
+
+test('wrong-amount linked debit blocks the bank balance, never hides 50 CAD',()=>{
+ const tx={id:'wrong',accountId:'cad',type:'external_transfer',status:'confirmed',
+  date:'2026-10-12',amountCAD:250};
+ const op={bankAccountId:'cad',type:'deposit',date:'2026-10-12',
+  bankAmountCAD:300,linkedTransactionId:'wrong'};
+ assert.equal(estimate(CAD,1000,[tx],[op]),null);
+});
+test('bank income with same amount cannot disguise an investment debit',()=>{
+ const tx={id:'income',accountId:'cad',type:'income',status:'confirmed',
+  date:'2026-10-12',amountCAD:300};
+ const op={bankAccountId:'cad',type:'deposit',date:'2026-10-12',
+  bankAmountCAD:300,linkedTransactionId:'income'};
+ assert.equal(estimate(CAD,1000,[tx],[op]),null);
+});
+test('confirmed withdrawal linked to real incoming refund increases cash once',()=>{
+ const tx={id:'refund',accountId:'cad',type:'external_refund',status:'confirmed',
+  date:'2026-10-12',amountCAD:60};
+ const op={bankAccountId:'cad',type:'withdrawal',date:'2026-10-12',
+  bankAmountCAD:60,linkedTransactionId:'refund'};
+ assert.equal(estimate(CAD,1000,[tx],[op]),1060);
+});
+test('withdrawal pointing to a bank debit is a contradiction, not neutral cash',()=>{
+ const tx={id:'debit',accountId:'cad',type:'external_transfer',status:'confirmed',
+  date:'2026-10-12',amountCAD:60};
+ const op={bankAccountId:'cad',type:'withdrawal',date:'2026-10-12',
+  bankAmountCAD:60,linkedTransactionId:'debit'};
+ assert.equal(estimate(CAD,1000,[tx],[op]),null);
+});
+test('EUR linked debit needs valid, matching native currency and cents',()=>{
+ const tx={id:'foreign',accountId:'eur',type:'external_transfer',
+  status:'confirmed',date:'2026-10-12',bankCurrency:'EUR',bankAmount:46.2};
+ const op={bankAccountId:'eur',type:'deposit',date:'2026-10-12',
+  bankAmount:46.2,bankCurrency:'EUR',linkedTransactionId:'foreign'};
+ assert.equal(estimate(EUR,500,[tx],[op]),453.8);
+ delete op.bankCurrency;assert.equal(estimate(EUR,500,[tx],[op]),null);
+ op.bankCurrency='EUR';op.bankAmount=46.21;assert.equal(estimate(EUR,500,[tx],[op]),null);
+});
+test('statement-only evidence cannot suppress the cash deposit leg',()=>{
+ const tx={id:'marker',accountId:'cad',type:'card_statement_evidence',
+  status:'confirmed',date:'2026-10-12',amountCAD:300};
+ const op={bankAccountId:'cad',type:'deposit',date:'2026-10-12',
+  bankAmountCAD:300,linkedTransactionId:'marker'};
+ assert.equal(estimate(CAD,1000,[tx],[op]),700);
+});
 console.log(count+' bank-native investment tests passed');
