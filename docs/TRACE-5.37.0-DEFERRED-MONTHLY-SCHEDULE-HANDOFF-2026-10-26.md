@@ -97,3 +97,33 @@ Aucun changement de `main`, aucune PR, fusion, action GitHub déclenchée manuel
 **BLOQUANTS inchangés :** `proposeScheduleRevision` produit uniquement `persistable:false`, `confirmed:false`, `writes:0` ; les versions ne sont pas enregistrées dans des documents propriétaires ou une base réelle. `resolveAccountEdit` possède encore une validation indépendante des jours sans contrat de prise d'effet SQL ; il ne faut **pas** lever `TRACE_DEFERRED_NOT_RELEASED` avant migration/protocole serveur, verrouillage CAS, RLS, authentification, tests de révisions concurrentes, provenance des deux relevés et gestion des changements bancaires de date réelle. Les tests Node natifs, migration 10–12 réellement jouée PostgreSQL/PGlite, PWA/Chromium/Safari iPhone et Supabase isolé à deux clients restent **NON EXÉCUTÉS** dans ce lot. Migration 12 non appliquée.
 
 Production **NO-GO** ; `main` intacte ; aucune PR, fusion, Action déclenchée manuellement, déploiement, ni manipulation Supabase réel. Pour la prochaine reprise résoudre le HEAD à nouveau, régénérer et vérifier le SW laboratoire uniquement via le générateur, poursuivre les qualifications SQL/RLS/CAS sur environnement fictif, puis connecter la persistance prospectivement **seulement après** preuve des gardes serveur. Estimation globale ~58 % ±10 points.
+
+
+## Lot complémentaire — preuve des prélèvements complets et décalages bancaires (26 octobre 2026)
+
+**Début du lot :** `4a7ee57e5b500ecf4b9c32762005e2be35bdc436`. **Dernier HEAD du code testé :** `b2d2ebdd12e7ded5e286cbaabcf6cea48ba21181`. Comparer à nouveau le HEAD réel à la prochaine reprise.
+
+### Changements réels, sans persistance
+
+- `trace-deferred-bank-review-1.0.0.js` étend la revue locale de justificatif du compte courant aux **prélèvements complets**. Un règlement complet exige sa propre `scheduledDueDate` et une ligne explicite `bankEvidence` correspondant **à la date bancaire réelle**. Un règlement partiel conserve `allocationDueDate` et ne peut mélanger ces champs.
+- La réponse de revue expose `scheduledDueDate`, `observedDebitDate` et `bankDateDeviationDays` (signé), sans décaler automatiquement une échéance de week-end/jour férié. Modification de la date ou d'une ligne annexe du relevé périme l'attestation humaine, qui n'est pas une authentification bancaire. Un règlement ne peut pas réutiliser une ligne physique déjà revendiquée.
+- `trace-deferred-evidence-intake-1.0.0.js` exige, pour un règlement complet alloué à **un achat unique et sans frais**, le montant natif exact et le bon lot d'échéance. Pour un paiement « complet » couvrant plusieurs achats ou frais, `fullBatchEvidenceComplete:false` empêche de présenter la revue d'un seul achat comme certification du lot total : la comparaison de la ligne courante reste seulement locale.
+- La démonstration fictive dans `trace-international-preview.html` et `trace-deferred-lab-ui-1.0.0.js` propose une date bancaire observée séparée, affiche les jours d'écart et rejette les dates impossibles/antérieures à l'achat. Le calcul reste celui de `TraceDeferredDebit.simulate`, sans nouvel achat budgétaire ni virement créé.
+- Important : le contrôleur documentaire pour règlement « complet » et le simulateur comptable `TraceDeferredDebit.simulate` sont **des étapes séparées**, non un flux persistable unique. Ne jamais traiter un jeton de revue locale comme autorisation de modifier un enregistrement `confirmed`.
+
+### Commits de développement (tous `[skip ci]`)
+
+- `fc0b878e0a72d040f05d3ce3752fa2c452305e86` : rapprochement local complet + dates réelles/plans.
+- `e02ecf45238e3d6dedebd93b9b50c0f3c52ba53c` : scénarios date anticipée/retardée, montant, source, unicité et attestation périmée.
+- `1e53d68b47dd457984e5de212ef2feda3c4db56b` : prévention du faux « entièrement réglé » sur un achat isolé.
+- `a204b23aa8b9aca395a55fa87db56d790245c0c9` : intégration de 4 cas réels modules fictifs, sans écriture.
+- `3868c2f798967d5d692a1dcc9c5e22fbb5644099` : jours de décalage dans le labo.
+- `086c710108c190e4a9cd5e4e104ec1a4521be8dc` : saisie séparée de date bancaire dans la preview fictive.
+- `b2d2ebdd12e7ded5e286cbaabcf6cea48ba21181` : tests de saisie valide/invalide et ancien avis révoqué.
+
+**Qualification réellement obtenue au HEAD `b2d2ebdd` : 332/332 vérifications ciblées sous V8 avec dépendances Node simulées, 16 suites** :
+40 comparaison relevé courant ; 27 intake de preuves ; 20 intake avec modules réels ; 7 bridge de relevés ; 14 lab fictif ; 84 moteur différé ; 17 calendrier mensuel ; 11 prévision de trésorerie ; 13 versions de calendrier ; 7 paramètres UI ; 18 lecture compte ; 16 cycle compte ; 24 projection achat ; 17 plan d'écriture ; 5 contrats SQL **statiques** ; 12 mois de budget. La syntaxe du fichier principal `v5-app-5.37.0.js` passe le contrôle V8. **Aucun** test Node natif sur checkout complet, PostgreSQL/PGlite, Auth/RLS/CAS réel, navigateur Chromium ou Safari n'a été exécuté pendant ce lot.
+
+**Limites de sortie et sécurité :** les résultats restent `persistable:false`, `eligibleForServerConfirmation:false`, `confirmed:false`, `writes:0`. Tous les PDF/CSV et relevés des tests sont fictifs. La quarantaine `TRACE_DEFERRED_NOT_RELEASED` reste intacte. La preview a changé : **service worker candidat à régénérer exclusivement via le générateur, puis `--check` sur checkout local avant tout test PWA**. Aucune migration réellement appliquée, aucun changement `main`, PR, fusion, déploiement, action CI déclenchée manuellement ou accès Supabase financier réel. Production **NO-GO**.
+
+Prochaine étape de fiabilité : rattacher les attestations à l'identité immuable des sources et à la version serveur/CAS dans un environnement fictif réellement exécuté sur PostgreSQL ; vérifier à deux sessions, deux membres, deux cartes, remboursements et frais, dates prévues/réelles avant de considérer la persistance. Refaire ensuite toute la recette Node/Safari/PWA et restauration isolée. **Estimation globale ~58 % ±10 points**, sans hausse artificielle avant les vérifications bloquantes.
