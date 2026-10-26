@@ -1,3 +1,15 @@
+## 26 octobre 2026 — lien de preuve placement et fenêtre bancaire alignés (nouveau lot)
+
+**HEAD code/test vérifié :** `fd2ee4b297ed009cf99db14df60e4f099d41cd8e`, branche exclusive `trace-5.37.0-international-accounts-fx`. Départ `3a9a0acbb19ac08327bbd9fd2abff24591d5dcc7`. Commits `a2a1db79265f4ee494c9c66a145d9282eb082e6b` (code + 5 tests) et `fd2ee4b297ed009cf99db14df60e4f099d41cd8e` (harnais régression) tous deux `[skip ci]`.
+
+**Correctif confirmé :** `traceLinkedBankTransactionCovers` impose qu'une opération bancaire liée à un versement/retrait de placement soit confirmée, concerne le bon compte, **appartienne à la fenêtre de solde active** et ne soit pas un simple `card_statement_evidence`. Le calcul `accountEstimate` et l'encart de justificatifs de la fiche compte utilisent le même contrôle : un ancien lien avant rapprochement ou un faux lien de relevé ne cache plus une sortie bancaire ou un mouvement à vérifier. Une vraie opération liée est toujours comptée une seule fois. Le diagnostic emploie désormais aussi `openingBoundary` et `afterBoundary`, respectant le mode **fin de journée** des soldes d'ouverture.
+
+**Preuve V8 de ce passage sur code GitHub :** 28/28 tests ciblés fiches comptes (5 nouveaux), 34/34 intégrité financière internationale et 45/45 historique CAD = **107/107** scénarios, modules Node/DOM/VM simulés. Les deux harnais isolés ont été adaptés à la nouvelle fonction partagée ; aucune donnée persistante, aucun taux, budget ni rapprochement réel écrit. **Ne pas qualifier ces tests d'exécution native `node --test` sur checkout**, d'essai Safari iPhone ou de migration PostgreSQL : ces trois vérifications restent ABSENTES. Aucun `psql/postgres/initdb` ou PGlite local trouvé dans cet environnement, et l'accès git HTTPS n'est pas disponible. Production **NO-GO**, SQL 05–12 non exécuté / migration 12 non appliquée ; garder avancement indicatif **58 % ±10 points**.
+
+**Priorités conservées** : PostgreSQL/PGlite local fictif, quatre suites d'intégration migrations 05–12 Auth/RLS/CAS/CSV/différé/restauration ; recette iPhone Safari physique et navigation Activité depuis pièces signalées ; UX premium, import/réconciliation PDF/CSV, transitions clients 5.36.x. Aucun changement `main`, pas de PR, merge, workflow/CI, déploiement, Supabase réel ni migration hébergée.
+
+---
+
 ## 26 octobre 2026 — reprise terminée : rapprochement réellement qualifié pour l'alerte FX bancaire
 
 **Départ confirmé :** HEAD `9974a4bc1d9a792719de4e0ab5f4de01459918e0` sur `trace-5.37.0-international-accounts-fx`. `main` inchangée connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Tous les commits `[skip ci]`, aucun déploiement, CI, PR, merge, SQL distant ou données financières réelles.

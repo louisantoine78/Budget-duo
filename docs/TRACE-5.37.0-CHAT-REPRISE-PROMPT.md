@@ -1,3 +1,13 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — QUALIFICATION JUSTIFICATIFS + PLACEMENTS
+
+**Dernier commit code/test confirmé :** `fd2ee4b297ed009cf99db14df60e4f099d41cd8e` sur `trace-5.37.0-international-accounts-fx`. Revérifier le HEAD live avant tout nouveau travail (des commits documentaires peuvent suivre). Depuis `3a9a0acb`, correctif `a2a1db79` : les liens entre opérations de placement et banques ne permettent plus à une simple pièce de relevé ou à une transaction d'avant rapprochement de masquer un vrai montant ou une alerte. Les soldes d'ouverture de fin de journée sont correctement respectés par l'encart bancaire. Test UI augmenté à 28 cas. `fd2ee4b2` aligne les harnais isolés financiers et legacy.
+
+**Tests exécutés : 107/107 V8 sur sources GitHub** (28 UI comptes, 34 intégrité monétaire, 45 legacy CAD) avec Node/DOM/VM simulés. Pas de checkout natif `node --test`, PG/PGlite, Safari réel. Aucun moteur PG trouvé localement, pas de réseau Git HTTPS ; ne pas déclarer la release prête. Migrations 05–12 non qualifiées/non appliquées. Production **NO-GO**, ~58 % ±10. Ne jamais toucher `main`, CI/Actions, PR/merge, déploiement, SW production, Supabase réel ou transactions utilisateur ; commits uniquement `[skip ci]`.
+
+**Suite** : qualification PostgreSQL isolée avec faux foyers pour les quatre suites, puis contrôle complet sur Safari iPhone, flux bancaires/couple/FX, import PDF/CSV, récupération/restauration et finition UX premium. Ne pas recommencer la conception.
+
+---
+
 # ADDENDUM — 26 OCTOBRE 2026 — REPRISE FINIE DU DIAGNOSTIC BANCAIRE
 
 Revérifier HEAD live de `trace-5.37.0-international-accounts-fx` ; stable `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Ne jamais toucher main, CI/Actions, PR/merge, PWA/SW prod, migrations hébergées, Supabase et données réelles ; chaque commit `[skip ci]`.

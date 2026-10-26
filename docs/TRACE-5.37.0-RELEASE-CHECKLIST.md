@@ -1,3 +1,15 @@
+## 26 octobre 2026 — preuve bancaire / placements : qualification de régression
+
+- [x] `accountEstimate` et `traceAccountBankProofNotice` ignorent les liens d'investissement vers une simple preuve de relevé ou vers une transaction déjà couverte par le dernier rapprochement valide ; contrôle partagé `traceLinkedBankTransactionCovers` (`a2a1db79`).
+- [x] Jour d'ouverture : diagnostic cohérent avec début/fin de journée `openingBoundary`, sans faux justificatif le jour d'ouverture en mode `end` (`a2a1db79`).
+- [x] 5 scénarios additionnels dont lien valide sans double débit, lien relevé, lien antérieur, borne d'ouverture, calcul bancaire réel ; 28/28 sur fiches comptes.
+- [x] Harnais financiers isolés mis à jour pour importer le helper partagé (`fd2ee4b2`) ; tests V8 sur sources actuelles : **34/34** monnaie internationale + **45/45** historique CAD, total lot **107/107** avec 28 comptes.
+- [ ] **BLOCKER** : quatre suites PG/PGlite locales avec migrations 05–12, Auth/RLS/CAS, CSV/différé et rollback, non exécutées ; migration 12 non appliquée.
+- [ ] Exécution Node native complète sur checkout, iPhone Safari physique, parcours détaillé Activité, UX premium et réception PDF/CSV à qualifier.
+- [ ] GO production explicitement autorisé seulement après toutes les gates ; **NO-GO**. Aucun main/Supabase réel/CI/PR/merge/déploiement touché. Avancement conservateur ≈58 % ±10.
+
+---
+
 ## 26 octobre 2026 — diagnostic bancaire : dernier rapprochement valide uniquement
 
 - [x] L'encart compte « Justificatifs bancaires à vérifier » et `accountEstimate` utilisent le même dernier rapprochement **complet** (date valide, statut confirmé, devise native correspondante, montant `actualBalance` exact) : un rapprochement incomplet ou dans la mauvaise devise ne peut plus cacher une anomalie FX (`e8df42b`).
