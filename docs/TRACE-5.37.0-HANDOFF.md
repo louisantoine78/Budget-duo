@@ -1,3 +1,15 @@
+## 25 octobre 2026 — correctifs UX Accueil multi-comptes (candidats, non déployés)
+
+Branche exclusivement `trace-5.37.0-international-accounts-fx` ; toujours vérifier le HEAD réel à la reprise. Correction réelle `trace-international-ui-1.0.0.js` : lorsque tous les comptes courants deviennent archivés ou disparaissent de la vue, vider les anciens chiffres sur l'Accueil et afficher « À configurer », réinitialiser le montant du compte, la dette et les alertes inutiles, sans écrire de nouvelle transaction ni modifier le compte principal. Commit `daa260b76735e917059c980aca169259b504912b`. Test fake-DOM (dont retour depuis la consultation d'un compte secondaire et disparition d'un avoir carte) : `0952ad4e4b4aa0a3a9c49d662722eede59d4c632`.
+
+Deuxième correction réelle : une carte liée dans une devise différente ou une carte sans compte de règlement non ambigu bloque déjà le net dans le moteur financier ; l'Accueil affiche désormais une **explication explicite et exploitable** de ce refus, tout en conservant la priorité d'alerte sur les avoirs de carte non validés. Code `ec256fcc5cd2d756a183450560b23c4bbd3a207c`, tests `140d8930c49022cfd317b031512610c6c45ece9c`. Les écrans consultatifs restent sans impact sur les comptes enregistrés.
+
+**Preuve réellement exécutée : 13/13 scénarios de `tests/trace-home-account-switch.test.cjs` réussis** en évaluant la vraie source UI et un DOM simulé sous V8 (dépendances Node `fs/path/vm/test/assert` simulées) : sélection de compte sans modifier le principal, solde manquant, dette carte, avoir positif, archivage du dernier compte, extinction d'alerte, carte multidevise incompatible, carte à rattachement ambigu. **Ni Safari réel ni `node --test` natif**, et aucun moteur PostgreSQL/PGlite isolé n'était disponible (testé dans le conteneur : ni serveur ni DNS npm). Aucun test SQL 05–12 n'est prétendu réussi ; la migration 12 et les droits CAS exclusifs restent NON APPLIQUÉS.
+
+Maintenir `main` stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`, `[skip ci]`, aucune PR/merge/CI, déploiement, données financières réelles ou Supabase réel. Avancement global de prudence ~58 % ±10, production NO-GO. Priorités : qualification SQL sur PostgreSQL local fictif, parcours FX/Couple et Safari iPhone avec maquettes premium.
+
+---
+
 ## Rectificatif du 25 octobre — arrondi centime préservé après vérification de sécurité
 
 Commits [skip ci] `41481110a2fc13b678bf7a6e06dbd35efafa0bc5` (`trace-international-1.0.0.js`) et `5dcbf1439c141826c2d30844ddc5c1f0aafb24bf` (test). Après contrôle `exactMoney`/safe-cent des sommes Checking, dette, net et global CAD, les valeurs **VALIDES** sont désormais arrondies à 2 décimales par `round` comme auparavant. Une addition CAD 0,10+0,20 donne 0,30, et un net 0,30−0,20 donne 0,10 ; aucune somme overflow n'est rétablie. **Résultat final de ce lot : 20/20 tests V8** (15 moteur monétaire fonctionnel + 5 contrats SQL12), imports Node simulés ; PG natif NON EXÉCUTÉ. Les précédentes lignes évoquant 19/19 sont antérieures à ces deux commits. Stable main, production et Supabase réel inchangés ; NO-GO.
