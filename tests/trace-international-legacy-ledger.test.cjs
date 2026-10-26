@@ -59,7 +59,14 @@ const budgetState={household:{defaultSplit:{la:50,partner:50}},budgets:[],catego
  ]};
 const split=pick('split','alloc',{state:budgetState});
 const alloc=pick('alloc','budgetAmt',{split});
-const txs=pick('txs','summary',{state:budgetState,isFinancialPeriod:()=>true,split});
+const traceBudgetPostingMonth=pick('traceBudgetPostingMonth','txs',{window:root});
+const txs=pick('txs','summary',{state:budgetState,isFinancialPeriod:()=>true,split,traceBudgetPostingMonth});
+test('débit différé : mois budgétaire distinct de la date de débit bancaire',()=>{
+ const purchase={type:'expense',deferredKind:'purchase',date:'2026-11-10',budgetDate:'2026-10-12'};
+ assert.equal(traceBudgetPostingMonth(purchase),'2026-10');
+ assert.equal(traceBudgetPostingMonth({...purchase,budgetDate:null}),null);
+ assert.equal(traceBudgetPostingMonth({type:'expense',date:'2026-11-10'}),'2026-11');
+});
 const summary=pick('summary','breakdown',{state:budgetState,txs,alloc,cat:()=>({type:'expense'}),budgetAmt:()=>0});
 test('budget couple : dépense 40 + 180 - retour 10',()=>assert.equal(summary('2026-10','couple').expense,210));
 test('budget personnel : 20 + 180 - 5',()=>assert.equal(summary('2026-10','la').expense,195));
