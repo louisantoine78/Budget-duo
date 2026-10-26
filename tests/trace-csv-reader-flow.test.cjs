@@ -293,3 +293,21 @@ test('reviewed unreadable evidence remains immutable and prevents a new transact
  assert.match(later.node('#csvPreviewResult').innerHTML,/Import suspendu/);
  assert.equal(later.writes.length,0);
 });
+
+test('long bank CSV filename is never silently truncated into a colliding source',()=>{
+ const filename='octobre-'+('x'.repeat(112))+'.csv';
+ const s=scenario({filename,content:'Date,Description,Montant\n20/10/2026,Inconnu,??\n'});
+ s.preview();
+ assert.match(s.node('#csvPreviewResult').textContent,/Nom de fichier CSV trop long/);
+ assert.equal(s.writes.length,0);
+ assert.equal(s.evidenceWrites.length,0);
+});
+test('overlong CSV bank row is retained with explicit incomplete-evidence flag',async()=>{
+ const content='Date,Description,Montant\n20/10/2026,'+'DETAIL'.repeat(160)+',??\n';
+ const s=scenario({content});s.preview();
+ s.node('#csvInvalidAcknowledged').checked=true;await s.commit();
+ assert.equal(s.evidenceWrites.length,1);
+ assert.equal(s.evidenceWrites[0].rawText.length,650);
+ assert.equal(s.evidenceWrites[0].rawTruncated,true);
+ assert.equal(s.writes.length,0);
+});

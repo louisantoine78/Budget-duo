@@ -2853,15 +2853,18 @@ async function csvEnsurePrivateAuditReady(){
 // budget, or calendar-day certification. A stable source ID makes retries
 // CAS-idempotent across devices without silently merging different evidence.
 function csvUnparsedRecord(accountId,sourceName,index,cells,owner){
- const label=String(sourceName||'').slice(0,110),account=String(accountId||'');
+ const label=String(sourceName||''),account=String(accountId||'');
  if(!account||!label||!Number.isSafeInteger(index)||index<2||!Array.isArray(cells))
   throw Error('Source CSV illisible : ligne ou compte invalide.');
+ if(label.length>110)
+  throw Error('Nom de fichier CSV trop long (110 caractères maximum) : renomme le fichier avant de le prévisualiser.');
  const id='csv_unparsed_'+account.length+'_'+encodeURIComponent(account)+
   '_'+label.length+'_'+encodeURIComponent(label)+'_'+index;
  if(id.length>240)throw Error('Nom du CSV trop long pour le suivi des lignes : renomme le fichier.');
+ const raw= cells.map(v=>String(v??'')).join(' | ');
  return{id,kind:'csv_unparsed',status:'pending_review',source:'csv',
   owner,accountId:account,sourceFileName:label,sourceIndex:index,
-  rawText:cells.map(v=>String(v??'')).join(' | ').slice(0,650),
+  rawText:raw.slice(0,650),rawTruncated:raw.length>650,
   createdAt:new Date().toISOString()};
 }
 function csvConflictingUnparsedEvidence(row,imports){
@@ -2879,7 +2882,8 @@ function csvUnparsedSourceConflict(item,imports,transactions){
   prior&&(prior.accountId!==item.accountId||
    prior.sourceFileName!==item.sourceFileName||
    Number(prior.sourceIndex)!==item.sourceIndex||
-   prior.rawText!==item.rawText));
+   prior.rawText!==item.rawText||
+   Boolean(prior.rawTruncated)!==Boolean(item.rawTruncated)));
 }
 
 // Read-only review of a statement row against bank movements already in TRACE.
@@ -3911,12 +3915,13 @@ function openCsvUnparsedReview(id){
   x.status==='pending_review'&&x.owner===me&&visibleBankAccounts(me).some(a=>a.id===x.accountId));
  if(!d)return;
  const reviewedSnapshot=JSON.stringify([d.id,d.status,d.owner,d.accountId,
-  d.sourceFileName,d.sourceIndex,d.rawText]);
+  d.sourceFileName,d.sourceIndex,d.rawText,Boolean(d.rawTruncated)]);
  openSheet('Ligne CSV à contrôler',
   '<p class="trace-intl-help">Cette ligne du relevé n’a pas pu être interprétée. Vérifie le CSV original et, si nécessaire, ajoute une transaction séparément depuis TRACE. La revue ne crée ni dépense, ni revenu.</p>'+
   '<p><b>'+esc(d.sourceFileName)+'</b> · ligne '+Number(d.sourceIndex)+
   ' · '+esc(shortAccountLabel(state.accounts.find(a=>a.id===d.accountId)))+'</p>'+
   '<div class="trace-csv-review-original">'+esc(d.rawText||'Aucun extrait disponible')+'</div>'+
+  (d.rawTruncated?'<p role="alert" class="trace-csv-partial-warning">Extrait incomplet (limite 650 caractères). Consulte impérativement le CSV bancaire original pour contrôler la fin de cette ligne.</p>':'')+
   '<label class="trace-csv-review-confirm"><input type="checkbox" id="csvReviewChecked">J’ai vérifié cette ligne dans le relevé bancaire et traité séparément toute opération manquante.</label>'+
   '<p id="csvReviewError" role="alert" class="trace-bank-setup-error"></p>'+
   '<button type="button" class="primary full" id="csvReviewConfirm">Marquer comme revue (aucune opération créée)</button>'+
@@ -3930,7 +3935,7 @@ function openCsvUnparsedReview(id){
   if(!fresh||fresh.status!=='pending_review'||fresh.owner!==me||
      !visibleBankAccounts(me).some(a=>a.id===fresh.accountId)||
      JSON.stringify([fresh.id,fresh.status,fresh.owner,fresh.accountId,
-      fresh.sourceFileName,fresh.sourceIndex,fresh.rawText])!==reviewedSnapshot){
+      fresh.sourceFileName,fresh.sourceIndex,fresh.rawText,Boolean(fresh.rawTruncated)])!==reviewedSnapshot){
    $('#csvReviewError').textContent='Cette ligne a changé. Rouvre la liste pour la contrôler.';return;
   }
   const btn=$('#csvReviewConfirm');btn.disabled=true;
@@ -3938,7 +3943,7 @@ function openCsvUnparsedReview(id){
    await csvEnsurePrivateAuditReady();
    const current=state.smartImports.find(x=>x.id===d.id);
    if(!current||JSON.stringify([current.id,current.status,current.owner,current.accountId,
-    current.sourceFileName,current.sourceIndex,current.rawText])!==reviewedSnapshot)
+    current.sourceFileName,current.sourceIndex,current.rawText,Boolean(current.rawTruncated)])!==reviewedSnapshot)
     throw Error('Cette preuve a changé pendant la vérification. Rouvre-la.');
    const next={...current,status:'reviewed',reviewedBy:me,reviewedAt:new Date().toISOString()};
    await saveDocument('imports',next);

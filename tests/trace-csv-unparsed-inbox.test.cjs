@@ -101,3 +101,22 @@ test('source changed during the awaited privacy probe cannot be marked reviewed'
  assert.equal(s.state.smartImports[0].status,'pending_review');
  assert.match(s.el('#csvReviewError').textContent,/a changé pendant/);
 });
+
+test('truncated bank evidence visibly requires consulting the complete CSV original',()=>{
+ const s=scenario({items:[{id:'trimmed',kind:'csv_unparsed',status:'pending_review',
+  owner:'la',accountId:'la-bank',sourceFileName:'octobre.csv',sourceIndex:6,
+  rawText:'limited excerpt',rawTruncated:true}]});
+ s.renderCsvUnparsedReviewQueue();
+ s.buttons.get('trimmed').onclick();
+ assert.match(s.el('#sheetMarkup').innerHTML,/Extrait incomplet/);
+ assert.match(s.el('#sheetMarkup').innerHTML,/CSV bancaire original/);
+});
+test('changing truncation evidence after opening review blocks closure',async()=>{
+ const s=scenario();s.renderCsvUnparsedReviewQueue();
+ s.buttons.get('unparsed-1').onclick();
+ s.state.smartImports[0].rawTruncated=true;
+ s.el('#csvReviewChecked').checked=true;
+ await s.el('#csvReviewConfirm').onclick();
+ assert.equal(s.saves.length,0);
+ assert.match(s.el('#csvReviewError').textContent,/a changé/);
+});
