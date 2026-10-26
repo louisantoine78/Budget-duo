@@ -2828,6 +2828,31 @@ function csvConflictingSourceRows(t,rows){
 }
 
 
+// Invalid CSV bank lines are import evidence ONLY: no transaction, balance,
+// budget, or calendar-day certification. A stable source ID makes retries
+// CAS-idempotent across devices without silently merging different evidence.
+function csvUnparsedRecord(accountId,sourceName,index,cells,owner){
+ const label=String(sourceName||'').slice(0,110),account=String(accountId||'');
+ if(!account||!label||!Number.isSafeInteger(index)||index<2||!Array.isArray(cells))
+  throw Error('Source CSV illisible : ligne ou compte invalide.');
+ const id='csv_unparsed_'+account.length+'_'+encodeURIComponent(account)+
+  '_'+label.length+'_'+encodeURIComponent(label)+'_'+index;
+ if(id.length>240)throw Error('Nom du CSV trop long pour le suivi des lignes : renomme le fichier.');
+ return{id,kind:'csv_unparsed',status:'pending_review',source:'csv',
+  owner,accountId:account,sourceFileName:label,sourceIndex:index,
+  rawText:cells.map(v=>String(v??'')).join(' | ').slice(0,650),
+  createdAt:new Date().toISOString()};
+}
+function csvUnparsedSourceConflict(item,imports,transactions){
+ const prior=(imports||[]).find(x=>x.id===item.id&&x.kind==='csv_unparsed');
+ // A collision may also be a row previously interpreted as a financial line.
+ return Boolean((transactions||[]).some(x=>csvSourceRowsAtIndex(item,[x]).length)||
+  prior&&(prior.accountId!==item.accountId||
+   prior.sourceFileName!==item.sourceFileName||
+   Number(prior.sourceIndex)!==item.sourceIndex||
+   prior.rawText!==item.rawText));
+}
+
 // Read-only review of a statement row against bank movements already in TRACE.
 // A match is a warning, never authority to delete, merge or book a transaction.
 function csvBankEvidenceMatches(row,existing=state.transactions){
@@ -2948,7 +2973,11 @@ function importFile(file){
      });
      const mappingAtPreview=reviewedMapping();
      const flagged=result.all.filter(t=>t.csvReviewMatchIds?.length),
-      sourceConflicts=result.all.filter(t=>csvConflictingSourceRows(t,state.transactions).length);
+      invalidEvidence=result.invalid.map(index=>csvUnparsedRecord($('#csvAccount').value,
+       file.name,index,rows[index-2]||[],me)),
+      sourceConflicts=result.all.filter(t=>csvConflictingSourceRows(t,state.transactions).length),
+      invalidConflicts=invalidEvidence.filter(t=>csvUnparsedSourceConflict(t,state.smartImports,state.transactions)),
+      totalConflicts=sourceConflicts.length+invalidConflicts.length;
      const account=accts.find(a=>a.id===$('#csvAccount').value),I=window.TraceInternational,
       ccy=I.currency(account),accountAtPreview=csvImportAccountSnapshot(account,me),
       existing=[...state.transactions,...result.all];
@@ -2963,7 +2992,7 @@ function importFile(file){
        esc(nature)+' · '+(matched.status==='confirmed'?'Confirmée':'À vérifier')+'</small></article>';
      }).join('');
      preview.innerHTML='<div class="empty-note" style="margin-top:14px"><b>'+result.all.length+' lignes à vérifier</b> · '+result.duplicates+' doublon(s) déjà présents non réimportés · '+result.invalid.length+' ligne(s) invalide(s) · '+flagged.length+' rapprochement(s) possible(s).</div>'+
-      (sourceConflicts.length?'<div class="empty-note trace-csv-source-conflict" role="alert"><b>Import suspendu : '+sourceConflicts.length+' conflit(s) de fichier</b>. Le même nom de CSV et le même numéro de ligne ont déjà été utilisés pour une opération différente sur ce compte. Compare les relevés précédents. Si c’est réellement un autre relevé, renomme le fichier en incluant sa période puis prévisualise-le de nouveau. Aucun mouvement n’est créé automatiquement.</div>':'')+
+      (totalConflicts?'<div class="empty-note trace-csv-source-conflict" role="alert"><b>Import suspendu : '+totalConflicts+' conflit(s) de fichier</b>. Le même nom de CSV et le même numéro de ligne ont déjà été utilisés pour une opération différente sur ce compte. Compare les relevés précédents. Si c’est réellement un autre relevé, renomme le fichier en incluant sa période puis prévisualise-le de nouveau. Aucun mouvement n’est créé automatiquement.</div>':'')+
       (flagged.length?'<div class="empty-note" role="status"><b>Vérification bancaire nécessaire</b> : certaines lignes ressemblent à des paiements de carte, remboursements ou autres mouvements déjà saisis. Rien n’est fusionné ni supprimé automatiquement.</div>'+
        '<p class="empty-note">Déplie chaque ligne signalée pour comparer les opérations. Au plus cinq ressemblances par ligne ; ce contrôle ne certifie pas l’absence de doublon.</p>':'')+
       result.all.map(t=>'<details class="trace-csv-preview-row" data-csv-preview-row="'+t.csvSourceRowIndex+'"'+(t.csvReviewMatchIds?.length?' data-has-match="true"':'')+'><summary><span>'+esc(t.date)+' · '+esc(t.name)+
@@ -2972,18 +3001,20 @@ function importFile(file){
        comparison(t)+'</details>').join('')+
       (result.invalid.length?'<details class="trace-csv-invalid"><summary>'+result.invalid.length+' ligne(s) non interprétée(s)</summary>'+result.invalid.map(n=>
        '<p class="empty-note">Ligne '+n+' : '+esc((rows[n-2]||[]).join(' | '))+'</p>').join('')+'</details>':'')+
-      (result.all.length&&result.invalid.length&&!sourceConflicts.length?
-       '<label class="trace-csv-partial-ack"><input type="checkbox" id="csvInvalidAcknowledged"> J’ai examiné les '+result.invalid.length+' ligne(s) illisibles. Elles ne seront pas importées et je les vérifierai séparément sur mon relevé bancaire.</label>'+
+      (result.invalid.length&&!totalConflicts?
+       '<label class="trace-csv-partial-ack"><input type="checkbox" id="csvInvalidAcknowledged"> J’ai vérifié les '+result.invalid.length+' ligne(s) illisibles : TRACE les conservera dans « Imports · lignes CSV à revoir », sans opération bancaire ni incidence sur le budget. Elles resteront à contrôler séparément avec le relevé.</label>'+
        '<p id="csvImportWarnings" class="trace-csv-partial-warning" role="alert"></p>':'')+
-      (result.all.length&&!sourceConflicts.length?'<button class="primary full" id="csvCommit" style="margin-top:14px">Importer '+result.all.length+' opération(s) à vérifier</button>':'');
-     if(!result.all.length||sourceConflicts.length)return;
+      ((result.all.length||result.invalid.length)&&!totalConflicts?
+       '<button class="primary full" id="csvCommit" style="margin-top:14px">'+
+       (result.all.length?'Importer '+result.all.length+' opération(s) à vérifier':'Conserver les lignes à vérifier')+'</button>':'');
+     if((!result.all.length&&!result.invalid.length)||totalConflicts)return;
      $('#csvCommit').onclick=async()=>{
       if(!csvPartialImportAllowed(result.invalid.length,$('#csvInvalidAcknowledged')?.checked)){
        const warning=$('#csvImportWarnings');
        if(warning)warning.textContent='Vérifie les lignes non interprétées et confirme leur traitement séparé avant cet import partiel.';
        return;
       }
-      const btn=$('#csvCommit');btn.disabled=true;let saved=0;
+      const btn=$('#csvCommit');btn.disabled=true;let saved=0,retained=0;
       try{
        const validateReview=()=>{
         if(reviewedMapping()!==mappingAtPreview)
@@ -2994,8 +3025,19 @@ function importFile(file){
          throw Error('Le compte bancaire a changé depuis la prévisualisation. Relance la revue du CSV.');
        };
        validateReview();
-       if(result.all.some(t=>csvConflictingSourceRows(t,state.transactions).length))
+       if(result.all.some(t=>csvConflictingSourceRows(t,state.transactions).length)||
+          invalidEvidence.some(t=>csvUnparsedSourceConflict(t,state.smartImports,state.transactions)))
         throw Error('Conflit de source détecté depuis la prévisualisation. Compare les relevés et recommence.');
+       // Preserve invalid evidence first. If the later transaction import fails,
+       // these unreadable lines remain visible for human monthly control.
+       for(const entry of invalidEvidence){
+        validateReview();
+        if(csvUnparsedSourceConflict(entry,state.smartImports,state.transactions))
+         throw Error('Une ligne CSV illisible a changé depuis la prévisualisation.');
+        if(state.smartImports.some(x=>x.id===entry.id&&x.kind==='csv_unparsed'))continue;
+        await saveDocument('imports',entry);
+        state.smartImports.push(entry);retained++;
+       }
        const newEntries=result.all.filter(t=>!csvAlreadyImportedSourceRow(t,state.transactions));
        // Unquoted foreign rows remain pending in their real bank currency.
        // CAD is assigned only during explicit validation at a dated FX rate.
@@ -3018,10 +3060,11 @@ function importFile(file){
         await saveDocument('transactions',item);state.transactions.push(item);saved++;
        }
        renderAll();navigate('activity');showTab('review');
-       $('#importResult').textContent=saved+' opération(s) placée(s) dans À vérifier.';
+       $('#importResult').textContent=saved+' opération(s) placée(s) dans À vérifier · '+
+        retained+' ligne(s) CSV illisible(s) conservée(s) pour contrôle (sans budget).';
       }catch(e){console.error(e);renderAll();$('#importResult').textContent=saved+
-       ' ligne(s) importée(s). Import interrompu : '+String(e.message||e)+
-       ' Les écritures déjà placées en attente sont conservées. Relance la prévisualisation avant de reprendre.';}
+       ' ligne(s) importée(s), '+retained+' preuve(s) illisible(s) conservée(s). Import interrompu : '+
+       String(e.message||e)+' Les éléments déjà enregistrés sont conservés. Relance la prévisualisation avant de reprendre.';}
      };
     }catch(e){$('#csvPreviewResult').textContent=e.message;}
    };
