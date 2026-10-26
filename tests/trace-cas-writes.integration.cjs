@@ -425,7 +425,7 @@ async function run(){
     assert.equal(foreign.length,0,'a different household cannot see CSV source');
     await assert.rejects(acting(n,tx=>tx.query(
      'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
-     [otherId,'imports','cross-foyer',{...line,id:'cross-foyer'},null])),
+     [otherId,'imports','cross-foyer',JSON.stringify({...line,id:'cross-foyer'}),null])),
      /TRACE_WRITE_FORBIDDEN/);
    }
    // A controlled ADMINISTRATIVE household deletion cascades through the
