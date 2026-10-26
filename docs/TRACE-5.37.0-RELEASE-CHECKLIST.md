@@ -1,3 +1,15 @@
+## 25 octobre 2026 — incident SQL 11 et garde-fou de collision source CSV
+
+- [x] Défaut réel identifié dans la migration candidate 11 : littéral regex `sourceIndex` non terminé, empêchant la qualification SQL. Première tentative `595e66965dbfabf00e5067805beb3c0b7ebdd579` non correcte, supersédée par `26dcc704446798a900aed5623479d6867d2b3a6e` qui reconstruit la migration, préserve le terminateur regex par callback JS et valide l'index dans un `CASE` avant de convertir en entier.
+- [x] `71739b3da130a37a69125517cf41c1418a7f6ee2` : test de lexicalisation statique SQL pour migrations 07–11, chaînes et corps `$tag$`, détection d'expression tronquée, singletons policy/trigger/RPC. 4/4 cas V8 sous mocks. **N'est pas une preuve de parsing ou d'exécution SQL PostgreSQL.**
+- [x] `4b0377016059c4366cb597fd539d18a457cab031` et `a6bd854de0a3618786d58fc056431708611a65d3` : collision client désormais bidirectionnelle entre opérations CSV et preuves illisibles déjà conservées ; vérifie aussi les preuves marquées `reviewed`. 2 nouvelles fixtures end-to-end fictives, pas de nouvelle transaction silencieuse.
+- [x] **91/91 tests ciblés V8 sur HEAD courant** : 24 CSV, 6 compte, 7 collision, 5 partiel, 24 CAS client, 6 Home, 7 inbox, 8 SQL contrat statique, 4 SQL lexique. Module Node/FileReader/DOM/RPC simulé, vérifications SQL statiques uniquement.
+- [ ] **BLOQUANT :** vrai `node --test` dans checkout complet, PostgreSQL/PGlite migrations 05–11, 2 Auth JWT/foyers, RLS et triggers, RPC SECURITY DEFINER, relecture concurrente, sauvegarde/restauration, rollback. Aucun SQL de cette migration n'a été appliqué ni exécuté sur un moteur réel.
+- [ ] Séparer confidentialité des extraits bancaires, RLS Realtime, liens entre preuves CSV et achats bancaires, certificat mensuel PDF. Valider Safari physique, SW preview construit officiellement, Couple/FX/patrimoine/débit différé avant publication.
+- [ ] Stable `main` /5.36.5 intouché, ni PR, CI, Supabase réel ou déploiement. Estimation globale qualitative maintenue **58 % ±10**, release **NO-GO**.
+
+---
+
 ## 25 octobre 2026 — confidentialité CSV : sonde de sécurité et restauration DBA
 
 - [x] `2e675a6492fcd317fd47b91dcd8d97214e6e8606` : migration candidate 11 modifiée pour garder possible la restauration sans JWT par session administrative réelle `current_user=session_user='postgres'` ; session `authenticated` sans JWT refusée.

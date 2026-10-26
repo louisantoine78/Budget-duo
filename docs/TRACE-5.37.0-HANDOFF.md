@@ -1,3 +1,19 @@
+## 25 octobre 2026 — audit de la migration 11 : correction d'un SQL non exécutable
+
+**HEAD de code :** `a6bd854de0a3618786d58fc056431708611a65d3` avant actualisation du présent fichier. Branche internationale exclusive, stable `main` non modifiée.
+
+**Incident bloquant trouvé :** la migration `11-trace-csv-unparsed-owner-privacy.sql` contenait une chaîne regex `sourceIndex` tronquée, provenant de l'expansion spéciale JavaScript `$'` utilisée par la forme `String.replace(old,newString)`. Le premier commit tentative `595e66965dbfabf00e5067805beb3c0b7ebdd579` reproduisait l'anomalie en dupliquant le reste du fichier : **à ne jamais utiliser comme référence**. La version corrigée `26dcc704446798a900aed5623479d6867d2b3a6e` reconstruit le SQL depuis le dernier bon contexte par un callback `replace(old,()=>replacement)` qui préserve littéralement l'ancre regex, et utilise un `CASE` validant les chiffres avant `::integer`. Aucun SQL appliqué. Ce défaut prouve que les 85 tests V8 précédents ne validaient PAS la validité du SQL.
+
+**Prévention pérenne :** `71739b3da130a37a69125517cf41c1418a7f6ee2` crée `tests/trace-sql-lexical-integrity.test.cjs` : contrôle des quotes/dollar quotes et commentaires des migrations 07–11, regex sourceIndex et CASE, exemple mutant volontairement cassé devant échouer, unicité des définitions SQL. Ce test est découvert automatiquement par `scripts/test-trace-native.mjs` en checkout complet, mais ici seulement exécuté via V8 avec `node:*` simulé. Ce n'est PAS un parseur PostgreSQL et ne constitue PAS une migration testée.
+
+**Intégrité source CSV :** `4b0377016059c4366cb597fd539d18a457cab031` bloque maintenant la direction inverse de collision. Si `imports.csv_unparsed` a gardé une preuve au même compte/nom fichier/numéro de ligne, un nouveau CSV modifié ne peut créer une transaction `pending` à cet emplacement sans revue explicite. Idem si la preuve est `reviewed`. Contrôle en preview, au démarrage de l'import, avant chaque ligne ; aucune écriture financière automatique. `a6bd854de0a3618786d58fc056431708611a65d3` synchronise l'ancien test de contrat avec ce nouveau garde-fou.
+
+**Résultats V8 actuels : 91/91** (24+6+7+5+24+6+7+8+4), avec sources réelles et bibliothèques Node/DOM/RPC simulées. Les **tests PostgreSQL 05–11/Auth/RLS/CAS ne sont pas exécutés**, pas plus que vrai Safari, Chromium ou node natif. La migration corrigée demeure un simple fichier candidat dans GitHub ; aucun projet Supabase connecté n'a été touché. Les collisions CSV entre deux sessions distinctes restent à qualifier côté serveur : le test actuel est client uniquement.
+
+**Suite nécessaire :** réunir un vrai checkout et PGlite ou PostgreSQL fictif ; exécuter `tests/trace-cas-writes.integration.cjs` et les autres suites PG (avec vrais rôles/JWT fictifs et réversibilité), Realtime, interface/navigateur ; traiter les échecs avant tout cutover. Stable 5.36.5 protégé, global 58 % qualitatif, **NO-GO production**.
+
+---
+
 ## 25 octobre 2026 — barrière serveur de confidentialité avant stockage CSV
 
 **Commits techniques** : `2e675a6492fcd317fd47b91dcd8d97214e6e8606`, `452f265162f8dd6b93cde2a13e58182195949ca6`, `e3cfdda7d23ccd70ddb87a92d3c45162db0e8611`, `7230365b49685b2458d1e7f30cb54d1de3550444`, `498ea5f99f3a47bd994a7e78a29be7d13436dca8`. Branche unique 5.37 International, tous `[skip ci]`.
