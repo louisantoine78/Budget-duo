@@ -33,14 +33,18 @@ const windowReal={TraceInternational:{
   Number.isFinite(Number(v))?Number(v):null,
  money:(n,c)=>Number(n).toFixed(2)+' '+c
 }};
-const realRow=(t,account='all',currency='all')=>{
+const filesIntlSource=get('trace-international-1.0.0.js');
+const actualEngine={};
+new Function('window',filesIntlSource)(actualEngine);
+const realInternational=actualEngine.TraceInternational;
+const realRow=(t,account='all',currency='all',using=windowReal)=>{
  const start=app.indexOf('function txRow(t){'),
   end=app.indexOf('\n/* CSV import:',start);
  assert.ok(start>0&&end>start);
  const real=new Function('state','window','cat','accountType','isFinancialPeriod',
   'esc','money','activityAccountFilter','activityFilters',
   'return ('+app.slice(start,end)+');');
- return real({...state,investmentAccounts:[]},windowReal,id=>({name:'Courses',icon:'◇'}),
+ return real({...state,investmentAccounts:[]},using,id=>({name:'Courses',icon:'◇'}),
   a=>a?.type,()=>true,String,n=>Number(n).toFixed(2),account,
   {currency,category:'all',nature:'all',status:'all'})(t);
 };
@@ -135,4 +139,31 @@ test('pending all-account EUR filter displays EUR receipt, not source CAD debit'
  assert.doesNotMatch(view(tx),/40 CAD/);
 });
 
+
+test('real International engine refuses foreign CAD fallback without source proof',()=>{
+ const tx={id:'native-unproved',date:'2026-10-21',accountId:'fr',type:'expense',
+  status:'confirmed',amountCAD:73.92};
+ const out=realRow(tx,'fr','EUR',actualEngine);
+ assert.match(out,/Montant à vérifier/);
+ assert.doesNotMatch(out,/73,92\s*€/);
+});
+test('real International engine rejects mismatched or fractional native bank proof',()=>{
+ const tx={id:'native-bad',date:'2026-10-21',accountId:'fr',type:'expense',
+  status:'confirmed',amountCAD:73.92,bankAmount:46.2,bankCurrency:'CAD'};
+ assert.match(realRow(tx,'fr','EUR',actualEngine),/Montant à vérifier/);
+ tx.bankCurrency='EUR';tx.bankAmount=46.205;
+ assert.match(realRow(tx,'fr','EUR',actualEngine),/Montant à vérifier/);
+ tx.bankAmount=46.2;
+ assert.match(realRow(tx,'fr','EUR',actualEngine),/46,20\s*€/);
+});
+test('real International engine confirms a cross-currency EUR recipient amount',()=>{
+ const tx={id:'actual-eur-received',date:'2026-10-20',accountId:'ca',toAccountId:'fr',
+  type:'transfer',status:'confirmed',bankCurrency:'CAD',bankAmount:40,
+  toBankCurrency:'EUR',toBankAmount:25.5,amountCAD:40};
+ const out=realRow(tx,'all','EUR',actualEngine);
+ assert.match(out,/25,50\s*€/);
+ assert.doesNotMatch(out,/40,00\s*\$/);
+ tx.toBankCurrency='CAD';
+ assert.match(realRow(tx,'fr','EUR',actualEngine),/Montant à vérifier/);
+});
 console.log(n+' Activity journal tests passed');
