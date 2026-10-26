@@ -1,3 +1,9 @@
+## Rectificatif du 25 octobre — arrondi centime préservé après vérification de sécurité
+
+Commits [skip ci] `41481110a2fc13b678bf7a6e06dbd35efafa0bc5` (`trace-international-1.0.0.js`) et `5dcbf1439c141826c2d30844ddc5c1f0aafb24bf` (test). Après contrôle `exactMoney`/safe-cent des sommes Checking, dette, net et global CAD, les valeurs **VALIDES** sont désormais arrondies à 2 décimales par `round` comme auparavant. Une addition CAD 0,10+0,20 donne 0,30, et un net 0,30−0,20 donne 0,10 ; aucune somme overflow n'est rétablie. **Résultat final de ce lot : 20/20 tests V8** (15 moteur monétaire fonctionnel + 5 contrats SQL12), imports Node simulés ; PG natif NON EXÉCUTÉ. Les précédentes lignes évoquant 19/19 sont antérieures à ces deux commits. Stable main, production et Supabase réel inchangés ; NO-GO.
+
+---
+
 ## 25 octobre 2026 — intégrité numérique du moteur International et verrouillage SQL exhaustif (candidate)
 
 **Référence :** branche de travail `trace-5.37.0-international-accounts-fx`, vérifier son HEAD live à la reprise. Stable `main` confirmée `02c70f50e7e51da79b77a91dde96a03c6c719909`, inchangée. Uniquement des commits `[skip ci]`, aucun CI/PR/merge, SW production, déploiement, SQL réel Supabase ni lecture/écriture des données bancaires réelles.
