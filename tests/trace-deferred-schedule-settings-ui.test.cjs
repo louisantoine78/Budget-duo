@@ -82,3 +82,12 @@ test('non-French deferred card never exposes French schedule editor',()=>{
  assert.doesNotMatch(s.html,/traceBankMetaRevisionRun/);
  assert.equal(s.unchanged(),true);
 });
+
+test('unlinked or nonowned checking does not permit a calendar proposal',()=>{
+ const s=scenario({card:{settlementAccountId:'foreign-bank'}});
+ s.select('#traceBankMetaRevisionDebit','28');
+ s.select('#traceBankMetaRevisionEffective','2026-11-01');
+ s.propose();
+ assert.match(s.$('#traceBankMetaRevisionResult').textContent,/Compte courant français EUR/);
+ assert.equal(s.unchanged(),true);
+});
