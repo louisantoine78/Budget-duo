@@ -4571,7 +4571,8 @@ function openInvestmentOperation(account,original=null){
   }
   $('#invBankNativeLabel').textContent='Montant réellement débité / crédité ('+(nativeCode||'devise du compte')+')';
   $('#invBankCad').placeholder=nativeCode?'Montant exact en '+nativeCode:'Choisir un compte bancaire';
-  const entered=$('#invBankCad').value.trim(),validAmount=entered!==''&&Number(entered)>0&&Number.isFinite(Number(entered));
+  const entered=$('#invBankCad').value.trim(),
+   validAmount=entered!==''&&I.exactMoney(entered)!==null&&I.exactMoney(entered)>0;
   $('#invNativeImpact').textContent=selectedBank&&validAmount?
    'Compte bancaire : '+(t==='withdrawal'?'+':'−')+I.money(Number(entered),nativeCode)+' · Aucun revenu ni dépense budgétaire':
    'Vérifie le montant natif sur le relevé bancaire.';
@@ -4588,17 +4589,23 @@ function openInvestmentOperation(account,original=null){
  $('#saveInvOp').onclick=async()=>{
   const type=$('#invType').value,date=$('#invDate').value,amount=Number($('#invAmount').value),fee=Number($('#invFee').value),quantity=Number($('#invQty').value),
   unitPrice=Number(type==='quote'?$('#invQuote').value:$('#invPrice').value),symbol=$('#invSymbol').value.trim().toUpperCase();
-  if(!date||(['deposit','withdrawal','dividend','fee'].includes(type)&&!(amount>0))||(['buy','sell'].includes(type)&&!(quantity>0&&unitPrice>0))||(type==='quote'&&!(unitPrice>=0))||(['buy','sell','quote'].includes(type)&&!/^[A-Z0-9._-]{1,16}$/.test(symbol))||!(fee>=0)){
+  if(!I.calendarDate(date)||
+      (['deposit','withdrawal','dividend','fee'].includes(type)&&
+       (I.exactMoney(amount)===null||!(amount>0)))||
+      (['buy','sell'].includes(type)&&!(quantity>0&&unitPrice>0))||
+      (type==='quote'&&!(unitPrice>=0))||
+      (['buy','sell','quote'].includes(type)&&!/^[A-Z0-9._-]{1,16}$/.test(symbol))||
+      !(fee>=0)){
    $('#traceFeedback').textContent='Vérifie la date, le montant, les titres et les frais.';return;
   }
   const bankAccountId=['deposit','withdrawal'].includes(type)?$('#invBank').value||null:null,
     bankAccount=bankAccountId?visibleBankAccounts(account.owner).find(b=>b.id===bankAccountId):null,
     bankCurrency=bankAccount?I.currency(bankAccount):null,
     bankRaw=$('#invBankCad').value.trim(),bankAmount=bankAccountId&&bankRaw!==''?Number(bankRaw):null;
-  if(bankAccountId&&(!bankAccount||!(bankAmount>0)||!Number.isFinite(bankAmount))){
-   $('#traceFeedback').textContent='Saisis le montant bancaire natif réellement débité ou crédité.';return;
+  if(bankAccountId&&(!bankAccount||I.exactMoney(bankAmount)===null||!(bankAmount>0))){
+   $('#traceFeedback').textContent='Saisis le montant bancaire natif exact, au centime, réellement débité ou crédité.';return;
   }
-  const bankAmountCAD=bankCurrency==='CAD'?Math.round(bankAmount*100)/100:null;
+  const bankAmountCAD=bankCurrency==='CAD'?I.exactMoney(bankAmount):null;
   const booked=original?.linkedTransactionId?
    state.transactions.find(t=>t.id===original.linkedTransactionId&&t.status==='confirmed'):null;
   if(booked&&(original.bankAccountId!==bankAccountId||original.type!==type)){
@@ -4607,8 +4614,17 @@ function openInvestmentOperation(account,original=null){
   const linked=original?.linkedTransactionId&&original.bankAccountId===bankAccountId&&original.type===type?
    state.transactions.find(t=>t.id===original.linkedTransactionId&&t.status==='confirmed'):null;
   if(linked){
-   const recorded=I.amountOnAccount(linked,bankAccount,linked.toAccountId===bankAccountId?'destination':'source');
-   if(recorded===null||Math.abs(recorded-bankAmount)>.009){
+   const from=linked.accountId===bankAccountId,to=linked.toAccountId===bankAccountId;
+   const validDirection=type==='deposit'?
+    from&&['expense','group_expense','person_payment','transfer','external_transfer'].includes(linked.type):
+    type==='withdrawal'?
+     (to&&linked.type==='transfer')||
+     (from&&['income','refund','external_refund'].includes(linked.type)):false;
+   if(!I.calendarDate(linked.date)||!validDirection||(from&&to)){
+    $('#traceFeedback').textContent='Le mouvement bancaire lié ne correspond plus au compte ou au sens du versement. Vérifie-le dans Activité.';return;
+   }
+   const recorded=I.amountOnAccount(linked,bankAccount,to?'destination':'source');
+   if(recorded===null||I.exactMoney(recorded)!==I.exactMoney(bankAmount)){
     $('#traceFeedback').textContent='Montant différent du mouvement bancaire lié. Vérifie d’abord ce virement dans Activité.';return;
    }
   }

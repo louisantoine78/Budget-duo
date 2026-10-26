@@ -71,7 +71,7 @@ async function main(){
  });
  await test('linked booked transaction stays one bank source',async()=>{
   const t={id:'transfer',type:'external_transfer',status:'confirmed',
-   accountId:'eu',bankAmount:46.2,bankCurrency:'EUR'};
+   date:'2026-10-12',accountId:'eu',bankAmount:46.2,bankCurrency:'EUR'};
   const old={id:'one',accountId:'pea',type:'deposit',date:'2026-10-12',
    amount:46.2,bankAccountId:'eu',bankCurrency:'EUR',bankAmount:46.2,linkedTransactionId:'transfer'};
   const s=ui(PEA,old,[t]);await s.$('#saveInvOp').onclick();
@@ -80,7 +80,7 @@ async function main(){
  });
  await test('linked bank source cannot change amount without correction',async()=>{
   const t={id:'transfer',type:'external_transfer',status:'confirmed',
-   accountId:'eu',bankAmount:46.2,bankCurrency:'EUR'};
+   date:'2026-10-12',accountId:'eu',bankAmount:46.2,bankCurrency:'EUR'};
   const old={id:'one',accountId:'pea',type:'deposit',date:'2026-10-12',
    amount:46.2,bankAccountId:'eu',bankCurrency:'EUR',bankAmount:46.2,linkedTransactionId:'transfer'};
   const s=ui(PEA,old,[t]);s.$('#invBankCad').value='45';await s.$('#saveInvOp').onclick();
@@ -115,6 +115,47 @@ async function main(){
    date:'2026-10-12',name:'Virement France',transferFeeAmount:3};
   const v=I.resolveTransferEdit({transaction:t,from:CA,to:EU,bankAmount:150,receivedAmount:95});
   assert.equal(v.transferFeeAmount,3);
+ });
+
+ await test('fractional foreign bank cents are rejected without writing',async()=>{
+  const s=ui();s.$('#invBank').value='eu';s.$('#invBank').onchange();
+  s.$('#invBankCad').value='46.205';s.$('#invBankCad').oninput();
+  assert.match(s.$('#invNativeImpact').textContent,/Vérifie le montant natif/);
+  await s.$('#saveInvOp').onclick();
+  assert.equal(s.writes.length,0);assert.match(s.$('#traceFeedback').textContent,/au centime/);
+ });
+ await test('CAD debit cannot be rounded from 100.005',async()=>{
+  const s=ui();s.$('#invBank').value='ca';s.$('#invBank').onchange();
+  s.$('#invBankCad').value='100.005';await s.$('#saveInvOp').onclick();
+  assert.equal(s.writes.length,0);
+ });
+ await test('impossible investment date is rejected before saving',async()=>{
+  const s=ui();s.$('#invDate').value='2026-11-31';
+  await s.$('#saveInvOp').onclick();assert.equal(s.writes.length,0);
+  assert.match(s.$('#traceFeedback').textContent,/Vérifie la date/);
+ });
+ await test('fractional investment cash cannot be persisted',async()=>{
+  const s=ui();s.$('#invAmount').value='46.205';
+  await s.$('#saveInvOp').onclick();assert.equal(s.writes.length,0);
+ });
+ await test('editing investment refuses moved linked bank account',async()=>{
+  const t={id:'transfer',type:'external_transfer',status:'confirmed',
+   accountId:'ca',date:'2026-10-12',bankAmount:46.2,bankCurrency:'CAD'};
+  const old={id:'one',accountId:'pea',type:'deposit',date:'2026-10-12',
+   amount:46.2,bankAccountId:'eu',bankCurrency:'EUR',bankAmount:46.2,
+   linkedTransactionId:'transfer'};
+  const s=ui(PEA,old,[t]);await s.$('#saveInvOp').onclick();
+  assert.equal(s.writes.length,0);
+  assert.match(s.$('#traceFeedback').textContent,/ne correspond plus au compte/);
+ });
+ await test('editing linked investment rejects impossible bank-source date',async()=>{
+  const t={id:'transfer',type:'external_transfer',status:'confirmed',
+   accountId:'eu',date:'2026-13-12',bankAmount:46.2,bankCurrency:'EUR'};
+  const old={id:'one',accountId:'pea',type:'deposit',date:'2026-10-12',
+   amount:46.2,bankAccountId:'eu',bankCurrency:'EUR',bankAmount:46.2,
+   linkedTransactionId:'transfer'};
+  const s=ui(PEA,old,[t]);await s.$('#saveInvOp').onclick();
+  assert.equal(s.writes.length,0);
  });
  console.log(count+' bank-native and transfer-fee interaction tests passed');
 }
