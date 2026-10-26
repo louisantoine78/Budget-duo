@@ -1,3 +1,11 @@
+## Rectificatif 25 octobre — vérification centimes après bornage
+
+- [x] `41481110` et `5dcbf143` `[skip ci]` : conserver les arrondis à 2 décimales des cumuls valides ; test 0,10+0,20=0,30 et 0,30−0,20=0,10.
+- [x] **20/20** contrats et fonctions financières V8 exécutés (15 scénarios financiers, 5 contrats SQL12), faux imports Node. JS suite PG syntaxe validée.
+- [ ] Vérifier les flux natifs PostgreSQL/PGlite (non exécutés) et la recette mobile. Production NO-GO.
+
+---
+
 ## 25 octobre 2026 — sécurité des agrégats FX et privilèges SQL12 toutes colonnes
 
 **NO-GO**. Deux améliorations candidates enregistrées exclusivement sur branche internationale :
