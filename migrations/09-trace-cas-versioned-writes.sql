@@ -128,6 +128,21 @@ begin
           and original_portfolio.item_id = d.data->>'accountId'
           and original_portfolio.data->>'owner' = actor_slot
       ))
+      -- A legacy investment operation may already reference a bank account
+      -- belonging to the other member. Checking only the NEW payload would
+      -- let a privileged CAS update silently rewrite that original bank leg.
+      -- A member can replace/delete an operation only when both its original
+      -- portfolio and original checking account (if present) belong to them.
+      and (p_collection <> 'investment_operations'
+           or nullif(d.data->>'bankAccountId','') is null
+           or exists (
+        select 1 from public.documents original_bank
+        where original_bank.household_id = p_household_id
+          and original_bank.collection = 'accounts'
+          and original_bank.item_id = d.data->>'bankAccountId'
+          and original_bank.data->>'owner' = actor_slot
+          and original_bank.data->>'type' = 'checking'
+      ))
     returning revision into current_revision;
   end if;
 
@@ -180,6 +195,16 @@ begin
         and original_portfolio.collection = 'investment_accounts'
         and original_portfolio.item_id = d.data->>'accountId'
         and original_portfolio.data->>'owner' = actor_slot
+    ))
+    and (p_collection <> 'investment_operations'
+         or nullif(d.data->>'bankAccountId','') is null
+         or exists (
+      select 1 from public.documents original_bank
+      where original_bank.household_id = p_household_id
+        and original_bank.collection = 'accounts'
+        and original_bank.item_id = d.data->>'bankAccountId'
+        and original_bank.data->>'owner' = actor_slot
+        and original_bank.data->>'type' = 'checking'
     ))
   returning item_id into deleted_id;
   if deleted_id is null then
