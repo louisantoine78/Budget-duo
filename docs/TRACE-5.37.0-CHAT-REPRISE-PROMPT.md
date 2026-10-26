@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — PLACEMENTS ET BANQUE : DATES, COMPTES, CENTIMES
+
+**HEAD de code/test au moment de la passation : `032e1db585917b6048eb1be8ce1ac0ce44fdacbb`**, branche `trace-5.37.0-international-accounts-fx`. Résoudre à nouveau le HEAD dans la prochaine conversation. Base avant ces deux correctifs `ad4ade07275c2b161dbea9d3b5bc86b8855007c8`. `main` inchangée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits strictement `[skip ci]`. Zéro CI/Actions, PR, fusion, déploiement, migrations/SQL ou Supabase réel.
+
+**Corrections :** `23422265` bloque un solde lorsque la transaction confirmée d'un placement est désormais sur un autre compte, ou lorsque la date active d'un mouvement bancaire/placement est impossible. La fiche compte présente une alerte sans lien vers un mois inexistant. `032e1db5` sécurise aussi le formulaire avant sauvegarde : date calendaire valide, valeur monétaire exacte aux centimes natifs, zéro arrondissement CAD inventé, lien bancaire réévalué pour date, compte, sens et montant. Les enregistrements existants ne sont pas modifiés automatiquement.
+
+**Tests réellement rejoués après ce lot sur les sources GitHub : 207/207 scénarios V8** (18 activité, 38 compte, 34 monétaire, 45 legacy, 21 banque, 15 Mastercard, 19 garde-fous, 17 saisie native). Module Node/VM/DOM simulé, **ce n'est ni `node --test` natif complet ni PostgreSQL/PGlite ni Safari iPhone**. Parsing JS app complet vérifié. Migrations 05–12 jamais qualifiées sur PostgreSQL; migration 12 **NON APPLIQUÉE**. Production **NO-GO**, ~58 % ±10.
+
+**Reprise prioritaire** : exécuter les quatre suites PostgreSQL isolées en données fictives lorsqu'un moteur et checkout complets seront accessibles, puis QA Node complète, Safari iPhone et PWA offline, finance FX/Couple, imports CSV/PDF/OCR, UX premium, scénarios de rollback et anciens clients 5.36.x ; aucune autorisation implicite pour la mise en production.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — LIENS BANCAIRES DE PLACEMENTS VÉRIFIÉS
 
 HEAD du code/tests au dépôt : `f02b190fbdd478c92e6468514fad01cd3b49979a` sur **`trace-5.37.0-international-accounts-fx`** ; branche initiale de ce lot `091892c628fbe85f3ca2b2d46c9e044fd94ca47d`. Vérifier le véritable HEAD au prochain passage. `main` `02c70f50e7e51da79b77a91dde96a03c6c719909`, inchangée. Tous commits `[skip ci]`, pas de PR, merge, CI/Actions, prod, migration réelle ou Supabase hébergé.

@@ -1,3 +1,14 @@
+## 26 octobre 2026 — Preuve des dates et centimes des placements
+
+- [x] `23422265` : une transaction confirmée liée mais déplacée sur un autre compte déclenche le verrouillage du solde ; une date bancaire active invalide, de transaction ou d'opération de placement, bloque le calcul et est expliquée dans la fiche compte.
+- [x] `032e1db5` : saisie placement : dates strictes, montants au centime natif, aucun arrondi silencieux, vérification de la source liée (compte, sens, date, montant) avant `saveDocument`.
+- [x] Régression étendue **207/207 V8** : 18 Activité + 38 comptes + 34 monnaie + 45 CAD legacy + 21 banque/placements + 15 carte/amis + 19 garde-fous + 17 formulaire. Parsing JS app complet PASS ; modules dépendants simulés.
+- [ ] **BLOQUANT** : tests Node natifs sur checkout complet et **4 suites PostgreSQL/PGlite** sur données fictives pour migrations 05–12, avec protections RLS/Auth/CAS/CSV et rollback. Migration 12 non appliquée.
+- [ ] Safari iPhone réel, PWA offline, UX premium, imports PDF/CSV/OCR, Couple/FX et maintien des clients 5.36.x.
+- [ ] Aucun GO production sans validation humaine explicite. Aucun changement `main`, CI, PR/merge, déploiement ou Supabase hébergé. Estimation globale prudente ~58 % ±10.
+
+---
+
 ## 26 octobre 2026 — Critères banques et placements liés (nouveau lot)
 
 - [x] `f29385b8` : appariement montant **natif** au centime, compte et sens bancaire corrects ; conflit actif = solde inconnu et alerte lecture seule. Les liens hors rapprochement, en attente ou justificatifs de carte n'effacent pas une vraie jambe.

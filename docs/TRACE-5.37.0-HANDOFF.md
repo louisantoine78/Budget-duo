@@ -1,3 +1,17 @@
+## 26 octobre 2026 — Correction des comptes déplacés, dates impossibles et saisie des placements
+
+**Branche exclusive** : `trace-5.37.0-international-accounts-fx`. HEAD de code vérifié avant cette note : `032e1db585917b6048eb1be8ce1ac0ce44fdacbb` ; ancien HEAD `ad4ade07275c2b161dbea9d3b5bc86b8855007c8`. `main` stable inchangée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Tous commits **`[skip ci]`**, zéro PR, merge, workflow, déploiement, migration, écriture Supabase réelle.
+
+**`23422265` :** un placement encore lié à une transaction confirmée déplacée vers un **autre compte bancaire** n'est plus assimilé à une jambe indépendante : l'appariement `traceLinkedBankTransactionCovers` renvoie une contradiction `null`, le solde bancaire est **inconnu** plutôt que fictivement correct. Les transactions bancaires confirmées dont la date **active** est invalide et les versements/retraits actifs aux dates impossibles produisent également un solde inconnu. La fiche compte signale les dates erronées sans fabriquer un bouton vers un faux mois d'Activité. Un lien hors de la fenêtre de rapprochement ou en attente conserve son traitement prudent antérieur. 21/21 banque/placements et 38/38 détails comptes ciblés avant sauvegarde.
+
+**`032e1db5` :** au niveau du formulaire `openInvestmentOperation`, date contrôlée par le vrai `calendarDate`, montants monétaires dépôt/retrait/dividende/frais et débit bancaire natif contrôlés avec `exactMoney` : impossible d'enregistrer `100.005 CAD` par arrondi implicite ou `46.205 EUR`. L'indicateur d'impact ne présente pas de montant invalide comme confirmé. Lorsque l'on édite une opération liée, le compte, le sens, la date et les centimes de la jambe confirmée sont à nouveau vérifiés avant `saveDocument`; pas de mise à jour silencieuse d'un lien déplacé. Les fixtures fictives des transactions confirmées ont des dates réelles. **17/17 tests formulaire** ; six cas supplémentaires.
+
+**Preuve finale de ce lot : `207/207` scénarios V8** relancés sur les sources GitHub après les deux commits : 18 Activité, 38 comptes, 34 intégrité monétaire, 45 legacy CAD, 21 banque/placements, 15 Mastercard/amis, 19 invariants financiers, 17 formulaires/FX. Parsing V8 complet de `v5-app-5.37.0.js` PASS. Toutes les suites utilisaient des modules Node/fs/VM/DOM **simulés** dans un isolate, **pas** un clone `node --test` natif ni une exécution réelle PostgreSQL/PGlite ni Safari physique. Ne jamais qualifier ces résultats de qualification SQL.
+
+**Migrations 05–12 encore non exécutées sur PostgreSQL isolé** ; migration 12 NON APPLIQUÉE. Production **NO-GO**, avancement indicatif conservateur **~58 % ±10 points**. Prochain chantier : moteur PGlite/PostgreSQL dans checkout local fictif et les **quatre suites d'intégration** RLS/CAS/Auth/CSV/différé/cutover ; Node natif complet ; iPhone Safari/PWA offline, flux Couple FX PDF/CSV/OCR/Patrimoine, reprise anciens clients 5.36.x, sauvegarde/rollback et GO humain explicite.
+
+---
+
 ## 26 octobre 2026 — Intégrité des liens placements ⇄ banque : vérification stricte
 
 **Branche autorisée :** `trace-5.37.0-international-accounts-fx`. HEAD code/test juste avant cette mise à jour : `f02b190fbdd478c92e6468514fad01cd3b49979a` (base de reprise `091892c628fbe85f3ca2b2d46c9e044fd94ca47d`). Stable `main` toujours `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun CI, PR, merge, déploiement, SW production, migration SQL ni écriture Supabase réelle. Chaque commit porte `[skip ci]`.
