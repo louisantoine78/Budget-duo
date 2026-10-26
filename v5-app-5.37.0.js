@@ -2851,7 +2851,9 @@ function csvUnparsedRecord(accountId,sourceName,index,cells,owner){
 function csvUnparsedSourceConflict(item,imports,transactions){
  const prior=(imports||[]).find(x=>x.id===item.id&&x.kind==='csv_unparsed');
  // A collision may also be a row previously interpreted as a financial line.
- return Boolean((transactions||[]).some(x=>csvSourceRowsAtIndex(item,[x]).length)||
+ return Boolean((transactions||[]).some(x=>x.source==='csv'&&
+  x.accountId===item.accountId&&x.importFileName===item.sourceFileName&&
+  Number(x.csvSourceRowIndex)===item.sourceIndex)||
   prior&&(prior.accountId!==item.accountId||
    prior.sourceFileName!==item.sourceFileName||
    Number(prior.sourceIndex)!==item.sourceIndex||
