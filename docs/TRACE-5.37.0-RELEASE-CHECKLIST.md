@@ -1,3 +1,14 @@
+## 26 octobre 2026 — Critères banques et placements liés (nouveau lot)
+
+- [x] `f29385b8` : appariement montant **natif** au centime, compte et sens bancaire corrects ; conflit actif = solde inconnu et alerte lecture seule. Les liens hors rapprochement, en attente ou justificatifs de carte n'effacent pas une vraie jambe.
+- [x] `f02b190f` : plusieurs opérations de placement ne peuvent pas utiliser le même débit/crédit bancaire confirmé dans la fenêtre de solde, même si les deux montants semblent identiques.
+- [x] Régressions V8 sur sources GitHub **184/184** = 18 Activity + 36 comptes + 34 intégrité + 45 CAD legacy + 17 placements + 15 Mastercard + 19 garde-fous ; compilation/parsing JS app PASS. Tests isolés simulés, **pas** Node natif complet.
+- [ ] **Bloquant :** quatre suites PostgreSQL/PGlite des migrations 05–12 avec données fictives, puis audit Auth/RLS/CAS. Migration 12 NON APPLIQUÉE.
+- [ ] Recette Safari iPhone et PWA offline, UX premium, imports CSV/PDF/OCR, Couple/FX, rollback et coexistence/transition ancien client.
+- [ ] Production **NO-GO**. Ne changer ni `main`, ni CI, ni PR/merge, ni déploiement, ni Supabase réel. Indicateur d'avancement conservateur ~58 % ±10.
+
+---
+
 ## 26 octobre 2026 — Activity FX : aucun faux montant natif
 
 - [x] `e0b7a9f5` : filtres EUR retrouvent le virement CAD→EUR reçu ; affichage des mouvements en attente respecte la jambe native du compte filtré, sans inventer les réceptions inconnues.

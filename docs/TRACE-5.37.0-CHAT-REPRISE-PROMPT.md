@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — LIENS BANCAIRES DE PLACEMENTS VÉRIFIÉS
+
+HEAD du code/tests au dépôt : `f02b190fbdd478c92e6468514fad01cd3b49979a` sur **`trace-5.37.0-international-accounts-fx`** ; branche initiale de ce lot `091892c628fbe85f3ca2b2d46c9e044fd94ca47d`. Vérifier le véritable HEAD au prochain passage. `main` `02c70f50e7e51da79b77a91dde96a03c6c719909`, inchangée. Tous commits `[skip ci]`, pas de PR, merge, CI/Actions, prod, migration réelle ou Supabase hébergé.
+
+**Modifications :** `f29385b8` — le garde `traceLinkedBankTransactionCovers` compare désormais montant bancaire natif exact, identité de compte, statut/borne temporelle et sens débit ou crédit. Il retourne `true` (lié exact), `false` (hors fenêtre/non admissible), `null` (contradiction active). Le solde devient inconnu et la fiche compte signale l'opération lorsqu'un lien confirmé est faux ; jamais inventer un double débit, neutralisation de deux flux ou taux FX. `f02b190f` — deux mouvements de placement du même compte ne peuvent revendiquer une seule jambe bancaire confirmée.
+
+**Preuve réelle au niveau V8 :** **184/184 scénarios isolés** sur fichiers GitHub lus dans cette conversation : 18 Activity, 36 détails comptes, 34 monétaire, 45 historique CAD, 17 banque/placements, 15 Mastercard/amis et 19 garde-fous. Parsing JS V8 app réussi. Les modules Node/VM sont simulés : **ni `node --test` complet ni PostgreSQL/PGlite ni Safari iPhone exécuté**. Les migrations 05–12 et quatre suites de qualification PG restent NON testées ; migration 12 NON APPLIQUÉE. Production **NO-GO** (~58 % ±10).
+
+**Prochaine priorité :** installer ou fournir un moteur PG/PGlite local isolé avec checkout complet pour exécuter les quatre suites SQL d'intégration et la suite Node native, puis passer à Safari iPhone, PWA, Couple/FX, PDF/CSV/OCR, sauvegarde/rollback et validation publication explicite. Respect absolu des interdits production.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — ACTIVITÉ MULTIDEVISES ET AFFICHAGE NATIF SÉCURISÉS
 
 **HEAD de code/tests à la passation :** `9a0cefe79e6ff8c61bae0e50a2b3a69c3c30d744` sur `trace-5.37.0-international-accounts-fx`. Toujours résoudre le HEAD GitHub réel en début de conversation. Stable `main` vérifiée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Tous commits `[skip ci]`, aucun CI/Actions, PR, merge, déploiement, modification main ou Supabase réel.

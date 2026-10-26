@@ -1,3 +1,17 @@
+## 26 octobre 2026 — Intégrité des liens placements ⇄ banque : vérification stricte
+
+**Branche autorisée :** `trace-5.37.0-international-accounts-fx`. HEAD code/test juste avant cette mise à jour : `f02b190fbdd478c92e6468514fad01cd3b49979a` (base de reprise `091892c628fbe85f3ca2b2d46c9e044fd94ca47d`). Stable `main` toujours `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun CI, PR, merge, déploiement, SW production, migration SQL ni écriture Supabase réelle. Chaque commit porte `[skip ci]`.
+
+**Commit `f29385b8` — fail-closed sur lien contradictoire :** `traceLinkedBankTransactionCovers` distingue `true` (même jambe bancaire confirmée, dans la fenêtre de solde, montant natif exact et direction cohérente), `false` (lien absent/ancien/non confirmé/justificatif de carte non financier) et `null` (un lien confirmé dans la fenêtre est contradictoire). Les dépôts acceptent uniquement les **débits réels** ; les retraits uniquement les **crédits réels** ; `TraceInternational.amountOnAccount` et `investmentBankAmount` exigent la même devise native et les mêmes centimes. En contradiction `accountEstimate` renvoie **solde inconnu**, plutôt que sous-compter ou déduire deux fois ; `traceAccountBankProofNotice` montre une alerte de placement, lecture seule. Les anciens liens hors fenêtre de rapprochement restent traités comme une jambe indépendante sans supprimer l'historique. Ne pas modifier ces invariants sans tests de référence.
+
+**Commit `f02b190f` — exclusivité du justificatif :** impossible que deux versements/retraits de placement confirmés, du même compte et dans la même fenêtre, revendiquent silencieusement la même transaction bancaire confirmée : `traceLinkedBankTransactionCovers` renvoie alors `null`. Alerte de deux mouvements visible ; aucun montant persisté modifié.
+
+**Vérifications obtenues sur le code GitHub réel :** les sept suites VM simulées passent à **184/184 scénarios** = Activity 18, fiches comptes 36, monnaie 34, legacy CAD 45, placements/bank 17, cycle Mastercard/amis 15, invariants financiers 19. Le JS applicatif complet a été parsé en V8. Ces tests utilisent des modules Node/fs/DOM simulés, **NE SONT PAS une exécution `node --test` native sur un checkout ni un moteur PostgreSQL/Supabase ni une recette Safari**. Aucune migration 05–12 exécutée, migration 12 jamais appliquée. Production **NO-GO**, progrès indicatif **~58 % ±10 points** conservé.
+
+**Prochaine qualification :** quatre suites PostgreSQL/PGlite réelles dans un clone fictif isolé (Auth/RLS/CAS, confidentialité CSV, débit différé, cutover 12, restauration/rollback), tests Node natifs, Safari iPhone matériel, parcours Couple/FX/CSV/PDF/OCR/Patrimoine, compatibilité anciens clients 5.36.x, puis décision GO humaine explicite. Ne jamais contourner une preuve SQL manquante avec un test mock.
+
+---
+
 ## 26 octobre 2026 — Activity FX : montants natifs et filtres fiables (reprise suivante)
 
 **GitHub :** branche exclusive `trace-5.37.0-international-accounts-fx`; HEAD code/tests vérifié `9a0cefe79e6ff8c61bae0e50a2b3a69c3c30d744`. Départ `77250b115108967db5df7b45f5af2a5dc76aa775`. `main` vérifiée inchangée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits `e0b7a9f5`, `408f7308`, `9a0cefe7` tous `[skip ci]`; aucune PR, fusion, CI/Actions, déploiement ni accès/écriture Supabase réel.
