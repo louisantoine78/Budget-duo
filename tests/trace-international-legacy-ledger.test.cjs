@@ -12,7 +12,9 @@ function pick(name,next,dependencies={}){
  const start=app.indexOf('function '+name+'('),end=app.indexOf('\nfunction '+next+'(',start);
  assert.ok(start>=0&&end>start,'Fonction réelle introuvable : '+name);
  const args={window:root,...dependencies};
- const factory=new Function(...Object.keys(args),'return ('+app.slice(start,end)+');');
+ const helper=name==='accountEstimate'?
+  app.slice(app.indexOf('function traceLinkedBankTransactionCovers('),start):'';
+ const factory=new Function(...Object.keys(args),helper+'\nreturn ('+app.slice(start,end)+');');
  return factory(...Object.values(args));
 }
 const account={id:'current',type:'checking',owner:'la'},

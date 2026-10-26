@@ -10,7 +10,9 @@ const app=fs.readFileSync(path.join(__dirname,'../v5-app-5.37.0.js'),'utf8');
 function extract(name,next,deps){
  const start=app.indexOf('function '+name+'('),end=app.indexOf('\nfunction '+next+'(',start);
  assert.ok(start>0&&end>start);
- return new Function(...Object.keys(deps),'return ('+app.slice(start,end)+');')(...Object.values(deps));
+ const helper=name==='accountEstimate'?
+  app.slice(app.indexOf('function traceLinkedBankTransactionCovers('),start):'';
+ return new Function(...Object.keys(deps),helper+'\nreturn ('+app.slice(start,end)+');')(...Object.values(deps));
 }
 
 test('missing, whitespace, boolean and nonfinite native amounts never become a numeric bank balance',()=>{
