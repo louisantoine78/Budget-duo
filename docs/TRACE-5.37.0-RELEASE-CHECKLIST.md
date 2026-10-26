@@ -1,3 +1,15 @@
+## 26 octobre 2026 — Activity FX : aucun faux montant natif
+
+- [x] `e0b7a9f5` : filtres EUR retrouvent le virement CAD→EUR reçu ; affichage des mouvements en attente respecte la jambe native du compte filtré, sans inventer les réceptions inconnues.
+- [x] `408f7308` : lignes confirmées : `TraceInternational.amountOnAccount`, centimes natifs, valeurs inconnues affichées comme inconnues ; zéro substitution CAD→EUR. Le CAD historique demeure indicatif si exact, sans devenir un solde EUR.
+- [x] `9a0cefe7` : tests supplémentaires sur réel moteur JS pour absence de montant natif, devise discordante, montant fractionnaire au centime et transfert EUR reçu attesté.
+- [x] **175/175 tests V8 réussis lors de ce passage sur les sources GitHub finales** : 18 journal, 34 comptes, 34 argent, 45 legacy, 10 banque/placements, 15 Mastercard/amis, 19 garde-fous. Parsing app V8 PASS. Exécution Node CLI complète NON réalisée.
+- [ ] **BLOQUANT** : migrations 05–12 et 4 suites PostgreSQL/PGlite dans un checkout isolé avec données fictives ; migration 12 NON APPLIQUÉE.
+- [ ] Recette physique Safari iPhone, PWA offline, imports PDF/CSV/OCR, compatibilité anciens clients, restauration/rollback et validation UX premium avant toute décision de sortie.
+- [ ] Production **NO-GO**, avancement indicatif ~58 % ±10 ; `main` et Supabase réel intacts, aucun workflow/CI, merge, PR ni déploiement.
+
+---
+
 ## 26 octobre 2026 — reprise UX banques et protections de harnais
 
 - [x] Harnais banque/placements, Mastercard/amis et financiers alignés avec `traceLinkedBankTransactionCovers`; injection `traceBudgetPostingMonth` dans les scénarios intégrés ; **44/44 tests V8** après `38dfbd13`.

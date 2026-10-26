@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — ACTIVITÉ MULTIDEVISES ET AFFICHAGE NATIF SÉCURISÉS
+
+**HEAD de code/tests à la passation :** `9a0cefe79e6ff8c61bae0e50a2b3a69c3c30d744` sur `trace-5.37.0-international-accounts-fx`. Toujours résoudre le HEAD GitHub réel en début de conversation. Stable `main` vérifiée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Tous commits `[skip ci]`, aucun CI/Actions, PR, merge, déploiement, modification main ou Supabase réel.
+
+**Vrais changements :** `e0b7a9f5` — Activity EUR inclut les virements reçus CAD→EUR ; montants pending respectent la devise et la jambe bancaire du compte sélectionné. `408f7308` — les lignes confirmées `txRow` ne confondent plus `amountCAD` avec `bankAmount` EUR ; refus de présenter des données FX inconnues ou incompatibles, affichage natif au centime, destination correcte. `9a0cefe7` — trois tests sur moteur `TraceInternational` réel, isolé sans HTTP.
+
+**Preuve vérifiée :** **175/175 tests V8** sur code GitHub final et dépendances Node/DOM simulées : Activité18, comptes34, finance34, legacy45, banque/placements10, carte/amis15, garde-fous19. Parsing app V8 OK. Aucun test Node natif complet sur checkout, PostgreSQL/PGlite exécuté ou Safari réel. Node est présent localement, mais PG/PGlite et DNS github.com sont indisponibles. Ne pas confondre tests VM avec les 4 suites SQL. **Production strictement NO-GO**, migrations 05–12 non appliquées, ~58 % ±10.
+
+**Prochaine action** : moteur PostgreSQL/PGlite local **isolé** et checkout complet fictif, exécuter les 4 suites Auth/RLS/CAS/CSV/rollback. Puis recette iPhone Safari et PWA, imports PDF/CSV/OCR, transitions 5.36.x, Couple/FX et UI premium. Jamais toucher production ni appliquer migration12 sans GO humain.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — ACTIONS DE PREUVE BANCAIRE DANS ACTIVITÉ
 
 **HEAD de code confirmé avant la mise à jour des docs :** `95b57664d3b3476e74bee254dfd3aa980539ade0`, sur `trace-5.37.0-international-accounts-fx`. Revérifier le HEAD au démarrage. `main` confirmée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Uniquement commits `[skip ci]`, zéro PR/merge, CI/Actions, déploiement, SW production ou Supabase réel.

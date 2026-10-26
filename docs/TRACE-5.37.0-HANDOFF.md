@@ -1,3 +1,18 @@
+## 26 octobre 2026 — Activity FX : montants natifs et filtres fiables (reprise suivante)
+
+**GitHub :** branche exclusive `trace-5.37.0-international-accounts-fx`; HEAD code/tests vérifié `9a0cefe79e6ff8c61bae0e50a2b3a69c3c30d744`. Départ `77250b115108967db5df7b45f5af2a5dc76aa775`. `main` vérifiée inchangée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits `e0b7a9f5`, `408f7308`, `9a0cefe7` tous `[skip ci]`; aucune PR, fusion, CI/Actions, déploiement ni accès/écriture Supabase réel.
+
+**Deux correctifs fonctionnels :**
+- `e0b7a9f5` : filtre **Activité EUR** inclut la jambe reçue du virement CAD→EUR, même si l'origine est CAD. Avec compte destinataire choisi, le filtre devise s'applique au bon compte. Les opérations **en attente** indiquent la devise et le montant natif de la jambe réellement consultée ; réception manquante = « Montant bancaire à vérifier » sans faux montant ni conversion. Scénarios de test `tests/trace-activity-daily-filters.test.cjs`.
+- `408f7308` : les lignes **confirmées** de `txRow` ne fabriquent plus un faux EUR/USD à partir du montant CAD historique lorsque `bankAmount` manque. Le montant d'une jambe bancaire est obtenu par `TraceInternational.amountOnAccount` sur le compte réellement filtré (origine ou destination), contrôlé puis affiché avec ses **deux décimales** ; `amountCAD` reste seulement référence indicative lorsqu'il est exact. Mécanisme appliqué également au filtre « tous les comptes » avec devise EUR, à l'affichage des opérations en attente, et aux transferts CAD↔EUR. Aucune modification financière persistante.
+- `9a0cefe7` : trois tests supplémentaires utilisent le **véritable moteur TraceInternational** (sans HTTP) pour réfuter montant FX non attesté, devise erronée, fraction de centime, et vérifier réception EUR déclarée.
+
+**Tests indépendants réellement réexécutés sur les dernières sources GitHub : 175/175 scénarios V8**, avec faux Node/fs/vm/DOM dans sept suites disjointes : **18 Activité**, **34 détails comptes**, **34 intégrité monétaire**, **45 legacy CAD**, **10 banque/placements**, **15 Mastercard/amis**, **19 garde-fous financiers**. Parsing V8 du JS applicatif complet vérifié. Aucun `node --test` natif checkout complet, aucun PGlite/PostgreSQL réel, ni iPhone Safari physique. Vérification locale : Node.js présent, mais pas d'exécutable `postgres`/`psql`/`initdb`, PGlite ni cache npm ; `git ls-remote` échoue à résoudre github.com. Le connecteur GitHub est utilisé en lecture/écriture de branche autorisée uniquement. Les migrations **05–12 restent non qualifiées**, migration **12 NON APPLIQUÉE**. Production **NO-GO**, indicateur global conservateur **~58 % ±10 points**, ne pas augmenter pour ces seules régressions.
+
+**Suite impérative** : checkout complet avec moteur PostgreSQL/PGlite isolé et données fictives pour **4 suites PG** (base, propriétaires, CAS, cutover 12), RLS/Auth/CSV/différé/restauration ; puis `node scripts/test-trace-native.mjs` dans ce checkout sans CI, recette Safari iPhone, PDF/CSV/OCR, FX/Couple/patrimoine, UX premium, rollback et transition anciens clients 5.36.x. Pas de SQL hébergé ni activation migration 12 avant autorisation explicite.
+
+---
+
 ## 26 octobre 2026 — suite autonome : tests isolés et navigation ciblée des preuves bancaires
 
 **Branche exclusive :** `trace-5.37.0-international-accounts-fx`. HEAD de code à cette passation `95b57664d3b3476e74bee254dfd3aa980539ade0`. `main` revérifiée inchangée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Les trois commits de code/tests de ce passage portent `[skip ci]` : `38dfbd13`, `50f0301b`, `95b57664`. Ni PR, ni merge, ni CI/Actions, ni déploiement, ni Supabase hébergé, ni données financières réelles.
