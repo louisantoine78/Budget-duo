@@ -5357,7 +5357,16 @@ function openBankMetadata(id){
     esc(account.deferredClosingDay??'À vérifier auprès de la banque')+'</strong>.</p>'+
    '<p class="trace-intl-help">La configuration réelle des cartes différées reste bloquée. Tu peux choisir les jours dans la simulation sans enregistrer ni déclencher de prélèvement.</p>'+
    '<button type="button" class="secondary full" id="traceBankMetaSchedulePreview">'+
-    'Choisir les jours et simuler le prélèvement</button></section>':'')+
+    'Choisir les jours et simuler le prélèvement</button>'+
+   (account.country==='FR'&&I.currency(account)==='EUR'?
+    '<div class="trace-deferred-forecast-grid">'+
+    '<label>Jour du nouveau prélèvement (1–31)<input type="number" inputmode="numeric" min="1" max="31" step="1" id="traceBankMetaRevisionDebit" value="'+esc(account.deferredDebitDay??'')+'"></label>'+
+    '<label>Nouvelle clôture (facultative)<input type="number" inputmode="numeric" min="1" max="31" step="1" id="traceBankMetaRevisionClosing" value="'+esc(account.deferredClosingDay??'')+'"></label>'+
+    '<label>Date future de prise d’effet<input type="date" id="traceBankMetaRevisionEffective"></label>'+
+    '</div>'+
+    '<button type="button" class="secondary full" id="traceBankMetaRevisionRun">Prévisualiser une modification future · sans enregistrer</button>'+
+    '<p class="trace-intl-help" id="traceBankMetaRevisionResult" role="status" aria-live="polite">Choisis des jours et une date future. Aucune règle n’est enregistrée.</p>':
+    '')+'</section>':'')+
   (accountType(account)==='card'?'<label class="label2">Compte de règlement<select class="input" id="traceBankMetaSettlement"></select></label>':'')+
   '<p id="traceBankMetaError" class="trace-bank-setup-error" role="alert"></p>'+
   '<button type="button" class="primary full" id="traceBankMetaSave">Confirmer les modifications</button>'+
@@ -5377,6 +5386,30 @@ function openBankMetadata(id){
  const previewCalendar=$('#traceBankMetaSchedulePreview');
  if(accountType(account)==='card'&&account.paymentMode==='deferred'&&previewCalendar)
   previewCalendar.onclick=()=>openTraceAccountDetail(id,{onBack:openAccountSettings});
+ const previewRevision=$('#traceBankMetaRevisionRun');
+ if(accountType(account)==='card'&&account.paymentMode==='deferred'&&
+    account.country==='FR'&&I.currency(account)==='EUR'&&previewRevision)
+  previewRevision.onclick=()=>{
+   const output=$('#traceBankMetaRevisionResult');
+   try{
+    const prepare=window.TraceDeferredDebit?.proposeScheduleRevision;
+    if(typeof prepare!=='function')
+     throw Error('Simulation du calendrier différé indisponible.');
+    const proposal=prepare({card:account,asOfDate:localDateISO(),
+     effectiveDate:$('#traceBankMetaRevisionEffective').value,
+     debitDay:$('#traceBankMetaRevisionDebit').value,
+     closingDay:$('#traceBankMetaRevisionClosing').value});
+    output.textContent='Proposition non enregistrée · prise d’effet le '+
+     proposal.effectiveDate+' · prélèvement chaque '+proposal.proposedVersion.debitDay+
+     ' du mois'+(proposal.proposedVersion.closingDay===null?
+      ' · clôture inconnue (aucune affectation automatique des achats)':
+      ' · clôture chaque '+proposal.proposedVersion.closingDay+
+      ' du mois')+'. Les achats antérieurs gardent leurs échéances. '+
+     'Vérification bancaire et activation sécurisée encore nécessaires.';
+   }catch(err){
+    output.textContent='Proposition non validée : '+String(err?.message||'Contrôle indisponible');
+   }
+  };
  $('#traceBankMetaArchive').onclick=()=>confirmBankArchive(id,true);
  $('#traceBankMetaSave').onclick=async()=>{
   const button=$('#traceBankMetaSave');button.disabled=true;
