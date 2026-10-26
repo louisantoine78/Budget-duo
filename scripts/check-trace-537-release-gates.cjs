@@ -49,18 +49,40 @@ function runGate({spawn=spawnSync,root=ROOT,env=process.env,node=process.execPat
    message:'Refus : branche autorisée '+EXPECTED+' uniquement'});
   return{automatedPassed:false,releaseReady:false,results,manualRequired:MANUAL};
  }
- const working=exec('clean_worktree','git',['status','--porcelain','--untracked-files=no'],10000);
- if(working.passed&&working.stdout.trim())results.push({id:'clean_snapshot',passed:false,
-  message:'Fichiers suivis modifiés : aucun verdict reproductible sur le HEAD'});
+ const working=exec('clean_worktree','git',['status','--porcelain=v1','--untracked-files=normal'],10000);
+ if(working.passed){
+  const changed=working.stdout.split(/\r?\n/).filter(s=>s.trim()&&s!=='?? node_modules/');
+  if(changed.length)results.push({id:'clean_snapshot',passed:false,
+   message:'Fichiers modifiés ou non suivis : QA non reproductible sur HEAD.'});
+ }
  // --check is deliberately read-only and fails on stale SW.
  exec('preview_sw_fresh',node,['scripts/build-trace-preview-pwa.mjs','--check'],30000);
- exec('native_node_suite',node,['scripts/test-trace-native.mjs'],600000);
+ const native=exec('native_node_suite',node,['scripts/test-trace-native.mjs'],600000);
+ if(native.passed){
+  let s;
+  try{s=JSON.parse(native.stdout.trim().split(/\r?\n/).at(-1));}catch{}
+  if(!s||!Number.isSafeInteger(s.testFiles)||s.testFiles<1||
+     !Number.isSafeInteger(s.syntaxFiles)||s.syntaxFiles<1||
+     !Number.isSafeInteger(s.reportedScenarios)||s.reportedScenarios<1||
+     s.failedFiles!==0)
+   results.push({id:'native_evidence_missing',passed:false,
+    message:'Aucune preuve de scénarios Node réellement exécutés.'});
+ }
  // Require only the embedded fictional PostgreSQL package, no install/network.
  const moduleName=safe.TRACE_PGLITE_MODULE||'@electric-sql/pglite';
  const probe=exec('embedded_postgres_present',node,
   ['-e','require.resolve(process.argv[1])',moduleName],10000);
- if(probe.passed)for(const file of PG_TESTS)
-  exec('isolated_pg_'+file.split('/').at(-1),node,[file],180000);
+ if(probe.passed)for(const file of PG_TESTS){
+  const name=file.split('/').at(-1),pg=exec('isolated_pg_'+name,node,[file],180000);
+  if(!pg.passed)continue;
+  const found=pg.stdout.match(/\b(\d+)\s+remaining release-blocking findings\b/i);
+  if(found&&Number(found[1])>0)results.push({
+   id:'isolated_pg_open_findings_'+name,passed:false,
+   message:found[1]+' PostgreSQL blockers still open.'});
+  if(!/(?:^|\r?\n)PASS\s+[^\r\n]+/m.test(pg.stdout))results.push({
+   id:'isolated_pg_evidence_missing_'+name,passed:false,
+   message:'No passing SQL assertion reported.'});
+ }
  else results.push({id:'isolated_pg_blocked',passed:false,
   message:'PGlite local introuvable. Ne jamais substituer un Supabase hébergé.'});
  return{automatedPassed:results.every(r=>r.passed),releaseReady:false,
