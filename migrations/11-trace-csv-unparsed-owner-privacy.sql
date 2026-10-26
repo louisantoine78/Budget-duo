@@ -18,6 +18,13 @@ begin
       or nullif(d.data->>'accountId','') is null
       or nullif(d.data->>'sourceFileName','') is null
       or nullif(d.data->>'sourceIndex','') is null
+      or char_length(d.data->>'accountId') > 240
+      or char_length(d.data->>'sourceFileName') > 110
+      or case
+           when coalesce(d.data->>'sourceIndex','') ~ '^[0-9]{1,6}$'
+           then (d.data->>'sourceIndex')::integer not between 2 and 1001
+           else true
+         end
     )
  ) then
   raise exception 'TRACE_CSV_EVIDENCE_MIGRATION_BLOCKED: incomplete source identity'
@@ -29,6 +36,8 @@ $csv_source_preflight$;
 -- No duplicate audit row for a single bank statement source coordinate,
 -- even when an old or malicious client supplies a different document ID.
 -- Scope is household + owner + bank account + exact filename + source row.
+-- Normalize the row to INTEGER in the index so 4, "04" and "000004" do
+-- not create three independent proofs for one underlying source line.
 -- A duplicate must be reviewed manually; never create a booked transaction.
 create unique index if not exists trace_csv_unparsed_source_unique
 on public.documents (
@@ -36,7 +45,7 @@ on public.documents (
  (data->>'owner'),
  (data->>'accountId'),
  (data->>'sourceFileName'),
- (data->>'sourceIndex')
+ ((data->>'sourceIndex')::integer)
 )
 where collection = 'imports' and data->>'kind' = 'csv_unparsed';
 
