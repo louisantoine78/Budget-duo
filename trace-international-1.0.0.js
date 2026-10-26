@@ -112,7 +112,7 @@
   const complete=componentComplete&&totalCAD!==null;
   const incompletePrimary=invalidPrimary||missing.length||ambiguousCards.length||
    mixedLinkedCurrencies.length||cardsToReview.some(a=>included.includes(a));
-  const safeNet=exactMoney(check+debt);
+  const safeNet=safeChecking===null||safeDebt===null?null:exactMoney(check+debt);
   return{main,currency:currency(main),checking:missing.length||invalidPrimary?null:safeChecking,
    card:incompletePrimary?null:safeDebt,
    net:incompletePrimary?null:safeNet,
