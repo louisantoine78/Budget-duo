@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — BLOCAGE D'EFFACEMENT DES FOYERS HISTORIQUES
+
+**HEAD à revérifier à la reprise** : ne jamais supposer le SHA de cet addendum. Branche exclusive `trace-5.37.0-international-accounts-fx`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, commits `[skip ci]`. Interdits inchangés : PR, merge, CI, déploiement, migration réelle, Supabase réel et tout reset.
+
+**Nouveaux commits** : `c195aeeb6ba5ec43200f1bfc4ea3812919ed1e47` (test multi-foyer différé), `666c86668e8ec31a65b9473f6e9ff832e419324e` (UUID fictif SQL paramétré), `333c2c98f2ee378f46fe53034ce5b1c565ef6d08` (limites + immutabilité CSV). Dans `tests/trace-cas-writes.integration.cjs`, un quatrième utilisateur fictif crée un second foyer d'archive contenant avant migration 10 une carte EUR différée et un achat historique. **Comportement actuellement attendu à confirmer sur moteur PostgreSQL :** la suppression administrateur du foyer est refusée par `TRACE_DEFERRED_NOT_RELEASED`. C'est une **barrière produit**, PAS un test de suppression réussie. La suppression par membre est aussi non autorisée (schéma V4). Autre scénario : source CSV trop longue, nom >110, index hors plage, `rawFingerprint` / `rawTruncated` immuables.
+
+**Preuve de cette session : compilation syntaxique V8 du fichier test seulement** ; aucune exécution PostgreSQL/PGlite, aucune confirmation des nouveaux scénarios, pas de Node CLI sur checkout complet, ni Safari. Les `98/98` V8 du lot précédent ne doivent pas être attribués à ces nouveaux scénarios. Le conteneur n'a ni Postgres/PGlite ni accès DNS GitHub. Les migrations 10/11 restent candidates et non appliquées.
+
+**Prochaine priorité :** obtenir un PostgreSQL/PGlite isolé fictif, exécuter migrations 05–11 et les suites intégration. Qualifier un chemin d'effacement légitime *sans supprimer les protections contre la destruction d'une preuve isolée ou les écritures différées* ; qualifier aussi les accès des partenaires/foyers, CAS, RLS, Realtime, sauvegarde/restauration et rollback. Débit différé toujours en quarantaine, production **NO-GO**, progression **58 % ±10**. Continuer ensuite les fonctionnalités financières et l'UX premium déjà validées.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — INTÉGRITÉ DES PREUVES CSV LONGUES ET TEST MULTI-FOYERS
 
 **HEAD technique AVANT commit documentaire :** `9ef4e4e37831bf235f6ffb45aa7408915551ec83`. Résoudre le vrai HEAD de `trace-5.37.0-international-accounts-fx` au début de toute prochaine mission. Stable `main` inchangée connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun déploiement, merge, PR, CI, modification SW production, Supabase réel, SQL appliqué, reset, ou donnée financière personnelle manipulée. Commits `[skip ci]`.
