@@ -1,3 +1,20 @@
+## 25 octobre 2026 — sécurité des agrégats FX et privilèges SQL12 toutes colonnes
+
+**NO-GO**. Deux améliorations candidates enregistrées exclusivement sur branche internationale :
+
+- [x] Moteur `trace-international-1.0.0.js` : centimes sûrs imposés à `exactMoney` et `fxValue`; `snapshot` retourne une valeur inconnue pour les agrégats de dette ou patrimoine dont les centimes sont trop grands ; distinction solde natif du principal vs total global préservée. Commits `d1c12094`, `da3f78b6`.
+- [x] Trois nouveaux scénarios monétaires en `tests/trace-international-money-integrity.test.cjs` `4838a1eb`, `39eb2b24`.
+- [x] `migrations/12-trace-cas-exclusive-write-cutover.sql` : REVOKE dynamique de chaque colonne présente et postcondition sur droits effectifs des rôles `anon`/`authenticated` (y compris hérités), commit `21fd483a`.
+- [x] Scénario PGlite préparé : grants anormaux de `created_at`/`updated_at` avant migration, refusés après ; test de contrat statique corrigé `bf96a861`, `ebf5b97d`, `3dd4586`.
+- [x] **19/19 tests V8 réellement exécutés** sur ce périmètre : 14 scénarios fonctionnels JavaScript du moteur FX et 5 tests de contrat SQL12, imports Node simulés. Harnais PGlite : syntaxe V8 PASS, aucune exécution PostgreSQL.
+- [ ] **CRITIQUE** : SQL 05–12 et 4 suites PG sur vrai moteur fictif isolé ; tester comportement des grants colonne, privilèges hérités, réitération et rollback, RLS/2 partenaires et 2 foyers, preuves CSV, débit différé, CAS et protection historique.
+- [ ] Vérifier les éventuels dépassements des soldes numériques dans les autres calculateurs de la PWA (accueil/budget, recomposition des valeurs natifs/CAD) et la recette navigateur.
+- [ ] Finir FX/Couple, PDF/OCR, premium UX, Safari iPhone, backups, transition clients 5.36.x et autorisation GO.
+
+**La validation réelle du serveur PostgreSQL n'a pas eu lieu** ; SQL12 reste non appliquée, `main` et Supabase réel intacts. ~58 % ±10. Publication non autorisée.
+
+---
+
 ## 25 octobre 2026 — CUTOVER RPC CAS EXCLUSIF : prêt à qualifier, NON APPLIQUÉ
 
 **NO-GO production — migration 12 candidate exclusivement.** Nouvel artefact `migrations/12-trace-cas-exclusive-write-cutover.sql` propose la fermeture des écritures SQL directes de `authenticated` après vérification de présence des RPC CAS, RLS et 5 triggers 08–11. Revocation niveau TABLE + COLUMN sur documents et foyer ; postconditions effectives `has_*_privilege`. Aucune ligne budgétaire n'est modifiée. **Attention : l'application 5.36.x utilisant les écritures directes serait volontairement bloquée ; jamais activer sans autorisation explicite + procédure de transition.**
