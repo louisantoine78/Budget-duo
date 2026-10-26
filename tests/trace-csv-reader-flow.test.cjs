@@ -222,3 +222,13 @@ test('unreadable evidence survives later transaction import interruption',async(
  assert.equal(s.state.transactions.length,0);
  assert.match(s.node('#importResult').textContent,/Import interrompu/);
 });
+
+test('too many uninterpretable CSV rows fail before storing any evidence',()=>{
+ const rows=Array.from({length:101},(_,i)=>
+  '20/10/2026,Non reconnu '+i+',??');
+ const s=scenario({content:'Date,Description,Montant\n'+rows.join('\n')+'\n'});
+ s.preview();
+ assert.match(s.node('#csvPreviewResult').textContent,/100 lignes illisibles maximum/);
+ assert.equal(s.writes.length,0);
+ assert.equal(s.evidenceWrites.length,0);
+});

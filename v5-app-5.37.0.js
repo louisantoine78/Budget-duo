@@ -2802,6 +2802,9 @@ function csvImportAccountSnapshot(account,owner){
  });
 }
 
+// Prevent a large malformed CSV from enqueueing hundreds of per-line RPC
+// writes or storing excessive excerpts. Revisit after an atomic batch API.
+const CSV_UNPARSED_REVIEW_LIMIT=100;
 // A partial CSV import must never quietly dismiss unparsed bank lines.
 function csvPartialImportAllowed(invalidCount,acknowledged){
  return Number.isSafeInteger(invalidCount)&&invalidCount>=0&&
@@ -2966,6 +2969,8 @@ function importFile(file){
      // Reimporting the very same source row is the only silent no-op.
      if(!csvAlreadyImportedSourceRow(t,state.transactions))all.push(t);
     });
+    if(invalid.length>CSV_UNPARSED_REVIEW_LIMIT)
+     throw Error('Ce CSV contient '+invalid.length+' lignes non interprétées. Vérifie le choix des colonnes et le format des montants, puis sépare le relevé en fichiers plus petits (100 lignes illisibles maximum par import). Rien n’a été enregistré.');
     return{all,invalid,duplicates:rows.length-invalid.length-all.length};
    };
    $('#csvPreview').onclick=()=>{
