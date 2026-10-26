@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — CASCADE ADMINISTRATIVE / DÉBIT DIFFÉRÉ
+
+**Reprise** : revérifier HEAD de `trace-5.37.0-international-accounts-fx`. Stable main `02c70f50e7e51da79b77a91dde96a03c6c719909` inchangé. Aucun merge, PR, CI, déploiement, Supabase réel, reset ni migrations exécutées sur environnement hébergé. Commits exclusivement `[skip ci]`.
+
+**Nouveau code candidat :** migration 10 (`724ab694`) contient une exception très stricte permettant une suppression en cascade de document différé **uniquement** lorsque le foyer parent n'existe déjà plus dans la même transaction, `auth.uid()` est NULL, et `current_user=session_user='postgres'`. Refus des suppressions directes, modifications et créations différées conservé ; absence de RPC de suppression de foyer par membre. Développement non qualifié par moteur SQL : ne pas le considérer résolu.
+
+**Tests préparés :** `4cb1c4a` (tests de cascade admin et refus direct/membre), `301e675` (même foyer fictif avec preuve CSV privée), `73a1de5` (connexion admin munie d'un JWT refusée), `d21a881` (contrats statiques migration 10). **17/17 tests statiques/lexicaux V8 sous imports Node simulés** ; JS du harnais PGlite parse sous V8. **AUCUN TEST PG/PGlite réellement exécuté**, aucun test de l'ordre des triggers ou cascade du vrai moteur, navigateur/Safari, Realtime, backup/restore. Le faux foyer a quatre documents candidats, zéro donnée réelle.
+
+**Priorité suivante** : exécuter réellement migrations 05–11 et suites `tests/trace-cas-writes.integration.cjs`, `tests/trace-database.integration.cjs`, `tests/trace-personal-settings-ownership.integration.cjs` sur PostgreSQL/PGlite complètement fictif avec autorisations ; corriger les échecs et concevoir l'effacement membre sans privilège indu. Garder débit différé en quarantaine. Puis reprendre qualification FX, Couple, PDF/OCR, UI premium, PWA/Safari et scénarios de backup/rollback. **58 % ±10 ; NO-GO**.
+
+---
+
 > **Complément vérifié — 25 octobre 2026 :** commit `c8e27041a6fd02e11ebc022607ead8bf064f469a` (`[skip ci]`) : le test de suppression refusée vérifie désormais également que la ligne `household_members` et la sauvegarde `trace_v5_backups` survivent à la transaction avortée. **12/12 tests de contrat/lexique exécutés sous V8 avec `node:fs`, `node:path`, `node:assert` et `node:test` simulés, sur sources GitHub actuelles ; aucune exécution PostgreSQL ni suite Node native.** Les tests d'effacement PG restent NON exécutés et représentent un NO-GO.
 
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — BLOCAGE D'EFFACEMENT DES FOYERS HISTORIQUES
