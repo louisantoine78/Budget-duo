@@ -88,3 +88,11 @@ test('CSV source migration rejects incomplete or unbounded legacy index keys',()
  assert.match(sql,/then \(d\.data->>'sourceIndex'\)::integer not between 2 and 1001/);
  assert.match(sql,/char_length\(new\.data->>'accountId'\) > 240/);
 });
+
+test('readiness fails closed when the CSV uniqueness index is missing or invalid',()=>{
+ assert.match(sql,/idx\.relname='trace_csv_unparsed_source_unique'/);
+ assert.match(sql,/i\.indisunique and i\.indisvalid and i\.indisready/);
+ assert.match(pg,/drop index public\.trace_csv_unparsed_source_unique/);
+ assert.match(pg,/missing uniqueness index must close evidence intake/);
+ assert.match(pg,/reapplying 11 must restore unique source protection/);
+});
