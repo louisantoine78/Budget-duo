@@ -260,3 +260,35 @@ test('global wealth sums valid checking assets, card debt and FX at exact cents'
  assert.equal(snap.globalCAD,0.6);
  assert.equal(snap.complete,true);
 });
+
+
+test('cross-currency destination requires explicit proof of booked receipt currency',()=>{
+ const creditEUR={type:'transfer',bankCurrency:'CAD',bankAmount:100,
+  toBankAmount:63.75,toAccountId:'fr',amountCAD:100};
+ assert.equal(I.amountOnAccount(creditEUR,fr,'destination'),null);
+ assert.equal(I.amountOnAccount({...creditEUR,toBankCurrency:'USD'},fr,'destination'),null);
+ assert.equal(I.amountOnAccount({...creditEUR,toBankCurrency:'EUR'},fr,'destination'),63.75);
+ const creditCAD={type:'transfer',bankCurrency:'EUR',bankAmount:40,
+  toBankAmount:64,amountCAD:64};
+ assert.equal(I.amountOnAccount(creditCAD,ca,'destination'),null);
+ assert.equal(I.amountOnAccount({...creditCAD,toBankCurrency:'CAD'},ca,'destination'),64);
+ // Legacy 5.36.x accounts and transfers were CAD -> CAD.
+ assert.equal(I.amountOnAccount({type:'transfer',bankAmount:50,toBankAmount:50},ca,'destination'),50);
+ assert.equal(I.amountOnAccount({type:'transfer',amountCAD:50},ca,'destination'),50);
+});
+test('unknown currency of a foreign receipt stops the bank ledger, not an assumed EUR credit',()=>{
+ const tx={id:'incoming-fx',date:day,type:'transfer',status:'confirmed',
+  accountId:'ca',toAccountId:'fr',bankCurrency:'CAD',
+  bankAmount:100,amountCAD:100,toBankAmount:63.75};
+ const state={household:{accountOpeningBalances:{fr:10}},
+  reconciliations:[],transactions:[tx],investmentOperations:[]};
+ const estimate=extract('accountEstimate','bank',{state,
+  window:{TraceInternational:I},accountType:a=>a.type,
+  openingBoundary:()=>({date:'2026-10-01',mode:'start'}),
+  afterBoundary:(date,boundary)=>date>boundary.date});
+ assert.equal(estimate(fr),null);
+ tx.toBankCurrency='EUR';
+ assert.equal(estimate(fr),73.75);
+ tx.toBankCurrency='USD';
+ assert.equal(estimate(fr),null);
+});
