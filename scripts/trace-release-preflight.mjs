@@ -5,6 +5,26 @@ import {createHash} from 'node:crypto';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
+// Read-only, exact-snapshot evidence: a green historical run cannot
+// certify a later HEAD or a SQL report with known release-blocking findings.
+function traceQualificationHeadMatches(current,reviewed){
+ return typeof current==='string'&&typeof reviewed==='string'&&
+  /^[a-f0-9]{40}$/.test(current)&&current===reviewed;
+}
+function traceQualifiedNativeEvidence(native){
+ const s=native?.summary;
+ return native?.passed===true&&s?.failedFiles===0&&
+  Number.isSafeInteger(s?.syntaxFiles)&&s.syntaxFiles>0&&
+  Number.isSafeInteger(s?.testFiles)&&s.testFiles>0&&
+  Number.isSafeInteger(s?.reportedScenarios)&&s.reportedScenarios>0;
+}
+function traceQualifiedPostgresEvidence(db){
+ return db?.testsPassed===true&&db?.hostedSupabase===false&&
+  Array.isArray(db?.checks)&&db.checks.length>0&&
+  db.checks.every(x=>x?.passed===true)&&
+  Array.isArray(db?.findings)&&
+  !db.findings.some(x=>x?.severity==='release-blocker');
+}
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const qualification=JSON.parse(await readFile(resolve(root,'docs/qa/TRACE-5.37.0-QUALIFICATION.json'),'utf8'));
 const checks=[];
@@ -13,7 +33,10 @@ const git=(...args)=>spawnSync('git',args,{cwd:root,encoding:'utf8'});
 check('authorized candidate branch',git('branch','--show-current').stdout.trim()===qualification.branch);
 check('production entries, stable application and workflows untouched',git('diff','--quiet',qualification.missionBase,'--',
  'index.html','sw.js','manifest.webmanifest','trace-version.json','v5-app-5.36.5.js','.github').status===0);
-check('qualified code is an ancestor of the current checkout',git('merge-base','--is-ancestor',qualification.reviewedCodeCommit,'HEAD').status===0);
+const headResult=git('rev-parse','HEAD');
+const currentHead=headResult.status===0?headResult.stdout.trim():'';
+check('qualified code matches the exact reviewed commit',
+ traceQualificationHeadMatches(currentHead,qualification.reviewedCodeCommit));
 const messages=git('log',qualification.missionBase+'..HEAD','--format=%s');
 check('all mission commits skip CI',messages.status===0&&messages.stdout.trim().split('\n').every(message=>message.includes('[skip ci]')));
 const config=JSON.parse(await readFile(resolve(root,'vercel.json'),'utf8'));
@@ -31,9 +54,10 @@ const native=JSON.parse(await readFile(resolve(root,qualification.reports.native
 const browser=JSON.parse(await readFile(resolve(root,qualification.reports.browser),'utf8'));
 const database=JSON.parse(await readFile(resolve(root,qualification.reports.database),'utf8'));
 const valet=JSON.parse(await readFile(resolve(root,qualification.reports.valet),'utf8'));
-check('native suites and syntax passed',native.passed&&native.summary.failedFiles===0);
+check('native suites and syntax passed',traceQualifiedNativeEvidence(native));
 check('recorded Chromium scenarios passed',browser.passed&&browser.safari===false&&browser.externalRequests.length===0&&browser.consoleErrors.length===0);
-check('fictional PostgreSQL integration passed',database.testsPassed&&database.hostedSupabase===false);
+check('fictional PostgreSQL integration passed without open blockers',
+ traceQualifiedPostgresEvidence(database));
 check('public historical FX evidence passed',valet.passed&&valet.realHTTP===true&&valet.currentMarketQuote===false);
 for(const args of [['scripts/verify-trace-pdfjs.mjs','--preview-enabled'],['scripts/build-trace-preview-pwa.mjs','--check']]){
  const run=spawnSync(process.execPath,args,{cwd:root,encoding:'utf8'});
@@ -43,7 +67,7 @@ const open=qualification.gates.filter(g=>g.required&&g.status!=='passed');
 const failures=checks.filter(c=>!c.passed);
 // Recorded test success cannot override an open financial, platform or release gate.
 const report={decision:failures.length||open.length?'NO-GO':'GO',
- qualificationCommit:qualification.reviewedCodeCommit,currentHead:git('rev-parse','HEAD').stdout.trim(),
+ qualificationCommit:qualification.reviewedCodeCommit,currentHead,
  checks,openGates:open,productionAction:'none; explicit user authorization still required'};
 const index=process.argv.indexOf('--report');
 if(index>=0){if(!process.argv[index+1])throw Error('--report requires a path');
