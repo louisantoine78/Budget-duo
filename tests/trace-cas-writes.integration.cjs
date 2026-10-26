@@ -508,6 +508,18 @@ async function run(){
     'select count(*)::integer as n from public.households where id=$1',
     [deferredHouseId])).rows[0].n,1);
   });
+  await check('admin connection carrying a JWT may not erase a historical deferred household',async()=>{
+   await assert.rejects(db.transaction(async tx=>{
+    await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[uid(4)]);
+    return tx.query('delete from public.households where id=$1',[deferredHouseId]);
+   }),/TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.households where id=$1',
+    [deferredHouseId])).rows[0].n,1);
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.documents where household_id=$1',
+    [deferredHouseId])).rows[0].n,4);
+  });
   await check('administrative household erasure cascades through historical deferred records',async()=>{
    // The admin role alone may erase this separate fictional household.
    // Normal deferred edits/deletes still fail. A member-level erasure RPC
