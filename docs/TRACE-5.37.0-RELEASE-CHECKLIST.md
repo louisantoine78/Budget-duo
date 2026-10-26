@@ -1,3 +1,20 @@
+## 25 octobre 2026 — CUTOVER RPC CAS EXCLUSIF : prêt à qualifier, NON APPLIQUÉ
+
+**NO-GO production — migration 12 candidate exclusivement.** Nouvel artefact `migrations/12-trace-cas-exclusive-write-cutover.sql` propose la fermeture des écritures SQL directes de `authenticated` après vérification de présence des RPC CAS, RLS et 5 triggers 08–11. Revocation niveau TABLE + COLUMN sur documents et foyer ; postconditions effectives `has_*_privilege`. Aucune ligne budgétaire n'est modifiée. **Attention : l'application 5.36.x utilisant les écritures directes serait volontairement bloquée ; jamais activer sans autorisation explicite + procédure de transition.**
+
+- [x] Migration 12 NON DÉPLOYÉE créée `a714bdc` et renforcée pour interdire tout `UPDATE` direct de `households` `35c8e61`.
+- [x] Suite PGlite entièrement fictive conçue `07c03e4`, complétée (index CSV absent `fb3ade3`, renommage direct interdit `19fdce7`).
+- [x] Gate de release vérifie **quatre** suites PG (la nouvelle 12 incluse) : `e2173f5`; tests de gate et contrats ajustés (dont `db487eb`, `45b455e`, `4bec9ee`, `366d348`, `5ad041f`).
+- [x] **71/71 tests V8 de contrats et d'adaptateur client / gate fictif réussis**, vrais fichiers depuis GitHub, imports Node simulés. Deux harnais PG compilent sous V8.
+- [ ] **BLOQUANT** : exécuter sur PostgreSQL/PGlite NATIF entièrement fictif migrations 05–12, 4 suites d'intégration, vérifier refus des anciens clients, absence de pertes et droits RLS effectifs de deux membres, puis tests de concurrence réelle et rollback.
+- [ ] Vérifier tous les parcours 5.37, prévisualisation PWA, restauration, Auth/Reatime, Safari physique, flux internationaux et budget historique CAD.
+- [ ] Concevoir une RPC de renommage du foyer si fonction demandée ; **ne jamais rétablir un `UPDATE` direct**.
+- [ ] Vérifier/mettre en place la procédure réelle de bascule versions anciennes ; demander GO explicite. Aucun merge/déploiement Supabase ni commit main.
+
+L'absence de PGlite/PostgreSQL native ne peut pas être compensée par les contrôles V8. **Production NO-GO, estimation 58 % ±10.**
+
+---
+
 ## 25 octobre 2026 — capture fidèle des intentions de sauvegarde du client CAS
 
 **NO-GO**. Correctif client `cfd340c` `[skip ci]` : chaque `saveDocument()` fige immédiatement une copie profonde JSON de la requête financière, avant son entrée dans la file `traceSerialWrite`. Les vérifications de quarantaine bancaire différée sont réexécutées sur le modèle actuel ET sur cette copie, empêchant à la fois les changements de montants involontaires et le blanchiment d'opérations différées.
