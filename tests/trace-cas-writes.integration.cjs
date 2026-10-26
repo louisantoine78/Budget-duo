@@ -488,6 +488,12 @@ async function run(){
    assert.equal((await db.query(
     'select count(*)::integer as n from public.households where id=$1',
     [deferredHouseId])).rows[0].n,1);
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.household_members where household_id=$1',
+    [deferredHouseId])).rows[0].n,1,'member must survive failed cascade');
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.trace_v5_backups where household_id=$1',
+    [deferredHouseId])).rows[0].n,1,'historic snapshot must survive failed cascade');
   });
   await check('KNOWN NO-GO: member has no authorized self-service household erasure',async()=>{
    await assert.rejects(acting(4,tx=>tx.query(
