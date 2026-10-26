@@ -12,13 +12,18 @@ function harness({accounts,estimates,mainId='ca'}={}){
    const active=accounts.filter(a=>!a.archived&&(!owner||a.owner===owner));
    const main=active.find(a=>a.id===mainId&&a.type==='checking')||active.find(a=>a.type==='checking');
    const cards=active.filter(a=>a.type==='card'&&a.settlementAccountId===main?.id);
+   const sameCurrencyChecking=active.filter(a=>a.type==='checking'&&a.currency===main?.currency);
+   const ambiguous=active.filter(a=>a.type==='card'&&!a.settlementAccountId&&
+    a.currency===main?.currency&&sameCurrencyChecking.length>1);
+   const mixed=cards.filter(a=>a.currency!==main?.currency);
    const unknown=[main,...cards].some(a=>estimates[a?.id]==null);
    const creditReview=cards.filter(a=>Number(estimates[a.id])>0);
    const checking=unknown?null:Number(estimates[main.id]);
-   const card=unknown||creditReview.length?null:cards.reduce((s,a)=>s+Number(estimates[a.id]),0);
+   const card=unknown||creditReview.length||mixed.length||ambiguous.length?
+    null:cards.reduce((s,a)=>s+Number(estimates[a.id]),0);
    return{main,currency:main.currency,checking,card,
     net:checking==null||card==null?null:checking+card,
-    cardsToReview:creditReview,ambiguousCards:[],mixedLinkedCurrencies:[],
+    cardsToReview:creditReview,ambiguousCards:ambiguous,mixedLinkedCurrencies:mixed,
     balances:active.map(a=>({id:a.id,name:a.name,balance:estimates[a.id]??null,
      nativeCurrency:a.currency,cad:a.currency==='CAD'?estimates[a.id]:null})),
     complete:active.every(a=>a.currency==='CAD'&&estimates[a.id]!=null)&&!creditReview.length,
@@ -133,4 +138,27 @@ test('account removal clears a previous positive-card warning without reusing ol
  assert.equal(h.nodes.balance.textContent,'À configurer');
  assert.equal(h.nodes.checking.textContent,'—');
  assert.equal(h.nodes.card.textContent,'—');
+});
+
+
+test('mixed-currency legacy card linkage explains why net cash is blocked',()=>{
+ const badCard={...accounts[2],currency:'EUR'};
+ const h=harness({accounts:[accounts[0],badCard],estimates:{ca:500,card:-100}});
+ h.render();
+ assert.equal(h.nodes.balance.textContent,'À vérifier');
+ assert.equal(h.nodes.warning.hidden,false);
+ assert.match(h.nodes.warning.textContent,/autre devise/);
+ assert.match(h.nodes.warning.textContent,/compte de règlement/);
+ assert.equal(h.events.writes,0);
+});
+test('unlinked card across two candidate current accounts requires mapping explanation',()=>{
+ const another={...accounts[0],id:'ca2',name:'Second courant CA'};
+ const unlinked={...accounts[2],settlementAccountId:null};
+ const h=harness({accounts:[accounts[0],another,unlinked],
+  estimates:{ca:500,ca2:200,card:-100}});
+ h.render();
+ assert.equal(h.nodes.balance.textContent,'À vérifier');
+ assert.equal(h.nodes.warning.hidden,false);
+ assert.match(h.nodes.warning.textContent,/sans compte de règlement/);
+ assert.equal(h.events.writes,0);
 });
