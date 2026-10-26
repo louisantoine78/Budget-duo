@@ -72,10 +72,31 @@ async function run(){
   const otherAccount={id:'checking-partner',owner:'partner',type:'checking',currency:'EUR'};
   await save(1,'accounts',account.id,account,null);
   await save(2,'accounts',otherAccount.id,otherAccount,null);
+  await check('cutover clears surprise column-level grants before admitting clients',async()=>{
+   // Reproduce old clients (or third-party migrations) granting independent
+   // write access on columns not listed by the first candidate cutover.
+   await db.exec(`grant insert (created_at), update (updated_at)
+    on table public.documents to authenticated;
+    grant update (created_at) on table public.households to authenticated;`);
+   assert.equal((await db.query(
+    "select has_column_privilege('authenticated','public.documents','updated_at','UPDATE') as allowed")).rows[0].allowed,true);
+   assert.equal((await db.query(
+    "select has_column_privilege('authenticated','public.households','created_at','UPDATE') as allowed")).rows[0].allowed,true);
+  });
   await check('cutover installs only with ready migration 05-11 guards',async()=>{
    assert.equal((await asUser(1,tx=>tx.query(
     'select public.trace_csv_evidence_guard_ready() as ok'))).rows[0].ok,true);
    await migration(12);
+   for(const [table,column,action] of [
+    ['documents','created_at','INSERT'],
+    ['documents','updated_at','UPDATE'],
+    ['households','created_at','UPDATE']
+   ]){
+    const x=(await db.query(
+     'select has_column_privilege($1,$2,$3,$4) as allowed',
+     ['authenticated','public.'+table,column,action])).rows[0];
+    assert.equal(x.allowed,false,table+'.'+column+' retained write permission');
+   }
   });
   await check('authenticated loses document direct insert/update/delete and household settings',async()=>{
    const q=`select
