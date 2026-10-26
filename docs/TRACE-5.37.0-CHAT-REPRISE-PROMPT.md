@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — PLACEMENTS CAS / ANCIEN COMPTE BANCAIRE
+
+**Reprendre au vrai HEAD** de `trace-5.37.0-international-accounts-fx` (à résoudre en direct). `main` stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits `[skip ci]`, jamais PR/merge, déploiement, workflows, CI, migration Supabase hébergée, reset ou lecture/écriture de données financières réelles.
+
+**Nouveau lot réel de code candidat** : `c20be62f388d0124b59996f7f8968d65040e5116` renforce `migrations/09-trace-cas-versioned-writes.sql`. Le CAS de modification et suppression d'`investment_operations` vérifie maintenant la propriété et le type bancaire **du document original** (`d.data.bankAccountId`, `accounts`, `owner=actor_slot`, `type=checking`) en plus des contrôles existants du nouveau document et du portefeuille d'origine. Un compte d'origine appartenant à l'autre partenaire ou supprimé refuse l'écriture et laisse l'historique inchangé. `2d2da87707fdf9b18d46ee16a5ddb0f5771cd3e2` ajoute deux fixtures PostgreSQL de régression fictives (anciennes opérations inter-partenaire ou compte bancaire manquant). `548d820edabd84dc32734fe62068c559ac4c0df6` ajoute trois tests statiques. Aucun de ces tests PostgreSQL n'a été exécuté.
+
+**Preuve vérifiée** : **28/28** contrats statiques et lexicaux V8 passés (vrais fichiers candidats + fausses dépendances Node), et syntaxe JavaScript du test d'intégration compilée V8. Pas de `node --test` natif du checkout, pas de PostgreSQL/PGlite isolé, ni Auth/RLS/CAS natifs, navigateur ou Safari. Conteneur sans serveur PG/PGlite, git/registry DNS bloqués. Les anciens tests PG décrits dans `docs/qa/trace-5.37.0-postgresql.json` sont historiques et ne qualifient PAS migrations 08–11 actuelles.
+
+**Prochaine étape prioritaire** : exécuter migrations 05–11 dans un clone PostgreSQL/PGlite fictif, corriger les échecs, qualifier CAS ancien/nouveau portefeuille et compte bancaire, écriture directe héritée, confidentialité/unicité CSV, cascade différée, permissions partenaire/foyer, Realtime et restauration. Ensuite poursuivre les flux financiers et UI premium déjà validés. Préserver la quarantaine différée. **NO-GO, 58 % ±10**.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — SOURCE CSV UNIQUE ET RPC FAIL-CLOSED
 
 **Reprendre sur le vrai HEAD de** `trace-5.37.0-international-accounts-fx` ; ne pas reprendre un ancien SHA de cet addendum. `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Interdiction : main, PR/merge, CI, déploiement, Supabase réel, données financières ou migrations hébergées. Tous commits `[skip ci]`.
