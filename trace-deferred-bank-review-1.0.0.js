@@ -32,12 +32,22 @@
    ['confirmed','pending'].includes(r.status)&&
    (!r.currency||String(r.currency).toUpperCase()===
     String(d.currency).toUpperCase())));
+ // A complete payment is matched to a bank line with its OWN explicit
+ // scheduled due date; a partial payment keeps its allocated due batch.
+ // Actual bank debit may differ from the scheduled date, but is never
+ // inferred from weekends/holidays. An evidence flag is not bank auth.
+ const due=s=>s?.settlementMode==='partial'?s.allocationDueDate:s?.scheduledDueDate;
  const goodSettlement=s=>{
   const e=s?.bankEvidence;
-  return !!(s&&str(s.id)&&s.settlementMode==='partial'&&
+  return !!(s&&str(s.id)&&['partial','full'].includes(s.settlementMode)&&
+   (s.settlementMode==='partial'?s.scheduledDueDate===undefined:
+     s.allocationDueDate===undefined)&&
    str(s.checkingAccountId)&&str(s.cardAccountId)&&str(s.currency)&&
-   day(s.debitDate)&&day(s.allocationDueDate)&&money(s.amount)!==null&&
+   day(s.debitDate)&&day(due(s))&&money(s.amount)!==null&&
    ['confirmed','pending'].includes(s.status)&&
+   Array.isArray(s.purchaseIds)&&Array.isArray(s.feeIds)&&
+   (s.purchaseIds.length+s.feeIds.length)>0&&
+   s.purchaseIds.length<=5000&&s.feeIds.length<=5000&&
    e&&str(e.statementId)&&str(e.lineId)&&
    e.accountId===s.checkingAccountId&&
    String(e.currency).toUpperCase()===String(s.currency).toUpperCase()&&
@@ -116,6 +126,7 @@
    const id=String(s?.id||''),e=s?.bankEvidence;
    const item={settlementId:id,statementId:String(e?.statementId||''),
     lineId:String(e?.lineId||''),status:'',reviewToken:null,
+    scheduledDueDate:null,observedDebitDate:null,bankDateDeviationDays:null,
     budgetExpense:false,budgetIncome:false,confirmedAutomatically:false};
    if(!goodSettlement(s))item.status='invalid_settlement';
    else{
@@ -133,6 +144,13 @@
      else if(!same(d,r,s))item.status='mismatched_line';
      else{
       recognized.add(k);
+      item.scheduledDueDate=due(s);
+      item.observedDebitDate=s.debitDate;
+      // Signed civil-date difference, informational until separately
+      // authenticated in a real bank/SQL workflow.
+      item.bankDateDeviationDays=Math.round((
+       Date.parse(s.debitDate+'T12:00:00Z')-
+       Date.parse(due(s)+'T12:00:00Z'))/86400000);
       if(s.status==='pending')item.status='pending_review';
       else{
        const token=fingerprint(d,s),review=approvals.get(id)||[];
