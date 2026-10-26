@@ -56,6 +56,26 @@ test('no same source can be reused as card and checking evidence',()=>{
  assert.throws(()=>h.review({...h.input,checkingStatements:[{
   ...h.input.checkingStatements[0],sourceId:'card-physical'}]}),/distinctes/);
 });
+
+test('renamed physical source cannot be reused across card and checking with same import ID',()=>{
+ const h=harness();
+ assert.throws(()=>h.review({...h.input,checkingStatements:[{
+  ...h.input.checkingStatements[0],sourceId:'renamed-checking-physical',
+  importId:'card-import'}]}),/distinctes/);
+ assert.equal(h.calls.length,0);
+});
+test('exclusive partial payment cannot bypass purchase cap by omitting fee IDs',()=>{
+ const h=harness(),s=h.input.settlements[0];
+ for(const feeIds of [undefined,null,'not-a-list',{},[null],['fee1','fee1']]){
+  const next={...s,amount:'40.01',feeIds};
+  assert.throws(()=>h.review({...h.input,settlements:[next]}),/distinctes/);
+ }
+ assert.equal(h.calls.length,0);
+});
+test('a normal zero-fee partial payment stays reviewable',()=>{
+ const h=harness();
+ assert.equal(h.review(h.input).localEvidenceReviewed,true);
+});
 test('checking imports cannot be secretly passed in card sources',()=>{
  const h=harness();
  assert.throws(()=>h.review({...h.input,cardStatements:[h.input.checkingStatements[0]]}),/distinctes/);

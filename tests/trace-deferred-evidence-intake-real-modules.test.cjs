@@ -102,6 +102,19 @@ test('same physical source and incompatible checking account rejected',()=>{
   ...f.args,checkingAccountId:'other'}),/distinctes/);
 });
 
+
+test('actual linked modules refuse an import reused across card/checking source IDs',()=>{
+ const f=fixture();
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,checkingStatements:[{...f.checkingDoc,
+   sourceId:'renamed-statement',importId:f.cardDoc.importId}]}),/distinctes/);
+});
+test('actual linked modules reject missing fee list before accepting an overpayment',()=>{
+ const f=fixture(),s={...f.settlement,amount:'40.01'};
+ delete s.feeIds;
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[s]}),/distinctes/);
+});
 test('plan locks the original checking account against reassignment',()=>{
  const f=fixture();assert.equal(f.plan.checkingAccountId,'current-eur-demo');
  assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({

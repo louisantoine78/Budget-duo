@@ -24,18 +24,18 @@
    !arr(settlements,5000)||!arr(settlementReceipts,5000))error();
   // NEVER accept one physical imported item as both card-purchase evidence
   // and current-account debit evidence, even if a renamed import is supplied.
-  const physical=new Set();
+  const physical=new Set(),imports=new Set();
   for(const doc of cardStatements){
    if(!doc||doc.accountId!==plan.document.accountId||
       !str(doc.sourceId)||!str(doc.sourceVersion)||!str(doc.importId))error();
-   physical.add(doc.sourceId);
+   physical.add(doc.sourceId);imports.add(doc.importId);
   }
   for(const doc of checkingStatements){
    if(!doc||doc.accountId!==checkingAccountId||
       String(doc.currency||'').toUpperCase()!==
        String(plan.document.bankCurrency||'').toUpperCase()||
       !str(doc.sourceId)||!str(doc.sourceVersion)||!str(doc.importId)||
-      physical.has(doc.sourceId))error();
+      physical.has(doc.sourceId)||imports.has(doc.importId))error();
   }
   // For an installment allocated ONLY to this purchase with no card fees,
   // even the sum of several debits cannot exceed the purchase's native cost.
@@ -57,8 +57,13 @@
       !Array.isArray(s.purchaseIds)||s.purchaseIds.length<1||
       s.purchaseIds.length>5000||
       new Set(s.purchaseIds).size!==s.purchaseIds.length||
-      !s.purchaseIds.includes(plan.document.id))error();
-   if(s.purchaseIds.length===1&&Array.isArray(s.feeIds)&&!s.feeIds.length){
+      !s.purchaseIds.includes(plan.document.id)||
+      !Array.isArray(s.feeIds)||s.feeIds.length>5000||
+      s.feeIds.some(id=>!str(id))||
+      new Set(s.feeIds).size!==s.feeIds.length)error();
+   // Missing or malformed fee metadata must never bypass the exclusive
+   // partial-payment cap by masquerading as a fee-bearing settlement.
+   if(s.purchaseIds.length===1&&!s.feeIds.length){
     const paid=cents(s.amount);
     if(paid===null||nativeCap===null||
        exclusivePaidCents+paid>nativeCap)error();
