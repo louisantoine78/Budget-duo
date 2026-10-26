@@ -30,15 +30,17 @@ test('cutover preflight requires CAS RPCs RLS and five active triggers',()=>{
 });
 test('cutover revokes both table-level and column-level document writes',()=>{
  assert.match(sql,/revoke insert, update, delete on table public\.documents\s+from public, anon, authenticated/);
- assert.match(sql,/revoke insert \(household_id,collection,item_id,data,updated_by,revision\),\s+update \(household_id,collection,item_id,data,updated_by,revision\)/);
- assert.match(sql,/has_column_privilege\('authenticated','public\.documents','data','UPDATE'\)/);
+ assert.match(sql,/do \\$cutover_document_columns\\$/);
+ assert.match(sql,/pg_catalog\\.pg_attribute/);
+ assert.match(sql,/revoke insert \\(%I\\), update \\(%I\\) on table public\\.documents/);
+ assert.match(sql,/has_column_privilege\\(role_name,'public\\.documents',col_name,'UPDATE'\\)/);
  assert.match(sql,/has_table_privilege\('authenticated','public\.documents','SELECT'\)/);
 });
 test('household setting direct updates are denied but CAS retains access',()=>{
- assert.match(sql,/revoke update \(name,settings,updated_by\) on table public\.households/);
+ assert.match(sql,/do \\$cutover_household_columns\\$/);
  assert.equal(sql.includes('grant update (name) on table public.households'),false);
- assert.equal(sql.includes("has_column_privilege('authenticated','public.households','name','UPDATE')"),true);
- assert.match(sql,/has_column_privilege\('authenticated','public\.households','settings','UPDATE'\)/);
+ assert.match(sql,/revoke update \\(%I\\) on table public\\.households/);
+ assert.match(sql,/has_column_privilege\\(role_name,'public\\.households',col_name,'UPDATE'\\)/);
  assert.match(pg,/update public\.households set settings/);
  assert.match(pg,/direct household rename is blocked/);
  assert.match(pg,/trace_cas_save_household_settings/);
