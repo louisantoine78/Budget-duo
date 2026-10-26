@@ -19,7 +19,7 @@ function fixture(opts={}){
    {id:'recent',accountId:'fr',date:'2026-10-11',status:'confirmed',bankAmount:12.35,name:'Recent'},
    {id:'pending',accountId:'fr',date:'2026-10-19',status:'pending',bankAmount:null,name:'Pending'},
    {id:'transfer',accountId:'ca',toAccountId:'card',date:'2026-10-20',status:'confirmed',toBankAmount:5,bankAmount:5,name:'Carte'}],
-  reconciliations:[{accountId:'fr',date:'2026-10-05',status:'confirmed'}]};
+  reconciliations:[{accountId:'fr',date:'2026-10-05',status:'confirmed',currency:'EUR',actualBalance:100}]};
  const calls={save:0,render:0,navigate:0,activity:0,close:0,title:''},els=new Map(),
  $=k=>{if(!els.has(k))els.set(k,{textContent:'',innerHTML:'',onclick:null,disabled:false});return els.get(k)};
  let scope=opts.scope||'mine';
@@ -30,6 +30,10 @@ function fixture(opts={}){
   $,$$:()=>[],shortAccountLabel:a=>a.name,shortMemberName:x=>x==='la'?'Moi':'Partenaire',
   esc:x=>String(x??'').replace(/[&<>"]/g,y=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[y])),
   window:{TraceInternational:{currency:a=>a.currency,
+   calendarDate:d=>/^\d{4}-\d\d-\d\d$/.test(String(d||''))&&
+    !Number.isNaN(Date.parse(String(d)+'T00:00:00Z')),
+   exactMoney:v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))||
+    !Number.isSafeInteger(Math.round(Number(v)*100))?null:Number(v),
    money:(n,c)=>n+' '+c,fxValue:(n,c,r)=>r?n*r.cadPerUnit:null,
    amountOnAccount:(t,a,leg)=>{
     if(opts.strictEvidence){
@@ -183,7 +187,7 @@ async function main(){
  });
  await test('reconciliation day is excluded but next-day invalid leg is flagged',()=>{
   const f=fixture({strictEvidence:true});
-  f.state.reconciliations.push({accountId:'ca',date:'2026-10-18',status:'confirmed'});
+  f.state.reconciliations.push({accountId:'ca',date:'2026-10-18',status:'confirmed',currency:'CAD',actualBalance:500});
   f.state.transactions.push({id:'same-day',accountId:'ca',toAccountId:'ca',
    type:'transfer',status:'confirmed',date:'2026-10-18',name:'Already reconciled',
    bankAmount:40,toBankAmount:40});
@@ -195,6 +199,37 @@ async function main(){
   f.openTraceAccountDetail('ca');
   assert.match(f.$('#sheetBody').innerHTML,/After reconciliation/);
   assert.doesNotMatch(f.$('#sheetBody').innerHTML,/Already reconciled ·/);
+ });
+ await test('reconciliation without a real balance must not hide earlier unproved FX legs',()=>{
+  const f=fixture({strictEvidence:true});
+  // Newer administrative status is NOT a verified financial balance.
+  f.state.reconciliations.push({accountId:'fr',date:'2026-10-23',
+   status:'confirmed',currency:'EUR'});
+  f.openTraceAccountDetail('fr');
+  const html=f.$('#sheetBody').innerHTML;
+  assert.match(html,/Justificatifs bancaires à vérifier/);
+  assert.match(html,/Recent/);
+  assert.match(html,/2026-10-05/);
+  assert.doesNotMatch(html,/Dernier rapprochement<\/span><b>2026-10-23/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('reconciliation with wrong currency cannot suppress missing EUR bank evidence',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.reconciliations.push({accountId:'fr',date:'2026-10-22',
+   status:'confirmed',currency:'CAD',actualBalance:500});
+  f.openTraceAccountDetail('fr');
+  assert.match(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.match(f.$('#sheetBody').innerHTML,/Recent/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('valid newer EUR reconciliation closes reviewed bank evidence',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.reconciliations.push({accountId:'fr',date:'2026-10-22',
+   status:'confirmed',currency:'EUR',actualBalance:200});
+  f.openTraceAccountDetail('fr');
+  assert.doesNotMatch(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.match(f.$('#sheetBody').innerHTML,/2026-10-22/);
+  assert.equal(f.calls.save,0);
  });
  await test('premium sheets and missing-rate safeguards exist',()=>{
   assert.match(css,/\.trace-account-detail-hero/);
