@@ -38,11 +38,17 @@
   if(!a)return null;
   const code=currency(a);
   if(leg==='destination'){
-   if(t.toBankCurrency&&String(t.toBankCurrency).toUpperCase()!==code)return null;
+   const destinationCurrency=String(t.toBankCurrency||'').trim().toUpperCase();
+   const sourceCurrency=String(t.bankCurrency||'CAD').trim().toUpperCase();
+   if(destinationCurrency&&destinationCurrency!==code)return null;
+   // A foreign receipt has its own native currency and cannot be inferred
+   // from a bare destination number. Only historical CAD -> CAD transfers
+   // can safely omit destination currency metadata.
+   if(!destinationCurrency&&(code!=='CAD'||sourceCurrency!=='CAD'))return null;
    if(t.toBankAmount!==null&&t.toBankAmount!==undefined&&t.toBankAmount!=='')return exactMoney(t.toBankAmount);
    // Legacy CAD -> CAD documents only. CAD as destination of EUR/USD/etc
    // must never inherit the CAD budget valuation as a bank receipt.
-   if(code==='CAD'&&(!t.bankCurrency||String(t.bankCurrency).toUpperCase()==='CAD')){
+   if(code==='CAD'&&sourceCurrency==='CAD'){
     const legacy=t.amountCAD;
     return exactMoney(legacy);
    }
