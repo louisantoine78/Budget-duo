@@ -82,6 +82,81 @@
   return{debitDay:debit,closingDay:closing,cutoffDate:cutoff,
    nextDebitDate:due,dueDate:due,allocationVerified:true};
  };
+
+ // This versioned plan is read-only. Earlier purchase due dates and bank
+ // evidence remain untouched; unversioned old rules are never backdated.
+ const scheduleVersions=card=>{
+  const records=card?.deferredScheduleVersions??[];
+  if(!Array.isArray(records)||records.length>120)
+   throw Error('Historique du calendrier différé invalide.');
+  let last='';
+  return records.map(v=>{
+   if(!v||typeof v!=='object'||Array.isArray(v)||
+      Object.keys(v).some(k=>!['effectiveDate','debitDay','closingDay'].includes(k)))
+    throw Error('Version de calendrier différé non reconnue.');
+   const effectiveDate=date(v.effectiveDate),debitDay=dayNumber(v.debitDay,true),
+    closingDay=dayNumber(v.closingDay);
+   if(!effectiveDate||effectiveDate<=last)
+    throw Error('Versions sans dates de prise d’effet croissantes.');
+   last=effectiveDate;
+   return{effectiveDate,debitDay,closingDay};
+  });
+ };
+ const frenchDeferred=card=>{
+  if(!card||card.type!=='card'||card.paymentMode!=='deferred'||
+     card.country!=='FR'||card.archived||!String(card.id||'').trim()||
+     !String(card.owner||'').trim()||!String(card.settlementAccountId||'').trim()||
+     String(card.currency||'').toUpperCase()!=='EUR')
+   throw Error('Calendrier réservé à une carte différée française active liée à un compte EUR.');
+ };
+ const proposeScheduleRevision=({card,asOfDate,effectiveDate,debitDay,closingDay=null}={})=>{
+  frenchDeferred(card);
+  const today=date(asOfDate),start=date(effectiveDate);
+  if(!today||!start||start<=today)
+   throw Error('La règle doit prendre effet à une date future valide.');
+  const history=scheduleVersions(card),prior=history[history.length-1];
+  if(!prior&&(card.deferredDebitDay!=null||card.deferredClosingDay!=null))
+   throw Error('Ancien calendrier sans prise d’effet : revue bancaire requise.');
+  if(prior&&(
+    (card.deferredDebitDay!=null&&dayNumber(card.deferredDebitDay,true)!==prior.debitDay)||
+    (card.deferredClosingDay!=null&&dayNumber(card.deferredClosingDay)!==prior.closingDay)))
+   throw Error('Historique et calendrier actuel contradictoires.');
+  if(prior?.effectiveDate>today)
+   throw Error('Une modification future attend déjà une revue.');
+  const debit=dayNumber(debitDay,true),closing=dayNumber(closingDay);
+  let openCycleCloses=null;
+  if(prior?.closingDay){
+   let y=Number(today.slice(0,4)),m=Number(today.slice(5,7));
+   let cutoff=monthDay(y,m,prior.closingDay);
+   if(cutoff<today){
+    const next=addMonth(y,m);y=next.year;m=next.month;
+    cutoff=monthDay(y,m,prior.closingDay);
+   }
+   openCycleCloses=cutoff;
+   if(start<=cutoff)
+    throw Error('La nouvelle règle doit commencer après la clôture du cycle ouvert.');
+  }
+  const version={effectiveDate:start,debitDay:debit,closingDay:closing};
+  return{cardAccountId:card.id,owner:card.owner,effectiveDate:start,
+   currentCycleCloses:openCycleCloses,versions:[...history,version],
+   proposedVersion:version,persistable:false,confirmed:false,
+   writes:0,financialChanges:0};
+ };
+ const scheduleForPurchase=({card,purchaseDate}={})=>{
+  frenchDeferred(card);
+  const purchased=date(purchaseDate);
+  if(!purchased)throw Error('Date d’achat invalide.');
+  const active=scheduleVersions(card).filter(x=>x.effectiveDate<=purchased).slice(-1)[0];
+  if(!active)return{purchaseDate:purchased,versionEffectiveDate:null,
+   cutoffDate:null,nextDebitDate:null,dueDate:null,allocationVerified:false,
+   reason:'no_dated_configuration'};
+  const forecast=monthlyDebitSchedule({purchaseDate:purchased,
+   debitDay:active.debitDay,closingDay:active.closingDay});
+  return{purchaseDate:purchased,versionEffectiveDate:active.effectiveDate,
+   ...forecast,reason:forecast.allocationVerified?
+    'effective_calendar_projection':'closing_day_not_configured'};
+ };
+
  const month=d=>d.slice(0,7);
  const amount=v=>v/100;
  function simulate({card,checking,purchases=[],refunds=[],fees=[],settlements=[],asOfDate}={}){
@@ -367,5 +442,5 @@
    scope:'single_deferred_card',balanceSource:'trace_estimate_unverified',
    writes:0,financialChanges:0};
  }
- root.TraceDeferredDebit=Object.freeze({simulate,monthlyDebitSchedule,projectCheckingBalance});
+ root.TraceDeferredDebit=Object.freeze({simulate,monthlyDebitSchedule,projectCheckingBalance,proposeScheduleRevision,scheduleForPurchase});
 })(typeof window!=='undefined'?window:globalThis);
