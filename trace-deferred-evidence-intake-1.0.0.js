@@ -25,18 +25,18 @@
   // NEVER accept one physical imported item as both card-purchase evidence
   // and current-account debit evidence, even if a renamed import is supplied.
   const physical=new Set(),imports=new Set();
-  for(const doc of cardStatements){
-   if(!doc||doc.accountId!==plan.document.accountId||
-      !str(doc.sourceId)||!str(doc.sourceVersion)||!str(doc.importId))error();
-   physical.add(doc.sourceId);imports.add(doc.importId);
-  }
-  for(const doc of checkingStatements){
-   if(!doc||doc.accountId!==checkingAccountId||
-      String(doc.currency||'').toUpperCase()!==
-       String(plan.document.bankCurrency||'').toUpperCase()||
+  // Each physical bank source and each import is unique across the WHOLE
+  // review batch, including multiple statements from the same channel.
+  const register=(doc,accountId,checkCurrency)=>{
+   if(!doc||doc.accountId!==accountId||
+      (checkCurrency&&String(doc.currency||'').toUpperCase()!==
+       String(plan.document.bankCurrency||'').toUpperCase())||
       !str(doc.sourceId)||!str(doc.sourceVersion)||!str(doc.importId)||
       physical.has(doc.sourceId)||imports.has(doc.importId))error();
-  }
+   physical.add(doc.sourceId);imports.add(doc.importId);
+  };
+  for(const doc of cardStatements)register(doc,plan.document.accountId,false);
+  for(const doc of checkingStatements)register(doc,checkingAccountId,true);
   // For an installment allocated ONLY to this purchase with no card fees,
   // even the sum of several debits cannot exceed the purchase's native cost.
   // Mixed allocations and refunds still require a complete ledger validation.

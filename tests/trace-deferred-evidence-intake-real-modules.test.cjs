@@ -115,6 +115,18 @@ test('actual linked modules reject missing fee list before accepting an overpaym
  assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
   ...f.args,settlements:[s]}),/distinctes/);
 });
+
+test('duplicate card import with a new source ID is refused by the real modules',()=>{
+ const f=fixture(),d={...f.cardDoc,statementId:'card-clone',sourceId:'renamed'};
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,cardStatements:[f.cardDoc,d]}),/distinctes/);
+});
+test('duplicate checking source with a new import ID is refused by real modules',()=>{
+ const f=fixture(),d={...f.checkingDoc,statementId:'check-clone',
+  importId:'renamed-check-import'};
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,checkingStatements:[f.checkingDoc,d]}),/distinctes/);
+});
 test('plan locks the original checking account against reassignment',()=>{
  const f=fixture();assert.equal(f.plan.checkingAccountId,'current-eur-demo');
  assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({

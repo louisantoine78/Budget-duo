@@ -76,6 +76,29 @@ test('a normal zero-fee partial payment stays reviewable',()=>{
  const h=harness();
  assert.equal(h.review(h.input).localEvidenceReviewed,true);
 });
+
+test('same card physical source or import cannot appear twice in one review',()=>{
+ const h=harness(),card=h.input.cardStatements[0];
+ const aliases=[
+  {...card,statementId:'second-card',importId:'new-card-import'},
+  {...card,statementId:'second-card',sourceId:'new-card-source'}
+ ];
+ for(const duplicate of aliases)
+  assert.throws(()=>h.review({...h.input,
+   cardStatements:[card,duplicate]}),/distinctes/);
+ assert.equal(h.calls.length,0);
+});
+test('same checking import or source cannot appear twice despite renamed statement',()=>{
+ const h=harness(),doc=h.input.checkingStatements[0];
+ const aliases=[
+  {...doc,statementId:'other-checking',importId:'new-checking-import'},
+  {...doc,statementId:'other-checking',sourceId:'new-checking-source'}
+ ];
+ for(const duplicate of aliases)
+  assert.throws(()=>h.review({...h.input,
+   checkingStatements:[doc,duplicate]}),/distinctes/);
+ assert.equal(h.calls.length,0);
+});
 test('checking imports cannot be secretly passed in card sources',()=>{
  const h=harness();
  assert.throws(()=>h.review({...h.input,cardStatements:[h.input.checkingStatements[0]]}),/distinctes/);
