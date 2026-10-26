@@ -55,7 +55,7 @@ test('Home keeps imported draft and pending bank transaction counts distinct',()
   {id:'xyz',kind:'smart_draft',status:'pending',accountId:'cad-checking'}]});
  ctx.renderHomeReview();
  assert.equal(ctx.nodes['#pendingCountBadge'].textContent,'2');
- assert.match(ctx.root.innerHTML,/2 opération\(s\) à vérifier/);
+ assert.match(ctx.root.innerHTML,/2 élément\(s\) à vérifier/);
  assert.match(ctx.root.innerHTML,/1 import\(s\) à confirmer/);
 });
 test('no accounts keeps add-bank guidance and hides unusable shortcuts',()=>{
@@ -78,4 +78,15 @@ test('unresolved OCR-only days never display a false all-clear message',()=>{
  assert.match(ctx.nodes['#pendingText'].textContent,/3 lignes OCR à contrôler/);
  assert.doesNotMatch(ctx.nodes['#pendingText'].textContent,/Tout est à jour/);
  assert.match(ctx.root.innerHTML,/3 ligne\(s\) OCR à revérifier/);
+});
+
+test('CSV unreadable evidence appears in Home counter without pretending it is a booked operation',()=>{
+ const ctx=createContext({smartImports:[{id:'source-1',kind:'csv_unparsed',
+  status:'pending_review',owner:'la',accountId:'cad-checking',sourceIndex:4,
+  rawText:'ligne bancaire illisible'}]});
+ ctx.renderHomeReview();
+ assert.equal(ctx.nodes['#pendingCountBadge'].textContent,'1');
+ assert.match(ctx.root.innerHTML,/1 ligne\(s\) CSV non interprétée\(s\)/);
+ assert.match(ctx.nodes['#pendingText'].textContent,/élément à vérifier/);
+ assert.equal(ctx.state.transactions.length,0);
 });

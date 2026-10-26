@@ -502,7 +502,7 @@ function renderHomeReview(){
   ocrToReview=rows.reduce((n,r)=>n+r.unresolved,0);
  const badge=$('#pendingCountBadge'),summary=$('#pendingText'),root=$('#homeReviewAccounts');
  if(badge)badge.textContent=String(total);
- if(summary)summary.textContent=(total?total+' opération'+(total>1?'s':'')+
+ if(summary)summary.textContent=(total?total+' élément'+(total>1?'s':'')+
   ' à vérifier · '+rows.filter(x=>x.total).length+' compte'+(rows.filter(x=>x.total).length>1?'s':''):
   ocrToReview?'Des lignes OCR demandent une vérification':'Tout est à jour')+
   (ocrToReview?' · '+ocrToReview+' ligne'+(ocrToReview>1?'s':'')+' OCR à contrôler':'');
@@ -518,7 +518,7 @@ function renderHomeReview(){
   const add=a.unresolved?' · '+a.unresolved+' ligne(s) OCR à revérifier':'';
   return '<button type="button" class="trace-home-review-account'+(a.total?' has-pending':'')+'" data-home-review-account="'+esc(a.id)+'">'+
    '<span class="trace-home-review-info"><strong>'+esc(title)+'</strong><small>'+esc(a.name)+'</small><small>'+esc(sub+add)+'</small></span>'+
-   '<span class="trace-home-review-count" aria-label="'+a.total+' opération(s) à vérifier">'+a.total+'</span>'+
+   '<span class="trace-home-review-count" aria-label="'+a.total+' élément(s) à vérifier">'+a.total+'</span>'+
    '<span class="trace-home-review-chevron" aria-hidden="true">›</span></button>';
  }).join('')+
   '<div class="trace-home-next-actions" role="group" aria-label="Actions pour tenir les comptes à jour">'+
@@ -3879,6 +3879,8 @@ function openCsvUnparsedReview(id){
  const d=state.smartImports.find(x=>x.id===id&&x.kind==='csv_unparsed'&&
   x.status==='pending_review'&&x.owner===me&&visibleBankAccounts(me).some(a=>a.id===x.accountId));
  if(!d)return;
+ const reviewedSnapshot=JSON.stringify([d.id,d.status,d.owner,d.accountId,
+  d.sourceFileName,d.sourceIndex,d.rawText]);
  openSheet('Ligne CSV à contrôler',
   '<p class="trace-intl-help">Cette ligne du relevé n’a pas pu être interprétée. Vérifie le CSV original et, si nécessaire, ajoute une transaction séparément depuis TRACE. La revue ne crée ni dépense, ni revenu.</p>'+
   '<p><b>'+esc(d.sourceFileName)+'</b> · ligne '+Number(d.sourceIndex)+
@@ -3896,7 +3898,8 @@ function openCsvUnparsedReview(id){
   const fresh=state.smartImports.find(x=>x.id===d.id);
   if(!fresh||fresh.status!=='pending_review'||fresh.owner!==me||
      !visibleBankAccounts(me).some(a=>a.id===fresh.accountId)||
-     fresh.rawText!==d.rawText){
+     JSON.stringify([fresh.id,fresh.status,fresh.owner,fresh.accountId,
+      fresh.sourceFileName,fresh.sourceIndex,fresh.rawText])!==reviewedSnapshot){
    $('#csvReviewError').textContent='Cette ligne a changé. Rouvre la liste pour la contrôler.';return;
   }
   const btn=$('#csvReviewConfirm');btn.disabled=true;
