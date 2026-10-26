@@ -883,10 +883,12 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
  const I=window.TraceInternational,code=I.currency(account);
  const since=lastReconciliationDate||
   state.household.accountOpeningBalanceDates?.[account.id]||'';
+ const afterEvidenceBoundary=date=>!since||
+  (lastReconciliationDate?String(date||'')>since:String(date||'')>=since);
  const candidate=t=>t&&t.status==='confirmed'&&
   t.type!=='card_statement_evidence'&&
   (t.accountId===account.id||t.toAccountId===account.id)&&
-  (!since||String(t.date||'')>since);
+  afterEvidenceBoundary(t.date);
  const issues=state.transactions.filter(candidate).filter(t=>{
   if(t.type==='transfer'&&t.accountId===account.id&&t.toAccountId===account.id)
    return true;
@@ -899,7 +901,7 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
   if(!o||o.bankAccountId!==account.id||
      !['deposit','withdrawal'].includes(o.type)||
      (o.status&&o.status!=='confirmed')||
-     (since&&String(o.date||'')<=since))continue;
+     !afterEvidenceBoundary(o.date))continue;
   if(o.linkedTransactionId&&state.transactions.some(t=>
     t.id===o.linkedTransactionId&&t.status==='confirmed'&&
     (t.accountId===account.id||t.toAccountId===account.id)))continue;
