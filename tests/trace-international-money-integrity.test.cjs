@@ -120,10 +120,12 @@ test('snapshot refuses unsafe aggregate cash even when every account is individu
  const second={...ca,id:'ca2'};
  const snap=I.snapshot({accounts:[ca,second],owner:'la',mainId:'ca',
   estimates:{ca:one,ca2:one}});
- assert.equal(snap.net,null);
+ // The selected current account remains precise; only the all-account
+ // total is too large and must be shown as unknown.
+ assert.equal(snap.net,one);
+ assert.equal(snap.checking,one);
  assert.equal(snap.globalCAD,null);
  assert.equal(snap.complete,false);
- assert.equal(snap.checking,null);
 });
 test('large opposite bank balances cannot disguise unsafe checking totals as known net',()=>{
  const one=6e13;
@@ -132,7 +134,9 @@ test('large opposite bank balances cannot disguise unsafe checking totals as kno
  const debt2={...ca,id:'debt2',type:'card',settlementAccountId:'ca'};
  const snap=I.snapshot({accounts:[ca,two,debt1,debt2],owner:'la',mainId:'ca',
   estimates:{ca:one,ca2:one,debt1:-one,debt2:-one}});
- assert.equal(snap.net,null);
- assert.equal(snap.checking,null);
+ // The primary checking amount is known, but summing two credit-card
+ // liabilities is not safe. The apparent resulting cash must be unknown.
+ assert.equal(snap.checking,one);
  assert.equal(snap.card,null);
+ assert.equal(snap.net,null);
 });
