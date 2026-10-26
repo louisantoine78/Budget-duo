@@ -1,3 +1,13 @@
+# ADDENDUM — nouveau lot : empreintes FX, auto-transferts, alertes compte
+
+Reprendre depuis le vrai HEAD de `trace-5.37.0-international-accounts-fx`. `main` connue stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, ne jamais changer. Commits `[skip ci]`, aucun PR/merge/CI/Actions, déploiement, migrations hébergées ou données Supabase réelles.
+
+**Code livré :** `trace-international-1.0.0.js` (commit `eaaccd8`) retire l'ancien `importFingerprint` lorsque la devise banque native d'un transfert confirmé est corrigée (sans casser CAD→CAD legacy), tests `164af90`. `v5-app-5.37.0.js` (`d8828e1`) refuse les auto-transferts mal formés en valorisation de compte, tests `b52a872`. Nouveau module lecture seule `traceAccountBankProofNotice` intégré à la fiche des comptes (commits `2604cf1`, `557181e`, `175ec87`, CSS `64c1883`), diagnostic des devises natives inconnues, montants bancaires/placements sans preuves, auto-transfert, dédoublonnage des opérations placées liées. Respect date ouverture (inclusive) vs date dernier rapprochement (exclusive). Tests `55e56e5` + `21cd0eb` : 20/20 fiche compte.
+
+**Vérification** : 275 tests/scénarios JavaScript et statiques réussis **en plusieurs lots V8** sur les sources GitHub (avec dépendances Node/DOM/RPC simulées ; certains lots avant les ultimes changements localisés UX). Deux harnais PG validés seulement syntaxiquement. Aucun véritable PostgreSQL/PGlite, aucun `node --test` sur checkout complet, aucun Safari physique, aucune donnée réelle. Production **NO-GO** et ~58 % ±10. Prochaine étape prioritaire : PG local avec 4 suites, puis recette premium iPhone, FX/Couple/legacy et rollback. SQL migrations 05–12 NON APPLIQUÉES, ne jamais déployer migration12 sans plan ancien client et autorisation explicite.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — PREUVE DE DEVISE BANQUE ET PLACEMENTS
 
 Résoudre le HEAD GitHub de `trace-5.37.0-international-accounts-fx` à la reprise. Ne jamais toucher `main` (stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`), Supabase réel, données financières, PR, merge, CI/Actions, service worker production, déploiement. Commits `[skip ci]`. Ne PAS recommencer les choix UX/financiers validés.
