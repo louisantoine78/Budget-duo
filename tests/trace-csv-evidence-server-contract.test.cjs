@@ -72,3 +72,19 @@ test('only a real administrator may perform JWT-less restore, not role authentic
  assert.match(pg,/privileged maintenance can restore a CSV snapshot/);
  assert.match(pg,/missing-JWT authenticated user cannot exploit admin maintenance path/);
 });
+
+test('PostgreSQL owns CSV evidence identity even when client document IDs differ',()=>{
+ assert.match(sql,/create unique index if not exists trace_csv_unparsed_source_unique/);
+ assert.match(sql,/on public\.documents \([\s\S]*?household_id,[\s\S]*?data->>'owner'[\s\S]*?data->>'accountId'[\s\S]*?data->>'sourceFileName'[\s\S]*?\(data->>'sourceIndex'\)::integer/);
+ assert.match(sql,/where collection = 'imports' and data->>'kind' = 'csv_unparsed'/);
+ assert.match(pg,/server unique index rejects a forged second ID for the same CSV source line/);
+ assert.match(pg,/csv-forged-alias-id/);
+ assert.match(pg,/csv-forged-padded-index/);
+});
+test('CSV source migration rejects incomplete or unbounded legacy index keys',()=>{
+ assert.match(sql,/TRACE_CSV_EVIDENCE_MIGRATION_BLOCKED: incomplete source identity/);
+ assert.match(sql,/char_length\(d\.data->>'accountId'\) > 240/);
+ assert.match(sql,/char_length\(d\.data->>'sourceFileName'\) > 110/);
+ assert.match(sql,/then \(d\.data->>'sourceIndex'\)::integer not between 2 and 1001/);
+ assert.match(sql,/char_length\(new\.data->>'accountId'\) > 240/);
+});
