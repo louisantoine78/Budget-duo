@@ -1,3 +1,18 @@
+## 25 octobre 2026 — barrière d'effacement des foyers avec débit différé
+
+**NO-GO MAINTENU.** Sur la branche internationale uniquement, `tests/trace-cas-writes.integration.cjs` a été renforcé (`c195aee`, `666c866`, `333c2c9` ; tous `[skip ci]`) pour préparer une validation fictive supplémentaire : quatrième utilisateur, foyer indépendant avec ancienne carte différée + achat, et détection du rejet `TRACE_DEFERRED_NOT_RELEASED` lors de la suppression administrative (à travers la cascade `documents`). L'ancien schéma ne fournit pas de privilège de suppression du foyer aux membres. La suppression du foyer contenant seulement une preuve CSV reste couverte par le test précédent mais elle aussi NON exécutée sur ce HEAD.
+
+- [x] Tests d'intégration écrits : cas de blocage d'effacement, conservation atomique en cas d'échec, membre sans accès DELETE ; limites et immutabilité des preuves CSV.
+- [x] Contrôle syntaxique du fichier `.cjs` sous V8 après modifications ; correctif de fixture UUID paramétrée.
+- [ ] Exécuter ces tests dans un **vrai moteur PostgreSQL/PGlite** local et fictif ; confirmer le comportement réel des triggers 10/11 et corriger tout échec.
+- [ ] Concevoir/qualifier explicitement une **suppression légitime complète**, y compris anciennes opérations différées, preuves CSV, cascade, utilisateurs/partenaires, droits RLS, restauration administrative et rollback. Aucun bypass non authentifié et aucune relaxation générale du trigger pour atteindre artificiellement un test vert.
+- [ ] Exécuter migrations 05–11, Auth/RLS/CAS multi-sessions, Realtime, données propriétaires et foyers distincts, tests Node/Chromium/Safari ; préserver les budgets CAD et toutes les décisions UX.
+- [ ] Vérifier sauvegarde restaurée et procédure de retour arrière ; GO humain explicite obligatoire.
+
+**Le test qui démontre un rejet attendu n'est pas un test de réussite de suppression.** L'estimation reste **58 % ±10 points**, production **NO-GO**, aucun SQL réel appliqué.
+
+---
+
 ## 25 octobre 2026 — lot CSV longues lignes, empêchement des faux rapprochements
 
 - [x] Commit `cd94b0a5bd1631fd58ad76d06feafaa51ab9eeea` : non-troncature silencieuse des noms CSV >110 caractères, `rawTruncated` et message de revue explicite si extrait supérieur à 650 caractères, nécessité de vérifier le CSV d'origine.
