@@ -6,10 +6,13 @@ const {test}=require('node:test');
 const source=fs.readFileSync(path.join(__dirname,'..','v5-app-5.37.0.js'),'utf8');
 const start=source.indexOf('function openCsvUnparsedReview('),end=source.indexOf('function renderActivity(){',start);
 assert.ok(start>=0&&end>start,'CSV inbox and human review module missing');
-const code=source.slice(start,end);
+const guardBegin=source.indexOf('async function csvEnsurePrivateAuditReady()');
+const guardEnd=source.indexOf('// Invalid CSV bank lines',guardBegin);
+assert.ok(guardBegin>0&&guardEnd>guardBegin,'CSV readiness check missing');
+const code=source.slice(guardBegin,guardEnd)+source.slice(start,end);
 function scenario({items=[{id:'unparsed-1',kind:'csv_unparsed',status:'pending_review',
  owner:'la',accountId:'la-bank',sourceFileName:'octobre.csv',sourceIndex:4,
- rawText:'20/10 | <script> | inconnu',createdAt:'2026-10-25T12:00:00Z'}]}={}){
+ rawText:'20/10 | <script> | inconnu',createdAt:'2026-10-25T12:00:00Z'}],privateReady=true}={}){
  const state={smartImports:items.map(x=>({...x})),accounts:[{id:'la-bank',owner:'la',name:'Courant',type:'checking'}],
  transactions:[]};
  const elements=new Map(),events=[],saves=[],buttons=new Map();
@@ -24,7 +27,7 @@ function scenario({items=[{id:'unparsed-1',kind:'csv_unparsed',status:'pending_r
  elements.set('#activityImport',parent);
  const esc=s=>String(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
  const fn=new Function('state','$','me','visibleBankAccounts','openSheet','esc',
-  'shortAccountLabel','saveDocument','closeSheet','renderAll','navigate','showTab',
+  'shortAccountLabel','saveDocument','closeSheet','renderAll','navigate','showTab','internationalPreviewMode','client',
   code+'return {renderCsvUnparsedReviewQueue,openCsvUnparsedReview};');
  const api=fn(state,el,'la',()=>state.accounts.filter(a=>a.owner==='la'),(name,markup)=>{
   events.push('open:'+name);elements.set('#sheetMarkup',{innerHTML:markup});
@@ -33,7 +36,8 @@ function scenario({items=[{id:'unparsed-1',kind:'csv_unparsed',status:'pending_r
  },esc,a=>a?.name||'Compte inconnu',
  async(collection,doc)=>{assert.equal(collection,'imports');saves.push({...doc});},
  ()=>events.push('close'),()=>events.push('render'),page=>events.push('navigate:'+page),
- tab=>events.push('tab:'+tab));
+ tab=>events.push('tab:'+tab),()=>false,
+ {rpc:async()=>({data:privateReady,error:null})});
  return{...api,state,el,saves,events,buttons};
 }
 test('unreadable CSV evidence is shown as safe escaped text in Imports',()=>{
@@ -76,4 +80,13 @@ test('changing the source during review fails closed and does not save',async()=
  await s.el('#csvReviewConfirm').onclick();
  assert.equal(s.saves.length,0);
  assert.match(s.el('#csvReviewError').textContent,/a changé/);
+});
+
+test('a removed SQL privacy gate prevents reviewing evidence, leaving it pending',async()=>{
+ const s=scenario({privateReady:false});s.renderCsvUnparsedReviewQueue();
+ s.buttons.get('unparsed-1').onclick();s.el('#csvReviewChecked').checked=true;
+ await s.el('#csvReviewConfirm').onclick();
+ assert.equal(s.saves.length,0);
+ assert.equal(s.state.smartImports[0].status,'pending_review');
+ assert.match(s.el('#csvReviewError').textContent,/confidentialité des preuves CSV/);
 });

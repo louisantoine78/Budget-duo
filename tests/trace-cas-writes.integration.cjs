@@ -287,6 +287,13 @@ async function run(){
    await assert.rejects(rpcSave(1,'transactions','shared',{id:'shared',amountCAD:1},old),/TRACE_WRITE_CONFLICT/);
   });
 
+  await check('CSV privacy-readiness RPC returns true only with active policy and trigger',async()=>{
+   const ready=await acting(1,tx=>tx.query('select public.trace_csv_evidence_guard_ready() as ready'));
+   assert.equal(ready.rows[0].ready,true);
+   const grant=(await db.query(
+    "select has_function_privilege('anon','public.trace_csv_evidence_guard_ready()','EXECUTE') as allowed")).rows[0];
+   assert.equal(grant.allowed,false);
+  });
   await check('owner CSV evidence is private on authenticated SELECT but shared imports remain unchanged',async()=>{
    const item={id:'csv_unparsed_own',kind:'csv_unparsed',
     status:'pending_review',owner:'la',accountId:'la',

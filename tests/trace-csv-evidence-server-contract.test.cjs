@@ -56,3 +56,19 @@ test('application never creates a bank transaction merely to retain CSV evidence
  assert.match(app,/await saveDocument\('imports',entry\)/);
  assert.match(app,/const CSV_UNPARSED_REVIEW_LIMIT=100/);
 });
+
+test('readiness RPC probes active RLS policy and trigger without giving client privileges',()=>{
+ assert.match(sql,/create or replace function public\.trace_csv_evidence_guard_ready\(\)/);
+ assert.match(sql,/security invoker/);
+ assert.match(sql,/p\.permissive='RESTRICTIVE'/);
+ assert.match(sql,/t\.tgname='trace_csv_unparsed_evidence_guard'/);
+ assert.match(sql,/c\.relrowsecurity/);
+ assert.match(sql,/grant execute on function public\.trace_csv_evidence_guard_ready\(\) to authenticated/);
+ assert.match(app,/await csvEnsurePrivateAuditReady\(\)/);
+ assert.match(app,/result\?\.data!==true/);
+});
+test('only a real administrator may perform JWT-less restore, not role authenticated',()=>{
+ assert.match(sql,/current_user = 'postgres' and session_user = 'postgres'/);
+ assert.match(pg,/privileged maintenance can restore a CSV snapshot/);
+ assert.match(pg,/missing-JWT authenticated user cannot exploit admin maintenance path/);
+});

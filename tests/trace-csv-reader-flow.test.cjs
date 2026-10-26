@@ -13,10 +13,13 @@ const compareSource=fs.readFileSync(path.join(root,'trace-statement-reconcile-1.
 const start=source.indexOf('function normalizedCsvKey('),
  end=source.indexOf('/* Merchant suggestions never silently validate',start);
 assert.ok(start>0&&end>start,'CSV parser+UI block missing');
-const body=source.slice(start,end);
+const guardBegin=source.indexOf('async function csvEnsurePrivateAuditReady()');
+const guardEnd=source.indexOf('// Invalid CSV bank lines',guardBegin);
+assert.ok(guardBegin>0&&guardEnd>guardBegin,'CSV server readiness gate missing');
+const body=source.slice(guardBegin,guardEnd)+source.slice(start,end);
 let seq=0;
 function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Cafe,-5.50\n',
- filename='octobre.csv',transactionRows=[],importRows=[],onSave}={}){
+ filename='octobre.csv',transactionRows=[],importRows=[],onSave,privateReady=true}={}){
  const accounts=[{id:'checking-la',type:'checking',owner:'la',currency,country:currency==='EUR'?'FR':'CA'}];
  const state={accounts,transactions:transactionRows.map(t=>({...t})),smartImports:importRows.map(t=>({...t}))};
  const dom=new Map(),events=[],writes=[],evidenceWrites=[];
@@ -32,7 +35,7 @@ function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,
  const money=n=>String(n)+' CAD';
  const context=new Function('FileReader','$','visibleBankAccounts','me','state',
   'window','accountType','shortAccountLabel','esc','smartExactBankAmount',
-  'txDocId','traceSplit','saveDocument','renderAll','navigate','showTab','money','dateGapDays','console',
+  'txDocId','traceSplit','saveDocument','renderAll','navigate','showTab','money','dateGapDays','console','internationalPreviewMode','client',
   body+'return {importFile};');
  const api=context(FakeReader,node,()=>accounts.filter(a=>!a.archived),'la',state,win,
   a=>a?.type||'other',a=>a?.name||'Compte',s=>String(s||''),
@@ -44,7 +47,9 @@ function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,
    else if(collection==='imports')evidenceWrites.push({...item});
    else throw Error('Unexpected collection '+collection);
   },()=>events.push('render'),p=>events.push('navigate:'+p),
-  t=>events.push('tab:'+t),money,()=>0,{error:()=>{}});
+  t=>events.push('tab:'+t),money,()=>0,{error:()=>{}},()=>false,
+  {rpc:async(name)=>{assert.equal(name,'trace_csv_evidence_guard_ready');
+   events.push('privacy-check');return {data:privateReady,error:null};}});
  api.importFile({name:filename,type:'text/csv',size:content.length,content});
  Object.assign(node('#csvCol_date'),{value:'0'});
  Object.assign(node('#csvCol_name'),{value:'1'});
@@ -231,4 +236,26 @@ test('too many uninterpretable CSV rows fail before storing any evidence',()=>{
  assert.match(s.node('#csvPreviewResult').textContent,/100 lignes illisibles maximum/);
  assert.equal(s.writes.length,0);
  assert.equal(s.evidenceWrites.length,0);
+});
+
+test('CSV private evidence cannot be persisted when server security gate is missing',async()=>{
+ const s=scenario({privateReady:false,
+  content:'Date,Description,Montant\n20/10/2026,Courses,-40\n21/10/2026,Inconnu,??\n'});
+ s.preview();s.node('#csvInvalidAcknowledged').checked=true;
+ await s.commit();
+ assert.equal(s.evidenceWrites.length,0);
+ assert.equal(s.writes.length,0);
+ assert.match(s.node('#importResult').textContent,/confidentialité des preuves CSV/);
+});
+test('valid-only CSV imports do not depend on the private-evidence capability',async()=>{
+ const s=scenario({privateReady:false});
+ s.preview();await s.commit();
+ assert.equal(s.writes.length,2);assert.equal(s.evidenceWrites.length,0);
+ assert.equal(s.events.includes('privacy-check'),false);
+});
+test('CSV privacy gate is verified before writing an unreadable record',async()=>{
+ const s=scenario({content:'Date,Description,Montant\n20/10/2026,Inconnu,??\n'});
+ s.preview();s.node('#csvInvalidAcknowledged').checked=true;await s.commit();
+ assert.equal(s.evidenceWrites.length,1);
+ assert.equal(s.events.filter(x=>x==='privacy-check').length,1);
 });
