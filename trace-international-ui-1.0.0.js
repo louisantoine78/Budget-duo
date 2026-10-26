@@ -9,7 +9,20 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
  // The summary is inside a clickable balance card; changing the account must not open settings.
  host.onclick=event=>event.stopPropagation();
  const I=root.TraceInternational,checking=accounts.filter(a=>a.owner===owner&&a.type==='checking'&&!a.archived);
- if(!checking.length){host.innerHTML='';viewState=null;return;}
+ if(!checking.length){
+  // No active checking account can safely back this cash summary. On
+  // archive/account removal reset every previously rendered financial
+  // figure instead of leaving a misleading cached balance on the home card.
+  host.innerHTML='';
+  if(balanceNode)balanceNode.textContent='À configurer';
+  if(checkingNode)checkingNode.textContent='—';
+  if(cardNode)cardNode.textContent='—';
+  if(warningNode){warningNode.hidden=true;warningNode.textContent='';}
+  if(badgeNode&&viewState?.owner===owner&&
+     badgeNode.textContent==='Consultation · compte secondaire')
+   badgeNode.textContent=viewState.primaryBadge||'';
+  viewState=null;return;
+ }
  const primarySnap=I.snapshot({accounts,owner,mainId,estimates,fxRates:rates});
  const primaryId=primarySnap.main?.id;
  if(!viewState||viewState.owner!==owner||viewState.primaryId!==primaryId||
