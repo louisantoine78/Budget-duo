@@ -914,8 +914,14 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
    issues.push({id:o.id,name:'Opération de placement',date:o.date||'Date inconnue',kind:'investment'});
  }
  if(!issues.length)return'';
+ // Prioritize the newest reviewable bank legs without inventing dates.
+ issues.sort((a,b)=>{
+  const left=I.calendarDate(a.date)?a.date:'';
+  const right=I.calendarDate(b.date)?b.date:'';
+  return right.localeCompare(left)||String(b.id).localeCompare(String(a.id));
+ });
  const details=issues.slice(0,3).map(t=>
-  '<li>'+(t.kind==='transaction'?
+  '<li>'+(t.kind==='transaction'&&I.calendarDate(t.date)?
    '<button type="button" class="trace-bank-proof-link" data-trace-bank-proof-open="'+
    esc(t.id)+'" aria-label="Retrouver '+esc(t.name)+' dans Activité">'+
    esc(t.name)+' · '+esc(t.date)+'</button>':

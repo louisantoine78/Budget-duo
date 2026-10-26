@@ -39,8 +39,13 @@ function fixture(opts={}){
   $,$$:()=>[],shortAccountLabel:a=>a.name,shortMemberName:x=>x==='la'?'Moi':'Partenaire',
   esc:x=>String(x??'').replace(/[&<>"]/g,y=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[y])),
   window:{TraceInternational:{currency:a=>a.currency,
-   calendarDate:d=>/^\d{4}-\d\d-\d\d$/.test(String(d||''))&&
-    !Number.isNaN(Date.parse(String(d)+'T00:00:00Z')),
+   calendarDate:d=>{
+    const value=String(d||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+    const parsed=new Date(value+'T12:00:00Z');
+    return Number.isFinite(parsed.getTime())&&
+     parsed.toISOString().slice(0,10)===value;
+   },
    exactMoney:v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))||
     !Number.isSafeInteger(Math.round(Number(v)*100))?null:Number(v),
    money:(n,c)=>n+' '+c,fxValue:(n,c,r)=>r?n*r.cadPerUnit:null,
@@ -346,6 +351,33 @@ async function main(){
   assert.match(markup,/vérifient dans Patrimoine/);
   assert.doesNotMatch(markup,/data-trace-bank-proof-open=/);
   assert.match(css,/\.trace-bank-proof-review \.trace-bank-proof-link/);
+  assert.equal(f.calls.save,0);
+ });
+
+
+ await test('latest bank evidence appears before older unresolved proof items',()=>{
+  const f=fixture({strictEvidence:true});
+  for(const [id,date] of [['warn-12','2026-10-12'],['warn-13','2026-10-13'],
+   ['warn-14','2026-10-14'],['warn-15','2026-10-15']])
+   f.state.transactions.push({id,accountId:'fr',type:'expense',
+    status:'confirmed',name:id,date,bankAmount:5});
+  f.openTraceAccountDetail('fr');
+  const html=f.$('#sheetBody').innerHTML;
+  for(const id of ['warn-15','warn-14','warn-13'])
+   assert.match(html,new RegExp('data-trace-bank-proof-open="'+id+'"'));
+  assert.doesNotMatch(html,/data-trace-bank-proof-open="recent"/);
+  assert.match(html,/Et 2 autre\(s\) mouvement\(s\)/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('bank movement with invalid calendar date is visible but not falsely clickable',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.push({id:'undated',accountId:'ca',toAccountId:'ca',
+   type:'transfer',status:'confirmed',name:'Date impossible',
+   bankAmount:10,date:'2026-02-31'});
+  f.openTraceAccountDetail('ca');
+  const html=f.$('#sheetBody').innerHTML;
+  assert.match(html,/Date impossible/);
+  assert.doesNotMatch(html,/data-trace-bank-proof-open="undated"/);
   assert.equal(f.calls.save,0);
  });
 
