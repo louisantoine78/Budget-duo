@@ -1,3 +1,17 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — PROTECTION DES CENTIMES ET MIGRATION 12 EXHAUSTIVE
+
+Au début de la prochaine conversation, vérifier le vrai HEAD sur `trace-5.37.0-international-accounts-fx`; la stable `main` connue est `02c70f50e7e51da79b77a91dde96a03c6c719909`. Continuer le développement sans reprendre les décisions fonctionnelles. Aucun deploy, PR, merge, Actions/CI, Supabase réel, migration appliquée sur environnement hébergé ou modification de `main`. Commits uniquement `[skip ci]`.
+
+**Nouveau moteur financier** : `trace-international-1.0.0.js` refuse maintenant les centimes dépassant `Number.isSafeInteger` dans `exactMoney`, et toute source invalide dans `fxValue` ; `snapshot` affiche global CAD ou dette nette inconnus si leur somme n'est plus exprimable en centimes fiables. Distinction compte principal vs total tous comptes respectée (un autre compte non sélectionné ne rend pas le solde principal faux). Commits `d1c12094`, `da3f78b6` et tests `4838a1eb`, `39eb2b24`.
+
+**Nouveau SQL candidat cutover 12** : suppression des droits colonne `INSERT/UPDATE` sur TOUTES les colonnes de `documents` et `UPDATE` sur TOUTES celles de `households`, via boucles `pg_attribute`. Postflight revérifie TOUTES les colonnes et les droits effectifs `anon`/`authenticated`. Cas adverse fixture grants sur `documents.created_at/updated_at`, `households.created_at` révoqués dans `tests/trace-cas-exclusive-cutover.integration.cjs` (PG non exécuté). Commits `21fd483a`, `bf96a861`, tests statiques `ebf5b97d`, `3dd4586`. Rappel impératif : migration12 refuse les écritures directes 5.36.x et restera NON APPLIQUÉE sans validation explicite.
+
+**Vraies preuves de cette session :** 14/14 tests fonctionnels International et 5/5 contrats SQL12 exécutés via V8 avec véritables sources GitHub et imports Node simulés. JS syntax de la suite d'intégration PostgreSQL PASS. Ni `node --test` natif checkout, ni PostgreSQL/PGlite, ni Safari : NE PAS annoncer les migrations qualifiées. Documentation officielle PostgreSQL 17 consultée pour les permissions TABLE/COLUMN. Main inchangée, pas de données réelles.
+
+**Prochain objectif** : moteur PostgreSQL/PGlite isolé avec faux comptes, exécuter migrations 05–12 et 4 suites PG, corriger les défauts réellement observés. En parallèle finir la qualification métier FX, Couple, cartes, PWA premium Safari et restaurations. Production **NO-GO**, progression indicative ~58 % ±10.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — NOUVEAU CHANTIER CAS EXCLUSIF / MIGRATION 12
 
 **Revérifier en premier lieu le HEAD live** de `trace-5.37.0-international-accounts-fx`; main stable confirmée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Enchaîner les développements sans revalidation à chaque lot mais ne jamais toucher à main, Supabase réel, comptes bancaires, PR, merge, CI/Actions, SW de production ni déploiement. Tous les commits `[skip ci]`.
