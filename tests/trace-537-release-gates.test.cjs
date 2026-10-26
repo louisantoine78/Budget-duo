@@ -3,12 +3,17 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const {runGate,isolatedEnv,EXPECTED,PG_TESTS}=
  require('../scripts/check-trace-537-release-gates.cjs');
 function scenario({branch=EXPECTED,dirty=false,untracked='',gitStatusFail=false,
+  baseAncestor=true,protectedChanged=false,commits='fix(candidate): safe [skip ci]\\n',
+  vercelDisabled=true,vercelMissing=false,
   sw=0,native=0,nativeSummary=true,pgProbe=0,pgStatuses=[0,0,0,0],
   pgEmptyOutput=false,pgFindings=0}={}){
  const calls=[],spawn=(cmd,args,options)=>{
   calls.push({cmd,args,options});
   let status=0,stdout='';
   if(cmd==='git'&&args[0]==='branch')stdout=branch+'\n';
+  if(cmd==='git'&&args[0]==='merge-base')status=baseAncestor?0:1;
+  if(cmd==='git'&&args[0]==='diff')status=protectedChanged?1:0;
+  if(cmd==='git'&&args[0]==='log')stdout=commits.replaceAll('\\n','\n');
   if(cmd==='git'&&args[0]==='status'){
    stdout=(dirty?' M v5-app-5.37.0.js\n':'')+untracked;
    if(gitStatusFail)status=1;
@@ -29,6 +34,8 @@ function scenario({branch=EXPECTED,dirty=false,untracked='',gitStatusFail=false,
   return{status,stdout,stderr:status?'Fictitious failure':''};
  };
  return{...runGate({spawn,root:'/fake/isolated',node:'/fake/node',
+  readFile:()=>{if(vercelMissing)throw Error('Missing config');
+   return JSON.stringify({git:{deploymentEnabled:{[EXPECTED]:vercelDisabled?false:true}}});},
   env:{PATH:'/usr/bin',HOME:'/tmp',SUPABASE_URL:'https://forbidden.example',
    SUPABASE_SERVICE_ROLE_KEY:'SECRET',
    TRACE_PGLITE_MODULE:'/fictional/pglite'}}),calls};
@@ -41,7 +48,7 @@ test('refuses main and other branches before executing financial tools',()=>{
 test('all fictional automated gates passing is still not a production GO',()=>{
  const q=scenario();
  assert.equal(q.automatedPassed,true);assert.equal(q.releaseReady,false);
- assert.equal(q.calls.length,9);assert.ok(q.manualRequired.length>=5);
+ assert.equal(q.calls.length,12);assert.ok(q.manualRequired.length>=5);
 });
 test('supabase credentials and NODE_OPTIONS are never propagated to children',()=>{
  const q=scenario();
@@ -132,4 +139,42 @@ test('release gate inspects untracked candidates, not only tracked modifications
  const q=scenario();
  assert.ok(q.calls.some(x=>x.cmd==='git'&&x.args[0]==='status'&&
   x.args.includes('--untracked-files=normal')));
+});
+
+
+test('candidate branch must descend from pinned reviewed mission base',()=>{
+ const q=scenario({baseAncestor:false});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(x=>x.id==='mission_base_ancestor'&&!x.passed));
+});
+test('candidate cannot quietly modify live stable entries or workflows',()=>{
+ const q=scenario({protectedChanged:true});
+ assert.equal(q.automatedPassed,false);
+ const cmd=q.calls.find(x=>x.cmd==='git'&&x.args[0]==='diff');
+ assert.ok(cmd.args.includes('index.html'));
+ assert.ok(cmd.args.includes('v5-app-5.36.5.js'));
+ assert.ok(cmd.args.includes('.github'));
+ assert.ok(q.results.some(x=>x.id==='stable_entries_unchanged'&&!x.passed));
+});
+test('candidate rejects any commit without [skip ci], including a mixed history',()=>{
+ const q=scenario({commits:'safe [skip ci]\nunsafe without marker\n'});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(x=>x.id==='mission_ci_guard'&&!x.passed));
+});
+test('missing candidate commit history cannot qualify unreviewed HEAD',()=>{
+ const q=scenario({commits:''});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(x=>x.id==='mission_ci_guard'&&!x.passed));
+});
+test('Vercel branch deployment must be explicitly disabled',()=>{
+ for(const opts of [{vercelDisabled:false},{vercelMissing:true}]){
+  const q=scenario(opts);
+  assert.equal(q.automatedPassed,false);
+  assert.ok(q.results.some(x=>x.id==='candidate_auto_deploy_disabled'&&!x.passed));
+ }
+});
+test('valid candidate invariants permit automated QA but never override manual NO-GO',()=>{
+ const q=scenario();
+ assert.equal(q.automatedPassed,true);assert.equal(q.releaseReady,false);
+ assert.ok(q.results.some(x=>x.id==='candidate_auto_deploy_disabled'&&x.passed));
 });
