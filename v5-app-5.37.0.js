@@ -823,6 +823,37 @@ function traceDeferredAccountReview(card){
    pending_review:'Paiement à vérifier',
    partially_settled:'Partiellement réglé',
    partially_settled_pending_review:'Règlement partiel à vérifier'};
+  // A forecast only becomes visible if TRACE can calculate a native
+  // checking estimate, without future confirmed bank legs contaminating it.
+  // It is NOT today's bank-certified balance and covers this card only.
+  const today=localDateISO();
+  const futureBank=(state.transactions||[]).some(t=>t?.status==='confirmed'&&
+   (t.accountId===checking.id||t.toAccountId===checking.id)&&
+   I.calendarDate(t.date)&&t.date>today)||
+   (state.investmentOperations||[]).some(o=>o?.bankAccountId===checking.id&&
+    (!o.status||o.status==='confirmed')&&I.calendarDate(o.date)&&o.date>today)||
+   (state.reconciliations||[]).some(x=>x?.accountId===checking.id&&
+    x.confirmed!==false&&I.calendarDate(x.date)&&x.date>today);
+  let cashHTML='<p class="trace-intl-help">Solde courant et prévision indisponibles : '+
+   'solde bancaire natif ou justificatifs à vérifier.</p>';
+  if(!futureBank&&typeof accountEstimate==='function'&&
+     typeof window.TraceDeferredDebit.projectCheckingBalance==='function'){
+   const bankBalance=accountEstimate(checking);
+   if(typeof bankBalance==='number'&&Number.isFinite(bankBalance)){
+    const cash=window.TraceDeferredDebit.projectCheckingBalance({
+     checkingBalance:bankBalance,card,checking,purchases,refunds,fees,settlements,
+     asOfDate:today});
+    cashHTML='<div class="trace-deferred-summary"><span>Compte courant · solde calculé TRACE</span><b>'+
+     esc(fmt(cash.checkingBalance))+'</b></div>'+
+     '<div class="trace-deferred-summary"><span>Différé restant à prélever · cette carte</span><b>'+
+     esc(fmt(cash.deferredUnpaid))+'</b></div>'+
+     '<div class="trace-deferred-summary"><span>Solde prévisionnel · après cette carte</span><b>'+
+     esc(fmt(cash.projectedCheckingBalance))+'</b></div>'+
+     '<small>Solde courant calculé par TRACE, non attesté en temps réel par la banque. '+
+     'Prévision limitée à cette carte ; autres cartes, mouvements futurs, décalages '+
+     'bancaires et frais non justifiés exclus. Aucun prélèvement enregistré.</small>';
+   }
+  }
   return '<section class="trace-deferred-account">'+
    '<h3>Débit différé · échéances</h3>'+
    '<p>Lecture seule · montants natifs '+esc(I.currency(card))+
@@ -831,6 +862,7 @@ function traceDeferredAccountReview(card){
     esc(fmt(r.liability))+'</b></div>'+
    '<div class="trace-deferred-summary"><span>Échéances dépassées</span><b>'+
     esc(fmt(r.overdue))+'</b></div>'+
+   cashHTML+
    '<div class="trace-deferred-batches">'+r.batches.map(batch=>
     '<div><strong>'+esc(batch.dueDate)+'</strong><span>'+
      esc(labels[batch.status]||'À revoir')+'</span><b>'+
