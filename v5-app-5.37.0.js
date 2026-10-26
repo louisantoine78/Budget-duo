@@ -860,7 +860,21 @@ function traceDeferredPurchaseProjection(card,fields){
   throw Error('Montant bancaire positif et exact au centime requis.');
  const purchaseDate=String(fields?.purchaseDate||''),
   budgetDate=String(fields?.budgetDate||''),
-  dueDate=String(fields?.dueDate||'');
+  requestedDueDate=String(fields?.dueDate||'');
+ // Settings are per deferred card. The calendar is predictive only:
+ // it never posts a bank debit or assumes a monthly batch without cutoff.
+ const debitDay=fields?.debitDay===undefined?card.deferredDebitDay:fields.debitDay,
+  closingDay=fields?.closingDay===undefined?card.deferredClosingDay:fields.closingDay;
+ const hasDebitDay=debitDay!==undefined&&debitDay!==null&&String(debitDay).trim()!=='',
+  hasClosingDay=closingDay!==undefined&&closingDay!==null&&String(closingDay).trim()!=='';
+ if(hasClosingDay&&!hasDebitDay)
+  throw Error('Renseigne le jour mensuel de prélèvement avant la clôture.');
+ const schedule=hasDebitDay?window.TraceDeferredDebit.monthlyDebitSchedule({
+  purchaseDate,debitDay,closingDay:hasClosingDay?closingDay:null}):null;
+ if(schedule?.allocationVerified&&requestedDueDate&&
+    requestedDueDate!==schedule.dueDate)
+  throw Error('La date prévue diffère de la règle mensuelle de la carte. Vérifie la clôture.');
+ const dueDate=schedule?.allocationVerified?schedule.dueDate:requestedDueDate;
  if(![purchaseDate,budgetDate,dueDate].every(I.calendarDate))
   throw Error('Renseigne trois dates calendaires valides : achat, budget et prélèvement.');
  if(purchaseDate>dueDate||budgetDate>dueDate)
@@ -879,7 +893,7 @@ function traceDeferredPurchaseProjection(card,fields){
  if(!Number.isFinite(monthBudget)||monthBudget!==amount)
   throw Error('Impact budgétaire du scénario incohérent : vérification nécessaire.');
  return{currency,amount,purchaseDate,budgetDate,dueDate,
-  asOfDate:forecastDate,month:budgetDate.slice(0,7),monthBudget,
+  schedule,asOfDate:forecastDate,month:budgetDate.slice(0,7),monthBudget,
   liability:scenario.liability,checkingMovement:0,
   status:scenario.batches[0].status};
 }
@@ -888,16 +902,26 @@ function traceDeferredPurchaseForm(card){
     card.archived||card.owner!==me)return'';
  return '<section class="trace-deferred-forecast" aria-label="Simulation d’achat différé">'+
   '<h3>Simuler un achat différé</h3>'+
-  '<p>Simulation isolée, non enregistrée : renseigne les trois dates du relevé. '+
-   'Le prélèvement indiqué est <strong>prévu</strong>, pas constaté en banque.</p>'+
+  '<p>Simulation isolée, non enregistrée. Choisis le jour mensuel de prélèvement '+
+   'et, si tu le connais, le jour de clôture des achats. Le prélèvement reste '+
+   '<strong>prévu</strong>, jamais constaté en banque.</p>'+
   '<div class="trace-deferred-forecast-grid">'+
    '<label>Montant '+esc(window.TraceInternational.currency(card))+
     '<input id="traceDeferredForecastAmount" type="text" inputmode="decimal" '+
      'autocomplete="off" placeholder="40,00"></label>'+
    '<label>Date d’achat<input id="traceDeferredForecastPurchase" type="date"></label>'+
    '<label>Date d’impact sur le budget<input id="traceDeferredForecastBudget" type="date"></label>'+
+   '<label>Jour de prélèvement chaque mois (1–31)<input id="traceDeferredForecastDebitDay" '+
+    'type="number" inputmode="numeric" min="1" max="31" step="1" '+
+    'value="'+esc(card.deferredDebitDay??'')+'"></label>'+
+   '<label>Jour de clôture (facultatif, 1–31)<input id="traceDeferredForecastClosingDay" '+
+    'type="number" inputmode="numeric" min="1" max="31" step="1" '+
+    'value="'+esc(card.deferredClosingDay??'')+'"></label>'+
    '<label>Date prévue de prélèvement<input id="traceDeferredForecastDue" type="date"></label>'+
   '</div>'+
+  '<p id="traceDeferredMonthlyHint" class="trace-intl-help" role="status" aria-live="polite">'+
+   'Règle mensuelle non enregistrée. Sans clôture connue, il faut vérifier '+
+   'manuellement à quelle échéance appartient chaque achat.</p>'+
   '<button type="button" class="secondary full" id="traceDeferredForecastRun">'+
    'Vérifier les conséquences, sans enregistrer</button>'+
   '<div id="traceDeferredForecastResult" class="trace-deferred-forecast-result" role="status" aria-live="polite">'+
@@ -913,18 +937,50 @@ function bindTraceDeferredPurchaseForm(card){
  const action=$('#traceDeferredForecastRun'),target=$('#traceDeferredForecastResult');
  if(!action||!target)return;
  const ids=['#traceDeferredForecastAmount','#traceDeferredForecastPurchase',
-  '#traceDeferredForecastBudget','#traceDeferredForecastDue'];
+  '#traceDeferredForecastBudget','#traceDeferredForecastDue',
+  '#traceDeferredForecastDebitDay','#traceDeferredForecastClosingDay'];
  const inputs=ids.map(id=>$(id));
  if(inputs.some(x=>!x)){action.disabled=true;return;}
- const invalidate=()=>{target.textContent='Paramètres modifiés : relance une simulation. Rien n’a été enregistré.';};
+ const note=$('#traceDeferredMonthlyHint');
+ let lastAutoDue=null;
+ const refreshSchedule=()=>{
+  const [,, ,due,debit,closing]=inputs;
+  // Do not overwrite a manually entered due date unless BOTH recurring
+  // calendar settings are known. Removing the cutoff releases auto mode.
+  if(lastAutoDue&&due.value===lastAutoDue)due.value='';
+  due.readOnly=false;lastAutoDue=null;
+  const day=debit.value.trim(),cutoff=closing.value.trim();
+  if(!day&&!cutoff){
+   if(note)note.textContent='Aucune règle mensuelle choisie. Saisis la date prévue manuellement, sans enregistrement.';
+   return;
+  }
+  try{
+   if(!day)throw Error('Le jour de prélèvement est obligatoire pour calculer un cycle.');
+   const S=window.TraceDeferredDebit?.monthlyDebitSchedule;
+   if(typeof S!=='function')throw Error('Calendrier mensuel indisponible.');
+   const schedule=S({purchaseDate:inputs[1].value,debitDay:day,closingDay:cutoff});
+   if(schedule.allocationVerified){
+    due.value=schedule.dueDate;due.readOnly=true;lastAutoDue=schedule.dueDate;
+    if(note)note.textContent='Clôture : '+schedule.cutoffDate+
+     ' · prélèvement prévu : '+schedule.dueDate+
+     '. Dates indicatives uniquement ; la banque peut débiter un autre jour.';
+   }else if(note)note.textContent='Prochain jour mensuel : '+schedule.nextDebitDate+
+    '. Sans clôture, impossible d’attribuer automatiquement cet achat à ce débit.';
+  }catch(error){
+   if(note)note.textContent='Calendrier à vérifier : '+String(error.message||error);
+  }
+ };
+ const invalidate=()=>{target.textContent='Paramètres modifiés : relance une simulation. Rien n’a été enregistré.';refreshSchedule();};
  inputs.forEach(input=>{input.addEventListener('input',invalidate);
   input.addEventListener('change',invalidate);});
+ refreshSchedule();
  action.onclick=()=>{
   target.textContent='Vérification des trois dates et du montant…';
   try{
    const outcome=traceDeferredPurchaseProjection(card,{
     amount:inputs[0].value,purchaseDate:inputs[1].value,
-    budgetDate:inputs[2].value,dueDate:inputs[3].value});
+    budgetDate:inputs[2].value,dueDate:inputs[3].value,
+    debitDay:inputs[4].value,closingDay:inputs[5].value});
    const fmt=n=>esc(window.TraceInternational.money(n,outcome.currency));
    target.innerHTML='<strong>Simulation hypothétique au '+esc(outcome.asOfDate)+
     ' · achat isolé</strong>'+
@@ -933,6 +989,10 @@ function bindTraceDeferredPurchaseForm(card){
     '<p>Dette de cet achat à cette date : '+fmt(outcome.liability)+'.</p>'+
     '<p>Prélèvement prévu le '+esc(outcome.dueDate)+
     '. Compte courant : <strong>aucun débit effectué</strong>.</p>'+
+    (outcome.schedule?.allocationVerified?
+     '<p>Cycle clos le '+esc(outcome.schedule.cutoffDate)+
+      ' · échéance calculée automatiquement.</p>':
+     '<p>Date à vérifier avec le relevé ; pas de rattachement de cycle confirmé.</p>')+
     '<p>Ce résultat ne représente pas la dette totale de cette carte.</p>'+
     '<small>Aucune donnée enregistrée. La contre-valeur CAD n’est pas calculée sans taux vérifié.</small>';
   }catch(error){

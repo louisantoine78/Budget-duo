@@ -124,3 +124,73 @@ test('ordinary credit card and foreign partner never bind missing simulator node
  c.bind({...card,archived:true});
  assert.equal(Object.keys(c.nodes).length,0);
 });
+
+
+test('monthly schedule calculates planned debit from a separate purchase cutoff',()=>{
+ const c=context();
+ const r=c.project(card,{amount:'40',purchaseDate:'2026-10-21',
+  budgetDate:'2026-10-21',debitDay:'28',closingDay:'20'});
+ assert.equal(r.dueDate,'2026-11-28');
+ assert.equal(r.schedule.cutoffDate,'2026-11-20');
+ assert.equal(r.monthBudget,40);assert.equal(r.checkingMovement,0);
+ assert.equal(c.unchanged(),true);
+});
+test('card-specific recurring rules may provide defaults but never mutate the card',()=>{
+ const c=context(),configured={...card,deferredDebitDay:5,deferredClosingDay:20};
+ const prior=JSON.stringify(configured);
+ const r=c.project(configured,{amount:'40',purchaseDate:'2026-10-12',budgetDate:'2026-10-12'});
+ assert.equal(r.dueDate,'2026-11-05');
+ assert.equal(JSON.stringify(configured),prior);
+});
+test('unspecified cutoff never guesses which scheduled batch an expense belongs to',()=>{
+ const c=context(),r=c.project(card,{...fields,debitDay:'28',closingDay:''});
+ assert.equal(r.schedule.dueDate,null);
+ assert.equal(r.schedule.nextDebitDate,'2026-10-28');
+ assert.equal(r.dueDate,'2026-11-05'); // manual, not assigned by recurrence
+});
+test('schedule with cutoff refuses a different manual planned due date',()=>{
+ const c=context();
+ assert.throws(()=>c.project(card,{...fields,debitDay:'28',closingDay:'20'}),/règle mensuelle/);
+});
+test('monthly rules cannot choose invalid calendar days or omit the debit day',()=>{
+ const c=context();
+ assert.throws(()=>c.project(card,{...fields,debitDay:'32',closingDay:'20'}),/Jour mensuel/);
+ assert.throws(()=>c.project(card,{...fields,debitDay:'',closingDay:'20'}),/jour mensuel/);
+});
+test('deferred card forecast form exposes nonpersisted recurring day and cutoff settings',()=>{
+ const c=context(),html=c.form(card);
+ assert.match(html,/traceDeferredForecastDebitDay/);
+ assert.match(html,/traceDeferredForecastClosingDay/);
+ assert.match(html,/Règle mensuelle non enregistrée/);
+ assert.doesNotMatch(html,/Enregistrer les paramètres|type="submit"/);
+});
+test('live changing the cutoff fills the due date and clears old schedule',()=>{
+ const c=context(),configured={...card,deferredDebitDay:28,deferredClosingDay:20};
+ c.bind(configured);
+ const debit=c.$('#traceDeferredForecastDebitDay'),
+  cutoff=c.$('#traceDeferredForecastClosingDay'),
+  purchase=c.$('#traceDeferredForecastPurchase'),
+  due=c.$('#traceDeferredForecastDue');
+ debit.value='28';cutoff.value='20';purchase.value='2026-10-21';
+ purchase.onchange();
+ assert.equal(due.value,'2026-11-28');assert.equal(due.readOnly,true);
+ cutoff.value='';cutoff.onchange();
+ assert.equal(due.value,'');assert.equal(due.readOnly,false);
+ assert.match(c.$('#traceDeferredMonthlyHint').textContent,/Sans clôture/);
+ assert.equal(c.unchanged(),true);
+});
+test('calculated forecast is visibly approximate and never posts a payment',()=>{
+ const c=context();c.bind(card);
+ const values={
+  '#traceDeferredForecastAmount':'40',
+  '#traceDeferredForecastPurchase':'2026-10-12',
+  '#traceDeferredForecastBudget':'2026-10-12',
+  '#traceDeferredForecastDebitDay':'28',
+  '#traceDeferredForecastClosingDay':'20'};
+ for(const [id,value] of Object.entries(values))c.$(id).value=value;
+ c.$('#traceDeferredForecastClosingDay').onchange();
+ c.$('#traceDeferredForecastRun').onclick();
+ assert.equal(c.$('#traceDeferredForecastDue').value,'2026-10-28');
+ assert.match(c.$('#traceDeferredForecastResult').innerHTML,/Cycle clos le 2026-10-20/);
+ assert.equal(c.unchanged(),true);
+});
