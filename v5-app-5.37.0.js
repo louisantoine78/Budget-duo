@@ -901,7 +901,8 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
      (o.status&&o.status!=='confirmed')||
      (since&&String(o.date||'')<=since))continue;
   if(o.linkedTransactionId&&state.transactions.some(t=>
-    t.id===o.linkedTransactionId&&candidate(t)))continue;
+    t.id===o.linkedTransactionId&&t.status==='confirmed'&&
+    (t.accountId===account.id||t.toAccountId===account.id)))continue;
   if(I.investmentBankAmount(o,account)===null)
    issues.push({id:o.id,name:'Opération de placement',date:o.date||'Date inconnue'});
  }
