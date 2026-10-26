@@ -901,7 +901,7 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
    return true;
   const leg=t.toAccountId===account.id?'destination':'source';
   return I.amountOnAccount(t,account,leg)===null;
- }).map(t=>({id:t.id,name:t.name||'Opération bancaire',date:t.date||'Date inconnue'}));
+ }).map(t=>({id:t.id,name:t.name||'Opération bancaire',date:t.date||'Date inconnue',kind:'transaction'}));
  // Only bank-side investment deposits/withdrawals matter; if an already
  // confirmed linked transaction carries that bank leg it is checked above.
  for(const o of state.investmentOperations||[]){
@@ -911,11 +911,15 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
      !afterEvidenceBoundary(o.date))continue;
   if(traceLinkedBankTransactionCovers(o,account,boundary))continue;
   if(I.investmentBankAmount(o,account)===null)
-   issues.push({id:o.id,name:'Opération de placement',date:o.date||'Date inconnue'});
+   issues.push({id:o.id,name:'Opération de placement',date:o.date||'Date inconnue',kind:'investment'});
  }
  if(!issues.length)return'';
  const details=issues.slice(0,3).map(t=>
-  '<li>'+esc(t.name)+' · '+esc(t.date)+'</li>').join('');
+  '<li>'+(t.kind==='transaction'?
+   '<button type="button" class="trace-bank-proof-link" data-trace-bank-proof-open="'+
+   esc(t.id)+'" aria-label="Retrouver '+esc(t.name)+' dans Activité">'+
+   esc(t.name)+' · '+esc(t.date)+'</button>':
+   esc(t.name)+' · '+esc(t.date))+'</li>').join('');
  return '<section class="trace-bank-proof-review" aria-label="Mouvements bancaires à vérifier">'+
   '<h3>Justificatifs bancaires à vérifier</h3>'+
   '<p><strong>'+issues.length+' mouvement(s)</strong> peuvent empêcher le calcul du solde '+
@@ -923,7 +927,7 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
   'réellement débité ou reçu.</p><ul>'+details+'</ul>'+
   (issues.length>3?'<p>Et '+(issues.length-3)+' autre(s) mouvement(s).</p>':'')+
   '<small>Consultation uniquement · aucun montant, taux, rapprochement ou budget modifié. '+
-  'Utilise « Voir toutes les opérations » pour retrouver les pièces concernées.</small></section>';
+  'Touche une ligne bancaire pour ouvrir Activité au bon mois. Les mouvements de placement se vérifient dans Patrimoine.</small></section>';
 }
 function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
  const a=state.accounts.find(x=>x.id===id&&['la','partner'].includes(x.owner)&&
@@ -979,16 +983,22 @@ function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
   '<button type="button" class="primary full" id="traceAccountAllTx" style="margin-top:12px">Voir toutes les opérations</button>'+
   '<button type="button" class="secondary full" id="traceAccountDetailBack" style="margin-top:8px">Retour aux comptes</button>');
  bindTraceDeferredPurchaseForm(a);
+ $$('[data-trace-bank-proof-open]').forEach(btn=>btn.onclick=()=>
+  openTraceAccountActivity(a.id,btn.dataset.traceBankProofOpen));
  $('#traceAccountDetailBack').onclick=typeof onBack==='function'?onBack:openAccountsOverview;
  $('#traceAccountAllTx').onclick=()=>openTraceAccountActivity(a.id);
  const primary=$('#traceAccountSelectPrimary');
  if(primary)primary.onclick=()=>confirmTracePrimaryAccount(a.id,()=>openTraceAccountDetail(a.id,{householdView,onBack}));
 }
-function openTraceAccountActivity(id){
+function openTraceAccountActivity(id,proofTransactionId=null){
  const account=state.accounts.find(a=>a.id===id&&
   ['la','partner'].includes(a.owner)&&['checking','card'].includes(accountType(a)));
  if(!account)return;
- const latest=traceAccountOperations(id).find(t=>/^\d{4}-\d\d-\d\d$/.test(String(t.date||'')));
+ const proof=proofTransactionId&&state.transactions.find(t=>t.id===proofTransactionId&&
+  (t.accountId===id||t.toAccountId===id)&&
+  window.TraceInternational.calendarDate(t.date));
+ const latest=proof||traceAccountOperations(id).find(t=>
+  window.TraceInternational.calendarDate(t.date));
  activityAccountFilter=id;
  activityFilters={category:'all',nature:'all',currency:'all',status:'all'};
  if(latest)activityMonth=latest.date.slice(0,7);

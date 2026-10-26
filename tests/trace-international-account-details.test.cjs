@@ -307,6 +307,48 @@ async function main(){
   assert.equal(f.calls.save,0);
  });
 
+
+ await test('bank proof provides an accessible scoped Activity link without saving',()=>{
+  const f=fixture({strictEvidence:true}),before=JSON.stringify(f.state);
+  f.openTraceAccountDetail('fr');
+  const markup=f.$('#sheetBody').innerHTML;
+  assert.match(markup,/data-trace-bank-proof-open="recent"/);
+  assert.match(markup,/aria-label="Retrouver Recent dans Activité"/);
+  assert.match(app,/openTraceAccountActivity\(a\.id,btn\.dataset\.traceBankProofOpen\)/);
+  assert.equal(f.calls.save,0);assert.equal(JSON.stringify(f.state),before);
+ });
+ await test('bank proof opens the right historic month over a more recent movement',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.push({id:'later',accountId:'fr',type:'expense',
+   status:'confirmed',date:'2026-12-02',bankAmount:10,bankCurrency:'EUR'});
+  const before=JSON.stringify(f.state);
+  f.openTraceAccountActivity('fr','recent');
+  assert.equal(f.getFilter(),'fr');assert.equal(f.getMonth(),'2026-10');
+  assert.equal(f.calls.activity,1);assert.equal(f.calls.save,0);
+  assert.equal(JSON.stringify(f.state),before);
+ });
+ await test('proof id from another account cannot redirect month selection',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.push({id:'later',accountId:'fr',type:'expense',
+   status:'confirmed',date:'2026-12-02',bankAmount:10,bankCurrency:'EUR'});
+  f.openTraceAccountActivity('fr','transfer');
+  assert.equal(f.getFilter(),'fr');assert.equal(f.getMonth(),'2026-12');
+  assert.equal(f.calls.save,0);
+ });
+ await test('investment warning is explicitly separate from clickable bank transactions',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.state.investmentOperations=[{id:'unproved-investment',bankAccountId:'fr',
+   type:'deposit',date:'2026-10-19',status:'confirmed',bankAmount:46.2}];
+  f.openTraceAccountDetail('fr');
+  const markup=f.$('#sheetBody').innerHTML;
+  assert.match(markup,/Opération de placement/);
+  assert.match(markup,/vérifient dans Patrimoine/);
+  assert.doesNotMatch(markup,/data-trace-bank-proof-open=/);
+  assert.match(css,/\.trace-bank-proof-review \.trace-bank-proof-link/);
+  assert.equal(f.calls.save,0);
+ });
+
  await test('premium sheets and missing-rate safeguards exist',()=>{
   assert.match(css,/\.trace-account-detail-hero/);
   assert.match(css,/\.trace-account-activity-filter/);

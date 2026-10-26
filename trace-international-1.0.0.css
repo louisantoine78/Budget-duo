@@ -316,3 +316,13 @@
 .trace-bank-proof-review small{display:block;margin-top:9px;font-size:11px;
  line-height:1.45;color:#73674b}
 @media(max-width:380px){.trace-bank-proof-review{padding:12px;border-radius:13px}}
+
+.trace-bank-proof-review .trace-bank-proof-link{
+ display:block;width:100%;text-align:left;border:1px solid #e3d5b1;
+ border-radius:10px;background:#fffdf8;color:#5b4a25;
+ padding:10px 12px;font:inherit;font-size:12px;line-height:1.45;
+ overflow-wrap:anywhere;cursor:pointer;min-height:44px;
+}
+.trace-bank-proof-review .trace-bank-proof-link:focus-visible{
+ outline:2px solid #406b51;outline-offset:2px;
+}
