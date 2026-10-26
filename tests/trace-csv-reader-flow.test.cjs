@@ -16,10 +16,10 @@ assert.ok(start>0&&end>start,'CSV parser+UI block missing');
 const body=source.slice(start,end);
 let seq=0;
 function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Cafe,-5.50\n',
- filename='octobre.csv',transactionRows=[],onSave}={}){
+ filename='octobre.csv',transactionRows=[],importRows=[],onSave}={}){
  const accounts=[{id:'checking-la',type:'checking',owner:'la',currency,country:currency==='EUR'?'FR':'CA'}];
- const state={accounts,transactions:transactionRows.map(t=>({...t}))};
- const dom=new Map(),events=[],writes=[];
+ const state={accounts,transactions:transactionRows.map(t=>({...t})),smartImports:importRows.map(t=>({...t}))};
+ const dom=new Map(),events=[],writes=[],evidenceWrites=[];
  const node=id=>{
   if(!dom.has(id))dom.set(id,{value:'',textContent:'',innerHTML:'',disabled:false,checked:false,dataset:{}});
   return dom.get(id);
@@ -39,8 +39,10 @@ function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,
   v=>v==null||v===''?null:Number.isFinite(Number(v))&&Number(v)>0&&Math.abs(Number(v)*100-Math.round(Number(v)*100))<1e-6?Number(v):null,
   ()=>'test_'+(++seq),()=>({split:{la:100,partner:0}}),
   async(collection,item)=>{
-   assert.equal(collection,'transactions');writes.push({...item});
-   if(onSave)await onSave({item,state,accounts,writes});
+   if(collection==='transactions'){writes.push({...item});
+    if(onSave)await onSave({item,state,accounts,writes});}
+   else if(collection==='imports')evidenceWrites.push({...item});
+   else throw Error('Unexpected collection '+collection);
   },()=>events.push('render'),p=>events.push('navigate:'+p),
   t=>events.push('tab:'+t),money,()=>0,{error:()=>{}});
  api.importFile({name:filename,type:'text/csv',size:content.length,content});
@@ -52,7 +54,7 @@ function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,
  Object.assign(node('#csvDateFormat'),{value:'dmy'});
  Object.assign(node('#csvSign'),{value:'income'});
  Object.assign(node('#csvAccount'),{value:'checking-la'});
- return{state,accounts,api,node,events,writes,
+ return{state,accounts,api,node,events,writes,evidenceWrites,
   compare:win.TraceStatementReconcile.compare,amountOnAccount:win.TraceInternational.amountOnAccount,
   preview:()=>node('#csvPreview').onclick(),
   commit:async()=>{const cb=node('#csvCommit').onclick;assert.equal(typeof cb,'function');await cb();}};
@@ -160,4 +162,63 @@ test('monthly comparison highlights line absent in CSV-imported candidate journa
  assert.equal(report.totals.missing,1);
  assert.equal(report.totals.matched,0);
  assert.equal(s.writes.length,2);
+});
+
+test('unreadable CSV lines survive import as non-financial evidence',async()=>{
+ const content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Source inconnue,??\n';
+ const s=scenario({content});s.preview();s.node('#csvInvalidAcknowledged').checked=true;
+ await s.commit();
+ assert.equal(s.writes.length,1);
+ assert.equal(s.evidenceWrites.length,1);
+ assert.equal(s.state.smartImports.length,1);
+ const ev=s.evidenceWrites[0];
+ assert.equal(ev.kind,'csv_unparsed');assert.equal(ev.status,'pending_review');
+ assert.equal(ev.accountId,'checking-la');assert.equal(ev.sourceIndex,3);
+ assert.match(ev.rawText,/Source inconnue/);
+ assert.equal(ev.amountCAD,undefined);assert.equal(ev.bankAmount,undefined);
+ assert.ok(s.state.transactions.every(t=>t.status==='pending'));
+});
+test('same invalid source row is not recreated on an identical later import',async()=>{
+ const content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Source inconnue,??\n';
+ const s=scenario({content});s.preview();s.node('#csvInvalidAcknowledged').checked=true;await s.commit();
+ const again=scenario({content,transactionRows:s.state.transactions,importRows:s.state.smartImports});
+ again.preview();again.node('#csvInvalidAcknowledged').checked=true;await again.commit();
+ assert.equal(again.evidenceWrites.length,0);
+ assert.equal(again.writes.length,0);
+ assert.equal(again.state.smartImports.length,1);
+});
+test('changed unreadable source text on same file line blocks import completely',async()=>{
+ const older=scenario({content:'Date,Description,Montant\n20/10/2026,Inconnu,??\n'});
+ older.preview();older.node('#csvInvalidAcknowledged').checked=true;await older.commit();
+ const changed=scenario({content:'Date,Description,Montant\n20/10/2026,Autre,??\n',
+  importRows:older.state.smartImports});
+ changed.preview();
+ assert.match(changed.node('#csvPreviewResult').innerHTML,/Import suspendu/);
+ assert.equal(changed.writes.length,0);assert.equal(changed.evidenceWrites.length,0);
+});
+test('all-invalid CSV still retains lines without a bank transaction',async()=>{
+ const s=scenario({content:'Date,Description,Montant\n20/10/2026,Inconnu,??\n'});
+ s.preview();
+ assert.match(s.node('#csvPreviewResult').innerHTML,/id="csvCommit"/);
+ s.node('#csvInvalidAcknowledged').checked=true;await s.commit();
+ assert.equal(s.writes.length,0);assert.equal(s.evidenceWrites.length,1);
+ assert.equal(s.state.transactions.length,0);
+});
+test('unreadable CSV cannot overwrite a previously interpreted bank row',()=>{
+ const prior={id:'old',source:'csv',importFileName:'octobre.csv',
+  csvSourceRowIndex:2,accountId:'checking-la',date:'2026-10-20',
+  type:'expense',name:'Courses',bankAmount:40,status:'pending'};
+ const s=scenario({content:'Date,Description,Montant\n20/10/2026,Courses,??\n',
+  transactionRows:[prior]});s.preview();
+ assert.match(s.node('#csvPreviewResult').innerHTML,/Import suspendu/);
+ assert.equal(s.writes.length,0);
+});
+test('unreadable evidence survives later transaction import interruption',async()=>{
+ const content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Inconnu,??\n';
+ const s=scenario({content,onSave:async()=>{throw Error('Fictional RPC timeout')}});
+ s.preview();s.node('#csvInvalidAcknowledged').checked=true;await s.commit();
+ assert.equal(s.evidenceWrites.length,1);
+ assert.equal(s.state.smartImports.length,1);
+ assert.equal(s.state.transactions.length,0);
+ assert.match(s.node('#importResult').textContent,/Import interrompu/);
 });
