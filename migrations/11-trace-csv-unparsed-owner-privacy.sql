@@ -2,6 +2,44 @@
 -- Not applied. Existing family-wide document access stays unchanged for
 -- every document type other than imports.kind = csv_unparsed.
 begin;
+
+-- Fail closed on pre-existing incomplete source identities rather than
+-- silently leaving NULL-indexed evidence outside uniqueness enforcement.
+-- A collision aborts the whole migration transaction; NEVER auto-merge,
+-- rewrite or delete original bank evidence to make the index pass.
+do $csv_source_preflight$
+begin
+ if exists (
+  select 1 from public.documents d
+  where d.collection = 'imports'
+    and d.data->>'kind' = 'csv_unparsed'
+    and (
+      nullif(d.data->>'owner','') is null
+      or nullif(d.data->>'accountId','') is null
+      or nullif(d.data->>'sourceFileName','') is null
+      or nullif(d.data->>'sourceIndex','') is null
+    )
+ ) then
+  raise exception 'TRACE_CSV_EVIDENCE_MIGRATION_BLOCKED: incomplete source identity'
+   using errcode='23514';
+ end if;
+end;
+$csv_source_preflight$;
+
+-- No duplicate audit row for a single bank statement source coordinate,
+-- even when an old or malicious client supplies a different document ID.
+-- Scope is household + owner + bank account + exact filename + source row.
+-- A duplicate must be reviewed manually; never create a booked transaction.
+create unique index if not exists trace_csv_unparsed_source_unique
+on public.documents (
+ household_id,
+ (data->>'owner'),
+ (data->>'accountId'),
+ (data->>'sourceFileName'),
+ (data->>'sourceIndex')
+)
+where collection = 'imports' and data->>'kind' = 'csv_unparsed';
+
 drop policy if exists trace_csv_unparsed_private_select on public.documents;
 create policy trace_csv_unparsed_private_select
 on public.documents as restrictive for select to authenticated
@@ -64,6 +102,7 @@ begin
  end if;
  if not after_evidence or new.data->>'owner' is distinct from actor_slot
   or nullif(new.data->>'accountId','') is null
+  or char_length(new.data->>'accountId') > 240
   or new.data->>'id' is distinct from new.item_id
   or char_length(new.item_id) > 240
   or char_length(coalesce(new.data->>'rawText','')) > 650
