@@ -5317,6 +5317,15 @@ function openBankMetadata(id){
   '<label class="label2">Devise native<select class="input" id="traceBankMetaCurrency"'+(history?' disabled':'')+'>'+I.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></label></div>'+
   (history?'<p class="trace-intl-help">La devise est verrouillée car ce compte possède un solde ou un historique. Pour une autre devise, ajoute un autre compte.</p>':'')+
   '<div class="setting-summary"><span>Modèle bancaire</span><b>'+esc(accountType(account)==='card'?(account.paymentMode==='deferred'?'Débit différé · activation bloquée':'Carte de crédit'):'Débit immédiat')+'</b></div>'+
+  (accountType(account)==='card'&&account.paymentMode==='deferred'?
+   '<section class="trace-deferred-calendar-settings" aria-label="Calendrier mensuel de la carte">'+
+   '<h3>Calendrier mensuel du débit différé</h3>'+
+   '<p class="trace-intl-help">Jour de prélèvement : <strong>'+
+    esc(account.deferredDebitDay??'À définir')+'</strong> · clôture du cycle : <strong>'+
+    esc(account.deferredClosingDay??'À vérifier auprès de la banque')+'</strong>.</p>'+
+   '<p class="trace-intl-help">La configuration réelle des cartes différées reste bloquée. Tu peux choisir les jours dans la simulation sans enregistrer ni déclencher de prélèvement.</p>'+
+   '<button type="button" class="secondary full" id="traceBankMetaSchedulePreview">'+
+    'Choisir les jours et simuler le prélèvement</button></section>':'')+
   (accountType(account)==='card'?'<label class="label2">Compte de règlement<select class="input" id="traceBankMetaSettlement"></select></label>':'')+
   '<p id="traceBankMetaError" class="trace-bank-setup-error" role="alert"></p>'+
   '<button type="button" class="primary full" id="traceBankMetaSave">Confirmer les modifications</button>'+
@@ -5333,6 +5342,9 @@ function openBankMetadata(id){
  };
  $('#traceBankMetaCountry').onchange=links;$('#traceBankMetaCurrency').onchange=links;links();
  $('#traceBankMetaBack').onclick=openAccountSettings;
+ const previewCalendar=$('#traceBankMetaSchedulePreview');
+ if(accountType(account)==='card'&&account.paymentMode==='deferred'&&previewCalendar)
+  previewCalendar.onclick=()=>openTraceAccountDetail(id,{onBack:openAccountSettings});
  $('#traceBankMetaArchive').onclick=()=>confirmBankArchive(id,true);
  $('#traceBankMetaSave').onclick=async()=>{
   const button=$('#traceBankMetaSave');button.disabled=true;

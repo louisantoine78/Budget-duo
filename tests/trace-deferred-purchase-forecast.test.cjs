@@ -194,3 +194,14 @@ test('calculated forecast is visibly approximate and never posts a payment',()=>
  assert.match(c.$('#traceDeferredForecastResult').innerHTML,/Cycle clos le 2026-10-20/);
  assert.equal(c.unchanged(),true);
 });
+
+
+test('deferred calendar is discoverable from card settings without offering a false save',()=>{
+ const accountSettings=app.slice(app.indexOf('function openBankMetadata('),
+  app.indexOf('function confirmBankArchive('));
+ assert.match(accountSettings,/Calendrier mensuel du débit différé/);
+ assert.match(accountSettings,/traceBankMetaSchedulePreview/);
+ assert.match(accountSettings,/openTraceAccountDetail\(id,\{onBack:openAccountSettings\}\)/);
+ assert.match(accountSettings,/simulation sans enregistrer/);
+ assert.match(accountSettings,/configuration réelle des cartes différées reste bloquée/);
+});
