@@ -1,3 +1,15 @@
+## 26 octobre 2026 — Authenticité du candidat et non-péremption des rapports
+
+- [x] `9e620688` : vérifications `git merge-base` depuis la base mission, `git diff --quiet` sur fichiers de production et workflows, `[skip ci]` sur tout l'historique de la mission, `vercel.json` interdisant le déploiement de la branche internationale.
+- [x] Historique GitHub consulté : 329 commits depuis `6eb6c17...` avec `[skip ci]` ; pas de modification de fichier stable protégé depuis cette base ; `main` stable inchangée.
+- [x] `6298b3ae` : préflight exige SHA candidat **strictement identique** au SHA déjà qualifié, un bilan Node non vide, des assertions PG et aucun finding SQL `release-blocker`.
+- [x] **33/33 scénarios V8 isolés** sur contrôleur (25) et nouvelles fonctions du préflight (8) ; vrais fichiers GitHub, APIs Node simulées. **Non** Node natif complet/PG/Safari.
+- [ ] Produire sur le HEAD exact les quatre résultats PostgreSQL/PGlite avec données fictives, après migrations candidates 05–12, et les rapports de réconciliation des findings historiques RLS partenaire/CAS.
+- [ ] Tests Node natifs, Safari iPhone/PWA offline, imports PDF/CSV/OCR, FX/Couple/Patrimoine, tests de rollback et compatibilité anciens clients.
+- [ ] Production **NO-GO**, estimation ~58 % ±10 inchangée ; jamais de commit `main`, PR/merge, CI/Actions, déploiement ou migration Supabase réelle sans autorisation humaine explicite.
+
+---
+
 ## 26 octobre 2026 — Unicité des justificatifs du débit différé
 
 - [x] `8b506189` : `sourceId` et `importId` uniques **dans tout le lot** des preuves différées, y compris plusieurs relevés carte ou courant.

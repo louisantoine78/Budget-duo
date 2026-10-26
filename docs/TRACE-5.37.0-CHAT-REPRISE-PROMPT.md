@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — QUALIFICATION EXACTE DU HEAD ET PROTECTION DE LA BRANCHE
+
+**Dernier HEAD code/test vérifié : `6298b3ae0dcc0ecb902e4399b600225d97767cf7`** sur `trace-5.37.0-international-accounts-fx`. Résoudre à nouveau le HEAD à toute reprise. Base au début de ce lot : `5b814d28b838d3b837d5329b7ee642db2d4aee86`, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Pas de PR, merge, workflow CI/Actions, déploiement, modification de production ni vraie base SQL ; commits `[skip ci]` uniquement.
+
+**`9e620688` :** le release gate vérifie la base Git `6eb6c17...`, l'absence de changement des fichiers `index.html/sw.js/manifest.webmanifest/trace-version.json/v5-app-5.36.5.js/.github` depuis la base, `[skip ci]` sur chaque commit de la mission et Vercel auto-déploiement candidat `false`. Vérification GitHub réelle : 329 commits consultés depuis cette base, tous marqués `[skip ci]` et fichiers protégés non modifiés. Testés via **25/25 V8 isolés**.
+
+**`6298b3ae` :** le script `trace-release-preflight.mjs` exige maintenant un HEAD égal au SHA exact qualifié ; aucun rapport du 24 octobre (SHA `94c613cd...`) ne valide le HEAD actuel par ascendance. Rapport natif doit compter scénarios/tests/syntaxe, rapport PG fictif doit comporter des assertions réussies et zéro finding `release-blocker`. Le rapport historique affiche `RLS-PERSONAL-SETTINGS` et `STALE-WRITE` encore ouverts. **8/8 nouveaux tests V8**. Total lot **33/33**. API Node simulée, jamais présenter comme Node CLI complet, PostgreSQL/PGlite ou Safari physique.
+
+**NO-GO toujours obligatoire.** Prochaine priorité : récupérer un checkout complet avec PGlite isolé et exécuter toutes les suites SQL 05–12 sur données fictives, en séparant baseline historique et preuves de correction candidates CAS/RLS ; aucun GO tant que SQL, Node natif, iPhone Safari/PWA, imports/FX/Couple et rollback ne sont pas qualifiés. Aucun déploiement ni écriture Supabase réelle.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — DOUBLONS D'IMPORT DANS TOUT LE LOT DE PREUVES
 
 HEAD vérifié des **trois commits de code/tests** de cette reprise : `5a06416690ff890fae7d5cd69fb03cbbbb80dd47` sur `trace-5.37.0-international-accounts-fx`; base de départ `afd56d4e7eac8b9c5b74534ef39e22d8084094fe`. Toujours résoudre le HEAD en début de prochaine conversation. Stable `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits `[skip ci]`, aucun workflow, merge/PR, déploiement, migration hébergée ou écriture Supabase réel.
