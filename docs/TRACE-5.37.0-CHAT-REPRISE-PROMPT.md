@@ -1,3 +1,16 @@
+# ADDENDUM — 25 OCTOBRE 2026 — COUPLE MULTIDEVISES, SITUATION GLOBALE FIABLE
+
+Vérifier en premier le vrai HEAD live de `trace-5.37.0-international-accounts-fx` et `main` (stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`). Ne pas reprendre la conception ni réouvrir décisions UX/finances validées. Code candidat seulement, commits `[skip ci]`. Jamais PR/merge, Actions/CI, déploiement, service worker de production, Supabase réel ou données financières réelles.
+
+**Nouveau lot commité :**
+- `v5-app-5.37.0.js` `eb8bf44`, `9196905` : l'Accueil Couple FX ne publie plus `checkingCAD`, `cardDebt` ou situation nette si des centimes dépassent la précision sûre. Une somme de comptes opposée à une dette artificiellement compensée reste bloquée. Réinitialisation des alertes d'avoir carte après correction.
+- `trace-international-1.0.0.js` `75ab7b5` : `snapshot` vérifie séparément sommes de comptes courants et cartes avant de publier `globalCAD`.
+- `tests/trace-international-couple-home.test.cjs` `1d115b9`, `tests/trace-international-money-integrity.test.cjs` `eb408e4` : cas d'overflow, compensation, petit centime et correction d'avoir.
+
+**Preuves exactement exécutées : 114/114 V8** sur vraies sources GitHub, avec fausses dépendances Node/DOM/RPC (22 finance, 8 Couple, 13 UI, 27 CAS, 11 release gates, 33 contrats SQL), plus parsing V8 de deux suites PG. **AUCUN** vrai PG/PGlite, Node CLI checkout complet, Safari ou backend réel. Migrations candidates 05–12, notamment cutover12, non exécutées et non autorisées. Ne pas hausser estimation de ~58 % ±10 sur cette seule preuve. Prochain chantier prioritaire : exécuter quatre suites PG isolées avec faux foyers, puis compléter FX/Couple, imports, interface premium et recette Safari. Production NO-GO.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — SOLDES COURANTS / COUPLE AU CENTIME
 
 Résoudre le HEAD courant de `trace-5.37.0-international-accounts-fx`, seul espace de travail autorisé. Stable `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Jamais Supabase réel, finance utilisateur, PR/merge/CI, Actions, déploiement, production ni modifications main. Tous commits `[skip ci]`.
