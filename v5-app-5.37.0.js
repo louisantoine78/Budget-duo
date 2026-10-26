@@ -296,8 +296,14 @@ function accountEstimate(a){
   // Every intermediate booked subtotal must retain safe, exact cents.
   // An overflowing debit must not be concealed by a later opposite credit.
   const subtotal=I.exactMoney(x+delta);
-  return subtotal===null?NaN:Math.round(subtotal*100)/100;
+  // The actual bank balance includes its opening/reconciliation anchor.
+  // Checking movement deltas alone would miss a transient unsafe balance
+  // which a later opposite movement could silently cancel.
+  if(subtotal===null||I.exactMoney(base+subtotal)===null)return NaN;
+  return Math.round(subtotal*100)/100;
  },0);
+ const beforeInvestment=I.exactMoney(base+movement);
+ if(beforeInvestment===null)return null;
  const investMovement=state.investmentOperations.filter(o=>o.bankAccountId===a.id&&
    (!o.status||o.status==='confirmed')&&afterBoundary(o.date,boundary)).reduce((v,o)=>{
     if(!['deposit','withdrawal'].includes(o.type))return v;
@@ -306,12 +312,12 @@ function accountEstimate(a){
     const native=I.investmentBankAmount(o,a);
     if(native===null||!Number.isFinite(v))return NaN;
     const subtotal=I.exactMoney(v+(o.type==='deposit'?-native:native));
-    return subtotal===null?NaN:Math.round(subtotal*100)/100;
+    if(subtotal===null||I.exactMoney(beforeInvestment+subtotal)===null)return NaN;
+    return Math.round(subtotal*100)/100;
    },0);
  // Never repair an unsafe opening + transaction subtotal by offsetting it
  // against another, unrelated investment movement.
- const beforeInvestment=I.exactMoney(base+movement);
- if(beforeInvestment===null||I.exactMoney(investMovement)===null)return null;
+ if(I.exactMoney(investMovement)===null)return null;
  const total=I.exactMoney(beforeInvestment+investMovement);
  return total===null?null:Math.round(total*100)/100;
 }
