@@ -1,3 +1,25 @@
+## 25 octobre 2026 — conservation et clôture humaine des lignes CSV illisibles
+
+**HEAD technique avant mise à jour :** `bdb16d12350ade57c9ccebf50a220bcf913c20e9`. Branche de travail unique, pas de changement `main`.
+
+**Travaux code candidats intégrés :** nouvelles preuves `imports` de type `csv_unparsed`, `pending_review` issues de chaque ligne CSV illisible, après case de consentement expliquant la conservation. Nom du CSV/compte/index/extrait borné, identifiant stable pour réimportation ; aucune banque `transactions`, aucun `amountCAD`, aucun budget, aucune certification de journée. Le rapprochement CSV n'est donc pas incomplet silencieusement ; les extraits apparaissent sous Activité → Importer puis sous l'Accueil « À faire ». L'utilisateur ne peut marquer `reviewed` que par une action explicite après vérification du relevé et traitement séparé des éventuelles transactions. Aucune écriture financière par la clôture. Le stockage du détail bancaire constitue une nouvelle donnée sensible à vérifier via droits et rétention.
+
+**Commits [skip ci] :**
+- `b13297ce7baf5926c2c0183a54f56c7cc0108ac9` : preuve, import CAS dans `imports`, collision; CSS
+- `69a621f44ba2b6690f3cc4f1287457e4d5103f46` : affichage Home/Activity et revue manuelle
+- `0215dad8ec2bcfe71852ac12a0bbd6af5acb5d11` : nouveaux tests d'import interrompu, tout illisible, réimportation
+- `744fae90dec3ae9bf489ae77242f8753e4a3d938` : fix du conflit `sourceFileName` vs `importFileName` réellement détecté par test
+- `c6d7e36c44731b41315ebbf576b1fdc28f5a9751` : tests anciens actualisés, confirmation locale invalide si l'extrait a changé
+- `bdb16d12350ade57c9ccebf50a220bcf913c20e9` : tests de revue UX et anti-injection HTML.
+
+**Résultats : 70/70 tests sous V8 simulé** sur code actuel : `17` import complet CSV + `6` compte/preview + `7` source + `5` import partiel + `24` CAS client + `6` Accueil + `5` file de revue. Aucune exécution Node CLI native, aucun PostgreSQL/PGlite, vrai navigateur, Safari, Auth/RLS, Supabase ni PDF natif. Une vraie anomalie a été corrigée après échec de 1/17 pendant l'implémentation. Aucune autre ancienne fonctionnalité modifiée intentionnellement.
+
+**Points ouverts critiques :** protection d'accès aux extraits bancaires dans espace Couple à auditer côté RLS/server avec deux comptes fictifs ; rétention des preuves et fichiers bruts absents ; très grands imports potentiellement lents/non atomiques ; source de fichier/index ne garantit pas identité globale ; document CSV tronqué à 650 caractères ; mois PDF encore labo lecture seule non raccordé en persistance ; services SW preview périmés et Safari non qualifié. Ne pas confondre les tests 70/70 V8 avec une recette end-to-end réelle.
+
+**Prochaine priorité :** qualité serveur/migrations 07–10 fictives, transactions CAS simultanées, vrai navigateur desktop/Safari et performance lots, puis Couple/FX et UI premium complète. Environnement conteneur sans accès checkout natif GitHub/npm ou PGlite. Production **NO-GO**, estimation globale qualitative `58 % ±10`.
+
+---
+
 ## 25 octobre 2026 — test intégré CSV → rapprochement mensuel (simulé)
 
 **Commits [skip ci], branche internationale exclusivement :**

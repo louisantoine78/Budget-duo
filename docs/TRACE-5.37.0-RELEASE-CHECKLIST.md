@@ -1,3 +1,17 @@
+## 25 octobre 2026 — suivi persistant des lignes CSV non interprétées
+
+- [x] `b13297ce7baf5926c2c0183a54f56c7cc0108ac9` : écrit des **preuves non financières** après consentement dans `imports` (`kind=csv_unparsed`, `status=pending_review`, source CSV, banque, titulaire, index, texte borné). Sans transaction, montant CAD, dépense, revenu ni journée certifiée. Peut conserver un CSV entièrement illisible. Identifiant stable de source, collisions bloquées.
+- [x] `69a621f44ba2b6690f3cc4f1287457e4d5103f46` : liste des preuves dans Activité → Importer, compteur « éléments » à vérifier dans Accueil ; action explicite « Marquer comme revue » après vérification manuelle du relevé, statut non financier `reviewed`.
+- [x] `0215dad8ec2bcfe71852ac12a0bbd6af5acb5d11`, `744fae90dec3ae9bf489ae77242f8753e4a3d938` : nouveaux cas de test et correction réelle collision historique source `importFileName` / `sourceFileName`.
+- [x] `c6d7e36c44731b41315ebbf576b1fdc28f5a9751`, `bdb16d12350ade57c9ccebf50a220bcf913c20e9` : mise à jour contrat des tests anciens et nouveau test de revue/consentement/confidentialité UI ; total `70/70` tests sous V8 simulé sur vrai code, tous verts.
+- [ ] **BLOQUANT serveur/confidentialité :** les extraits bancaires sont destinés à être conservés dans le foyer. Vérifier le modèle RLS de lecture et les droits de modification entre titulaires/foyers avec PostgreSQL/PGlite fictif (migrations 07–10) et deux utilisateurs, puis préciser rétention/effacement. Une barrière UI client ne remplace pas les règles serveur.
+- [ ] Performance/imports volumineux : écrire une preuve par ligne peut provoquer beaucoup de RPC et des lots partiellement conservés. Qualifier limites, atomicité et gestion des erreurs avant GO.
+- [ ] Exécuter les tests Node CLI de tout le repo, tests Chromium + FileReader véritable et Safari iPhone, contrôle mensuel PDF exhaustif/manuellement attesté, SW preview régénéré uniquement via outil officiel, backup/restore/rollback, puis GO utilisateur.
+- [ ] Préserver les budgets CAD historiques, transferts internes hors budget, comptes FR immédiats, cartes CA crédit, Couple/multidevises et quarantaine différée. **Production NO-GO.**
+- [ ] Estimation globale `58 % (±10)` ; progression qualitative d'environ +1 point pour la nouvelle file de revue candidate, sans validation production.
+
+---
+
 ## 25 octobre 2026 — test intégré CSV et moteur mensuel fictif
 
 - [x] Commit `f83c7fc091333950e80819c5b232e3b17d8a5868` : tests vrais points d'entrée CSV de `v5-app-5.37.0.js` avec FileReader/DOM/RPC fictifs (CAD/EUR, doublons, interruption en cours d'écriture, collisions de noms de fichier, lignes illisibles).
