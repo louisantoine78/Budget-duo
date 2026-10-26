@@ -306,6 +306,11 @@ function traceLinkedBankTransactionCovers(o,account,boundary){
 // invalid payments are flagged; no correction, write or FX rate is invented.
 function traceCardRepaymentMismatch(t){
  if(!t||t.type!=='transfer')return false;
+ // Isolated legacy-ledger checks can supply a single account without the
+ // complete state.accounts catalogue. A declared card repayment remains
+ // untrusted; an unrelated transfer cannot be classified as a card payment.
+ if(!Array.isArray(state.accounts))
+  return t.transferPurpose==='card_repayment';
  const I=window.TraceInternational,
   target=state.accounts.find(a=>a.id===t.toAccountId);
  if(!target||accountType(target)!=='card')
