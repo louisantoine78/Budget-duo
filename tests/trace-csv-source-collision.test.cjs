@@ -45,5 +45,6 @@ test('preview and commit path both stop when same-source evidence conflicts',()=
  assert.match(source,/sourceConflicts=result\.all\.filter\(t=>csvConflictingSourceRows/);
  assert.match(source,/if\(\(!result\.all\.length&&!result\.invalid\.length\)\|\|totalConflicts\)return/);
  assert.match(source,/if\(result\.all\.some\(t=>csvConflictingSourceRows/);
- assert.match(source,/if\(csvConflictingSourceRows\(t,state\.transactions\)\.length\)/);
+ assert.match(source,/if\(csvConflictingSourceRows\(t,state\.transactions\)\.length\|\|/);
+ assert.match(source,/csvConflictingUnparsedEvidence\(t,state\.smartImports\)/);
 });
