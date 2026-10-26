@@ -22,7 +22,7 @@ function view(accounts,balances,quotes={}){
   a=>balances[a.id]??null,c=>calls.push(c),rates,$,String,
   ()=>accounts.filter(a=>a.owner==='la'),'la',async()=>{},()=>{},()=>{});
  f();
- return{nodes,calls,$};
+ return{nodes,calls,$,render:f};
 }
 test('two countries and linked debt produce one CAD household net',()=>{
  const a=view([ca,fr,card,partner],{ca:1000,fr:1000,card:-200,partner:300},
@@ -56,3 +56,46 @@ test('positive card estimate is never included in combined net',()=>{
  assert.match(a.$('#homeCardWarning').textContent,/avoir de carte/);
 });
 console.log(count+' household international balance scenarios passed');
+
+
+test('Couple with foreign checking never publishes unsafe CAD subtotal',()=>{
+ const a=view([ca,partner,fr],{ca:6e13,partner:6e13,fr:0.1},
+  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20',source:'Fictitious quote'}});
+ assert.equal(a.$('#homeChecking').textContent,'—');
+ assert.equal(a.$('#homeBalance').textContent,'Situation à vérifier');
+ assert.match(a.$('#traceIntlHome').innerHTML,/précision/);
+ assert.equal(a.$('#reconcileBadge').textContent,'Conversion / soldes à vérifier');
+});
+test('Couple refuses compensated unsafe multi-card debt as known net cash',()=>{
+ const huge=6e13;
+ const ca1={...ca,id:'first-ca'},ca2={...partner,id:'second-ca'};
+ const card1={...card,id:'card-one',settlementAccountId:'first-ca'};
+ const card2={...card,id:'card-two',settlementAccountId:'second-ca'};
+ const a=view([ca1,ca2,fr,card1,card2],{
+  'first-ca':huge,'second-ca':huge,fr:10,'card-one':-huge,'card-two':-huge
+ },{EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20',source:'Fictitious quote'}});
+ assert.equal(a.$('#homeChecking').textContent,'—');
+ assert.equal(a.$('#homeCard').textContent,'À vérifier');
+ assert.equal(a.$('#homeBalance').textContent,'Situation à vérifier');
+ assert.match(a.$('#traceIntlHome').innerHTML,/Situation incomplète/);
+});
+test('Couple normal floating cent sums remain exact across CAD and EUR accounts',()=>{
+ const extra={...ca,id:'other-ca',owner:'partner'};
+ const a=view([ca,extra,fr,card],{ca:0.1,'other-ca':0.2,fr:0.25,card:-0.1},
+  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20',source:'Fictitious quote'}});
+ assert.equal(a.$('#homeChecking').textContent,I.money(0.7,'CAD'));
+ assert.equal(a.$('#homeCard').textContent,I.money(0.1,'CAD')+' de dette');
+ assert.equal(a.$('#homeBalance').textContent,I.money(0.6,'CAD'));
+});
+test('Couple clears previously visible positive-card alert when account debt is corrected',()=>{
+ const amounts={ca:1000,fr:500,card:60};
+ const a=view([ca,fr,{...card,currency:'EUR',settlementAccountId:'fr'}],amounts,
+  {EUR:{currency:'EUR',cadPerUnit:1.6,date:'2026-10-20',source:'Fictitious quote'}});
+ assert.equal(a.$('#homeCardWarning').hidden,false);
+ assert.match(a.$('#homeCardWarning').textContent,/avoir de carte/);
+ amounts.card=-50;
+ a.render();
+ assert.equal(a.$('#homeCardWarning').hidden,true);
+ assert.equal(a.$('#homeCardWarning').textContent,'');
+ assert.equal(a.$('#homeBalance').textContent,I.money(1720,'CAD'));
+});
