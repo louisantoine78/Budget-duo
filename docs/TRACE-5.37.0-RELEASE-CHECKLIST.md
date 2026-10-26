@@ -1,3 +1,18 @@
+## 25 octobre 2026 — preuve CSV : collision serveur et source normalisée
+
+**NO-GO.** Migration 11 candidate : index unique partiel `trace_csv_unparsed_source_unique` ajouté (source = foyer + propriétaire + compte + nom de fichier exact + ligne numérique). Le garde refuse `accountId` >240 caractères ; précontrôle migration des preuves antérieures avec identités manquantes ou numéros invalides. Faille résiduelle à valider : création de doublons avec ID différent par RPC ou écriture directe legacy, désormais **censée échouer** en PostgreSQL par violation d'unicité.
+
+- [x] Commits `9de886e`, `71f0b96`, `102491f`, `97c334e`, `19fa718`, `1d62ffb`, tous `[skip ci]`. Aucun autre branchement / deployment.
+- [x] Contrats V8 : **19/19 statiques/lexicaux** sur les vrais fichiers SQL et JS, dépendances Node simulées. Harnais PG compilé sous V8 seulement.
+- [ ] Tester le **vrai index PostgreSQL** et l'échec unique `23505` pour même foyer/propriétaire/compte/fichier/ligne même avec deux IDs ; `sourceIndex=4` / `0004`, reimport, écriture directe ancienne, lignes et propriétaires distincts.
+- [ ] Tester un historique mal formé/dupliqué AVANT migration 11 : l'installation doit refuser sans effacer ni modifier les preuves.
+- [ ] Qualifier intégralement la cascade foyer + CSV + débit différé, 05–11, Auth/RLS/CAS, deux sessions/foyers, Realtime, backup/restore/rollback dans moteur PostgreSQL/PGlite isolé (NON exécuté).
+- [ ] Poursuivre FX/Couple, PDF/OCR, UX premium et Safari iPhone ; demander GO explicite, sans toucher à `main`, Supabase réel ou GitHub CI.
+
+**Ne PAS compter les 19 contrôles V8 comme une exécution PostgreSQL.** Progression de référence 58 % ±10, production NO-GO.
+
+---
+
 ## 25 octobre 2026 — correctif candidat de cascade différée (tests PG toujours requis)
 
 **NO-GO.** Candidate 10 modifiée uniquement sur la branche internationale : exception limitée au `DELETE` déclenché après disparition effective du parent `households` et appelé par le vrai rôle PostgreSQL `postgres` sans JWT. Aucun accès à la fonction par les clients, aucun assouplissement du rejet des écritures bancaires différées, aucun RPC d'effacement utilisateur. **Vérification PostgreSQL encore ABSENTE ; ne pas déployer**.
