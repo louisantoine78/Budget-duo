@@ -77,9 +77,20 @@ $cutover_preflight$;
 -- document column write grant explicitly as well.
 revoke insert, update, delete on table public.documents
   from public, anon, authenticated;
-revoke insert (household_id,collection,item_id,data,updated_by,revision),
-       update (household_id,collection,item_id,data,updated_by,revision)
-on table public.documents from public, anon, authenticated;
+do $cutover_document_columns$
+declare col_name text;
+begin
+ for col_name in
+  select a.attname from pg_catalog.pg_attribute a
+  where a.attrelid='public.documents'::regclass
+    and a.attnum>0 and not a.attisdropped
+ loop
+  execute format(
+   'revoke insert (%I), update (%I) on table public.documents from public, anon, authenticated',
+   col_name,col_name);
+ end loop;
+end;
+$cutover_document_columns$;
 
 -- ANY direct update on a household (name, settings or audit identity)
 -- would bypass a reviewed RPC and may fail partner RLS inconsistently.
@@ -87,25 +98,67 @@ on table public.documents from public, anon, authenticated;
 -- A future rename must use a separately qualified authenticated RPC.
 revoke update on table public.households
   from public, anon, authenticated;
-revoke update (name,settings,updated_by) on table public.households
-  from public, anon, authenticated;
+do $cutover_household_columns$
+declare col_name text;
+begin
+ for col_name in
+  select a.attname from pg_catalog.pg_attribute a
+  where a.attrelid='public.households'::regclass
+    and a.attnum>0 and not a.attisdropped
+ loop
+  execute format(
+   'revoke update (%I) on table public.households from public, anon, authenticated',
+   col_name);
+ end loop;
+end;
+$cutover_household_columns$;
 
 -- A postcondition, not an assumption: effective privileges can be inherited.
 -- Refuse the entire transaction if any bypass remains through a role grant.
 do $cutover_postflight$
+declare
+ role_name text;
+ col_name text;
 begin
- if has_table_privilege('authenticated','public.documents','INSERT')
-    or has_table_privilege('authenticated','public.documents','UPDATE')
-    or has_table_privilege('authenticated','public.documents','DELETE')
-    or has_column_privilege('authenticated','public.documents','data','INSERT')
-    or has_column_privilege('authenticated','public.documents','data','UPDATE')
-    or has_column_privilege('authenticated','public.documents','revision','UPDATE')
-    or has_column_privilege('authenticated','public.households','settings','UPDATE')
-    or has_column_privilege('authenticated','public.households','updated_by','UPDATE')
-    or has_column_privilege('authenticated','public.households','name','UPDATE')
-    or not has_table_privilege('authenticated','public.documents','SELECT')
+ -- Validate EFFECTIVE privileges for both client roles, including inherited
+ -- grants from unexpected existing roles; cover columns added in the future.
+ foreach role_name in array array['authenticated','anon'] loop
+  if has_table_privilege(role_name,'public.documents','INSERT')
+     or has_table_privilege(role_name,'public.documents','UPDATE')
+     or has_table_privilege(role_name,'public.documents','DELETE')
+     or has_table_privilege(role_name,'public.households','UPDATE')
+  then
+    raise exception 'TRACE_CAS_CUTOVER_BLOCKED: table privileges remain for %',role_name
+      using errcode='42501';
+  end if;
+  for col_name in
+   select a.attname from pg_catalog.pg_attribute a
+   where a.attrelid='public.documents'::regclass
+     and a.attnum>0 and not a.attisdropped
+  loop
+   if has_column_privilege(role_name,'public.documents',col_name,'INSERT')
+     or has_column_privilege(role_name,'public.documents',col_name,'UPDATE')
+   then
+    raise exception 'TRACE_CAS_CUTOVER_BLOCKED: document column % writable by %',col_name,role_name
+      using errcode='42501';
+   end if;
+  end loop;
+  for col_name in
+   select a.attname from pg_catalog.pg_attribute a
+   where a.attrelid='public.households'::regclass
+     and a.attnum>0 and not a.attisdropped
+  loop
+   if has_column_privilege(role_name,'public.households',col_name,'UPDATE')
+   then
+    raise exception 'TRACE_CAS_CUTOVER_BLOCKED: household column % writable by %',col_name,role_name
+      using errcode='42501';
+   end if;
+  end loop;
+ end loop;
+ if not has_table_privilege('authenticated','public.documents','SELECT')
+    or not has_table_privilege('authenticated','public.households','SELECT')
  then
-   raise exception 'TRACE_CAS_CUTOVER_BLOCKED: direct privileges remain or reads lost'
+   raise exception 'TRACE_CAS_CUTOVER_BLOCKED: RLS reads unexpectedly revoked'
      using errcode='42501';
  end if;
 end;
