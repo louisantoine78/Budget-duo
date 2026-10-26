@@ -831,3 +831,18 @@ Commits précis et commandes de tests dans `docs/TRACE-5.37.0-HANDOFF.md`. Aprè
 - [ ] Rejouer les contrôles sur le commit final choisi, examiner les risques puis obtenir l'autorisation explicite de fusion/publication.
 
 Le contrôle `node scripts/trace-release-preflight.mjs` est local et en lecture seule. **Code de sortie 2 = NO-GO attendu**, zéro déploiement. Les rapports détaillés, commandes, anomalies et procédure Safari sont dans [WORK-VALIDATION](TRACE-5.37.0-WORK-VALIDATION.md). Ne pas présenter une ancienne URL Vercel comme la version de cette mission.
+
+
+## Débit différé — versions prospectives et paramètres de carte (26 octobre 2026)
+
+- [x] Moteur pur de calendrier par carte et par **date de prise d'effet** ; ancienne version conservée ; aucune échéance historique réécrite.
+- [x] Exclusion des cartes canadiennes, propriétaires étrangers, comptes EUR non liés/incompatibles et états archivés dans la proposition.
+- [x] Règle bloquant une prise d'effet au milieu du cycle ouvert et toute rétroactivité non vérifiée ; anciens jours sans provenance datée soumis à revue.
+- [x] Interface de **simulation non enregistrable** dans les paramètres de chaque carte FR différée (deux jours distincts + date d'effet).
+- [x] 224/224 tests V8 simulés sur 11 suites au code HEAD `b2ae4ccd` ; **dont 5 contrôles SQL statiques seulement**.
+- [ ] CRITIQUE — rendre la configuration persistante uniquement sous contrat serveur Auth/RLS/CAS versionné avec date d'effet, gestion de conflit, historique immuable et migration PostgreSQL qualifiée (quarantaine **maintenue**).
+- [ ] CRITIQUE — épreuves PostgreSQL/PGlite réelles des migrations 05–12, deux sessions, rôle propriétaire et vérification règlement bancaire / achat carte.
+- [ ] Exécution réelle du runner Node sur checkout complet et requalification du SW généré / PWA offline / iPhone Safari.
+- [ ] Valider changement de jour réellement constaté en banque, relevés PDF/CSV/OCR, paiement partiel, transfert neutre, devise Couple, sauvegarde/rollback.
+
+**NO-GO**. Aucun enregistrement de configuration différée réelle ou modification de `main`. Ces cases [x] qualifient une **simulation**, pas une fonctionnalité prête pour des données utilisateurs.
