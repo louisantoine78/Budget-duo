@@ -36,7 +36,7 @@ test('cutover revokes both table-level and column-level document writes',()=>{
 });
 test('household setting direct updates are denied but CAS retains access',()=>{
  assert.match(sql,/revoke update \(name,settings,updated_by\) on table public\.households/);
- assert.doesNotMatch(sql,/grant update \\(name\\) on table public\\.households/);
+ assert.equal(sql.includes('grant update (name) on table public.households'),false);
  assert.match(sql,/has_column_privilege\\('authenticated','public\\.households','name','UPDATE'\\)/);
  assert.match(sql,/has_column_privilege\('authenticated','public\.households','settings','UPDATE'\)/);
  assert.match(pg,/update public\.households set settings/);
