@@ -775,7 +775,7 @@ function traceDeferredAccountReview(card){
  if(!rows.length)return warn('Aucune échéance complète',
   'Les dates d’achat, de budget et de débit doivent être renseignées explicitement.');
  const purchases=[],refunds=[],fees=[],settlements=[];
- let incomplete=0;
+ let incomplete=0,unverifiedConfirmedSettlements=0;
  for(const t of rows){
   const transfer=t.type==='transfer'&&t.toAccountId===card.id;
   const native=transfer?
@@ -802,6 +802,10 @@ function traceDeferredAccountReview(card){
   }else if(transfer&&t.accountId===checking.id&&
      Array.isArray(t.deferredPurchaseIds)&&Array.isArray(t.deferredFeeIds)&&
      t.toBankAmount!==null&&t.toBankAmount!==undefined){
+   // A confirmed transfer is not documentary proof of bank settlement.
+   // Until independently reviewed checking statements are linked here,
+   // a 'confirmed' flag or review metadata must NOT settle liabilities.
+   if(t.status==='confirmed'){unverifiedConfirmedSettlements++;continue;}
    settlements.push({...common,type:'deferred_settlement',
     cardAccountId:card.id,checkingAccountId:checking.id,debitDate:t.date,
     purchaseIds:t.deferredPurchaseIds,feeIds:t.deferredFeeIds,
@@ -810,6 +814,9 @@ function traceDeferredAccountReview(card){
      allocationDueDate:t.deferredDueDate,bankEvidence:t.deferredBankEvidence}: {})});
   }else incomplete++;
  }
+ // Fail closed when confirmed transfers have no verified source linkage.
+ if(unverifiedConfirmedSettlements)return warn('Prélèvement à vérifier',
+  unverifiedConfirmedSettlements+' transfert(s) confirmés sans justificatif bancaire indépendant rattaché à cette fiche. Le statut confirmé et les métadonnées locales ne certifient pas un débit. Aucun solde projeté.');
  // Never display a partial projection when a single bank movement is missing.
  if(incomplete)return warn('Informations bancaires incomplètes',
   incomplete+' mouvement(s) nécessitent une date de budget, une échéance, un montant natif ou un rapprochement explicite. Aucun solde projeté.');
