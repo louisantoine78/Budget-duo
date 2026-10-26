@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — SOURCE CSV UNIQUE ET RPC FAIL-CLOSED
+
+**Reprendre sur le vrai HEAD de** `trace-5.37.0-international-accounts-fx` ; ne pas reprendre un ancien SHA de cet addendum. `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Interdiction : main, PR/merge, CI, déploiement, Supabase réel, données financières ou migrations hébergées. Tous commits `[skip ci]`.
+
+**Nouvel acquis code CANDIDAT du 25 octobre** : migration 11 ajoute index unique partiel `trace_csv_unparsed_source_unique` sur foyer/titulaire/compte/fichier/ligne (numéro normalisé en INTEGER ; "0004" et 4 identiques), précontrôle des anciens documents incomplets, borne `accountId` 240 ; fail-closed de `trace_csv_evidence_guard_ready()` si index absent, non unique ou invalide. Commits `9de886e`, `71f0b96`, `a5f207b`. Tests PG préparés `102491f`, `97c334e`, `19fa718`, `ae8ca41`; contrats V8 `1d62ffb`, `dcf149b`.
+
+**Dernières vérifications RÉELLES** : **20/20 contrôles V8 statiques/lexicaux** avec faux Node fs/path/assert/test sur sources GitHub, compilation syntaxique V8 du harnais. **AUCUN** PostgreSQL/PGlite, aucune migration SQL réellement compilée/appliquée, aucune suite Node CLI complète, aucun Safari. Sur ce conteneur : Node 22, `pg_config` client/dev mais **pas** de binaire `postgres`/`psql`/`initdb`, pas de PGlite, DNS npm/GitHub indisponible.
+
+**Suite immédiate** : qualifier SQL 05–11 sur PostgreSQL/PGlite entièrement fictif avec tests `trace-cas-writes.integration.cjs`, `trace-database.integration.cjs`, `trace-personal-settings-ownership.integration.cjs`, notamment index d'unicité, collision de lignes, RLS/CAS/JWT, deux partenaires/deux foyers, suppression admin CSV+différé, restauration et Realtime. Garder débit différé en quarantaine et production NO-GO ; puis poursuivre les modules financiers et l'UX premium. **Avancement 58 % ±10**.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — INDEX UNIQUE DES LIGNES CSV BANCAIRES
 
 **HEAD à revérifier** sur `trace-5.37.0-international-accounts-fx`. Stable `main` `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun merge, PR, workflow, déploiement, migration hébergée, Supabase réel, reset ni donnée financière personnelle. `[skip ci]` pour chaque commit.
