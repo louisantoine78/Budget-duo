@@ -1,3 +1,20 @@
+## 25 octobre 2026 — ancien compte bancaire des placements : contrôle CAS bidirectionnel
+
+**NO-GO maintenu.** Migration 09 candidate : contrôle du compte bancaire original d'une opération de placement à la modification ET à la suppression. Le compte `bankAccountId` ancien doit encore être la propriété du membre actif et être un courant `checking` (si renseigné). La vérification du compte/portefeuille **nouveau** reste présente. Cette protection n'éteint pas les anciennes écritures directes ; un cutover serveur reste obligatoire après qualification.
+
+- [x] Code candidat commité : `c20be62` `[skip ci]`.
+- [x] Fixtures de risque inter-partenaire et compte manquant préparées dans `tests/trace-cas-writes.integration.cjs` : `2d2da87` `[skip ci]`.
+- [x] Contrats statiques ajoutés aux tests `trace-cas-investment-ownership-static` : `548d820` `[skip ci]`.
+- [x] **28/28** contrôles statiques/lexicaux V8 réussis sur sources actuelles avec dépendances Node simulées ; syntaxe du JS d'intégration valide sous V8.
+- [ ] **CRITIQUE :** exécuter migrations 05–11 sur vrai moteur PostgreSQL/PGlite fictif, vérifier ancien compte bancaire/portefeuille, y compris opérations correctes et celles contenant des comptes absents, RLS et deux membres.
+- [ ] Vérifier et documenter le traitement des anciens comptes sans `type='checking'` et sans automatiser la modification de mouvements financiers historiques.
+- [ ] Verrouiller les écritures directes uniquement après cutover autorisé et vérification des anciens clients ; tester backups/restores, cascade CSV/différé, Realtime et CAS concurrent.
+- [ ] Compléter FX/Couple/immédiat/crédit/PDF/OCR/UX premium et recette Safari physique ; GO humain explicite requis.
+
+La migration SQL modifiée est NON qualifiée : aucun `postgres`, `psql`, `initdb`, PGlite ou téléchargement de dépendance disponible dans le conteneur. `main` intacte ; aucune donnée réelle ni déploiement touché.
+
+---
+
 ## 25 octobre 2026 — la sonde CSV exige un index unique en état valide
 
 **Production NO-GO.** `trace_csv_evidence_guard_ready()` exige désormais `trace_csv_unparsed_source_unique` sur la table documents avec `pg_index.indisunique AND indisvalid AND indisready`. Migration 11 encore **candidate et non appliquée**. Les tests fictifs PostgreSQL simulent la perte de l'index et la réapplication de migration pour contrôler que la capacité de stockage privé s'interrompt puis reprend.
