@@ -28,7 +28,8 @@ test('source and destination amounts must agree with the explicitly declared acc
  assert.equal(I.amountOnAccount({bankAmount:50,bankCurrency:'EUR'},fr),50);
  assert.equal(I.amountOnAccount({toBankAmount:50,toBankCurrency:'USD'},fr,'destination'),null);
  assert.equal(I.amountOnAccount({toBankAmount:50,toBankCurrency:'EUR'},fr,'destination'),50);
- assert.equal(I.amountOnAccount({bankCurrency:'CAD',toBankAmount:95},fr,'destination'),95);
+ assert.equal(I.amountOnAccount({bankCurrency:'CAD',toBankAmount:95},fr,'destination'),null);
+ assert.equal(I.amountOnAccount({bankCurrency:'CAD',toBankAmount:95,toBankCurrency:'EUR'},fr,'destination'),95);
  assert.equal(I.amountOnAccount({bankAmount:'bad',amountCAD:80},ca),null);
  assert.equal(I.amountOnAccount({toBankAmount:'bad',amountCAD:80},ca,'destination'),null);
 });
