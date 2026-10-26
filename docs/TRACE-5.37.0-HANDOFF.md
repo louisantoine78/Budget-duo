@@ -1,3 +1,15 @@
+## 26 octobre 2026 — reprise terminée : rapprochement réellement qualifié pour l'alerte FX bancaire
+
+**Départ confirmé :** HEAD `9974a4bc1d9a792719de4e0ab5f4de01459918e0` sur `trace-5.37.0-international-accounts-fx`. `main` inchangée connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Tous les commits `[skip ci]`, aucun déploiement, CI, PR, merge, SQL distant ou données financières réelles.
+
+**Anomalie corrigée** dans `v5-app-5.37.0.js`, commit `e8df42b92a17ee6389072d6b7fd791d1c34511e5` : la fiche compte `openTraceAccountDetail` utilisait comme borne de l'encart « Justificatifs bancaires à vérifier » un rapprochement affiché `confirmed` avec date plausible, **même sans `actualBalance` et/ou avec une `currency` incohérente**. Le moteur `accountEstimate` excluait déjà ce rapprochement et continuait donc de considérer les opérations précédentes. Ce désalignement pouvait cacher une opération étrangère non qualifiée et afficher un rapprochement trompeur. Les deux modules emploient maintenant les mêmes critères : statut confirmé/complete/matched, `confirmed!==false`, date réelle `I.calendarDate`, devise native du compte (`x.currency||'CAD'`) et `I.exactMoney(actualBalance)!==null`. Aucun document ni solde stocké modifié, seulement lecture.
+
+**Tests ajoutés** dans `tests/trace-international-account-details.test.cjs` commit `92a06832dd44a75aaaf642cca093a5f6f19865fc` : un rapprochement plus récent sans solde ne masque pas les justificatifs EUR ; un rapprochement CAD ne peut masquer les mouvements EUR ; un rapprochement EUR daté et avec montant natif attesté masque les justificatifs antérieurs, sans aucune sauvegarde. **23/23 tests ciblés Account UX passés** sur vrai code du dépôt sous V8 + faux Node/DOM. Regessions fonctionnelles complémentaires sur fichiers actuels : **34/34 tests intégrité monétaire** et **45/45 scénarios historiques CAD**. Total vérifié dans ce passage = **102/102** (23+34+45) sur ces trois suites disjointes. AUCUN vrai navigateur Safari, `node --test` complet ni PostgreSQL/PGlite exécuté. Le compte courant/placement et le budget Couple restent régis par les protections historiques.
+
+**BLOQUANTS** : migrations 05–12 et quatre suites d'intégration sur **PostgreSQL local isolé** encore non qualifiés, recette iPhone Safari complète, UX premium restante, réconciliation CSV/PDF et transitions anciens clients. Migration 12 NON APPLIQUÉE. Pas de GO production, avancement indicatif ~58 % ±10 points.
+
+---
+
 ## Lot de reprise — preuve FX, virements auto-référencés et diagnostic premium de compte
 
 **Branche exclusive** `trace-5.37.0-international-accounts-fx` ; revérifier le HEAD réel au prochain passage. `main` stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`, inchangée. Toutes les écritures GitHub `[skip ci]`. Aucun SQL Supabase réel, données bancaires réelles, PR/merge, Actions/CI ou déploiement.
