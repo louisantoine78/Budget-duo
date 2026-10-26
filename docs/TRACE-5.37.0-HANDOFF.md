@@ -1,3 +1,19 @@
+## 25 octobre 2026 — finances Couple FX : sous-totaux sûrs, zéro alerte périmée (lot confirmé)
+
+Travaux réels uniquement sur `trace-5.37.0-international-accounts-fx` ; résoudre le HEAD au prochain passage. Stable main toujours connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun merge, PR, déclenchement CI, migration hébergée, Supabase réel ni déploiement. Tous commits portent `[skip ci]`.
+
+**Corrections fonctionnelles :**
+- `v5-app-5.37.0.js` : le panneau Accueil **Couple** avec devises mixtes calcule désormais `checkingCAD` et `cardDebt` via sommes contrôlées au centime et non des `reduce` en virgule flottante non bornés. Il ne présente un net vérifié que si les soldes connus, les groupes courants, les dettes cartes et `checkingCAD-cardDebt` sont **tous** sûrs, indépendamment d'une compensation fictive. Le message de détail signale également une précision insuffisante. Le message d'avoir de carte antérieur s'efface maintenant dès la correction de l'avoir. Commits `eb8bf44c57e330636b531f15da24f71f158c1aaa` et `9196905ea344f6143450812379246c2b589fa064`.
+- `trace-international-1.0.0.js` : le moteur `snapshot` qui fournit le patrimoine global CAD vérifie séparément les groupes courants et cartes, puis leur somme. Une paire de 60 000 milliards de comptes et deux dettes opposées de même montant n'apparaît plus comme un patrimoine fiable de zéro après compensation numérique. Le moteur ne touche pas à l'historique ou à la devise native. Commit `75ab7b5af8fd62a2a9f196e3e228b7cf4cfa3152`.
+
+**Tests fictifs ajoutés** dans `tests/trace-international-couple-home.test.cjs` et `tests/trace-international-money-integrity.test.cjs` : overflow de deux soldes courants CAD + EUR, overflow apparent compensé par deux cartes, CAD 0,10 + 0,20 et EUR 0,25 à taux fictif 1,60, disparition après régularisation d'une alerte d'avoir, patrimoines globaux équilibrés mais dépassant les centimes sûrs. Commits `1d115b9268b64eb536c97933f1e396a139dc8297` et `eb408e416663ed530d648e0a30418543eac8d103`.
+
+**Vérification réellement exécutée : 114/114 tests V8 réussis** en deux lots sur les vrais fichiers GitHub (22 moteur financier, 8 Couple mixte, 13 UI comptes, 27 client CAS, 11 release gates, 5 contrat migration12, 28 autres contrats statiques SQL). Environnement de test : dépendances Node, faux DOM, RPC et sous-processus simulés, aucun accès à des comptes réels ; les deux scripts d'intégration SQL vérifiés passent seulement leur syntaxe JavaScript V8. **Ne PAS confondre avec une exécution native `node --test`, PostgreSQL/PGlite ou iPhone Safari**. Migrations SQL 05–12 (dont bascule exclusive 12) NON APPLIQUÉES et NON QUALIFIÉES. Statut production NO-GO ; estimation globale conservatrice ~58 % ±10 points.
+
+Prochaine priorité : obtenir PostgreSQL/PGlite **local** avec données fictives, réellement exécuter 4 suites SQL et corriger, puis régressions FX/Couple/import et parcours premium iPhone. Interdit de contourner ce blocage via le Supabase réel.
+
+---
+
 ## 25 octobre 2026 — cumul banque/placements et vue Couple : calculs exacts de bout en bout
 
 **Branche exclusive** `trace-5.37.0-international-accounts-fx` ; vérifier HEAD à la reprise. Stable `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`, inchangée. Tous commits `[skip ci]`, aucune PR/merge/CI, migration hébergée, Supabase réel, PWA stable ni déploiement.
