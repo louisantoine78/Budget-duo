@@ -2,16 +2,30 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {runGate,isolatedEnv,EXPECTED,PG_TESTS}=
  require('../scripts/check-trace-537-release-gates.cjs');
-function scenario({branch=EXPECTED,dirty=false,sw=0,native=0,pgProbe=0,pgStatuses=[0,0,0,0]}={}){
+function scenario({branch=EXPECTED,dirty=false,untracked='',gitStatusFail=false,
+  sw=0,native=0,nativeSummary=true,pgProbe=0,pgStatuses=[0,0,0,0],
+  pgEmptyOutput=false,pgFindings=0}={}){
  const calls=[],spawn=(cmd,args,options)=>{
   calls.push({cmd,args,options});
   let status=0,stdout='';
   if(cmd==='git'&&args[0]==='branch')stdout=branch+'\n';
-  if(cmd==='git'&&args[0]==='status')stdout=dirty?' M v5-app-5.37.0.js\n':'';
+  if(cmd==='git'&&args[0]==='status'){
+   stdout=(dirty?' M v5-app-5.37.0.js\n':'')+untracked;
+   if(gitStatusFail)status=1;
+  }
   if(args.includes('--check'))status=sw;
-  if(args.includes('scripts/test-trace-native.mjs'))status=native;
+  if(args.includes('scripts/test-trace-native.mjs')){
+   status=native;
+   stdout=nativeSummary?JSON.stringify({syntaxFiles:12,testFiles:47,
+    reportedScenarios:300,failedFiles:0})+'\n':'';
+  }
   if(args.includes('require.resolve(process.argv[1])'))status=pgProbe;
-  const n=PG_TESTS.indexOf(args[0]);if(n>=0)status=pgStatuses[n];
+  const n=PG_TESTS.indexOf(args[0]);
+  if(n>=0){
+   status=pgStatuses[n];
+   stdout=pgEmptyOutput?'':('PASS fictional embedded PostgreSQL check\n'+
+    (n===0?pgFindings+' remaining release-blocking findings\n':''));
+  }
   return{status,stdout,stderr:status?'Fictitious failure':''};
  };
  return{...runGate({spawn,root:'/fake/isolated',node:'/fake/node',
@@ -75,4 +89,47 @@ test('migration-12 SQL privilege cutover must be a mandatory isolated gate',()=>
  const q=scenario({pgStatuses:[0,0,0,1]});
  assert.equal(q.automatedPassed,false);
  assert.ok(q.results.some(x=>x.id==='isolated_pg_trace-cas-exclusive-cutover.integration.cjs'&&!x.passed));
+});
+
+
+test('native process exit zero without a summary is a failed gate',()=>{
+ const q=scenario({nativeSummary:false});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(x=>x.id==='native_evidence_missing'&&!x.passed));
+});
+test('untracked source/test files block a verdict based on git HEAD',()=>{
+ for(const untracked of ['?? tests/untracked.test.cjs\n',
+  '?? v5-candidate-extra.js\n','?? migrations/\n']){
+  const q=scenario({untracked});
+  assert.equal(q.automatedPassed,false);
+  assert.ok(q.results.some(x=>x.id==='clean_snapshot'&&!x.passed));
+ }
+});
+test('untracked local node_modules may supply PGlite but not release approval',()=>{
+ const q=scenario({untracked:'?? node_modules/\n'});
+ assert.equal(q.automatedPassed,true);assert.equal(q.releaseReady,false);
+});
+test('git status failure always fails the release gate',()=>{
+ const q=scenario({gitStatusFail:true});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(x=>x.id==='clean_worktree'&&!x.passed));
+});
+test('embedded PostgreSQL returning zero without executed assertions is blocked',()=>{
+ const q=scenario({pgEmptyOutput:true});
+ assert.equal(q.automatedPassed,false);
+ assert.equal(q.results.filter(x=>x.id.startsWith('isolated_pg_evidence_missing_')).length,4);
+});
+test('unresolved PostgreSQL findings block despite a zero process exit',()=>{
+ const q=scenario({pgFindings:2});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(x=>x.id==='isolated_pg_open_findings_trace-database.integration.cjs'&&!x.passed));
+});
+test('zero findings with passing SQL assertions is automated-only, never production GO',()=>{
+ const q=scenario({pgFindings:0});
+ assert.equal(q.automatedPassed,true);assert.equal(q.releaseReady,false);
+});
+test('release gate inspects untracked candidates, not only tracked modifications',()=>{
+ const q=scenario();
+ assert.ok(q.calls.some(x=>x.cmd==='git'&&x.args[0]==='status'&&
+  x.args.includes('--untracked-files=normal')));
 });
