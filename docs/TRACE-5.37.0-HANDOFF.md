@@ -1,3 +1,5 @@
+> **Complément vérifié — 25 octobre 2026 :** commit `c8e27041a6fd02e11ebc022607ead8bf064f469a` (`[skip ci]`) : le test de suppression refusée vérifie désormais également que la ligne `household_members` et la sauvegarde `trace_v5_backups` survivent à la transaction avortée. **12/12 tests de contrat/lexique exécutés sous V8 avec `node:fs`, `node:path`, `node:assert` et `node:test` simulés, sur sources GitHub actuelles ; aucune exécution PostgreSQL ni suite Node native.** Les tests d'effacement PG restent NON exécutés et représentent un NO-GO.
+
 ## 25 octobre 2026 — reprise sécurisée : effacement foyer différé et intégrité CSV (non qualifié PG)
 
 **Commits candidats [skip ci]** : `c195aeeb6ba5ec43200f1bfc4ea3812919ed1e47`, `666c86668e8ec31a65b9473f6e9ff832e419324e`, `333c2c98f2ee378f46fe53034ce5b1c565ef6d08`. Branche internationale seulement ; `main`, Supabase réel, CI/Actions, preview PWA, déploiement et migrations appliquées inchangés.
