@@ -205,3 +205,26 @@ test('clean authorized candidate still exercises all isolated gates, not product
  assert.equal(q.releaseReady,false);
  assert.equal(q.calls.filter(c=>PG_TESTS.includes(c.args[0])).length,4);
 });
+
+test('every local JS and CSS dependency of stable 5.36.5 is protected',()=>{
+ const {PROTECTED}=require('../scripts/check-trace-537-release-gates.cjs');
+ const fs=require('node:fs'),path=require('node:path');
+ const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+ const local=[...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)=["']([^"']+)/g)]
+  .map(m=>m[1].split(/[?#]/)[0])
+  .filter(v=>v&&!/^(?:https?:|data:|\/\/)/.test(v));
+ for(const asset of local)
+  assert.ok(PROTECTED.includes(asset),'Stable asset outside release guard: '+asset);
+ for(const asset of ['assets','app.js','cloud.js','config.js',
+  'supabase-schema.sql','trace-launch-v2.html','.github'])
+  assert.ok(PROTECTED.includes(asset),'Stable production resource outside guard: '+asset);
+});
+test('protected CSS and helper scripts are passed into immutable candidate diff',()=>{
+ const q=scenario({protectedChanged:true});
+ const diff=q.calls.find(c=>c.cmd==='git'&&c.args[0]==='diff');
+ for(const p of ['trace-smart-inbox-3.4.2.js',
+  'trace-bank-ui-2.8.1.js','v5-5.31.17.css','config.js'])
+  assert.ok(diff.args.includes(p));
+ assert.equal(q.automatedPassed,false);
+ assert.equal(q.calls.some(c=>c.cmd!=='git'),false);
+});
