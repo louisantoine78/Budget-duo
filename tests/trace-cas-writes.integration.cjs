@@ -489,6 +489,11 @@ async function run(){
    await db.exec(await fs.readFile(path.join(root,
      'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
    assert.equal(await probe(),true);
+   await db.exec('drop index public.trace_csv_unparsed_source_unique');
+   assert.equal(await probe(),false,'missing uniqueness index must close evidence intake');
+   await db.exec(await fs.readFile(path.join(root,
+    'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
+   assert.equal(await probe(),true,'reapplying 11 must restore unique source protection');
    assert.equal((await readDoc('imports','csv_unparsed_own')).data.status,'reviewed');
   });
   await check('CSV audit evidence remains private across two separate fictitious households',async()=>{
