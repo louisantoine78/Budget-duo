@@ -347,6 +347,19 @@ async function run(){
     [hid,shared.id]));
    assert.equal(oldView.rows.length,1);
   });
+  await check('server unique index rejects a forged second ID for the same CSV source line',async()=>{
+   const original=(await readDoc('imports','csv_unparsed_own')).data;
+   const duplicate={...original,id:'csv-forged-alias-id',rawText:'different bank wording'};
+   await assert.rejects(rpcSave(1,'imports',duplicate.id,duplicate,null),
+    /trace_csv_unparsed_source_unique|duplicate key|23505/i);
+   assert.equal(await readDoc('imports',duplicate.id),undefined);
+   assert.equal((await readDoc('imports',original.id)).data.rawText,original.rawText);
+   // A genuinely distinct row of the same file must remain separately
+   // auditable without inventing a transaction or modifying the old source.
+   const next={...original,id:'csv-distinct-row-5',sourceIndex:5};
+   assert.equal((await rpcSave(1,'imports',next.id,next,null)).rows[0].revision,0);
+   assert.equal((await readDoc('imports',next.id)).data.sourceIndex,5);
+  });
   await check('partner cannot forge owner or linked bank account in private CSV evidence',async()=>{
    const forged={id:'forged-source',kind:'csv_unparsed',status:'pending_review',
     owner:'la',accountId:'la',source:'csv',sourceFileName:'octobre.csv',
@@ -380,6 +393,8 @@ async function run(){
    },null);
    await assert.rejects(invalid('oversize-name',{
     sourceFileName:'x'.repeat(111)}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(invalid('oversize-account-id',{
+    accountId:'a'.repeat(241)}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
    await assert.rejects(invalid('oversize-row',{
     rawText:'x'.repeat(651)}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
    await assert.rejects(invalid('bad-row-index',{
