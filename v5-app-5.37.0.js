@@ -2884,9 +2884,56 @@ async function copyPreviousBudget(){
     }
   };
 }
-function txRow(t){const c=cat(t.categoryId),pos=['income','refund','external_refund'].includes(t.type),transfer=t.type==='transfer',outside=!isFinancialPeriod(t),label=t.type==='card_statement_evidence'?'Paiement de carte rapproché · sans nouveau mouvement':transfer?(t.toAccountId&&accountType(state.accounts.find(a=>a.id===t.accountId))==='checking'&&
- accountType(state.accounts.find(a=>a.id===t.toAccountId))==='card'?'Paiement de carte de crédit · hors budget':'Transfert entre comptes · hors budget'):t.type==='external_transfer'?(t.transferPurpose==='savings'?(t.investmentAccountId?'Versement vers CELI · '+esc(state.investmentAccounts.find(a=>a.id===t.investmentAccountId)?.name||'CELI')+' · compte courant':'Versement vers CELI · CELI à relier'):t.transferPurpose==='friend_payment_settlement'?'Règlement à un proche · déjà compté':'Virement hors budget'):t.type==='external_refund'?(t.transferPurpose==='friend_reimbursement'?'Remboursement d’un proche · hors budget':t.transferPurpose==='savings_withdrawal'?'Retrait de CELI · hors budget':'Entrée hors budget'):esc(c.name);return `<button type="button" class="tx trace-tx-link ${outside?'trace-outside-start':''}" data-tx-open="${esc(t.id)}"><span class="tx-icon">${esc(c.icon||'◇')}</span><span class="tx-main"><b>${esc(t.name||t.merchant||'Transaction')}</b><small>${label} · ${esc(t.date||'')}${outside?' · Hors solde de départ':''}${t.bankAmount!=null&&window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId))!=='CAD'?' · Env. '+money(t.amountCAD)+' CAD':''}</small></span><span class="tx-amt ${pos?'positive':''}">${t.type==='card_statement_evidence'?'↔ ':transfer?(t.toAccountId?'↔ ':'−'):pos?'+':'−'}${window.TraceInternational.money(t.bankAmount??t.amountCAD,window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId)),0)}</span></button>`;}
-
+function txRow(t){
+ const I=window.TraceInternational,c=cat(t.categoryId);
+ const source=state.accounts.find(a=>a.id===t.accountId);
+ const target=state.accounts.find(a=>a.id===t.toAccountId);
+ // Display the selected bank leg; in the all-account view a currency
+ // filter can select the receiving leg of an international transfer.
+ const receive=!!target&&(activityAccountFilter!=='all'?
+  activityAccountFilter===target.id:
+  activityFilters.currency!=='all'&&I.currency(source)!==activityFilters.currency&&
+  I.currency(target)===activityFilters.currency);
+ const nativeAccount=receive?target:source;
+ const native=nativeAccount?I.amountOnAccount(t,nativeAccount,
+  receive?'destination':'source'):null;
+ const nativeCode=nativeAccount?I.currency(nativeAccount):null;
+ // Historical CAD valuation is never a fallback native EUR/USD amount.
+ const display=native===null||!Number.isFinite(native)?
+  'Montant à vérifier':I.money(Math.abs(native),nativeCode);
+ const pos=['income','refund','external_refund'].includes(t.type),
+  transfer=t.type==='transfer',outside=!isFinancialPeriod(t);
+ const label=t.type==='card_statement_evidence'?
+  'Paiement de carte rapproché · sans nouveau mouvement':
+  transfer?(t.toAccountId&&accountType(source)==='checking'&&
+   accountType(target)==='card'?'Paiement de carte de crédit · hors budget':
+   'Transfert entre comptes · hors budget'):
+  t.type==='external_transfer'?
+   (t.transferPurpose==='savings'?
+    (t.investmentAccountId?'Versement vers CELI · '+
+     esc(state.investmentAccounts.find(a=>a.id===t.investmentAccountId)?.name||'CELI')+
+     ' · compte courant':'Versement vers CELI · CELI à relier'):
+    t.transferPurpose==='friend_payment_settlement'?
+     'Règlement à un proche · déjà compté':'Virement hors budget'):
+  t.type==='external_refund'?
+   (t.transferPurpose==='friend_reimbursement'?
+    'Remboursement d’un proche · hors budget':
+    t.transferPurpose==='savings_withdrawal'?
+     'Retrait de CELI · hors budget':'Entrée hors budget'):esc(c.name);
+ const cad=I.exactMoney(t.amountCAD);
+ const indicative=nativeCode&&nativeCode!=='CAD'&&cad!==null?
+  ' · Env. '+money(cad)+' CAD':'';
+ return '<button type="button" class="tx trace-tx-link '+
+  (outside?'trace-outside-start':'')+'" data-tx-open="'+esc(t.id)+'">'+
+  '<span class="tx-icon">'+esc(c.icon||'◇')+'</span>'+
+  '<span class="tx-main"><b>'+esc(t.name||t.merchant||'Transaction')+
+  '</b><small>'+label+' · '+esc(t.date||'')+
+  (outside?' · Hors solde de départ':'')+indicative+
+  (receive?' · Réception '+esc(nativeCode):'')+'</small></span>'+
+  '<span class="tx-amt '+(pos?'positive':'')+'">'+
+  (t.type==='card_statement_evidence'?'↔ ':transfer?(t.toAccountId?'↔ ':'−'):pos?'+':'−')+
+  esc(display)+'</span></button>';
+}
 /* CSV import: cautious preview; pending until explicit validation */
 function normalizedCsvKey(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');}
 function parseCsv(raw,sep){
@@ -3985,7 +4032,13 @@ function traceActivityRows(){
 function traceActivityPendingRow(t){
  // Show the actual bank leg being reviewed, not the source CAD amount
  // when the current Activity filter selects a EUR transfer recipient.
- const recipient=activityAccountFilter!=='all'&&t.toAccountId===activityAccountFilter;
+ const target=state.accounts.find(x=>x.id===t.toAccountId);
+ const source=state.accounts.find(x=>x.id===t.accountId);
+ const recipient=!!target&&(activityAccountFilter!=='all'?
+  t.toAccountId===activityAccountFilter:
+  activityFilters.currency!=='all'&&window.TraceInternational.currency(source)!==
+   activityFilters.currency&&window.TraceInternational.currency(target)===
+   activityFilters.currency);
  const a=state.accounts.find(x=>x.id===(recipient?t.toAccountId:t.accountId)),
   cur=a?window.TraceInternational.currency(a):null;
  const amount=a?window.TraceInternational.amountOnAccount(t,a,

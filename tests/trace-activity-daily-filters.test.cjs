@@ -20,6 +20,31 @@ window:{TraceInternational:{currency:a=>a.currency,money:(n,c)=>n+' '+c,
 txRow:t=>'<button data-tx-open="'+t.id+'"></button>',renderActivity(){},closeSheet(){},navigate(){},showTab(){}};
 const m=new Function(...Object.keys(ctx),app.slice(i,j)+
 '\nreturn {rows:traceActivityRows,controls:traceActivityControls,group:traceActivityGroupHTML,pending:traceActivityPendingRow,open:openActivityCategory};')(...Object.values(ctx));
+
+const windowReal={TraceInternational:{
+ currency:a=>a?.currency||'CAD',
+ amountOnAccount:(t,a,leg)=> {
+  const cur=a?.currency||'CAD';
+  const explicit=leg==='destination'?t.toBankAmount:t.bankAmount;
+  const actual=explicit??(cur==='CAD'?t.amountCAD:null);
+  return actual===null||actual===undefined||!Number.isFinite(Number(actual))?null:Number(actual);
+ },
+ exactMoney:v=>v===null||v===undefined||v===''?null:
+  Number.isFinite(Number(v))?Number(v):null,
+ money:(n,c)=>Number(n).toFixed(2)+' '+c
+}};
+const realRow=(t,account='all',currency='all')=>{
+ const start=app.indexOf('function txRow(t){'),
+  end=app.indexOf('\n/* CSV import:',start);
+ assert.ok(start>0&&end>start);
+ const real=new Function('state','window','cat','accountType','isFinancialPeriod',
+  'esc','money','activityAccountFilter','activityFilters',
+  'return ('+app.slice(start,end)+');');
+ return real({...state,investmentAccounts:[]},windowReal,id=>({name:'Courses',icon:'◇'}),
+  a=>a?.type,()=>true,String,n=>Number(n).toFixed(2),account,
+  {currency,category:'all',nature:'all',status:'all'})(t);
+};
+
 let n=0;function test(name,fn){fn();n++;console.log('PASS '+name);}
 test('only October confirmed transactions appear by default',()=>assert.deepEqual(m.rows().map(t=>t.id),['a','b']));
 test('account, currency and status selectors are wired',()=>{m.controls();for(const id of ['activityAccountFilter','activityCategoryFilter','activityNatureFilter','activityCurrencyFilter','activityStatusFilter'])assert.equal(typeof $('#'+id).onchange,'function')});
@@ -63,4 +88,51 @@ test('currency filter never silently relabels unknown destination bank amount as
  assert.match(m.pending(transfer),/Montant bancaire à vérifier/);
  assert.doesNotMatch(m.pending(transfer),/40 CAD/);
 });
+
+test('confirmed EUR movement without native bank proof never renders historical CAD as EUR',()=>{
+ const tx={id:'foreign-unproved',date:'2026-10-22',accountId:'fr',type:'expense',
+  status:'confirmed',amountCAD:73.92,bankAmount:null};
+ const markup=realRow(tx,'fr');
+ assert.match(markup,/Montant à vérifier/);
+ assert.doesNotMatch(markup,/73.92 EUR/);
+ assert.doesNotMatch(markup,/−73.92 EUR/);
+});
+test('confirmed EUR expense shows its exact native cent amount and historical CAD reference',()=>{
+ const tx={id:'foreign-proved',date:'2026-10-22',accountId:'fr',type:'expense',
+  status:'confirmed',bankCurrency:'EUR',bankAmount:46.2,amountCAD:73.92};
+ const markup=realRow(tx,'fr');
+ assert.match(markup,/46.20 EUR/);
+ assert.match(markup,/Env. 73.92 CAD/);
+ assert.doesNotMatch(markup,/−73.92 EUR/);
+});
+test('confirmed cross-currency transfer displays receiving EUR leg for EUR filter',()=>{
+ const tx={id:'dual-legged',date:'2026-10-22',accountId:'ca',toAccountId:'fr',
+  type:'transfer',status:'confirmed',bankCurrency:'CAD',bankAmount:40,
+  toBankCurrency:'EUR',toBankAmount:25.5,amountCAD:40};
+ const markup=realRow(tx,'all','EUR');
+ assert.match(markup,/25.50 EUR/);
+ assert.match(markup,/Réception EUR/);
+ assert.doesNotMatch(markup,/40.00 CAD<\/span>/);
+});
+test('missing transfer receipt does not borrow the source amount in EUR Activity',()=>{
+ const tx={id:'missing-receipt',date:'2026-10-22',accountId:'ca',toAccountId:'fr',
+  type:'transfer',status:'confirmed',bankAmount:40,bankCurrency:'CAD',
+  toBankAmount:null,amountCAD:40};
+ const markup=realRow(tx,'fr');
+ assert.match(markup,/Montant à vérifier/);
+ assert.doesNotMatch(markup,/40.00 EUR/);
+});
+test('pending all-account EUR filter displays EUR receipt, not source CAD debit',()=>{
+ const tx={id:'pending-all-eur',date:'2026-10-23',accountId:'ca',toAccountId:'fr',
+  type:'transfer',status:'pending',bankAmount:40,toBankAmount:25.5};
+ const src=app.indexOf('/* TRACE 5.37 — filter and journal display'),
+  dest=app.indexOf('\nfunction renderActivity(){',src);
+ const fake={...ctx,activityAccountFilter:'all',
+  activityFilters:{category:'all',nature:'all',currency:'EUR',status:'pending'}};
+ const view=new Function(...Object.keys(fake),app.slice(src,dest)+
+  '\nreturn traceActivityPendingRow;')(...Object.values(fake));
+ assert.match(view(tx),/25.5 EUR/);
+ assert.doesNotMatch(view(tx),/40 CAD/);
+});
+
 console.log(n+' Activity journal tests passed');
