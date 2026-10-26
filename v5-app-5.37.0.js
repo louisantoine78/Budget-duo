@@ -3968,17 +3968,28 @@ function traceActivityRows(){
   if(activityFilters.status==='confirmed'&&t.status!=='confirmed')return false;
   if(activityFilters.status==='pending'&&t.status==='confirmed')return false;
   if(activityFilters.currency!=='all'){
-   const account=state.accounts.find(a=>a.id===t.accountId);
-   if(!account||window.TraceInternational.currency(account)!==activityFilters.currency)return false;
+   // A cross-currency transfer has two actual native bank legs. Filtering
+   // the recipient's EUR account must not hide it just because its source
+   // account is CAD. For a selected account, use only that account's leg.
+   const ids=activityAccountFilter==='all'?
+    [t.accountId,t.toAccountId]:[activityAccountFilter];
+   if(!ids.some(id=>{
+    const account=state.accounts.find(a=>a.id===id);
+    return account&&window.TraceInternational.currency(account)===activityFilters.currency;
+   }))return false;
   }
   return true;
  }).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||
   String(b.id||'').localeCompare(String(a.id||'')));
 }
 function traceActivityPendingRow(t){
- const a=state.accounts.find(x=>x.id===t.accountId),
+ // Show the actual bank leg being reviewed, not the source CAD amount
+ // when the current Activity filter selects a EUR transfer recipient.
+ const recipient=activityAccountFilter!=='all'&&t.toAccountId===activityAccountFilter;
+ const a=state.accounts.find(x=>x.id===(recipient?t.toAccountId:t.accountId)),
   cur=a?window.TraceInternational.currency(a):null;
- const amount=a?window.TraceInternational.amountOnAccount(t,a,'source'):null;
+ const amount=a?window.TraceInternational.amountOnAccount(t,a,
+  recipient?'destination':'source'):null;
  const amountLabel=amount===null||!Number.isFinite(Number(amount))?
   'Montant bancaire à vérifier':window.TraceInternational.money(Math.abs(Number(amount)),cur);
  return '<button type="button" class="tx trace-tx-link trace-activity-pending" data-tx-open="'+esc(t.id)+'">'+
