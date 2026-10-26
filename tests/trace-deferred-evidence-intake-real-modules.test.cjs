@@ -172,3 +172,55 @@ test('two exclusive installments exceeding purchase native cents are refused',()
    {...f.settlement,id:'p1',amount:'25'},
    {...f.settlement,id:'p2',amount:'16'}]}),/distinctes/);
 });
+
+test('complete EUR settlement reviewed on checking statement keeps real bank delay explicit',()=>{
+ const f=fixture();
+ const s={...f.settlement,id:'full-payment',settlementMode:'full',
+  scheduledDueDate:'2026-12-05',allocationDueDate:undefined,
+  debitDate:'2026-12-08',amount:'40.00',
+  bankEvidence:{...f.settlement.bankEvidence,debitDate:'2026-12-08',amount:'40.00'}};
+ const d={...f.checkingDoc,rows:[{...f.checkingDoc.rows[0],
+  debitDate:'2026-12-08',amount:'40.00'}]};
+ const token=f.root.TraceDeferredBankReview.reviewSnapshot({
+  statement:d,settlement:s});
+ const r=f.root.TraceDeferredEvidenceIntake.review({...f.args,
+  checkingStatements:[d],settlements:[s],
+  settlementReceipts:[{settlementId:'full-payment',approved:true,snapshot:token}]});
+ assert.equal(r.localEvidenceReviewed,true);
+ assert.equal(r.settlementStatuses[0].status,'manual_review_current');
+ assert.equal(r.settlementStatuses[0].bankDateDeviationDays,3);
+ assert.equal(r.settlementStatuses[0].scheduledDueDate,'2026-12-05');
+ assert.equal(r.settlementStatuses[0].observedDebitDate,'2026-12-08');
+ assert.equal(r.persistable,false);assert.equal(r.confirmed,false);
+ assert.equal(r.checkingDebitBooked,0);
+});
+test('full payment for single purchase must equal exact native charge',()=>{
+ const f=fixture();
+ const s={...f.settlement,settlementMode:'full',
+  scheduledDueDate:'2026-12-05',allocationDueDate:undefined};
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[s]}),/distinctes/);
+});
+test('complete payment cannot borrow a different batch due date',()=>{
+ const f=fixture();
+ const s={...f.settlement,settlementMode:'full',
+  scheduledDueDate:'2027-01-05',allocationDueDate:undefined,amount:'40.00'};
+ assert.throws(()=>f.root.TraceDeferredEvidenceIntake.review({
+  ...f.args,settlements:[s]}),/distinctes/);
+});
+test('full payment spanning another purchase cannot become locally batch-complete',()=>{
+ const f=fixture();
+ const s={...f.settlement,id:'mixed-full',settlementMode:'full',
+  scheduledDueDate:'2026-12-05',allocationDueDate:undefined,
+  purchaseIds:[f.plan.document.id,'another-purchase'],amount:'40.00',
+  bankEvidence:{...f.settlement.bankEvidence,amount:'40.00'}};
+ const d={...f.checkingDoc,rows:[{...f.checkingDoc.rows[0],amount:'40.00'}]};
+ const snap=f.root.TraceDeferredBankReview.reviewSnapshot({statement:d,settlement:s});
+ const r=f.root.TraceDeferredEvidenceIntake.review({...f.args,
+  checkingStatements:[d],settlements:[s],settlementReceipts:[
+   {settlementId:'mixed-full',approved:true,snapshot:snap}]});
+ assert.equal(r.settlementStatuses[0].status,'manual_review_current');
+ assert.equal(r.fullBatchEvidenceComplete,false);
+ assert.equal(r.localEvidenceReviewed,false);
+ assert.equal(r.persistable,false);
+});
