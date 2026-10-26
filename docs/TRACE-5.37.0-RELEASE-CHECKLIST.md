@@ -1,3 +1,15 @@
+## 25 octobre 2026 — lot CSV longues lignes, empêchement des faux rapprochements
+
+- [x] Commit `cd94b0a5bd1631fd58ad76d06feafaa51ab9eeea` : non-troncature silencieuse des noms CSV >110 caractères, `rawTruncated` et message de revue explicite si extrait supérieur à 650 caractères, nécessité de vérifier le CSV d'origine.
+- [x] Commit `2da832a6613a0a7727cf304a750646309aac204e` : nouvelle empreinte `rawFingerprint` de la ligne intégrale (FNV-1a 64 bits **non cryptographique**, détection d'erreur accidentelle uniquement). Divergence de deux longues lignes ayant le même préfixe visible = conflit et aucune création bancaire. Vérification en prévisualisation et avant enregistrement. Contrôle fingerprint/longueur dans snapshot de revue ; test de non-régression.
+- [x] Commits `f49610b013e243c4038f358a8e233dbcf261ac4c` et `9ef4e4e37831bf235f6ffb45aa7408915551ec83` : tests SQL fictifs préparés pour deux foyers indépendants, troisième utilisateur propriétaire et suppression admin avec cascade ; **non exécutés**.
+- [x] `98/98` scénarios V8 sous mocks (28 CSV, 6 preview, 7 conflits, 5 partiels, 24 CAS, 6 Accueil, 10 revue, 8 SQL contrats statiques, 4 SQL lexique) et syntaxe JS du test PGlite réussis ; ne pas annoncer « 98 tests PostgreSQL » ou test navigateur.
+- [ ] **NO-GO :** vrai checkout natif avec SQL/PostgreSQL/PGlite pour migrer 05–11 et tester Auth/RLS/CAS, abonnements Realtime, données privées cross-foyer, suppression légitime du foyer contenant des preuves et restauration. Analyser l'interaction du trigger 11 (interdit DELETE) avec cascade depuis suppression utilisateur, actuellement non qualifiée.
+- [ ] Vérifier perf gros CSV, tests vrais navigateurs/FileReader, accessibilité 320–430px et iPhone Safari, régénération SW uniquement via constructeur officiel preview, imports PDF/OCR, Couple multi-devises, cartes CA/FR/différé, patrimoine, backups et rollback. Aucun fichier stable ni donnée réelle modifiés.
+- [ ] **Avancement qualitatif maintenu à 58 % ±10**, candidat seulement et **PRODUCTION NO-GO**.
+
+---
+
 ## 25 octobre 2026 — incident SQL 11 et garde-fou de collision source CSV
 
 - [x] Défaut réel identifié dans la migration candidate 11 : littéral regex `sourceIndex` non terminé, empêchant la qualification SQL. Première tentative `595e66965dbfabf00e5067805beb3c0b7ebdd579` non correcte, supersédée par `26dcc704446798a900aed5623479d6867d2b3a6e` qui reconstruit la migration, préserve le terminateur regex par callback JS et valide l'index dans un `CASE` avant de convertir en entier.

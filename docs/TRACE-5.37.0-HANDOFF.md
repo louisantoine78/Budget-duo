@@ -1,3 +1,20 @@
+## 25 octobre 2026 — preuve CSV longue et intégrité multi-foyer (code candidat)
+
+Dernier HEAD **avant commit doc** `9ef4e4e37831bf235f6ffb45aa7408915551ec83`, branche exclusive `trace-5.37.0-international-accounts-fx`. `main` et 5.36.5 non touchés.
+
+**Correctifs :** au lieu de tronquer sans explication les noms longs (110 caractères maximum) et les extraits bancaires (650 caractères conservés), le candidat refuse un fichier au nom trop long et signale `rawTruncated=true` dans le stockage et la fiche de revue. Le fichier CSV d'origine doit rester disponible pour confirmer la fin d'une ligne trop longue. `rawFingerprint` couvre l'intégralité de la ligne au moyen de FNV-1a 64 bits **NON cryptographique** pour distinguer les réimports longs ayant les mêmes 650 premiers caractères mais un texte final différent. Les champs demeurent des preuves NON FINANCIÈRES `imports.csv_unparsed`; aucune transaction, budget, FX ou virement créé, et pas de suppression automatique. `rawTruncated/rawFingerprint` sont ajoutés au snapshot de revue pour bloquer un changement asynchrone. Migration SQL 11 non appliquée, donc aucune assurance serveur.
+
+**Commits :**
+- `cd94b0a5bd1631fd58ad76d06feafaa51ab9eeea` — source CSV explicite et avertissement des extraits incomplets.
+- `2da832a6613a0a7727cf304a750646309aac204e` — empreinte déterministe du contenu complet et tests FNV64.
+- `f49610b013e243c4038f358a8e233dbcf261ac4c` + `9ef4e4e37831bf235f6ffb45aa7408915551ec83` — test PostgreSQL fictif troisième membre / autre foyer, absence de lecture et écriture cross-tenant, suppression admin cascade ; correction fixture JSONB. Tests SQL NON exécutés.
+
+**Couverture de cette session : `98/98` vrais tests client/contrats sources via simulateur V8, y compris SQL statique lexical uniquement ; suite native pas exécutée. Répartition 28+6+7+5+24+6+10+8+4. Le banc PostgreSQL a été validé seulement pour syntaxe JavaScript, pas SQL, pas RLS. Contrôles Realtime, Auth multi-session, PostgreSQL, CAS serveur, sauvegarde/restauration et effacement fonctionnel restent le blocage. Le trigger 11 interdit actuellement les suppressions individuelles de preuve et pourrait empêcher des cascades d'effacement utilisateur : **à tester avant release et à corriger selon une autorisation serveur vérifiée**, pas en levant aveuglément cette règle. Documentation Supabase : ne pas utiliser `payload.old.data` sous RLS comme source fiable pour Realtime.
+
+**Environnement :** conteneur sans serveur PostgreSQL/PGlite ni checkout réseau; aucun projet Supabase réel accédé; GitHub connector uniquement. Pas de changements à `main`, `sw.js`, workflows, prod ou Supabase. Estimation 58 % qualitative, PRODUCTION NO-GO. La conversation devient longue : démarrer la suite dans un nouveau chat sur les 3 docs.
+
+---
+
 ## 25 octobre 2026 — audit de la migration 11 : correction d'un SQL non exécutable
 
 **HEAD de code :** `a6bd854de0a3618786d58fc056431708611a65d3` avant actualisation du présent fichier. Branche internationale exclusive, stable `main` non modifiée.
