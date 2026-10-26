@@ -5395,7 +5395,11 @@ function openBankMetadata(id){
     const prepare=window.TraceDeferredDebit?.proposeScheduleRevision;
     if(typeof prepare!=='function')
      throw Error('Simulation du calendrier différé indisponible.');
-    const proposal=prepare({card:account,asOfDate:localDateISO(),
+    const proposal=prepare({card:account,owner:me,
+     checking:state.accounts.find(a=>a.id===account.settlementAccountId&&
+      a.owner===me&&a.type==='checking'&&!a.archived&&
+      I.currency(a)==='EUR'&&I.country(a)==='FR'),
+     asOfDate:localDateISO(),
      effectiveDate:$('#traceBankMetaRevisionEffective').value,
      debitDay:$('#traceBankMetaRevisionDebit').value,
      closingDay:$('#traceBankMetaRevisionClosing').value});
