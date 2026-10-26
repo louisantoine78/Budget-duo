@@ -4531,13 +4531,22 @@ async function saveDocument(collection,item){
    throw Error('Identifiant du document manquant.');
   traceRefuseUnqualifiedDeferredWrite(collection,item);
   const id=String(item.id),key=traceWriteKey(collection,id);
+  // Freeze the user's intended JSON at call time. Later edits may mutate
+  // the same object while a previous CAS write is still queued; without a
+  // snapshot, the queued RPC could unexpectedly post those later amounts.
+  // A JSON roundtrip also matches what the database will serialize.
+  const requested=JSON.parse(JSON.stringify(item));
   return traceSerialWrite(key,async()=>{
    if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+   // Keep the existing fail-closed deferred check against the LIVE model
+   // and original object: a card or the caller's metadata can become
+   // deferred while queued. Never interpret such a transition as permission.
    traceRefuseUnqualifiedDeferredWrite(collection,item);
+   traceRefuseUnqualifiedDeferredWrite(collection,requested);
    const expected=traceDocRevisions.has(key)?traceRevision(traceDocRevisions.get(key)):null;
    const {data,error}=await client.rpc('trace_cas_save_document',{
     p_household_id:household.id,p_collection:collection,p_item_id:id,
-    p_data:item,p_expected_revision:expected});
+    p_data:requested,p_expected_revision:expected});
    if(error)throw traceSaveFailure(error);
    traceDocRevisions.set(key,traceRevision(data));sync('synced');
   });
