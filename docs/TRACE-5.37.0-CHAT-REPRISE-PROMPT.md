@@ -1,3 +1,13 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — SOLDES COURANTS / COUPLE AU CENTIME
+
+Résoudre le HEAD courant de `trace-5.37.0-international-accounts-fx`, seul espace de travail autorisé. Stable `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Jamais Supabase réel, finance utilisateur, PR/merge/CI, Actions, déploiement, production ni modifications main. Tous commits `[skip ci]`.
+
+**Nouveau code réel :** `v5-app-5.37.0.js` commits `5f63f9c`, `3cf397e` : `accountEstimate` refuse toute somme numériquement non sûre de transactions et investissements, vérifie chaque étape **contre le solde d'ouverture/rapprochement** pour empêcher qu'une entrée et sortie opposées cachent un dépassement intermédiaire. `bank('la'|'partner'|'couple')` contrôle chaque somme de comptes CAD, cartes et dettes, et affiche `null` au lieu de chiffres inventés. Test `tests/trace-international-money-integrity.test.cjs` `bee1bb1c` ajoute 5 scénarios fictifs extrêmes et centimes normaux.
+
+**Résultat exact de l'exécution : 93/93 tests V8 réussis** sur vrais fichiers du dépôt (20 finances, 13 UI, 27 CAS client, 33 contrats statiques SQL) avec imports Node/DOM/RPC simulés. Deux harnais PG syntaxe V8 PASS. **Aucune** vraie exécution PostgreSQL/PGlite, Node CLI checkout complet, Safari/iPhone ou Supabase hébergé. SQL 05–12 dont bascule CAS 12 NON QUALIFIÉ/NON APPLIQUÉ. Préserver historique CAD, pas de conversion FX inventée, débit différé quarantaine, et UX premium validée. Prochaine étape stratégique : obtenir moteur PG fictif et qualifications PG/RLS puis recette Safari/flux financiers. ~58 % ±10 ; production NO-GO.
+
+---
+
 # ADDENDUM — 25 OCTOBRE 2026 — ALERTES ET SOLDE ACCUEIL INTERNATIONAL
 
 Vérifier le HEAD live de `trace-5.37.0-international-accounts-fx`. Commits `[skip ci]` récents : `daa260b` et `0952ad4` (pas d'anciens chiffres quand dernier courant disparu/archivé) ; `ec256fc` et `140d893` (avertissements explicites si carte multidevise mal liée ou lien de règlement ambigu). **13/13 tests fake-DOM V8 exécutés sur vraie UI**, dépendances Node simulées ; aucun Safari physique et pas de suite native `node --test`. Pas de PostgreSQL/PGlite local ni d'accès DNS npm ; **SQL 05–12 NON QUALIFIÉ, migration12 NON APPLIQUÉE**. Aucune PR, merge, CI, déploiement, données Supabase réelles, modification main (stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`). Garder ~58 % ±10 et NO-GO.
