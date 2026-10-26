@@ -1,3 +1,11 @@
+# ADDENDUM — 25 OCTOBRE 2026 — ALERTES ET SOLDE ACCUEIL INTERNATIONAL
+
+Vérifier le HEAD live de `trace-5.37.0-international-accounts-fx`. Commits `[skip ci]` récents : `daa260b` et `0952ad4` (pas d'anciens chiffres quand dernier courant disparu/archivé) ; `ec256fc` et `140d893` (avertissements explicites si carte multidevise mal liée ou lien de règlement ambigu). **13/13 tests fake-DOM V8 exécutés sur vraie UI**, dépendances Node simulées ; aucun Safari physique et pas de suite native `node --test`. Pas de PostgreSQL/PGlite local ni d'accès DNS npm ; **SQL 05–12 NON QUALIFIÉ, migration12 NON APPLIQUÉE**. Aucune PR, merge, CI, déploiement, données Supabase réelles, modification main (stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`). Garder ~58 % ±10 et NO-GO.
+
+Next : exécuter PG isolé fictif (4 suites), puis UI Safari et flux FX/Couple/cartes historiques, stabilité, sauvegardes/restauration. Ne pas recommencer les choix UX/UI déjà approuvés.
+
+---
+
 # ADDENDUM RECTIFICATIF — 25 OCTOBRE — TOTAUX SÛRS ET ARRONDIS
 
 Derniers commits supplémentaires `41481110` (arrondi final à 2 décimales après validation des centimes sûrs, dans `trace-international-1.0.0.js`) et `5dcbf143` (test 0,10+0,20 / 0,30−0,20) sur la branche internationale, `[skip ci]`. **Bilan final corrigé : 20/20 tests V8 de ce lot** — 15 vrais scénarios financiers + 5 contrats SQL12, Node simulé. Aucun vrai PostgreSQL/PGlite, aucun Safari physique, aucune activation de migration12 ni modification main, Supabase réel. Priorité inchangée : PG fictif puis validations app.
