@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — PREUVE DE DEVISE BANQUE ET PLACEMENTS
+
+Résoudre le HEAD GitHub de `trace-5.37.0-international-accounts-fx` à la reprise. Ne jamais toucher `main` (stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`), Supabase réel, données financières, PR, merge, CI/Actions, service worker production, déploiement. Commits `[skip ci]`. Ne PAS recommencer les choix UX/financiers validés.
+
+**Nouveau code :** `trace-international-1.0.0.js` (`662a98a`, `d738ba8`) refuse désormais les réceptions bancaires de transferts FX sans `toBankCurrency`, ainsi que les sorties et versements banque/épargne/placements en devise étrangère sans `bankCurrency` / `investmentCurrency` explicitement attestées. Les historiques CAD→CAD sans champs devises restent admis. Les nouveaux parcours de capture manuelle et smart ajoutent les devises requises. Absence de preuve = `null`, jamais taux=1 implicite ou somme étrangère calculée sur CAD.
+
+**Tests récents :** `tests/trace-international-money-integrity.test.cjs` nouveaux cas sources, destinations et placements; `tests/trace-international.test.cjs` fixture CAD→EUR avec EUR déclaré; `tests/trace-international-legacy-ledger.test.cjs` `7b56ff1` corrige une dépendance test `traceBudgetPostingMonth` manquante, ajoute scénario budget différé. **249/249 tests V8** exécutés sur les sources Github actuelles dans plusieurs lots : 28 money, 13 UI comptes, 27 CAS, 8 smart FX, 27 international, 10 investissements, 8 Couple, 9 épargne, 11 banque, 19 invariants, 45 legacy, 44 contrats SQL/release. Environnement de tests avec Node/VM/DOM/RPC simulés, pas de vrai `node --test` checkout, aucune exécution PG/PGlite et aucun Safari physique. Les deux harnais PG n'ont été vérifiés qu'en syntaxe JS.
+
+**Suite** : PostgreSQL/PGlite fictif impératif migrations 05–12 et 4 suites, puis FX couple/imports/placements/UX premium iPhone, revue des documents internationaux anciens sans devises attestées (ne pas corriger automatiquement). Avancement prudent ~58 % ±10, production NO-GO.
+
+---
+
 # ADDENDUM — 25 OCTOBRE 2026 — COUPLE MULTIDEVISES, SITUATION GLOBALE FIABLE
 
 Vérifier en premier le vrai HEAD live de `trace-5.37.0-international-accounts-fx` et `main` (stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`). Ne pas reprendre la conception ni réouvrir décisions UX/finances validées. Code candidat seulement, commits `[skip ci]`. Jamais PR/merge, Actions/CI, déploiement, service worker de production, Supabase réel ou données financières réelles.
