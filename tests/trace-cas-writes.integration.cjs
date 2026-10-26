@@ -152,6 +152,37 @@ async function run(){
    assert.equal((await rpcDelete(1,'investment_operations','op-la',1)).rows[0].ok,true);
    assert.equal(await readDoc('investment_operations','op-la'),undefined);
   });
+  await check('CAS cannot launder historical investment bank legs owned by another member',async()=>{
+   // Reproduce a legacy write predating the ownership guard: this historical
+   // operation belongs to la's portfolio, yet debits the partner's checking
+   // account. Security-definer edits/deletes must NOT bypass that old leg.
+   const legacy={id:'legacy-investment-foreign-bank',accountId:'pea-la',
+    bankAccountId:'partner',type:'deposit',bankAmount:45,
+    bankCurrency:'EUR',status:'confirmed'};
+   await db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'investment_operations',legacy.id,JSON.stringify(legacy),uid(1)]);
+   const original=await readDoc('investment_operations',legacy.id);
+   assert.equal(original.revision,0);
+   await assert.rejects(rpcSave(1,'investment_operations',legacy.id,{
+    ...legacy,bankAccountId:'la',bankAmount:50},0),/TRACE_WRITE_CONFLICT/);
+   await assert.rejects(rpcDelete(1,'investment_operations',legacy.id,0),
+    /TRACE_WRITE_CONFLICT/);
+   const remaining=await readDoc('investment_operations',legacy.id);
+   assert.deepEqual(remaining.data,legacy);
+   assert.equal(remaining.revision,0,'rejected edits must not increment revision');
+   // A missing historic bank account must also fail closed, not silently
+   // become removable via a rewritten valid bank reference.
+   const missing={...legacy,id:'legacy-investment-missing-bank',
+    bankAccountId:'deleted-checking'};
+   await db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'investment_operations',missing.id,JSON.stringify(missing),uid(1)]);
+   await assert.rejects(rpcSave(1,'investment_operations',missing.id,{
+    ...missing,bankAccountId:'la'},0),/TRACE_WRITE_CONFLICT/);
+   await assert.rejects(rpcDelete(1,'investment_operations',missing.id,0),
+    /TRACE_WRITE_CONFLICT/);
+  });
   await check('arbitrary collections cannot be written by privileged RPC',async()=>{
    await assert.rejects(rpcSave(1,'unknown_settings','intruder',
     {id:'intruder',amountCAD:9000},null),/TRACE_WRITE_INVALID/);
