@@ -11,8 +11,10 @@ function estimate(bank,opening,transactions=[],investmentOperations=[]){
  assert.ok(from>0&&to>from);
  const state={household:{accountOpeningBalances:{[bank.id]:opening}},transactions,
  investmentOperations,reconciliations:[]};
+ const helperStart=app.indexOf('function traceLinkedBankTransactionCovers(');
+ assert.ok(helperStart>0&&helperStart<from);
  return new Function('state','window','accountType','openingBoundary','afterBoundary',
- 'return ('+app.slice(from,to)+');')(state,root,a=>a.type,
+ app.slice(helperStart,from)+'\nreturn ('+app.slice(from,to)+');')(state,root,a=>a.type,
  ()=>({date:'2026-10-01',mode:'start'}),()=>true)(bank);
 }
 test('CAD legacy 300 debit',()=>assert.equal(I.investmentBankAmount({bankAmountCAD:300},CAD),300));

@@ -15,7 +15,9 @@ async function test(name,run){await run();count++;console.log('PASS '+name);}
 function extract(name,next,args){
  const from=app.indexOf('function '+name+'('),to=app.indexOf('\nfunction '+next+'(',from);
  assert.ok(from>0&&to>from,'Missing source function '+name);
- return new Function(...Object.keys(args),'return ('+app.slice(from,to)+');')(...Object.values(args));
+ const helper=name==='accountEstimate'?
+  app.slice(app.indexOf('function traceLinkedBankTransactionCovers('),from):'';
+ return new Function(...Object.keys(args),helper+'\nreturn ('+app.slice(from,to)+');')(...Object.values(args));
 }
 function estimate(opening,reconciliations=[],transactions=[]){
  const state={household:{accountOpeningBalances:{ca:opening}},reconciliations,transactions,investmentOperations:[]};

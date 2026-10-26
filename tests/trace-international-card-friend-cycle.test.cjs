@@ -30,7 +30,9 @@ const merchantRefund={id:'merchant-refund',type:'refund',status:'confirmed',
 function pick(name,deps){
  const from=app.indexOf('function '+name+'('),to=app.indexOf('\nfunction ',from+10);
  assert.ok(from>=0&&to>from,'Missing real function '+name);
- return new Function(...Object.keys(deps),'return ('+app.slice(from,to)+');')(...Object.values(deps));
+ const helper=name==='accountEstimate'?
+  app.slice(app.indexOf('function traceLinkedBankTransactionCovers('),from):'';
+ return new Function(...Object.keys(deps),helper+'\nreturn ('+app.slice(from,to)+');')(...Object.values(deps));
 }
 function scenario(transactions=[],reconciliations=[]){
  const state={household:{referenceDate:'2026-10-01',accountOpeningBalances:{ca:1000,mc:0},
@@ -43,7 +45,8 @@ function scenario(transactions=[],reconciliations=[]){
  const split=pick('split',{state});
  const alloc=pick('alloc',{split});
  const isFinancialPeriod=pick('isFinancialPeriod',{state,openingBoundary,afterBoundary,window:root});
- const txs=pick('txs',{state,isFinancialPeriod,split});
+ const traceBudgetPostingMonth=pick('traceBudgetPostingMonth',{window:root});
+ const txs=pick('txs',{state,isFinancialPeriod,split,traceBudgetPostingMonth});
  const summary=pick('summary',{state,txs,alloc,cat:()=>({type:'expense'}),budgetAmt:()=>0});
  const accountEstimate=pick('accountEstimate',{state,openingBoundary,afterBoundary,accountType,window:root});
  const sharingMovement=pick('sharingMovement',{split});
