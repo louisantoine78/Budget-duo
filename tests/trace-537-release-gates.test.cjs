@@ -5,17 +5,26 @@ const {runGate,isolatedEnv,EXPECTED,PG_TESTS}=
 function scenario({branch=EXPECTED,dirty=false,untracked='',gitStatusFail=false,
   baseAncestor=true,protectedChanged=false,commits='fix(candidate): safe [skip ci]\\n',
   vercelDisabled=true,vercelMissing=false,
+  candidateHead='0123456789abcdef0123456789abcdef01234567',
+  headAfter=null,branchAfter=null,dirtyAfter=false,
   sw=0,native=0,nativeSummary=true,pgProbe=0,pgStatuses=[0,0,0,0],
   pgEmptyOutput=false,pgFindings=0}={}){
  const calls=[],spawn=(cmd,args,options)=>{
   calls.push({cmd,args,options});
   let status=0,stdout='';
-  if(cmd==='git'&&args[0]==='branch')stdout=branch+'\n';
+  if(cmd==='git'&&args[0]==='branch')stdout=
+   ((calls.filter(c=>c.cmd==='git'&&c.args[0]==='branch').length>1
+     ?branchAfter||branch:branch)+'\n');
+  if(cmd==='git'&&args[0]==='rev-parse')stdout=
+   ((calls.filter(c=>c.cmd==='git'&&c.args[0]==='rev-parse').length>1
+     ?headAfter||candidateHead:candidateHead)+'\n');
   if(cmd==='git'&&args[0]==='merge-base')status=baseAncestor?0:1;
   if(cmd==='git'&&args[0]==='diff')status=protectedChanged?1:0;
   if(cmd==='git'&&args[0]==='log')stdout=commits.replaceAll('\\n','\n');
   if(cmd==='git'&&args[0]==='status'){
-   stdout=(dirty?' M v5-app-5.37.0.js\n':'')+untracked;
+   const post=calls.filter(c=>c.cmd==='git'&&c.args[0]==='status').length>1;
+   stdout=((post?dirtyAfter:dirty)?' M v5-app-5.37.0.js\n':'')+
+    (post?'':untracked);
    if(gitStatusFail)status=1;
   }
   if(args.includes('--check'))status=sw;
@@ -48,7 +57,7 @@ test('refuses main and other branches before executing financial tools',()=>{
 test('all fictional automated gates passing is still not a production GO',()=>{
  const q=scenario();
  assert.equal(q.automatedPassed,true);assert.equal(q.releaseReady,false);
- assert.equal(q.calls.length,12);assert.ok(q.manualRequired.length>=5);
+ assert.equal(q.calls.length,16);assert.ok(q.manualRequired.length>=5);
 });
 test('supabase credentials and NODE_OPTIONS are never propagated to children',()=>{
  const q=scenario();
@@ -227,4 +236,37 @@ test('protected CSS and helper scripts are passed into immutable candidate diff'
   assert.ok(diff.args.includes(p));
  assert.equal(q.automatedPassed,false);
  assert.equal(q.calls.some(c=>c.cmd!=='git'),false);
+});
+
+
+test('candidate cannot change HEAD midflight while keeping green test exits',()=>{
+ const q=scenario({headAfter:'abcdef0123456789abcdef0123456789abcdef01'});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(r=>r.id==='candidate_head_moved'&&!r.passed));
+ assert.equal(q.releaseReady,false);
+});
+test('tests cannot switch branches and inherit a green candidate gate',()=>{
+ const q=scenario({branchAfter:'main'});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(r=>r.id==='candidate_branch_moved'&&!r.passed));
+});
+test('a test-generated tracked change invalidates otherwise passing QA',()=>{
+ const q=scenario({dirtyAfter:true});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(r=>r.id==='final_snapshot_dirty'&&!r.passed));
+});
+test('a malformed candidate SHA is not acceptable release evidence',()=>{
+ for(const candidateHead of ['','not-a-sha','01234']){
+  const q=scenario({candidateHead});
+  assert.equal(q.automatedPassed,false);
+  assert.ok(q.results.some(r=>r.id==='candidate_head_invalid'&&!r.passed));
+  assert.equal(q.calls.some(c=>c.cmd!=='git'),false);
+ }
+});
+test('clean HEAD and identical branch after Node+PG checks still require manual GO',()=>{
+ const q=scenario();
+ assert.equal(q.automatedPassed,true);
+ assert.equal(q.releaseReady,false);
+ assert.ok(q.results.some(r=>r.id==='candidate_head_after'&&r.passed));
+ assert.ok(q.results.some(r=>r.id==='final_worktree'&&r.passed));
 });

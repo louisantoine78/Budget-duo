@@ -108,6 +108,12 @@ function runGate({spawn=spawnSync,root=ROOT,env=process.env,
    message:'Refus : branche autorisée '+EXPECTED+' uniquement'});
   return{automatedPassed:false,releaseReady:false,results,manualRequired:MANUAL};
  }
+ // Pin the exact immutable snapshot checked before running any candidate
+ // code. The subsequent tests must not change HEAD behind the reviewer's back.
+ const initialHead=exec('candidate_head','git',['rev-parse','HEAD'],10000);
+ if(initialHead.passed&&!/^[0-9a-f]{40}$/i.test(initialHead.stdout.trim()))
+  results.push({id:'candidate_head_invalid',passed:false,
+   message:'SHA du candidat invalide ou illisible.'});
  // The branch name alone cannot guarantee that production assets and
  // workflow definitions stayed untouched during candidate development.
  exec('mission_base_ancestor','git',
@@ -173,6 +179,24 @@ function runGate({spawn=spawnSync,root=ROOT,env=process.env,
  }
  else results.push({id:'isolated_pg_blocked',passed:false,
   message:'PGlite local introuvable. Ne jamais substituer un Supabase hébergé.'});
+ // Fail closed if a test script changed or produced any tracked/untracked
+ // candidate source, switched the branch, or moved HEAD during qualification.
+ const afterHead=exec('candidate_head_after','git',['rev-parse','HEAD'],10000);
+ if(initialHead.passed&&afterHead.passed&&
+    afterHead.stdout.trim()!==initialHead.stdout.trim())
+  results.push({id:'candidate_head_moved',passed:false,
+   message:'HEAD a changé pendant les tests : qualifications non reproductibles.'});
+ const afterBranch=exec('candidate_branch_after','git',
+  ['branch','--show-current'],10000);
+ if(afterBranch.passed&&afterBranch.stdout.trim()!==EXPECTED)
+  results.push({id:'candidate_branch_moved',passed:false,
+   message:'Branche candidate changée pendant les tests.'});
+ const afterWorking=exec('final_worktree','git',
+  ['status','--porcelain=v1','--untracked-files=normal'],10000);
+ if(afterWorking.passed&&afterWorking.stdout.split(/\r?\n/).some(s=>
+    s.trim()&&s!=='?? node_modules/'))
+  results.push({id:'final_snapshot_dirty',passed:false,
+   message:'Les tests ont modifié des fichiers : la qualification HEAD est invalide.'});
  return{automatedPassed:results.every(r=>r.passed),releaseReady:false,
   results,manualRequired:MANUAL};
 }
