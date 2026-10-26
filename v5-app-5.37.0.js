@@ -277,6 +277,13 @@ function traceLinkedBankTransactionCovers(o,account,boundary){
   (t.accountId===account.id||t.toAccountId===account.id)&&
   afterBoundary(t.date,boundary));
  if(!t)return false; // Pending, old or statement-only links are not counted.
+ // One confirmed bank leg cannot fund two different placement movements.
+ // Detect a second eligible claimant before a matching amount could hide it.
+ if((state.investmentOperations||[]).some(other=>other!==o&&
+  other.linkedTransactionId===o.linkedTransactionId&&
+  other.bankAccountId===account.id&&['deposit','withdrawal'].includes(other.type)&&
+  (!other.status||other.status==='confirmed')&&afterBoundary(other.date,boundary)))
+  return null;
  const debit=t.accountId===account.id,credit=t.toAccountId===account.id;
  if(debit&&credit)return null; // Invalid self-transfer.
  const directionOk=o.type==='deposit'?

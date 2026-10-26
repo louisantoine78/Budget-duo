@@ -84,4 +84,16 @@ test('statement-only evidence cannot suppress the cash deposit leg',()=>{
   bankAmountCAD:300,linkedTransactionId:'marker'};
  assert.equal(estimate(CAD,1000,[tx],[op]),700);
 });
+
+test('two investments cannot both claim one confirmed CAD bank debit',()=>{
+ const tx={id:'single-debit',type:'external_transfer',accountId:'cad',
+  status:'confirmed',date:'2026-10-12',amountCAD:100};
+ const first={id:'investment-a',bankAccountId:'cad',type:'deposit',
+  status:'confirmed',date:'2026-10-12',bankAmountCAD:100,linkedTransactionId:'single-debit'};
+ const second={...first,id:'investment-b',date:'2026-10-13'};
+ assert.equal(estimate(CAD,1000,[tx],[first,second]),null);
+ // Separate deposit legs without duplicated links remain ordinary cash debits.
+ assert.equal(estimate(CAD,1000,[],[
+  {...first,linkedTransactionId:null},{...second,linkedTransactionId:null}]),800);
+});
 console.log(count+' bank-native investment tests passed');

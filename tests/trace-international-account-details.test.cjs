@@ -328,6 +328,24 @@ async function main(){
   assert.match(f.$('#sheetBody').innerHTML,/Opération de placement/);
   assert.equal(f.calls.save,0);assert.equal(JSON.stringify(f.state),before);
  });
+
+ await test('two placements citing one bank transaction raise visible read-only alerts',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.state.transactions.push({id:'single-real-debit',accountId:'fr',type:'expense',
+   status:'confirmed',date:'2026-10-12',bankCurrency:'EUR',bankAmount:46.2});
+  const first={id:'investment-one',bankAccountId:'fr',type:'deposit',
+   status:'confirmed',date:'2026-10-12',bankCurrency:'EUR',bankAmount:46.2,
+   linkedTransactionId:'single-real-debit'};
+  f.state.investmentOperations=[first,{...first,id:'investment-two',date:'2026-10-13'}];
+  const original=JSON.stringify(f.state);
+  f.openTraceAccountDetail('fr');
+  const html=f.$('#sheetBody').innerHTML;
+  assert.match(html,/Justificatifs bancaires à vérifier/);
+  assert.match(html,/2 mouvement\(s\)/);
+  assert.match(html,/Opération de placement/);
+  assert.equal(f.calls.save,0);assert.equal(JSON.stringify(f.state),original);
+ });
  await test('bank proof provides an accessible scoped Activity link without saving',()=>{
   const f=fixture({strictEvidence:true}),before=JSON.stringify(f.state);
   f.openTraceAccountDetail('fr');
