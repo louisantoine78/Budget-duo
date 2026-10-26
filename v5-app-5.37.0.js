@@ -282,48 +282,80 @@ function accountEstimate(a){
  if(base===null||!I.calendarDate(boundary.date))return null;
  const movement=state.transactions.filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
   if(t.type==='card_statement_evidence')return x;
-  const v=window.TraceInternational.amountOnAccount(t,a,t.toAccountId===a.id?'destination':'source');
-  if(v===null||!Number.isFinite(v))return NaN;
-  if(t.type==='transfer'&&t.toAccountId===a.id)return x+v;
-  if(accountType(a)==='card'){
-   if(['expense','group_expense','person_payment'].includes(t.type))return x-v;
-   if(['refund','external_refund','transfer'].includes(t.type))return x+v;
+  const v=I.amountOnAccount(t,a,t.toAccountId===a.id?'destination':'source');
+  if(v===null||!Number.isFinite(v)||!Number.isFinite(x))return NaN;
+  let delta=0;
+  if(t.type==='transfer'&&t.toAccountId===a.id)delta=v;
+  else if(accountType(a)==='card'){
+   if(['expense','group_expense','person_payment'].includes(t.type))delta=-v;
+   if(['refund','external_refund','transfer'].includes(t.type))delta=v;
   }else{
-   if(['income','refund','external_refund'].includes(t.type))return x+v;
-   if(['expense','group_expense','person_payment','transfer','external_transfer'].includes(t.type))return x-v;
+   if(['income','refund','external_refund'].includes(t.type))delta=v;
+   if(['expense','group_expense','person_payment','transfer','external_transfer'].includes(t.type))delta=-v;
   }
-  return x;
+  // Every intermediate booked subtotal must retain safe, exact cents.
+  // An overflowing debit must not be concealed by a later opposite credit.
+  const subtotal=I.exactMoney(x+delta);
+  return subtotal===null?NaN:Math.round(subtotal*100)/100;
  },0);
  const investMovement=state.investmentOperations.filter(o=>o.bankAccountId===a.id&&
    (!o.status||o.status==='confirmed')&&afterBoundary(o.date,boundary)).reduce((v,o)=>{
     if(!['deposit','withdrawal'].includes(o.type))return v;
     if(o.linkedTransactionId&&state.transactions.some(t=>t.id===o.linkedTransactionId&&
      t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)))return v;
-    const native=window.TraceInternational.investmentBankAmount(o,a);
-    return native===null?NaN:v+(o.type==='deposit'?-native:native);
+    const native=I.investmentBankAmount(o,a);
+    if(native===null||!Number.isFinite(v))return NaN;
+    const subtotal=I.exactMoney(v+(o.type==='deposit'?-native:native));
+    return subtotal===null?NaN:Math.round(subtotal*100)/100;
    },0);
- const total=base+movement+investMovement;return Number.isFinite(total)?total:null;
+ // Never repair an unsafe opening + transaction subtotal by offsetting it
+ // against another, unrelated investment movement.
+ const beforeInvestment=I.exactMoney(base+movement);
+ if(beforeInvestment===null||I.exactMoney(investMovement)===null)return null;
+ const total=I.exactMoney(beforeInvestment+investMovement);
+ return total===null?null:Math.round(total*100)/100;
 }
 function bank(s){
- const owners=s==='couple'?['la','partner']:[s];
- let checking=0,card=0,cardDebt=0,cardCredit=0,hc=false,hv=false,missingChecking=false,missingCard=false;
- state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&window.TraceInternational.currency(a)==='CAD').forEach(a=>{
-  const v=accountEstimate(a);if(v===null){
+ const owners=s==='couple'?['la','partner']:[s],I=window.TraceInternational;
+ let checking=0,card=0,cardDebt=0,cardCredit=0,hc=false,hv=false,
+  missingChecking=false,missingCard=false,unsafeChecking=false,unsafeCard=false;
+ const add=(a,b)=>{
+  const n=I.exactMoney(a+b);
+  return n===null?null:Math.round(n*100)/100;
+ };
+ state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&I.currency(a)==='CAD').forEach(a=>{
+  const v=accountEstimate(a);
+  if(v===null){
    if(accountType(a)==='checking')missingChecking=true;
    if(accountType(a)==='card')missingCard=true;
    return;
   }
-  if(accountType(a)==='checking'){checking+=v;hc=true;}
+  if(accountType(a)==='checking'){
+   hc=true;
+   if(!unsafeChecking){
+    const next=add(checking,v);
+    if(next===null)unsafeChecking=true;
+    else checking=next;
+   }
+  }
   if(accountType(a)==='card'){
-   card+=v;cardDebt+=Math.max(0,-v);cardCredit+=Math.max(0,v);hv=true;
+   hv=true;
+   if(!unsafeCard){
+    const values=[add(card,v),add(cardDebt,Math.max(0,-v)),
+     add(cardCredit,Math.max(0,v))];
+    if(values.some(x=>x===null))unsafeCard=true;
+    else [card,cardDebt,cardCredit]=values;
+   }
   }
  });
+ const cashKnown=hc&&!missingChecking&&!unsafeChecking;
+ const cardsKnown=!missingCard&&!unsafeCard;
  // The card balance is signed internally: negative = debt, positive = credit.
  // Never add an unverified apparent card credit to current-account liquidity.
- return {checking:hc&&!missingChecking?checking:null,card:hv&&!missingCard?card:null,
-  cardDebt:hv&&!missingCard?cardDebt:null,cardCredit:hv&&!missingCard?cardCredit:null,
-  needsCardReview:hv&&cardCredit>.005,
-  net:hc&&!missingChecking&&!missingCard?checking-cardDebt:null};
+ return{checking:cashKnown?checking:null,card:hv&&cardsKnown?card:null,
+  cardDebt:hv&&cardsKnown?cardDebt:null,cardCredit:hv&&cardsKnown?cardCredit:null,
+  needsCardReview:hv&&cardsKnown&&cardCredit>.005,
+  net:cashKnown&&cardsKnown?add(checking,-cardDebt):null};
 }
 
 /* Share: one settlement = one transfer; the same document drives balances and account movements */
