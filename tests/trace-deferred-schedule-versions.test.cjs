@@ -4,9 +4,10 @@ require('../trace-deferred-debit-1.0.0.js');
 const D=globalThis.TraceDeferredDebit;
 const card={id:'visa-fr',owner:'la',type:'card',paymentMode:'deferred',country:'FR',currency:'EUR',settlementAccountId:'fr'};
 const old={effectiveDate:'2026-09-01',debitDay:5,closingDay:20};
+const bank={id:'fr',owner:'la',type:'checking',country:'FR',currency:'EUR'};
 const configured=(v,extras={})=>({...card,deferredScheduleVersions:v,...extras});
 const prior=configured([old],{deferredDebitDay:5,deferredClosingDay:20});
-const plan=(c=card,extra={})=>D.proposeScheduleRevision({card:c,asOfDate:'2026-10-26',
+const plan=(c=card,extra={})=>D.proposeScheduleRevision({card:c,checking:bank,owner:'la',asOfDate:'2026-10-26',
  effectiveDate:'2026-11-21',debitDay:28,closingDay:20,...extra});
 const due=(c,d)=>D.scheduleForPurchase({card:c,purchaseDate:d});
 test('first effective date is future-only; historical purchase has no computed batch',()=>{
@@ -77,4 +78,12 @@ test('old source versions remain immutable; proposal carries zero financial writ
  assert.equal(JSON.stringify(freeze),before);
  assert.equal(p.versions[0].effectiveDate,'2026-09-01');
  assert.equal(p.confirmed,false);assert.equal(p.financialChanges,0);
+});
+
+test('schedule change needs owner-matched native EUR checking evidence',()=>{
+ for(const invalid of [{checking:{...bank,owner:'partner'}},
+  {checking:{...bank,currency:'CAD'}},{checking:{...bank,country:'CA'}},
+  {checking:{...bank,id:'someone-else'}},{checking:{...bank,archived:true}},
+  {checking:null},{owner:'partner'}])
+  assert.throws(()=>plan(card,invalid),/Compte courant français/);
 });
