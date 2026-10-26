@@ -81,13 +81,14 @@ revoke insert (household_id,collection,item_id,data,updated_by,revision),
        update (household_id,collection,item_id,data,updated_by,revision)
 on table public.documents from public, anon, authenticated;
 
--- Direct household.settings and updated_by changes bypass CAS revisions.
--- Keep only optional name edits for the user interface, never settings.
+-- ANY direct update on a household (name, settings or audit identity)
+-- would bypass a reviewed RPC and may fail partner RLS inconsistently.
+-- Keep the entire household read-only at the PostgREST table boundary.
+-- A future rename must use a separately qualified authenticated RPC.
 revoke update on table public.households
   from public, anon, authenticated;
 revoke update (name,settings,updated_by) on table public.households
   from public, anon, authenticated;
-grant update (name) on table public.households to authenticated;
 
 -- A postcondition, not an assumption: effective privileges can be inherited.
 -- Refuse the entire transaction if any bypass remains through a role grant.
@@ -101,8 +102,8 @@ begin
     or has_column_privilege('authenticated','public.documents','revision','UPDATE')
     or has_column_privilege('authenticated','public.households','settings','UPDATE')
     or has_column_privilege('authenticated','public.households','updated_by','UPDATE')
+    or has_column_privilege('authenticated','public.households','name','UPDATE')
     or not has_table_privilege('authenticated','public.documents','SELECT')
-    or not has_column_privilege('authenticated','public.households','name','UPDATE')
  then
    raise exception 'TRACE_CAS_CUTOVER_BLOCKED: direct privileges remain or reads lost'
      using errcode='42501';
