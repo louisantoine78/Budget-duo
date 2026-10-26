@@ -118,4 +118,33 @@ create trigger trace_csv_unparsed_evidence_guard
 before insert or update or delete on public.documents
 for each row execute function public.trace_guard_csv_unparsed_evidence();
 
+
+-- A low-privilege readiness probe. Its presence is a fail-closed cutover
+-- marker, not proof of production security or a replacement for PG QA.
+create or replace function public.trace_csv_evidence_guard_ready()
+returns boolean language sql stable security invoker
+set search_path = ''
+as $ready$
+ select exists (
+   select 1 from pg_catalog.pg_class c
+   join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+   where n.nspname='public' and c.relname='documents'
+     and c.relrowsecurity
+ ) and exists (
+   select 1 from pg_catalog.pg_policies p
+   where p.schemaname='public' and p.tablename='documents'
+     and p.policyname='trace_csv_unparsed_private_select'
+     and p.permissive='RESTRICTIVE' and p.cmd='SELECT'
+ ) and exists (
+   select 1 from pg_catalog.pg_trigger t
+   join pg_catalog.pg_class c on c.oid=t.tgrelid
+   join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+   where n.nspname='public' and c.relname='documents'
+     and t.tgname='trace_csv_unparsed_evidence_guard'
+     and not t.tgisinternal and t.tgenabled in ('O','A')
+ );
+$ready$;
+revoke all on function public.trace_csv_evidence_guard_ready() from public, anon;
+grant execute on function public.trace_csv_evidence_guard_ready() to authenticated;
+
 commit;

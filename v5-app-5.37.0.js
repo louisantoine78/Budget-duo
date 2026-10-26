@@ -2836,6 +2836,19 @@ function csvConflictingSourceRows(t,rows){
 }
 
 
+// Block saving sensitive CSV excerpts if the database lacks its owner
+// privacy policy and write trigger. This is NOT an authorization decision:
+// the server must still enforce its own RLS and immutable trigger.
+async function csvEnsurePrivateAuditReady(){
+ if(internationalPreviewMode())return; // isolated fictitious preview only
+ if(!client||typeof client.rpc!=='function')
+  throw Error('Stockage privé des lignes CSV indisponible. Aucun extrait enregistré.');
+ let result;
+ try{result=await client.rpc('trace_csv_evidence_guard_ready');}
+ catch(error){throw Error('Protection des preuves CSV indisponible côté serveur. Aucun extrait enregistré.');}
+ if(result?.error||result?.data!==true)
+  throw Error('Le serveur ne confirme pas la confidentialité des preuves CSV. Aucun extrait enregistré. Demande la validation de la version 5.37.0.');
+}
 // Invalid CSV bank lines are import evidence ONLY: no transaction, balance,
 // budget, or calendar-day certification. A stable source ID makes retries
 // CAS-idempotent across devices without silently merging different evidence.
@@ -3037,6 +3050,10 @@ function importFile(file){
          throw Error('Le compte bancaire a changé depuis la prévisualisation. Relance la revue du CSV.');
        };
        validateReview();
+       if(invalidEvidence.length){
+        await csvEnsurePrivateAuditReady();
+        validateReview(); // the bank/source may have changed while awaiting RPC
+       }
        if(result.all.some(t=>csvConflictingSourceRows(t,state.transactions).length)||
           invalidEvidence.some(t=>csvUnparsedSourceConflict(t,state.smartImports,state.transactions)))
         throw Error('Conflit de source détecté depuis la prévisualisation. Compare les relevés et recommence.');
@@ -3909,7 +3926,12 @@ function openCsvUnparsedReview(id){
   }
   const btn=$('#csvReviewConfirm');btn.disabled=true;
   try{
-   const next={...fresh,status:'reviewed',reviewedBy:me,reviewedAt:new Date().toISOString()};
+   await csvEnsurePrivateAuditReady();
+   const current=state.smartImports.find(x=>x.id===d.id);
+   if(!current||JSON.stringify([current.id,current.status,current.owner,current.accountId,
+    current.sourceFileName,current.sourceIndex,current.rawText])!==reviewedSnapshot)
+    throw Error('Cette preuve a changé pendant la vérification. Rouvre-la.');
+   const next={...current,status:'reviewed',reviewedBy:me,reviewedAt:new Date().toISOString()};
    await saveDocument('imports',next);
    Object.assign(fresh,next);closeSheet();renderAll();navigate('activity');showTab('import');
   }catch(error){btn.disabled=false;$('#csvReviewError').textContent=String(error.message||error);}
