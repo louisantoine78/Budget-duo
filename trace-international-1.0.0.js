@@ -55,7 +55,11 @@
    // All international destination legs need an explicit booked amount.
    return null;
   }
-  if(t.bankCurrency&&String(t.bankCurrency).toUpperCase()!==code)return null;
+  const sourceCurrency=String(t.bankCurrency||'').trim().toUpperCase();
+  if(sourceCurrency&&sourceCurrency!==code)return null;
+  // Pre-5.37 documents without denomination were CAD only. A bankAmount
+  // on a EUR/USD/etc account cannot prove that the amount was in its currency.
+  if(!sourceCurrency&&code!=='CAD')return null;
   if(t.bankAmount!==null&&t.bankAmount!==undefined&&t.bankAmount!=='')return exactMoney(t.bankAmount);
   return code==='CAD'?exactMoney(t.amountCAD):null;
  };
@@ -150,7 +154,9 @@
  const investmentBankAmount=(op,bank)=>{
   if(!op||!bank)return null;
   const currencyNative=currency(bank);
-  if(op.bankCurrency&&String(op.bankCurrency).toUpperCase()!==currencyNative)return null;
+  const bookedCurrency=String(op.bankCurrency||'').trim().toUpperCase();
+  if(bookedCurrency&&bookedCurrency!==currencyNative)return null;
+  if(!bookedCurrency&&currencyNative!=='CAD')return null;
   let amount=op.bankAmount;
   if(amount===null||amount===undefined||amount===''){
     if(currencyNative!=='CAD')return null;
@@ -163,7 +169,13 @@
  const amountOnInvestment=(movement,investment,bank)=>{
   if(!movement||!investment||!bank||bank.type!=='checking'||bank.owner!==investment.owner)return null;
   const code=currency(investment);
-  if(movement.investmentCurrency&&String(movement.investmentCurrency).toUpperCase()!==code)return null;
+  const bookedInvestmentCurrency=String(movement.investmentCurrency||'').trim().toUpperCase();
+  if(bookedInvestmentCurrency&&bookedInvestmentCurrency!==code)return null;
+  // Foreign investment deposits need their own native denomination, even
+  // if an unrelated bank leg happens to use the same currency.
+  if(!bookedInvestmentCurrency&&code!=='CAD'&&
+     movement.investmentAmount!==null&&movement.investmentAmount!==undefined&&
+     movement.investmentAmount!=='')return null;
   if(movement.investmentAmount!==null&&movement.investmentAmount!==undefined&&movement.investmentAmount!==''){
    const amount=exactMoney(movement.investmentAmount);return amount!==null&&amount>0?amount:null;
   }
