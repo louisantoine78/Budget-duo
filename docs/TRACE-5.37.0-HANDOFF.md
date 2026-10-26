@@ -1,3 +1,17 @@
+## 25 octobre 2026 — correctif CLIENT des écritures CAS en file d'attente : copie des montants à l'appel
+
+**Nouveau lot sur `trace-5.37.0-international-accounts-fx` [skip ci]** :
+- `cfd340c1bfac99a63e97809a325c826cf8f5ea09` : `v5-app-5.37.0.js`.
+- `3e0016a5d94916e067f0efa04be0bb8b079ab3ae`, `2147f10837a1925f411bafbbf378b7cf4910b9be` : `tests/trace-cas-client.test.cjs`.
+
+**Défaut corrigé :** `saveDocument(collection,item)` conservait la référence JavaScript de `item` dans `traceSerialWrite`. Une nouvelle modification d'un montant, compte, taux ou métadonnée imbriquée du **même objet** pendant l'attente pouvait involontairement modifier le corps de la première requête CAS. Désormais `requested=JSON.parse(JSON.stringify(item))` est capturé au moment de l'appel et transmis à la RPC. Cette capture suit le contrat JSON réel du document et refuse les objets non sérialisables avant toute requête. **Sécurité maintenue :** pendant la sortie de file d'attente, `traceRefuseUnqualifiedDeferredWrite` vérifie encore l'objet d'origine LIVE et la copie demandée, ainsi que la configuration LIVE des cartes : une mutation tardive ajoutant `deferredKind='purchase'` ou rendant la carte différée n'est **pas** une autorisation. La mise en file, le CAS serveur et les révisions ne sont pas désactivés.
+
+**Vérifications réellement exécutées** : **55/55 tests statiques et de comportement V8** sur les fichiers actuels issus de GitHub, dont le vrai code de l'adaptateur client exécuté dans un contexte fictif (RPC simulée). Nouveaux cas : deux sauvegardes appelées avant exécution, montants 40 puis 41 préservés malgré mutation ultérieure à 900, copie profonde des notes, révisions null puis 0, mutation différée bloquée, BigInt non sérialisable refusé. Syntaxe V8 du harnais d'intégration PG vérifiée. **Imports Node simulés : pas de `node --test` natif sur checkout complet**, **aucun PostgreSQL/PGlite**, aucun Auth/RLS/CAS serveur réel, navigateur, iPhone Safari ou Supabase réel. Le code et les tests fonctionnels vérifiés en V8 constituent une progression de confiance côté adaptateur uniquement.
+
+**Blocage restant** : vrai PostgreSQL/PGlite isolé inexistant dans ce conteneur, installation réseau indisponible ; les migrations candidates 05–11 et les scénarios transactionnels/permissions/effacement/CSV/placements restent non qualifiés. Ne pas lancer CI, PR, merge, déploiement ni modifier `main` `02c70f50e7e51da79b77a91dde96a03c6c719909`. Débit différé toujours en quarantaine. **NO-GO production. Avancement qualitatif 58 % ±10 points**. Priorité : moteur PG fictif et qualifications multi-foyers, puis flux FX et design Safari premium.
+
+---
+
 ## 25 octobre 2026 — CAS des placements : contrôle du compte bancaire ORIGINAL (code candidat)
 
 **Lot réellement commité [skip ci] sur `trace-5.37.0-international-accounts-fx` :** `c20be62f388d0124b59996f7f8968d65040e5116` (migration 09), `2d2da87707fdf9b18d46ee16a5ddb0f5771cd3e2` (test d'intégration fictif), `548d820edabd84dc32734fe62068c559ac4c0df6` (contrats statiques). Aucun changement à `main`, à la production, aux données Supabase réelles ou aux migrations appliquées ; pas de PR, merge, CI ni workflow.
