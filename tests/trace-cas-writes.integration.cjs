@@ -353,6 +353,12 @@ async function run(){
    await assert.rejects(rpcSave(1,'imports',duplicate.id,duplicate,null),
     /trace_csv_unparsed_source_unique|duplicate key|23505/i);
    assert.equal(await readDoc('imports',duplicate.id),undefined);
+   // PostgreSQL must compare the actual row ordinal, not differently
+   // formatted JSON sourceIndex strings such as "0004" versus 4.
+   const padded={...original,id:'csv-forged-padded-index',sourceIndex:'0004'};
+   await assert.rejects(rpcSave(1,'imports',padded.id,padded,null),
+    /trace_csv_unparsed_source_unique|duplicate key|23505/i);
+   assert.equal(await readDoc('imports',padded.id),undefined);
    assert.equal((await readDoc('imports',original.id)).data.rawText,original.rawText);
    // A genuinely distinct row of the same file must remain separately
    // auditable without inventing a transaction or modifying the old source.
