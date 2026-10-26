@@ -31,7 +31,17 @@ function fixture(opts={}){
   esc:x=>String(x??'').replace(/[&<>"]/g,y=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[y])),
   window:{TraceInternational:{currency:a=>a.currency,
    money:(n,c)=>n+' '+c,fxValue:(n,c,r)=>r?n*r.cadPerUnit:null,
-   amountOnAccount:(t,a,leg)=>leg==='destination'?t.toBankAmount??null:t.bankAmount??null}},
+   amountOnAccount:(t,a,leg)=>{
+    if(opts.strictEvidence){
+     const expected=a.currency||'CAD';
+     const declared=leg==='destination'?t.toBankCurrency:t.bankCurrency;
+     if(expected!=='CAD'&&declared!==expected)return null;
+     if(declared&&declared!==expected)return null;
+    }
+    return leg==='destination'?t.toBankAmount??null:t.bankAmount??t.amountCAD??null;
+   },
+   investmentBankAmount:(o,a)=>opts.strictEvidence&&a.currency!=='CAD'&&
+    o.bankCurrency!==a.currency?null:o.bankAmount??o.bankAmountCAD??null}},
   openSheet:(title,content)=>{calls.title=title;$('#sheetBody').innerHTML=content},
   closeSheet:()=>calls.close++,openAccountSettings(){},renderHome:()=>calls.render++,
   renderAll:()=>calls.render++,navigate:()=>calls.navigate++,renderActivity:()=>calls.activity++,
@@ -118,6 +128,47 @@ async function main(){
   assert.match(app,/confirmTracePrimaryAccount\(button\.dataset\.primaryBank,openAccountSettings\)/);
   assert.match(app,/onSelect:id=>\{[\s\S]*?confirmTracePrimaryAccount\(id,/);
   assert.match(html,/id="homeAccountsBtn"/);assert.match(html,/id="activityAccountFilter"/);
+ });
+ await test('foreign account details identify unresolved bank currency since last reconciliation',()=>{
+  const f=fixture({strictEvidence:true});f.openTraceAccountDetail('fr');
+  const html=f.$('#sheetBody').innerHTML;
+  assert.match(html,/Justificatifs bancaires à vérifier/);
+  assert.match(html,/1 mouvement\(s\)/);
+  assert.match(html,/Recent/);
+  assert.doesNotMatch(html,/Old · 2026-09-02/);
+  assert.equal(f.calls.save,0);
+  assert.equal(f.calls.navigate,0);
+ });
+ await test('documented foreign movements remove read-only proof warning',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.openTraceAccountDetail('fr');
+  assert.doesNotMatch(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.equal(f.calls.save,0);
+ });
+ await test('a self-transfer surfaces a bank evidence warning without altering records',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.transactions.push({id:'bad-self',name:'Same account',accountId:'ca',
+   toAccountId:'ca',type:'transfer',status:'confirmed',
+   date:'2026-10-18',bankAmount:40,toBankAmount:40,
+   bankCurrency:'CAD',toBankCurrency:'CAD'});
+  const before=JSON.stringify(f.state);
+  f.openTraceAccountDetail('ca');
+  assert.match(f.$('#sheetBody').innerHTML,/Justificatifs bancaires à vérifier/);
+  assert.match(f.$('#sheetBody').innerHTML,/Same account/);
+  assert.equal(JSON.stringify(f.state),before);
+  assert.equal(f.calls.save,0);
+ });
+ await test('foreign investment bank evidence is reviewable without a phantom balance',()=>{
+  const f=fixture({strictEvidence:true});
+  f.state.investmentOperations=[
+   {id:'broker',bankAccountId:'fr',type:'deposit',status:'confirmed',
+    date:'2026-10-19',bankAmount:46.2}];
+  f.state.transactions.filter(t=>t.accountId==='fr').forEach(t=>t.bankCurrency='EUR');
+  f.openTraceAccountDetail('fr');
+  assert.match(f.$('#sheetBody').innerHTML,/Opération de placement/);
+  assert.match(f.$('#sheetBody').innerHTML,/1 mouvement\(s\)/);
+  assert.equal(f.calls.save,0);
  });
  await test('premium sheets and missing-rate safeguards exist',()=>{
   assert.match(css,/\.trace-account-detail-hero/);
