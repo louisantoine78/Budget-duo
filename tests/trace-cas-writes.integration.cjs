@@ -319,7 +319,7 @@ async function run(){
     /TRACE_CSV_EVIDENCE_FORBIDDEN/);
    await assert.rejects(acting(2,tx=>tx.query(
     'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
-    [hid,'imports','direct-forged',{...forged,id:'direct-forged'},uid(2)])),
+    [hid,'imports','direct-forged',JSON.stringify({...forged,id:'direct-forged'}),uid(2)])),
     /TRACE_CSV_EVIDENCE_FORBIDDEN/);
    assert.equal(await readDoc('imports','forged-source'),undefined);
   });
