@@ -270,3 +270,26 @@ test('account modified while awaiting privacy probe cancels every write in the C
  assert.equal(s.evidenceWrites.length,0);
  assert.match(s.node('#importResult').textContent,/compte bancaire a changé/);
 });
+
+test('line that was unreadable in an earlier import cannot become a booked pending transaction silently',async()=>{
+ const source='Date,Description,Montant\n20/10/2026,Cafe,??\n';
+ const first=scenario({content:source});first.preview();
+ first.node('#csvInvalidAcknowledged').checked=true;await first.commit();
+ assert.equal(first.evidenceWrites.length,1);
+ const fixed=scenario({content:'Date,Description,Montant\n20/10/2026,Cafe,-5.00\n',
+  importRows:first.state.smartImports});
+ fixed.preview();
+ assert.match(fixed.node('#csvPreviewResult').innerHTML,/Import suspendu/);
+ assert.doesNotMatch(fixed.node('#csvPreviewResult').innerHTML,/id="csvCommit"/);
+ assert.equal(fixed.writes.length,0);
+});
+test('reviewed unreadable evidence remains immutable and prevents a new transaction on same physical CSV line',async()=>{
+ const first=scenario({content:'Date,Description,Montant\n20/10/2026,Cafe,??\n'});
+ first.preview();first.node('#csvInvalidAcknowledged').checked=true;await first.commit();
+ const reviewed=first.state.smartImports.map(x=>({...x,status:'reviewed'}));
+ const later=scenario({content:'Date,Description,Montant\n20/10/2026,Cafe,-5.00\n',
+  importRows:reviewed});
+ later.preview();
+ assert.match(later.node('#csvPreviewResult').innerHTML,/Import suspendu/);
+ assert.equal(later.writes.length,0);
+});

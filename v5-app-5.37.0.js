@@ -2864,6 +2864,12 @@ function csvUnparsedRecord(accountId,sourceName,index,cells,owner){
   rawText:cells.map(v=>String(v??'')).join(' | ').slice(0,650),
   createdAt:new Date().toISOString()};
 }
+function csvConflictingUnparsedEvidence(row,imports){
+ const line=Number(row?.csvSourceRowIndex);
+ return Number.isSafeInteger(line)&&line>=2&&(imports||[]).some(d=>
+  d.kind==='csv_unparsed'&&d.accountId===row.accountId&&
+  d.sourceFileName===row.importFileName&&Number(d.sourceIndex)===line);
+}
 function csvUnparsedSourceConflict(item,imports,transactions){
  const prior=(imports||[]).find(x=>x.id===item.id&&x.kind==='csv_unparsed');
  // A collision may also be a row previously interpreted as a financial line.
@@ -3000,7 +3006,8 @@ function importFile(file){
      const flagged=result.all.filter(t=>t.csvReviewMatchIds?.length),
       invalidEvidence=result.invalid.map(index=>csvUnparsedRecord($('#csvAccount').value,
        file.name,index,rows[index-2]||[],me)),
-      sourceConflicts=result.all.filter(t=>csvConflictingSourceRows(t,state.transactions).length),
+      sourceConflicts=result.all.filter(t=>csvConflictingSourceRows(t,state.transactions).length||
+        csvConflictingUnparsedEvidence(t,state.smartImports)),
       invalidConflicts=invalidEvidence.filter(t=>csvUnparsedSourceConflict(t,state.smartImports,state.transactions)),
       totalConflicts=sourceConflicts.length+invalidConflicts.length;
      const account=accts.find(a=>a.id===$('#csvAccount').value),I=window.TraceInternational,
@@ -3017,7 +3024,7 @@ function importFile(file){
        esc(nature)+' · '+(matched.status==='confirmed'?'Confirmée':'À vérifier')+'</small></article>';
      }).join('');
      preview.innerHTML='<div class="empty-note" style="margin-top:14px"><b>'+result.all.length+' lignes à vérifier</b> · '+result.duplicates+' doublon(s) déjà présents non réimportés · '+result.invalid.length+' ligne(s) invalide(s) · '+flagged.length+' rapprochement(s) possible(s).</div>'+
-      (totalConflicts?'<div class="empty-note trace-csv-source-conflict" role="alert"><b>Import suspendu : '+totalConflicts+' conflit(s) de fichier</b>. Le même nom de CSV et le même numéro de ligne ont déjà été utilisés pour une opération différente sur ce compte. Compare les relevés précédents. Si c’est réellement un autre relevé, renomme le fichier en incluant sa période puis prévisualise-le de nouveau. Aucun mouvement n’est créé automatiquement.</div>':'')+
+      (totalConflicts?'<div class="empty-note trace-csv-source-conflict" role="alert"><b>Import suspendu : '+totalConflicts+' conflit(s) de fichier</b>. Le même nom de CSV et le même numéro de ligne existent déjà dans les opérations ou parmi les lignes illisibles conservées. Compare les relevés précédents. Si c’est réellement un autre relevé, renomme le fichier en incluant sa période puis prévisualise-le de nouveau. Aucun mouvement n’est créé automatiquement.</div>':'')+
       (flagged.length?'<div class="empty-note" role="status"><b>Vérification bancaire nécessaire</b> : certaines lignes ressemblent à des paiements de carte, remboursements ou autres mouvements déjà saisis. Rien n’est fusionné ni supprimé automatiquement.</div>'+
        '<p class="empty-note">Déplie chaque ligne signalée pour comparer les opérations. Au plus cinq ressemblances par ligne ; ce contrôle ne certifie pas l’absence de doublon.</p>':'')+
       result.all.map(t=>'<details class="trace-csv-preview-row" data-csv-preview-row="'+t.csvSourceRowIndex+'"'+(t.csvReviewMatchIds?.length?' data-has-match="true"':'')+'><summary><span>'+esc(t.date)+' · '+esc(t.name)+
@@ -3054,7 +3061,8 @@ function importFile(file){
         await csvEnsurePrivateAuditReady();
         validateReview(); // the bank/source may have changed while awaiting RPC
        }
-       if(result.all.some(t=>csvConflictingSourceRows(t,state.transactions).length)||
+       if(result.all.some(t=>csvConflictingSourceRows(t,state.transactions).length||
+           csvConflictingUnparsedEvidence(t,state.smartImports))||
           invalidEvidence.some(t=>csvUnparsedSourceConflict(t,state.smartImports,state.transactions)))
         throw Error('Conflit de source détecté depuis la prévisualisation. Compare les relevés et recommence.');
        // Preserve invalid evidence first. If the later transaction import fails,
@@ -3074,8 +3082,9 @@ function importFile(file){
         // Repeat after each awaited RPC: a account change mid-import must
         // stop subsequent writes; previously saved pending rows stay intact.
         validateReview();
-        if(csvConflictingSourceRows(t,state.transactions).length)
-         throw Error('Conflit de fichier détecté pendant l’import. Examine les lignes précédentes.');
+        if(csvConflictingSourceRows(t,state.transactions).length||
+           csvConflictingUnparsedEvidence(t,state.smartImports))
+         throw Error('Conflit de fichier détecté pendant l’import. Vérifie les lignes et preuves précédentes.');
         const account=state.accounts.find(a=>a.id===t.accountId);
         if(!account||I.currency(account)!==t.bankCurrency)
          throw Error('Devise native du compte modifiée : nouvel examen CSV requis.');
