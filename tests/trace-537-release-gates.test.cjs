@@ -2,7 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {runGate,isolatedEnv,EXPECTED,PG_TESTS}=
  require('../scripts/check-trace-537-release-gates.cjs');
-function scenario({branch=EXPECTED,dirty=false,sw=0,native=0,pgProbe=0,pgStatuses=[0,0,0]}={}){
+function scenario({branch=EXPECTED,dirty=false,sw=0,native=0,pgProbe=0,pgStatuses=[0,0,0,0]}={}){
  const calls=[],spawn=(cmd,args,options)=>{
   calls.push({cmd,args,options});
   let status=0,stdout='';
@@ -27,7 +27,7 @@ test('refuses main and other branches before executing financial tools',()=>{
 test('all fictional automated gates passing is still not a production GO',()=>{
  const q=scenario();
  assert.equal(q.automatedPassed,true);assert.equal(q.releaseReady,false);
- assert.equal(q.calls.length,8);assert.ok(q.manualRequired.length>=5);
+ assert.equal(q.calls.length,9);assert.ok(q.manualRequired.length>=5);
 });
 test('supabase credentials and NODE_OPTIONS are never propagated to children',()=>{
  const q=scenario();
@@ -56,9 +56,9 @@ test('one failing native Node suite blocks automated approval',()=>{
  const q=scenario({native:1});assert.equal(q.automatedPassed,false);
  assert.ok(q.results.some(x=>x.id==='native_node_suite'&&!x.passed));
 });
-test('each of the three isolated PostgreSQL suites must pass separately',()=>{
- const q=scenario({pgStatuses:[0,1,0]});assert.equal(q.automatedPassed,false);
- assert.equal(q.calls.filter(c=>PG_TESTS.includes(c.args[0])).length,3);
+test('each of the four isolated PostgreSQL suites must pass separately',()=>{
+ const q=scenario({pgStatuses:[0,1,0,0]});assert.equal(q.automatedPassed,false);
+ assert.equal(q.calls.filter(c=>PG_TESTS.includes(c.args[0])).length,4);
 });
 test('dirty tracked files prevent reproducible QA on exact HEAD',()=>{
  const q=scenario({dirty:true});assert.equal(q.automatedPassed,false);
@@ -68,4 +68,11 @@ test('child environment is an allowlist, not the production process env',()=>{
  const x=isolatedEnv({PATH:'/bin',TRACE_PGLITE_MODULE:'/fake/pglite',
   SUPABASE_DB_PASSWORD:'SECRET',NODE_OPTIONS:'--require disallowed'});
  assert.deepEqual(x,{NODE_ENV:'test',PATH:'/bin',TRACE_PGLITE_MODULE:'/fake/pglite'});
+});
+
+test('migration-12 SQL privilege cutover must be a mandatory isolated gate',()=>{
+ assert.equal(PG_TESTS.includes('tests/trace-cas-exclusive-cutover.integration.cjs'),true);
+ const q=scenario({pgStatuses:[0,0,0,1]});
+ assert.equal(q.automatedPassed,false);
+ assert.ok(q.results.some(x=>x.id==='isolated_pg_trace-cas-exclusive-cutover.integration.cjs'&&!x.passed));
 });
