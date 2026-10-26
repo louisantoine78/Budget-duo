@@ -12,7 +12,7 @@ assert.ok(guardBegin>0&&guardEnd>guardBegin,'CSV readiness check missing');
 const code=source.slice(guardBegin,guardEnd)+source.slice(start,end);
 function scenario({items=[{id:'unparsed-1',kind:'csv_unparsed',status:'pending_review',
  owner:'la',accountId:'la-bank',sourceFileName:'octobre.csv',sourceIndex:4,
- rawText:'20/10 | <script> | inconnu',createdAt:'2026-10-25T12:00:00Z'}],privateReady=true}={}){
+ rawText:'20/10 | <script> | inconnu',createdAt:'2026-10-25T12:00:00Z'}],privateReady=true,onPrivacyCheck}={}){
  const state={smartImports:items.map(x=>({...x})),accounts:[{id:'la-bank',owner:'la',name:'Courant',type:'checking'}],
  transactions:[]};
  const elements=new Map(),events=[],saves=[],buttons=new Map();
@@ -37,7 +37,7 @@ function scenario({items=[{id:'unparsed-1',kind:'csv_unparsed',status:'pending_r
  async(collection,doc)=>{assert.equal(collection,'imports');saves.push({...doc});},
  ()=>events.push('close'),()=>events.push('render'),page=>events.push('navigate:'+page),
  tab=>events.push('tab:'+tab),()=>false,
- {rpc:async()=>({data:privateReady,error:null})});
+ {rpc:async()=>{if(onPrivacyCheck)await onPrivacyCheck(state);return{data:privateReady,error:null};}});
  return{...api,state,el,saves,events,buttons};
 }
 test('unreadable CSV evidence is shown as safe escaped text in Imports',()=>{
@@ -89,4 +89,15 @@ test('a removed SQL privacy gate prevents reviewing evidence, leaving it pending
  assert.equal(s.saves.length,0);
  assert.equal(s.state.smartImports[0].status,'pending_review');
  assert.match(s.el('#csvReviewError').textContent,/confidentialité des preuves CSV/);
+});
+
+test('source changed during the awaited privacy probe cannot be marked reviewed',async()=>{
+ const s=scenario({onPrivacyCheck:async state=>{
+  state.smartImports[0].sourceFileName='replaced.csv';
+ }});
+ s.renderCsvUnparsedReviewQueue();s.buttons.get('unparsed-1').onclick();
+ s.el('#csvReviewChecked').checked=true;await s.el('#csvReviewConfirm').onclick();
+ assert.equal(s.saves.length,0);
+ assert.equal(s.state.smartImports[0].status,'pending_review');
+ assert.match(s.el('#csvReviewError').textContent,/a changé pendant/);
 });

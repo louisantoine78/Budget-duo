@@ -19,7 +19,7 @@ assert.ok(guardBegin>0&&guardEnd>guardBegin,'CSV server readiness gate missing')
 const body=source.slice(guardBegin,guardEnd)+source.slice(start,end);
 let seq=0;
 function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Cafe,-5.50\n',
- filename='octobre.csv',transactionRows=[],importRows=[],onSave,privateReady=true}={}){
+ filename='octobre.csv',transactionRows=[],importRows=[],onSave,privateReady=true,onPrivacyCheck}={}){
  const accounts=[{id:'checking-la',type:'checking',owner:'la',currency,country:currency==='EUR'?'FR':'CA'}];
  const state={accounts,transactions:transactionRows.map(t=>({...t})),smartImports:importRows.map(t=>({...t}))};
  const dom=new Map(),events=[],writes=[],evidenceWrites=[];
@@ -49,7 +49,7 @@ function scenario({currency='CAD',content='Date,Description,Montant\n20/10/2026,
   },()=>events.push('render'),p=>events.push('navigate:'+p),
   t=>events.push('tab:'+t),money,()=>0,{error:()=>{}},()=>false,
   {rpc:async(name)=>{assert.equal(name,'trace_csv_evidence_guard_ready');
-   events.push('privacy-check');return {data:privateReady,error:null};}});
+   events.push('privacy-check');if(onPrivacyCheck)await onPrivacyCheck({state,accounts});return {data:privateReady,error:null};}});
  api.importFile({name:filename,type:'text/csv',size:content.length,content});
  Object.assign(node('#csvCol_date'),{value:'0'});
  Object.assign(node('#csvCol_name'),{value:'1'});
@@ -258,4 +258,15 @@ test('CSV privacy gate is verified before writing an unreadable record',async()=
  s.preview();s.node('#csvInvalidAcknowledged').checked=true;await s.commit();
  assert.equal(s.evidenceWrites.length,1);
  assert.equal(s.events.filter(x=>x==='privacy-check').length,1);
+});
+
+test('account modified while awaiting privacy probe cancels every write in the CSV batch',async()=>{
+ const content='Date,Description,Montant\n20/10/2026,Courses,-40\n21/10/2026,Non identifiable,??\n';
+ const s=scenario({content,onPrivacyCheck:async({accounts})=>{
+  accounts[0].currency='EUR';
+ }});
+ s.preview();s.node('#csvInvalidAcknowledged').checked=true;await s.commit();
+ assert.equal(s.writes.length,0);
+ assert.equal(s.evidenceWrites.length,0);
+ assert.match(s.node('#importResult').textContent,/compte bancaire a changé/);
 });
