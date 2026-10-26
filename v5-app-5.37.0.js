@@ -282,6 +282,10 @@ function accountEstimate(a){
  if(base===null||!I.calendarDate(boundary.date))return null;
  const movement=state.transactions.filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
   if(t.type==='card_statement_evidence')return x;
+  // A legacy malformed self-transfer has BOTH bank legs on one account.
+  // Counting only its receiving leg invents cash; block reconciliation
+  // until the account mapping is reviewed instead of guessing the net.
+  if(t.type==='transfer'&&t.accountId===a.id&&t.toAccountId===a.id)return NaN;
   const v=I.amountOnAccount(t,a,t.toAccountId===a.id?'destination':'source');
   if(v===null||!Number.isFinite(v)||!Number.isFinite(x))return NaN;
   let delta=0;
