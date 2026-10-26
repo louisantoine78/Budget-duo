@@ -217,3 +217,64 @@ test('an independent additional checking source leaves existing manual review va
  assert.equal(result.createdTransactions,0);
 });
 console.log(passed+' deferred bank review scenarios passed');
+
+test('full settlement is comparable only with its own scheduled due date and checking proof',()=>{
+ const d=doc(),s=settlement({settlementMode:'full',
+  scheduledDueDate:'2026-11-05',allocationDueDate:undefined});
+ const snapshot=reviewSnapshot({statement:d,settlement:s});
+ const r=run([d],[s],[{settlementId:'pay1',approved:true,snapshot}]);
+ assert.equal(r.cases[0].status,'manual_review_current');
+ assert.equal(r.cases[0].bankDateDeviationDays,0);
+ assert.equal(r.createdTransactions,0);assert.equal(r.bankAuthenticated,false);
+});
+test('full settlement without explicit due date stays invalid; no inferred bank proof',()=>{
+ const s=settlement({settlementMode:'full',allocationDueDate:undefined});
+ assert.equal(run([doc()],[s]).cases[0].status,'invalid_settlement');
+ assert.throws(()=>reviewSnapshot({statement:doc(),settlement:s}),/incomplet/);
+});
+test('a full settlement cannot mix partial allocation and scheduled due metadata',()=>{
+ const s=settlement({settlementMode:'full',scheduledDueDate:'2026-11-05'});
+ assert.equal(run([doc()],[s]).cases[0].status,'invalid_settlement');
+});
+test('bank debit actually occurs three days later: no automatic date shift or write',()=>{
+ const s=settlement({settlementMode:'full',scheduledDueDate:'2026-11-05',
+  allocationDueDate:undefined,debitDate:'2026-11-08',
+  bankEvidence:{...settlement().bankEvidence,debitDate:'2026-11-08'}});
+ const d=doc({rows:[row({debitDate:'2026-11-08'})]});
+ const token=reviewSnapshot({statement:d,settlement:s});
+ const r=run([d],[s],[{settlementId:s.id,approved:true,snapshot:token}]);
+ assert.equal(r.cases[0].bankDateDeviationDays,3);
+ assert.equal(r.cases[0].scheduledDueDate,'2026-11-05');
+ assert.equal(r.cases[0].observedDebitDate,'2026-11-08');
+ assert.equal(r.cases[0].status,'manual_review_current');
+ assert.equal(r.financialChanges,0);
+});
+test('bank debit one day earlier is not reclassified as scheduled date',()=>{
+ const s=settlement({settlementMode:'full',scheduledDueDate:'2026-11-05',
+  allocationDueDate:undefined,debitDate:'2026-11-04',
+  bankEvidence:{...settlement().bankEvidence,debitDate:'2026-11-04'}});
+ const d=doc({rows:[row({debitDate:'2026-11-04'})]});
+ assert.equal(run([d],[s]).cases[0].bankDateDeviationDays,-1);
+ assert.equal(run([d],[s]).cases[0].status,'needs_human_review');
+});
+test('stale human receipt cannot certify a shifted debit date',()=>{
+ const old=settlement({settlementMode:'full',scheduledDueDate:'2026-11-05',allocationDueDate:undefined});
+ const snapshot=reviewSnapshot({statement:doc(),settlement:old});
+ const changed=settlement({settlementMode:'full',scheduledDueDate:'2026-11-05',
+  allocationDueDate:undefined,debitDate:'2026-11-08',
+  bankEvidence:{...settlement().bankEvidence,debitDate:'2026-11-08'}});
+ const fresh=doc({rows:[row({debitDate:'2026-11-08'})]});
+ const r=run([fresh],[changed],[{settlementId:'pay1',approved:true,snapshot}]);
+ assert.equal(r.cases[0].status,'stale_review');
+});
+test('bank evidence must attest the actual date, not merely the scheduled date',()=>{
+ const s=settlement({settlementMode:'full',scheduledDueDate:'2026-11-05',
+  allocationDueDate:undefined,debitDate:'2026-11-08'});
+ assert.equal(run([doc()],[s]).cases[0].status,'invalid_settlement');
+});
+test('two full settlements cannot reuse one physical bank line',()=>{
+ const s=settlement({settlementMode:'full',scheduledDueDate:'2026-11-05',allocationDueDate:undefined});
+ const r=run([doc()],[s,{...s,id:'pay2'}]);
+ assert.equal(r.cases[0].status,'conflicting_claim');
+ assert.equal(r.cases[1].status,'conflicting_claim');
+});
