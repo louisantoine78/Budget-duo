@@ -72,10 +72,17 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
  }
  const linkedReview=snap.cardsToReview.some(a=>a.settlementAccountId===selectedId||
    (!a.settlementAccountId&&snap.balances.length===2&&a.owner===owner));
+ const incompatibleCard=snap.mixedLinkedCurrencies.some(a=>a.settlementAccountId===selectedId);
+ const ambiguousCard=snap.ambiguousCards.some(a=>!a.settlementAccountId);
  if(warningNode){
-  warningNode.hidden=!linkedReview;
-  warningNode.textContent=linkedReview?
-   'Avoir de carte à vérifier : cet avoir n’est pas ajouté au solde disponible.':'';
+  const reason=linkedReview?
+   'Avoir de carte à vérifier : cet avoir n’est pas ajouté au solde disponible.':
+   incompatibleCard?
+   'Carte liée dans une autre devise : le solde net est indisponible. Vérifie le compte de règlement et la conversion.':
+   ambiguousCard?
+   'Carte sans compte de règlement identifié : associe-la au bon compte courant avant de calculer le solde net.':'';
+  warningNode.hidden=!reason;
+  warningNode.textContent=reason;
  }
  if(badgeNode){
   if(selectedId!==primaryId){
