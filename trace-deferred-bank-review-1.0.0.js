@@ -25,6 +25,10 @@
   d.rows.every(r=>r&&str(r.lineId)&&day(r.debitDate)&&
    r.debitDate>=d.fromDate&&r.debitDate<=d.toDate&&
    ['debit','credit'].includes(r.direction)&&money(r.amount)!==null&&
+   // Typed checking evidence must agree with its accounting direction.
+   // A card charge or checking credit cannot prove a checking debit.
+   (!r.type||r.type==='checking_debit'&&r.direction==='debit'||
+    r.type==='checking_credit'&&r.direction==='credit')&&
    ['confirmed','pending'].includes(r.status)&&
    (!r.currency||String(r.currency).toUpperCase()===
     String(d.currency).toUpperCase())));

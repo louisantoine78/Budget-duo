@@ -80,7 +80,7 @@ test('two bank rows with same amount and date are ambiguous without more evidenc
 });
 test('card credit cannot be relabeled a new expense',()=>{
  const c=context({sourceOverrides:{rows:[row({direction:'credit'})]}});
- assert.equal(c.review().status,'mismatched_bank_line');
+ assert.equal(c.review().status,'source_incomplete');
 });
 test('wrong currency, bank account, date and exact cents are all mismatches',()=>{
  for(const change of [
@@ -177,6 +177,18 @@ test('refund, payment or fee line cannot be evidence of a card purchase',()=>{
     direction:type==='card_fee'?'debit':'credit',status:'confirmed',amount:'40'}]}});
   assert.equal(c.review({selection:{statementId:c.doc.statementId,
    lineId:'other'}}).status,'mismatched_bank_line');
+ }
+});
+
+test('contradictory unselected refund or fee invalidates whole card statement',()=>{
+ for(const other of [
+  {type:'card_refund',direction:'debit'},
+  {type:'card_payment',direction:'debit'},
+  {type:'card_fee',direction:'credit'}]){
+  const c=context({sourceOverrides:{rows:[row(),
+   {lineId:'bad-typed-line',debitDate:'2026-10-17',
+    status:'confirmed',amount:'3.00',...other}]}});
+  assert.equal(c.review().status,'source_incomplete');
  }
 });
 test('an invalid nonpurchase row date invalidates the full statement',()=>{

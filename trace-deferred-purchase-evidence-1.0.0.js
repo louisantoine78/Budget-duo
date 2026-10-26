@@ -34,6 +34,8 @@
     ['card_purchase','card_refund','card_payment','card_fee'].includes(kind)&&
     date(when)&&when>=s.fromDate&&when<=s.toDate&&
     ['debit','credit'].includes(row.direction)&&
+    row.direction===({'card_purchase':'debit','card_fee':'debit',
+     'card_refund':'credit','card_payment':'credit'}[kind])&&
     ['confirmed','pending'].includes(row.status)&&
     cents(row.amount)!==null&&
     (!row.currency||String(row.currency).toUpperCase()===

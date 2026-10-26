@@ -171,4 +171,22 @@ test('unexpected volumes or invalid collections are rejected',()=>{
  assert.throws(()=>compare({statements:null}),/invalides/);
  assert.throws(()=>compare({statements:Array(101).fill(doc())}),/invalides/);
 });
+
+test('incorrectly typed checking or card row can never attest bank settlement',()=>{
+ for(const incorrect of [{type:'checking_credit',direction:'debit'},
+  {type:'card_fee',direction:'debit'},
+  {type:'card_purchase',direction:'debit'},
+  {type:'checking_debit',direction:'credit'}]){
+  const source=doc({rows:[row(incorrect)]});
+  assert.equal(run([source]).cases[0].status,'source_incomplete');
+  assert.throws(()=>reviewSnapshot({statement:source,settlement:settlement()}),/incomplet/);
+ }
+});
+test('a correctly typed checking debit remains only locally reviewable',()=>{
+ const source=doc({rows:[row({type:'checking_debit'})]});
+ const payment=settlement(),snap=reviewSnapshot({statement:source,settlement:payment});
+ const result=run([source],[payment],[{settlementId:payment.id,approved:true,snapshot:snap}]);
+ assert.equal(result.cases[0].status,'manual_review_current');
+ assert.equal(result.createdTransactions,0);
+});
 console.log(passed+' deferred bank review scenarios passed');
