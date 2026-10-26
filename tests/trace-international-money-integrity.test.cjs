@@ -236,3 +236,26 @@ test('Couple CAD aggregates still present valid amounts at cent precision',()=>{
  assert.equal(couple.cardDebt,0.1);
  assert.equal(couple.net,0.2);
 });
+
+
+test('global wealth cannot hide unsafe current assets behind opposite card liabilities',()=>{
+ const huge=6e13;
+ const bank2={...ca,id:'bank-2',owner:'partner'};
+ const card1={...ca,id:'card-1',type:'card',settlementAccountId:'ca'};
+ const card2={...ca,id:'card-2',type:'card',settlementAccountId:'bank-2'};
+ const snap=I.snapshot({accounts:[ca,bank2,card1,card2],
+  estimates:{ca:huge,'bank-2':huge,'card-1':-huge,'card-2':-huge}});
+ assert.equal(snap.globalCAD,null);
+ assert.equal(snap.complete,false);
+ assert.ok(snap.balances.every(x=>x.cad!==null),
+  'Each individual account is numerically representable');
+});
+test('global wealth sums valid checking assets, card debt and FX at exact cents',()=>{
+ const bank2={...ca,id:'bank-2',owner:'partner'};
+ const card={...ca,id:'card-1',type:'card',settlementAccountId:'ca'};
+ const snap=I.snapshot({accounts:[ca,bank2,fr,card],
+  estimates:{ca:0.1,'bank-2':0.2,fr:0.25,'card-1':-0.1},
+  fxRates:{EUR:quote}});
+ assert.equal(snap.globalCAD,0.6);
+ assert.equal(snap.complete,true);
+});
