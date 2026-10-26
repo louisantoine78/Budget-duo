@@ -1,3 +1,15 @@
+# ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — RACE CONDITION SUR LES ÉCRITURES CLIENT CAS
+
+**Reprendre sur le HEAD actuel** de `trace-5.37.0-international-accounts-fx` (revérifier GitHub au début, ne pas réutiliser aveuglément l'ancien SHA). `main` connue stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Chaque commit `[skip ci]`. Aucune donnée Supabase réelle ni migration hébergée, aucune opération budgétaire client, aucun PR/merge/CI/workflow/déploiement, aucune mise à jour de main ni service worker de production.
+
+**Nouveau vrai correctif client** `cfd340c1bfac99a63e97809a325c826cf8f5ea09` dans `v5-app-5.37.0.js` : `saveDocument(collection,item)` capture `JSON.parse(JSON.stringify(item))` AVANT mise en file `traceSerialWrite`, évitant qu'une mutation du même objet après l'appel modifie rétroactivement le montant, le compte, le taux ou les notes envoyées. Deux validations différées distinctes au moment du RPC : objet LIVE (peut avoir basculé différé) ET capture (intention originale). Révisions CAS et refus des écritures différées inchangés. Tests fonctionnels ajoutés `3e0016a5d94916e067f0efa04be0bb8b079ab3ae`, `2147f10837a1925f411bafbbf378b7cf4910b9be`.
+
+**Résultat exact** : **55/55 tests V8 exécutés**, comprenant des tests de comportement réel de l'adaptateur avec faux `client.rpc` en mémoire, et contrats statiques SQL/JS. Deux écritures d'un objet avec valeurs 40 puis 41 restent 40 puis 41 malgré mutation à 900, y compris note profonde ; test d'une mutation tardive `deferredKind`, BigInt non serialisable et carte qui devient différée. **Ce n'est pas une exécution Node CLI native**, PG/PGlite, navigateur ou iPhone Safari. Le harnais d'intégration PG passe son contrôle syntaxique JS V8, MAIS les migrations 05–11 ne sont pas exécutées sur SQL.
+
+**Prochain chantier** : tests PostgreSQL/PGlite natifs 05–11 sur base fictive, Auth/RLS/CAS, opérations historiques, index CSV et cascade différée ; puis recette réelle de l'adaptateur sur mobile Safari, contrôle des comptes France/Canada, FX, budgets historiques CAD et UX premium. Ne pas annoncer production prête. **58 % ±10, NO-GO**.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — PLACEMENTS CAS / ANCIEN COMPTE BANCAIRE
 
 **Reprendre au vrai HEAD** de `trace-5.37.0-international-accounts-fx` (à résoudre en direct). `main` stable connue `02c70f50e7e51da79b77a91dde96a03c6c719909`. Commits `[skip ci]`, jamais PR/merge, déploiement, workflows, CI, migration Supabase hébergée, reset ou lecture/écriture de données financières réelles.
