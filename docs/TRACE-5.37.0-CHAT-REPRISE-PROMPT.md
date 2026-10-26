@@ -1,3 +1,9 @@
+# ADDENDUM RECTIFICATIF — 25 OCTOBRE — TOTAUX SÛRS ET ARRONDIS
+
+Derniers commits supplémentaires `41481110` (arrondi final à 2 décimales après validation des centimes sûrs, dans `trace-international-1.0.0.js`) et `5dcbf143` (test 0,10+0,20 / 0,30−0,20) sur la branche internationale, `[skip ci]`. **Bilan final corrigé : 20/20 tests V8 de ce lot** — 15 vrais scénarios financiers + 5 contrats SQL12, Node simulé. Aucun vrai PostgreSQL/PGlite, aucun Safari physique, aucune activation de migration12 ni modification main, Supabase réel. Priorité inchangée : PG fictif puis validations app.
+
+---
+
 # ADDENDUM PRIORITAIRE — 25 OCTOBRE 2026 — PROTECTION DES CENTIMES ET MIGRATION 12 EXHAUSTIVE
 
 Au début de la prochaine conversation, vérifier le vrai HEAD sur `trace-5.37.0-international-accounts-fx`; la stable `main` connue est `02c70f50e7e51da79b77a91dde96a03c6c719909`. Continuer le développement sans reprendre les décisions fonctionnelles. Aucun deploy, PR, merge, Actions/CI, Supabase réel, migration appliquée sur environnement hébergé ou modification de `main`. Commits uniquement `[skip ci]`.
