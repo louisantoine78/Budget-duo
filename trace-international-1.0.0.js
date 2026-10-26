@@ -355,8 +355,16 @@
     transferFeeAmount:round(fee),transferFeeCurrency:bankCode,transferFeeIncludedInDebit:true};
   // The same transfer is never a new expense or income. Preserve historical
   // link IDs and all user allocations; only change native legs and FX metadata.
+  // The import match is bound to both *native* legs and their currencies.
+  // Correcting a missing/wrong FX denomination changes the bank evidence
+  // even when the numeric amount stays identical. A stale fingerprint must
+  // not silently certify the edited movement.
+  const sourceBefore=String(transaction.bankCurrency||'CAD').trim().toUpperCase();
+  const targetBefore=String(transaction.toBankCurrency||
+   (sourceBefore==='CAD'&&currency(to)==='CAD'?'CAD':'')).trim().toUpperCase();
   if(Number(transaction.bankAmount??transaction.amountCAD)!==next.bankAmount||
      Number(transaction.toBankAmount??transaction.amountCAD)!==next.toBankAmount||
+     sourceBefore!==next.bankCurrency||targetBefore!==next.toBankCurrency||
      transaction.name!==nextName)next.importFingerprint=null;
   return next;
  };
