@@ -41,3 +41,13 @@ test('candidates are not wired to a hosted migration or live Supabase connection
  assert.doesNotMatch(sql,/https?:\/\/|service_role|apikey/i);
  assert.doesNotMatch(pg,/supabase\.co\/rest\/v1|createClient\s*\(/);
 });
+
+test('deferred calendar keys stay quarantined even with forged payment mode',()=>{
+ const begin=sql.indexOf("when p_collection = 'accounts' then");
+ const end=sql.indexOf("when p_collection in ('transactions'",begin);
+ const block=sql.slice(begin,end);
+ assert.ok(begin>=0&&end>begin);
+ for(const key of ['deferredDebitDay','deferredClosingDay','deferredScheduleVersions'])
+  assert.match(block,new RegExp("'"+key+"'"));
+ assert.match(sql,/'scheduledDueDate','allocationDueDate'/);
+});
