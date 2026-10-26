@@ -846,3 +846,18 @@ Le contrôle `node scripts/trace-release-preflight.mjs` est local et en lecture 
 - [ ] Valider changement de jour réellement constaté en banque, relevés PDF/CSV/OCR, paiement partiel, transfert neutre, devise Couple, sauvegarde/rollback.
 
 **NO-GO**. Aucun enregistrement de configuration différée réelle ou modification de `main`. Ces cases [x] qualifient une **simulation**, pas une fonctionnalité prête pour des données utilisateurs.
+
+
+## 26 octobre 2026 — preuves de prélèvement complet et dates bancaires distinctes
+
+- [x] Comparaison locale de la preuve **sur le compte courant** pour règlement complet et partiel, avec date d'échéance explicitement déclarée.
+- [x] Contrôle des dates réelles (anticipé / retardé), concordance source/compte/devise/montant, double revendication et invalidation des revues périmées.
+- [x] Intake croisé achat carte + prélèvement courant, avec montant exact pour « complet » portant sur un achat seul sans frais ; interdiction de qualifier globalement les lots multi-achats/frais via une seule preuve d'achat.
+- [x] Laboratoire de prévisualisation fictive : changement de date bancaire constatée, écart en jours, blocage des dates impossibles et absence de double dépense.
+- [x] **332/332 tests V8 simulés sur 16 suites** au code `b2d2ebdd` ; aucun échec. Les 5 tests SQL concernés vérifient des textes, pas un moteur SQL.
+- [ ] CRITIQUE — vérifier le véritable schéma et les migrations 05–12 sous PostgreSQL/PGlite isolé, droits RLS/CAS/owner à deux sessions et preuves enregistrées avec unicité serveur.
+- [ ] CRITIQUE — relier le moteur de revue documentaire aux flux persistants de manière atomique, avec provenance distincte sur carte et sur courant ; maintenir `confirmed` impossible sans vérification autorisée.
+- [ ] Requalifier Node natif sur checkout complet, cache du SW labo **à reconstruire via générateur**, PWA hors ligne et Safari iPhone.
+- [ ] Régressions documentaires multi-cartes, frais/remboursements, contre-valeurs FX, protections Mastercard CAD et conservation historique, puis sauvegarde/restauration/rollback.
+
+**Production NO-GO** : cette revue est une préparation locale de preuve, **pas** une authentification bancaire ni une écriture financière autorisée.
