@@ -358,6 +358,28 @@ async function run(){
     {...item,status:'reviewed',reviewedBy:'partner'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
    assert.equal((await readDoc('imports',item.id)).revision,0);
   });
+  await check('CSV rejects oversized sources and preserves non-cryptographic fingerprint metadata',async()=>{
+   const existing=(await readDoc('imports','csv_unparsed_own')).data;
+   const invalid=(name,changes)=>rpcSave(1,'imports',name,{
+    ...existing,id:name,sourceIndex:8,...changes
+   },null);
+   await assert.rejects(invalid('oversize-name',{
+    sourceFileName:'x'.repeat(111)}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(invalid('oversize-row',{
+    rawText:'x'.repeat(651)}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(invalid('bad-row-index',{
+    sourceIndex:'2e3'}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(invalid('out-of-range-index',{
+    sourceIndex:1002}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   const reviewed=(await readDoc('imports','csv_unparsed_own'));
+   await assert.rejects(rpcSave(1,'imports',existing.id,{
+    ...existing,rawFingerprint:'fnv1a64:modified'},reviewed.revision),
+    /TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'imports',existing.id,{
+    ...existing,rawTruncated:true},reviewed.revision),
+    /TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   assert.equal((await readDoc('imports',existing.id)).revision,reviewed.revision);
+  });
   await check('manual review is the only permitted state change; deletions blocked',async()=>{
    const item=(await readDoc('imports','csv_unparsed_own')).data;
    await assert.rejects(rpcSave(1,'imports',item.id,
