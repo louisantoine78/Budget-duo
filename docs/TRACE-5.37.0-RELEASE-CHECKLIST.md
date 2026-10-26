@@ -1,3 +1,20 @@
+## 25 octobre 2026 — correctif candidat de cascade différée (tests PG toujours requis)
+
+**NO-GO.** Candidate 10 modifiée uniquement sur la branche internationale : exception limitée au `DELETE` déclenché après disparition effective du parent `households` et appelé par le vrai rôle PostgreSQL `postgres` sans JWT. Aucun accès à la fonction par les clients, aucun assouplissement du rejet des écritures bancaires différées, aucun RPC d'effacement utilisateur. **Vérification PostgreSQL encore ABSENTE ; ne pas déployer**.
+
+- [x] Correctif candidat migration 10 écrit : `724ab694` `[skip ci]`.
+- [x] Tests intégrés fictifs préparés : 4e utilisateur, foyer avec 2 anciens documents différés + compte et preuve CSV privée ; direct DELETE, membre DELETE, JWT injecté, cascade administrateur et contrôle des 4 tables : `4cb1c4a`, `301e675`, `73a1de5`.
+- [x] Contrats statiques dédiés ajoutés dans `tests/trace-deferred-household-cascade-contract.test.cjs` : `d21a881`.
+- [x] 17/17 contrôles sous V8, dépendances Node simulées ; compilation syntaxique JS du test PostgreSQL, **pas d'exécution SQL**.
+- [ ] **CRITIQUE :** exécuter réellement migrations 05–11 sur PostgreSQL/PGlite isolé, puis `node tests/trace-cas-writes.integration.cjs`. Vérifier déclenchement cascade, snapshots, autorisations, transactions annulées, idempotence, JWT et restauration.
+- [ ] Qualifier `tests/trace-database.integration.cjs` et `tests/trace-personal-settings-ownership.integration.cjs` avec deux foyers, deux membres et vrais rôles RLS/CAS.
+- [ ] Concevoir puis valider le **droit d'effacement légitime des membres** indépendamment de la voie administrative.
+- [ ] Poursuivre tests navigateur, Safari iPhone, budgets CAD historiques, flux internationaux, sauvegarde/restauration/rollback et GO explicite.
+
+**Ne pas transformer une assertion qui devrait réussir en preuve PostgreSQL réussie.** `main`, service worker prod, GitHub CI/Actions, données Supabase réelles et déploiement inchangés.
+
+---
+
 > **Complément vérifié — 25 octobre 2026 :** commit `c8e27041a6fd02e11ebc022607ead8bf064f469a` (`[skip ci]`) : le test de suppression refusée vérifie désormais également que la ligne `household_members` et la sauvegarde `trace_v5_backups` survivent à la transaction avortée. **12/12 tests de contrat/lexique exécutés sous V8 avec `node:fs`, `node:path`, `node:assert` et `node:test` simulés, sur sources GitHub actuelles ; aucune exécution PostgreSQL ni suite Node native.** Les tests d'effacement PG restent NON exécutés et représentent un NO-GO.
 
 ## 25 octobre 2026 — barrière d'effacement des foyers avec débit différé
