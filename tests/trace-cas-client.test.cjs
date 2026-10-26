@@ -68,6 +68,35 @@ test('CAS document create, update and local serialization retain last value',asy
  assert.equal(saved.get(k).data.amountCAD,43);
  assert.equal(app.traceDocRevisions.get(k),3);
 });
+test('queued CAS saves the amount and nested metadata from each call, not later mutations',async()=>{
+ const {app,calls,saved}=createContext();
+ const tx={id:'queued-native',type:'expense',amountCAD:40,
+  bankCurrency:'CAD',bankEvidence:{note:'original'}};
+ const first=app.saveDocument('transactions',tx);
+ tx.amountCAD=41;
+ tx.bankEvidence.note='second';
+ const second=app.saveDocument('transactions',tx);
+ tx.amountCAD=900;
+ tx.bankEvidence.note='unrelated future edit';
+ await Promise.all([first,second]);
+ const writes=calls.filter(c=>c.method==='trace_cas_save_document');
+ assert.equal(writes.length,2);
+ assert.deepEqual(writes.map(w=>w.p.p_data.amountCAD),[40,41]);
+ assert.deepEqual(writes.map(w=>w.p.p_data.bankEvidence.note),
+  ['original','second']);
+ assert.deepEqual(writes.map(w=>w.p.p_expected_revision),[null,0]);
+ assert.equal(saved.get(app.traceWriteKey('transactions',tx.id)).data.amountCAD,41);
+ assert.equal(saved.get(app.traceWriteKey('transactions',tx.id)).revision,1);
+});
+test('queued write snapshots JSON but still blocks metadata promoted to deferred',async()=>{
+ const {app,calls}=createContext();
+ const row={id:'late-deferred',type:'expense',amountCAD:20,
+  bankCurrency:'CAD'};
+ const queued=app.saveDocument('transactions',row);
+ row.deferredKind='purchase';
+ await assert.rejects(queued,/TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(calls.length,0);
+});
 test('CAS refuses stale overwrites, preserving original server row',async()=>{
  const {app,saved,root}=createContext(),k=app.traceWriteKey('transactions','x');
  await app.saveDocument('transactions',{id:'x',amountCAD:10});
