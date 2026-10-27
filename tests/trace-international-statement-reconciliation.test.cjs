@@ -90,7 +90,7 @@ test('merchant refund offsets card debt using the card native receipt',()=>{
 });
 test('cross-currency transfer compares CAD debit and EUR receipt independently',()=>{
  const transfer=transaction('fx','2026-10-16','transfer',150,'ca',
-  {toAccountId:'fr',toBankAmount:95,bankCurrency:'CAD',amountCAD:150});
+  {toAccountId:'fr',toBankAmount:95,toBankCurrency:'EUR',bankCurrency:'CAD',amountCAD:150});
  const debit=run([row('cad','2026-10-16','out',150,'Virement')],[transfer]);
  assert.equal(debit.lines[0].status,'matched');
  const credit=run([row('eur','2026-10-16','in',95,'Virement')],[transfer],
