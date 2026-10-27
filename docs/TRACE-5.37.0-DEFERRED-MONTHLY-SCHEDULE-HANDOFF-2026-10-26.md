@@ -200,3 +200,40 @@ Le JS du fichier candidat principal a passé l'analyse syntaxique V8. Les module
 - **SW/PWA :** les assets du labo ont changé depuis le cache généré `trace-international-preview-sw.js`. Le générateur `scripts/build-trace-preview-pwa.mjs` existe, mais ne peut pas être exécuté ici sur un checkout intégral ; son mode `--check`, Chromium hors ligne et Safari iPhone restent **non requalifiés**. Ne jamais éditer manuellement le SW ni le SW de production.
 - **Finance :** pour une vérification « complet » sur un relevé carte complexe ou multi-achat, compléter les allocations/remboursements avec preuve bancaire et contrôle serveur atomique avant de requalifier `fullBatchEvidenceComplete`. Les marqueurs `manual_review_current` restent une revue cliente, pas une authentification bancaire.
 - **Publication :** aucune PR, fusion, Action déclenchée manuellement, mise en production ou manipulation des transactions réelles ; `main` intacte. Production **NO-GO** et pourcentage d'avancement global indicatif inchangé (~58 % ±10 points).
+
+
+## 26 octobre 2026 — calendrier UX explicite et centimes stricts (reprise à partir de acc6a8b0)
+
+**HEAD de départ confirmé :** `acc6a8b01a12714fe9068df79ccee0934fb4ee63`. **HEAD du code effectivement testé :** `5484afe90ac77f5f8d402af690b574a7cb84916a`.
+
+### Fonctionnalités et correctifs enregistrés sur branche candidate
+
+1. **Prévisualisation UX du calendrier à date d'effet** — Dans `v5-app-5.37.0.js`, la proposition non enregistrable dans les paramètres de carte française affiche maintenant un **achat fictif à la date future de prise d'effet**, la vraie clôture de cycle calculée et le **jour mensuel de prélèvement théorique** qui en découle. Exemple : effet le 21 février 2027, clôture le 20 mars 2027, prélèvement théorique le 31 mars 2027. Les mois courts sont gérés par le moteur existant, sans date bancaire réelle inventée. Si la clôture est absente, seul le prochain prélèvement **indicatif** est affiché, sans allouer de lot. Aucun historique recalculé, aucune écriture persistante.
+2. **Montants bancaires stricts au sein du simulateur** — `TraceDeferredDebit.cents` refuse désormais la coercition JS implicite pour tous les mouvements différés (achats, transferts, remboursements, frais) : chaînes exponentielles, hexadécimales, textes à virgule, espaces, 3 décimales, booléens, objets ou tableaux. Nombres JS finis et chaînes décimales normalisées de 1 à 2 chiffres après la virgule acceptés si montants natifs en centimes exacts et bornes cohérentes. La preuve documentaire `TraceDeferredBankReview` appliquait déjà ce contrôle : les deux modèles convergent.
+3. Aucun changement des règles Mastercard canadiennes, des données réelles, de `main`, des migrations SQL en base, de la séparation Moi/Couple ou des écritures différées mises en quarantaine.
+
+### Commits — chaque message `[skip ci]`
+
+- `d7a8e1a9cca67bffa5e57eac402547f06d710626` — affichage de l'échéance d'un achat d'exemple, lecture seule.
+- `7b30b3b38c19abf6554e9f46993100770b0732ec` — 2 tests supplémentaires d'UX (clôture, date future, échéance indicative).
+- `d48cecd4a0c36e8b6885abda9ae0441e2c7f5daf` — validation stricte des centimes dans le moteur comptable différé.
+- `5484afe90ac77f5f8d402af690b574a7cb84916a` — 2 tests de non-coercition et précision à 0,01 EUR.
+
+### Validation au HEAD `5484afe9`
+
+**362 / 362 vérifications ciblées V8 simulées, zéro échec, 17 suites** :
+- Calendrier mensuel (17), soldes prévisionnels (11), versions (13), paramètres UI (9) : 50.
+- Fiche compte (20), achat prévisionnel (24), comptes (16), budget (12) : 72.
+- Revue bancaire (42), intake modules réels en mémoire (22), intake simulé (27), pont de relevés (7) : 98.
+- Moteur comptable différé (86), plan d'écriture (17), contrat SQL **statique** (6), Mastercard CAD + remboursements proches (19), laboratoire différé (14) : 142.
+
+**Limite explicite :** ces assertions exécutent de vrais JS candidats dans V8 mais utilisent des doublures des modules `fs/path/vm/node:test` ; elles ne sont **PAS** le runner Node natif sur checkout complet ni une exécution de PostgreSQL. Le moteur JavaScript principal `v5-app-5.37.0.js` a passé l'analyse syntaxique V8. Le conteneur disponible dispose de Node 22, mais ni checkout local, ni PGlite/PostgreSQL, et `git ls-remote` ne peut résoudre `github.com`. Les sources sont modifiées via le connecteur GitHub, jamais via Supabase réel.
+
+### Priorités inchangées / portes NO-GO
+
+- **Blocage n°1 :** qualification en environnement fictif isolé des migrations 05–12 (Auth/RLS, CAS, simultanéité, quarantaine du différé, provenance/identités, restitution). Ne lever `TRACE_DEFERRED_NOT_RELEASED` qu'après avis explicite et contrôles PostgreSQL réels.
+- **Blocage n°2 :** persistance Auth/RLS/CAS des versions de calendrier prospectives et des écritures débit différé avec sources bancaires immuables indépendantes sur carte/courant ; ne pas calculer un solde réglé depuis une simple propriété `status:'confirmed'`.
+- **Blocage n°3 :** reconstruire le service worker **du labo** avec `scripts/build-trace-preview-pwa.mjs`, puis exécuter `--check` sur checkout complet ; qualifier hors ligne, retours réseau, iPhone Safari physique, imports PDF/CSV/OCR et sauvegarde/restauration.
+- **Blocage n°4 :** relecture UX premium globale et maîtrise des flux Moi/Couple, devises indépendantes, patrimoine/avances, tests complets de non-régression avant toute release.
+
+Production **NO-GO**. Aucun déploiement, CI forcée, merge, PR, ni transaction réelle. Estimation globale indicative ~58 % ±10 points tant que ces qualifications ne sont pas effectuées.
