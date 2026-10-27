@@ -91,3 +91,26 @@ test('unlinked or nonowned checking does not permit a calendar proposal',()=>{
  assert.match(s.$('#traceBankMetaRevisionResult').textContent,/Compte courant français EUR/);
  assert.equal(s.unchanged(),true);
 });
+
+test('calendar preview illustrates cutoff and actual month-clamped planned debit',()=>{
+ const s=scenario();
+ s.select('#traceBankMetaRevisionDebit','31');
+ s.select('#traceBankMetaRevisionClosing','20');
+ s.select('#traceBankMetaRevisionEffective','2027-02-21');
+ s.propose();
+ assert.match(s.$('#traceBankMetaRevisionResult').textContent,/clôture le 2027-03-20/);
+ assert.match(s.$('#traceBankMetaRevisionResult').textContent,/prélèvement théorique le 2027-03-31/);
+ assert.equal(s.unchanged(),true);
+});
+test('calendar without closing date shows next possible debit without assigning a due date',()=>{
+ const s=scenario();
+ s.select('#traceBankMetaRevisionDebit','28');
+ s.select('#traceBankMetaRevisionClosing','');
+ s.select('#traceBankMetaRevisionEffective','2026-11-01');
+ s.propose();
+ const text=s.$('#traceBankMetaRevisionResult').textContent;
+ assert.match(text,/prochain prélèvement indicatif le 2026-11-28/);
+ assert.match(text,/aucune échéance ne peut être attribuée/);
+ assert.doesNotMatch(text,/prélèvement théorique le/);
+ assert.equal(s.unchanged(),true);
+});
