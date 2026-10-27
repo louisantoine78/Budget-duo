@@ -1043,3 +1043,14 @@ Soldes bancaires natifs ; taux traçable date/source et jamais 1 par défaut ; m
 **Décision :** production **NO-GO**, `main` stable, aucune écriture de compte réel, aucun changement Vercel/Supabase/CI. Avancement global toujours indicatif environ **58 % ±10 points**, pas réévalué à la hausse faute de validation native et navigateur.
 
 Documentation détaillée : `docs/TRACE-5.37.0-PREVIEW-READINESS.md` et `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md`. Commits tous `[skip ci]`. Résoudre le véritable nouveau HEAD GitHub avant tout autre lot.
+
+## Addendum — Reprise du 26 octobre : navigation clavier + cache laboratoire vérifié
+
+- **HEAD de départ de ce lot** : \`ffbe25a0d64c7858791905c4b03eb54b94b2213b\`. Résoudre le HEAD GitHub courant avant tout travail ultérieur. Branche exclusive : \`trace-5.37.0-international-accounts-fx\` ; ne pas toucher \`main\`.
+- Correction de la seconde erreur clavier : \`activityTabKey\` appelait \`$('#activityTabs .tab').indexOf(...)\` sur un unique élément DOM. Remplacé par \`$$('#activityTabs .tab')\` ; test corrigé pour simuler fidèlement \`$\` = élément unique et \`$$\` = tableau. Correction \`9eb0e244db06ed677976d64a96491a52890cd103\` ; anti-régression dans \`tests/trace-activity-keyboard.test.cjs\`.
+- La PWA fictive n'annonce désormais la disponibilité hors ligne que si son **cache propre au laboratoire** contient chaque script et lien statique de la page, l'entrée HTML, ainsi que PDF.js et son worker. Source : \`trace-preview-pwa-1.0.0.js\`. En cas de manque : \`ready=false\`, message explicite, sans aucune requête externe, sans toucher au cache de production. Scénarios fictifs dans \`tests/trace-preview-offline-readiness.test.cjs\`.
+- Tests **sur vrai contenu GitHub mais interprétés dans V8 simulé** : 24/24 cas Activité (9 listes, 7 clavier, 8 filtres de comptes), 6/6 cas audit hors ligne, 7/7 parcours boot du moteur dans un DOM fictif. Ne **pas** les qualifier de test Node natif ou Safari.
+- L'inventaire du SW **reste périmé** : 62 assets, six scripts différés présents dans le HTML mais absents du cache. Le garde-fou signale le défaut ; il ne le résout pas. Obtenir checkout intégral, exécuter \`node scripts/build-trace-preview-pwa.mjs\` puis \`--check\`, relancer suite native et navigateur réel avant toute preview.
+- \`TRACE_DEFERRED_NOT_RELEASED\` inchangé, migrations 05–12 et Auth/RLS/CAS non qualifiés, production **NO-GO**, pas de Vercel ou Supabase réel, pas de CI, pas de PR/merge.
+
+Lire \`docs/TRACE-5.37.0-PREVIEW-READINESS.md\` pour les détails et la liste exacte des six modules. 
