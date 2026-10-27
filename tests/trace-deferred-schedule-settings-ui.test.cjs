@@ -18,20 +18,21 @@ function scenario(overrides={}){
  const $=id=>els[id]||(els[id]={value:'',textContent:'',innerHTML:'',disabled:false,onclick:null});
  const I={country:a=>a.country,currency:a=>a.currency,currencies:()=>['CAD','EUR'],
   exactMoney:x=>x===undefined||x===null?null:Number(x)};
- let sheet='';
+ let sheet='',detailCalls=0;
  const fn=new Function('state','window','me','accountType','esc','$','openSheet',
   'visibleBankAccounts','shortAccountLabel','openAccountSettings',
   'openTraceAccountDetail','confirmBankArchive','saveDocument','renderAll',
   'localDateISO',section+'return openBankMetadata;');
  const open=fn(state,window,'la',a=>a.type,s=>String(s),
   $,(_title,html)=>{sheet=html},
-  ()=>state.accounts,a=>a.name,()=>{},()=>{},()=>{},async()=>{},()=>{},
+  ()=>state.accounts,a=>a.name,()=>{},()=>{detailCalls++},()=>{},async()=>{},()=>{},
   ()=>overrides.today||'2026-10-26');
  // TraceInternational only needed when open actually runs.
  window.TraceInternational=I;
  open('visa-fr');
  return{$,state,html:sheet,unchanged:()=>JSON.stringify(state)===before,
   select:(id,value)=>{$(id).value=value},
+  detailCalls:()=>detailCalls,chooseCalendar:()=>$('#traceBankMetaSchedulePreview').onclick(),
   propose:()=>$('#traceBankMetaRevisionRun').onclick()};
 }
 test('French deferred card settings show effective-dated read-only planner',()=>{
@@ -112,5 +113,21 @@ test('calendar without closing date shows next possible debit without assigning 
  assert.match(text,/prochain prélèvement indicatif le 2026-11-28/);
  assert.match(text,/aucune échéance ne peut être attribuée/);
  assert.doesNotMatch(text,/prélèvement théorique le/);
+ assert.equal(s.unchanged(),true);
+});
+
+test('calendar shortcut focuses the real French simulator instead of navigating away',()=>{
+ const s=scenario(),field=s.$('#traceBankMetaRevisionDebit');
+ let focus=0,scrolled=0;
+ field.focus=()=>focus++;
+ field.scrollIntoView=opts=>{assert.equal(opts.block,'center');scrolled++};
+ s.chooseCalendar();
+ assert.equal(focus,1);assert.equal(scrolled,1);assert.equal(s.detailCalls(),0);
+ assert.equal(s.unchanged(),true);
+});
+test('unavailable calendar form never attempts a phantom focus or hidden write',()=>{
+ const s=scenario({card:{country:'CA',currency:'CAD'}});
+ s.chooseCalendar();
+ assert.equal(s.detailCalls(),1);
  assert.equal(s.unchanged(),true);
 });
