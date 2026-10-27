@@ -7,7 +7,7 @@ function scenario({branch=EXPECTED,dirty=false,untracked='',gitStatusFail=false,
   vercelDisabled=true,vercelMissing=false,
   candidateHead='0123456789abcdef0123456789abcdef01234567',
   headAfter=null,branchAfter=null,dirtyAfter=false,
-  sw=0,native=0,nativeSummary=true,pgProbe=0,pgStatuses=[0,0,0,0],
+  sw=0,native=0,nativeSummary=true,nativeEvidence={},pgProbe=0,pgStatuses=[0,0,0,0],
   pgEmptyOutput=false,pgFindings=0}={}){
  const calls=[],spawn=(cmd,args,options)=>{
   calls.push({cmd,args,options});
@@ -30,8 +30,10 @@ function scenario({branch=EXPECTED,dirty=false,untracked='',gitStatusFail=false,
   if(args.includes('--check'))status=sw;
   if(args.includes('scripts/test-trace-native.mjs')){
    status=native;
-   stdout=nativeSummary?JSON.stringify({syntaxFiles:12,testFiles:47,
-    reportedScenarios:300,failedFiles:0})+'\n':'';
+   stdout=nativeSummary?JSON.stringify({syntaxFiles:12,testFiles:107,
+    expectedMinTestFiles:106,suiteFloorMet:true,
+    committedSuiteInventoryPassed:true,trackedSuiteFiles:107,
+    reportedScenarios:815,failedFiles:0,...nativeEvidence})+'\n':'';
   }
   if(args.includes('require.resolve(process.argv[1])'))status=pgProbe;
   const n=PG_TESTS.indexOf(args[0]);
@@ -112,6 +114,38 @@ test('native process exit zero without a summary is a failed gate',()=>{
  const q=scenario({nativeSummary:false});
  assert.equal(q.automatedPassed,false);
  assert.ok(q.results.some(x=>x.id==='native_evidence_missing'&&!x.passed));
+});
+test('native gate refuses a zero-exit runner with incomplete or forged suite proof',()=>{
+ const cases=[
+  {testFiles:1,trackedSuiteFiles:1,reportedScenarios:1},
+  {suiteFloorMet:false},
+  {committedSuiteInventoryPassed:false},
+  {committedSuiteInventoryPassed:undefined},
+  {trackedSuiteFiles:106},
+  {testFiles:106,trackedSuiteFiles:106,expectedMinTestFiles:107},
+  {expectedMinTestFiles:1},
+  {reportedScenarios:5},
+  {failedFiles:1},
+  {syntaxFiles:0},
+  {testFiles:'107'},
+  {reportedScenarios:Infinity}
+ ];
+ for(const nativeEvidence of cases){
+  const q=scenario({nativeEvidence});
+  assert.equal(q.automatedPassed,false,JSON.stringify(nativeEvidence));
+  assert.ok(q.results.some(x=>x.id==='native_evidence_missing'&&!x.passed),
+   JSON.stringify(nativeEvidence));
+ }
+});
+test('valid native evidence still cannot authorize production',()=>{
+ const {validNativeSummary,MINIMUM_NATIVE_SUITES}=
+  require('../scripts/check-trace-537-release-gates.cjs');
+ assert.equal(MINIMUM_NATIVE_SUITES,106);
+ assert.equal(validNativeSummary({syntaxFiles:12,testFiles:107,
+  expectedMinTestFiles:106,suiteFloorMet:true,
+  committedSuiteInventoryPassed:true,trackedSuiteFiles:107,
+  reportedScenarios:815,failedFiles:0}),true);
+ assert.equal(scenario().releaseReady,false);
 });
 test('untracked source/test files block a verdict based on git HEAD',()=>{
  for(const untracked of ['?? tests/untracked.test.cjs\n',

@@ -89,6 +89,19 @@ function isolatedEnv(env={}){
  if(env.TRACE_PGLITE_MODULE)safe.TRACE_PGLITE_MODULE=env.TRACE_PGLITE_MODULE;
  return safe;
 }
+// Validate the child runner's complete, committed-suite evidence. The exit
+// code alone cannot prove that a truncated checkout executed the 5.37 QA.
+// Keep the floor independent of the child script, which might regress.
+const MINIMUM_NATIVE_SUITES=106;
+function validNativeSummary(s){
+ return !!s&&s.committedSuiteInventoryPassed===true&&s.suiteFloorMet===true&&
+  Number.isSafeInteger(s.expectedMinTestFiles)&&s.expectedMinTestFiles>=MINIMUM_NATIVE_SUITES&&
+  Number.isSafeInteger(s.testFiles)&&s.testFiles>=s.expectedMinTestFiles&&
+  Number.isSafeInteger(s.trackedSuiteFiles)&&s.trackedSuiteFiles===s.testFiles&&
+  Number.isSafeInteger(s.syntaxFiles)&&s.syntaxFiles>0&&
+  Number.isSafeInteger(s.reportedScenarios)&&s.reportedScenarios>=s.testFiles&&
+  s.failedFiles===0;
+}
 function runGate({spawn=spawnSync,root=ROOT,env=process.env,
  node=process.execPath,readFile=readFileSync}={}){
  const safe=isolatedEnv(env),results=[];
@@ -155,12 +168,10 @@ function runGate({spawn=spawnSync,root=ROOT,env=process.env,
  if(native.passed){
   let s;
   try{s=JSON.parse(native.stdout.trim().split(/\r?\n/).at(-1));}catch{}
-  if(!s||!Number.isSafeInteger(s.testFiles)||s.testFiles<1||
-     !Number.isSafeInteger(s.syntaxFiles)||s.syntaxFiles<1||
-     !Number.isSafeInteger(s.reportedScenarios)||s.reportedScenarios<1||
-     s.failedFiles!==0)
+  if(!validNativeSummary(s))
    results.push({id:'native_evidence_missing',passed:false,
-    message:'Aucune preuve de scénarios Node réellement exécutés.'});
+    message:'Le rapport Node ne démontre pas un inventaire commit vérifié, '+
+     'au moins '+MINIMUM_NATIVE_SUITES+' suites complètes et des scénarios exécutés.'});
  }
  // Require only the embedded fictional PostgreSQL package, no install/network.
  const moduleName=safe.TRACE_PGLITE_MODULE||'@electric-sql/pglite';
@@ -208,5 +219,5 @@ if(require.main===module){
   '; Production: NO-GO pending browser, iPhone and explicit finance sign-off.\n');
  if(!report.automatedPassed)process.exitCode=1;
 }
-module.exports={isolatedEnv,runGate,EXPECTED,PG_TESTS,MANUAL,
- MISSION_BASE,PROTECTED};
+module.exports={isolatedEnv,runGate,validNativeSummary,EXPECTED,PG_TESTS,MANUAL,
+ MISSION_BASE,PROTECTED,MINIMUM_NATIVE_SUITES};
