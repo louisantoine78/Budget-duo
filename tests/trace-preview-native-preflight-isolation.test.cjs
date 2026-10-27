@@ -190,3 +190,22 @@ test('real Node runner rejects a missing committed test before executing financi
  assert.equal(report.summary.testFilesExecuted,0);
  assert.equal(report.suites.length,0);
 });
+
+test('real runner refuses tampered tracked test bytes despite identical suite name',t=>{
+ const f=fixture(t),filename='tests/expected.test.cjs';
+ f.put(filename,"const {test}=require('node:test');test('real bank assertion',()=>{});");
+ commitSandbox(f);
+ f.put(filename,"const {test}=require('node:test');test('forged bank assertion',()=>{});");
+ const run=f.cmd('test-trace-native.mjs','--report','proof.json');
+ assert.equal(run.status,1);
+ const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
+ assert.equal(report.preflight.passed,true);
+ assert.equal(report.committedSuites.trackedCount,1);
+ assert.equal(report.committedSuites.checkoutCount,1);
+ assert.deepEqual(report.committedSuites.missing,[]);
+ assert.deepEqual(report.committedSuites.unexpected,[]);
+ assert.equal(report.committedSuites.trackedContentsClean,false);
+ assert.equal(report.committedSuites.passed,false);
+ assert.equal(report.summary.testFilesExecuted,0);
+ assert.equal(report.suites.length,0);
+});
