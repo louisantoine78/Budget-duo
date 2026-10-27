@@ -98,6 +98,11 @@ begin
         and bank.item_id = p_data->>'bankAccountId'
         and bank.data->>'owner' = actor_slot
         and bank.data->>'type' = 'checking'
+        -- The client excludes archived accounts from new bank links.
+        -- Enforce the same rule in the SECURITY DEFINER RPC. Do not
+        -- extend this restriction to old/original bank legs below:
+        -- archived historical entries must remain correctable.
+        and coalesce(bank.data->>'archived','false') = 'false'
     ) then
       raise exception 'TRACE_WRITE_FORBIDDEN: investment bank account not owned by caller'
         using errcode = '42501';

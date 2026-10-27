@@ -152,6 +152,21 @@ async function run(){
    assert.equal((await rpcDelete(1,'investment_operations','op-la',1)).rows[0].ok,true);
    assert.equal(await readDoc('investment_operations','op-la'),undefined);
   });
+  await check('new investment bank leg cannot use an archived checking account',async()=>{
+   const archived={id:'archived-invest-bank',owner:'la',type:'checking',
+    currency:'CAD',archived:true};
+   assert.equal((await rpcSave(1,'accounts',archived.id,archived,null)).rows[0].revision,0);
+   const bad={id:'archive-invest-op',accountId:'pea-la',type:'deposit',
+    bankAccountId:archived.id,bankAmount:40,bankCurrency:'CAD',status:'pending'};
+   await assert.rejects(rpcSave(1,'investment_operations',bad.id,bad,null),
+    /TRACE_WRITE_FORBIDDEN/);
+   assert.equal(await readDoc('investment_operations',bad.id),undefined,
+    'Forbidden archived bank leg must not produce a financial movement');
+   // An active account belonging to the same member remains accepted.
+   const good={...bad,id:'active-invest-op',bankAccountId:'la'};
+   assert.equal((await rpcSave(1,'investment_operations',good.id,good,null)).rows[0].revision,0);
+   await rpcDelete(1,'investment_operations',good.id,0);
+  });
   await check('CAS cannot launder historical investment bank legs owned by another member',async()=>{
    // Reproduce a legacy write predating the ownership guard: this historical
    // operation belongs to la's portfolio, yet debits the partner's checking

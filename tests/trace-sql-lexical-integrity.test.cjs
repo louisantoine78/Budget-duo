@@ -95,3 +95,16 @@ test('primary-account owner guard verifies a real active checking account belong
  assert.match(sql,/coalesce\(d\.data->>'archived','false'\) = 'false'/);
  assert.match(sql,/TRACE_SETTINGS_FORBIDDEN: primary account must be an active checking account owned by caller/);
 });
+
+test('investment bank reference cannot use a checking account archived in the household',()=>{
+ const sql=fs.readFileSync(path.join(root,'migrations/09-trace-cas-versioned-writes.sql'),'utf8');
+ const newReference=sql.split("if nullif(p_data->>'bankAccountId','') is not null and not exists (")[1]?.split(') then')[0];
+ assert.ok(newReference,'missing investment bank reference guard');
+ assert.match(newReference,/bank\.data->>'owner' = actor_slot/);
+ assert.match(newReference,/bank\.data->>'type' = 'checking'/);
+ assert.match(newReference,/coalesce\(bank\.data->>'archived','false'\) = 'false'/,
+  'A new investment bank leg must never be posted into an archived checking account');
+ // Historical rows with a bank leg may be corrected or deleted after that
+ // checking account was archived: original-owner checks must remain intact.
+ assert.equal(sql.split("original_bank.data->>'owner' = actor_slot").length-1,2);
+});
