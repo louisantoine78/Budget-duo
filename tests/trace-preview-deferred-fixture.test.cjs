@@ -42,3 +42,19 @@ test('production location cannot mount fictional card or quote engine',()=>{
  vm.runInNewContext(fs.readFileSync(path.join(root,'trace-international-preview-fixtures-1.0.0.js'),'utf8'),{window});
  assert.equal(window.TraceInternationalPreviewFixtures,undefined);
 });
+
+test('fictional deferred card opening zero is explicitly anchored rather than unknown',()=>{
+ const data=get(),c=card(),hh=data.household;
+ assert.equal(hh.accountOpeningBalances[c.id],0);
+ assert.equal(typeof hh.accountOpeningBalanceDates[c.id],'string');
+ assert.equal(hh.accountOpeningBalanceModes[c.id],'start');
+ assert.equal(data.transactions.some(t=>t.accountId===c.id),false);
+});
+test('CAD to EUR sample provides independent booked EUR destination amount',()=>{
+ const data=get(),transfer=data.transactions.find(t=>t.id==='demo-ca-eur-transfer');
+ assert.equal(transfer.bankCurrency,'CAD');
+ assert.equal(transfer.bankAmount,150);
+ assert.equal(transfer.toBankCurrency,'EUR');
+ assert.equal(transfer.toBankAmount,95);
+ assert.equal(transfer.amountCAD,150);
+});
