@@ -196,3 +196,44 @@ test('a receiving account owned only by the other member is not added to review'
  assert.deepEqual(a.chosen.items.map(v=>v[0]),['all','partner']);
  assert.equal(JSON.stringify(a.state),a.before);
 });
+
+test('real International engine validates native recipient transfer proof',()=>{
+ const engine={};new Function('window',read('trace-international-1.0.0.js'))(engine);
+ const EUR={id:'eur',currency:'EUR',type:'checking',country:'FR'};
+ const CAD={id:'cad',currency:'CAD',type:'checking',country:'CA'};
+ const t={id:'fx',type:'transfer',status:'pending',accountId:'cad',toAccountId:'eur',
+  bankAmount:50,bankCurrency:'CAD',toBankAmount:46.2,toBankCurrency:'EUR',amountCAD:50};
+ const value=(a,leg)=>engine.TraceInternational.amountOnAccount(t,a,leg);
+ assert.equal(value(EUR,'destination'),46.2);
+ assert.equal(value(CAD,'source'),50);
+ t.toBankCurrency='CAD';assert.equal(value(EUR,'destination'),null);
+ t.toBankCurrency='EUR';t.toBankAmount=null;assert.equal(value(EUR,'destination'),null);
+ t.toBankAmount=46.205;assert.equal(value(EUR,'destination'),null);
+});
+test('review shortcut counts pending transfer once regardless of number of owned legs',()=>{
+ const i=app.indexOf('function traceActivityControls(){'),j=app.indexOf('\nfunction openActivityCategory(',i);
+ assert.ok(i>0&&j>i);
+ const accounts=[
+  {id:'cad',owner:'la',currency:'CAD',type:'checking',name:'Canada'},
+  {id:'eur',owner:'la',currency:'EUR',type:'checking',name:'France'},
+  {id:'other',owner:'partner',currency:'GBP',type:'checking',name:'Partner'}
+ ];
+ const state={accounts,categories:[],transactions:[
+  {id:'fx',accountId:'cad',toAccountId:'eur',type:'transfer',status:'pending'},
+  {id:'in',accountId:'other',toAccountId:'eur',type:'transfer',status:'pending'},
+  {id:'other-only',accountId:'other',type:'expense',status:'pending'},
+  {id:'confirmed',accountId:'cad',type:'expense',status:'confirmed'}
+ ]};
+ const pending={textContent:'',onclick:null};
+ const f=new Function('state','me','activityAccountFilter','activityFilters',
+  'accountType','traceActivityNatureLabel','traceActivitySelect','shortAccountLabel','window',
+  'visibleBankAccounts','$','renderActivity','showTab',
+  app.slice(i,j)+';return traceActivityControls;');
+ let opened='';
+ f(state,'la','all',{category:'all',nature:'all',currency:'all',status:'confirmed'},
+  a=>a.type,x=>x,()=>{},a=>a.name,{TraceInternational:{currency:a=>a.currency}},
+  owner=>accounts.filter(a=>a.owner===owner),
+  sel=>sel==='#activityShowPending'?pending:null,()=>{},tab=>opened=tab)();
+ assert.equal(pending.textContent,'À valider · 2');
+ pending.onclick();assert.equal(opened,'review');
+});
