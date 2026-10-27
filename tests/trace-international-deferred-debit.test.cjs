@@ -535,4 +535,23 @@ test('partial payment does not mutate source and remains read-only',()=>{
  assert.equal(r.writes,0);assert.equal(r.financialChanges,0);
  assert.equal(s.bankEvidence.amount,'12.35');
 });
+
+test('ambiguous strings and coerced objects never become native card or bank money',()=>{
+ for(const invalid of ['1e3','0x10',' 12.35 ','12,35','+12.35','12.345',
+   true,[],{},'Infinity','NaN']){
+  assert.throws(()=>calculate([purchase('p1',invalid)]),/Achat différé ambigu/);
+  assert.throws(()=>calculate([purchase('p1')],[debit('s1',invalid)],'2026-11-05'),/Règlement différé invalide/);
+  assert.throws(()=>simulate({card,checking,purchases:[purchase('p1')],
+   refunds:[merchantRefund('r1',invalid)],asOfDate:'2026-10-20'}),/Remboursement commerçant différé ambigu/);
+  assert.throws(()=>simulate({card,checking,purchases:[purchase('p1')],
+   fees:[cardFee('f1',invalid)],asOfDate:'2026-10-20'}),/Frais de carte différée ambigus/);
+ }
+});
+test('canonical one-cent debit remains a neutral internal transfer with exact budget amount',()=>{
+ const r=calculate([purchase('p1','0.01')],[debit('s1','0.01')],'2026-11-05');
+ assert.equal(r.liability,0);
+ assert.equal(r.monthlyBudget['2026-10'],0.01);
+ assert.equal(r.checkingBalanceChange,-0.01);
+ assert.equal(r.bankTransfers[0].budgetExpense,false);
+});
 console.log(count+' deferred-debit accounting laboratory scenarios passed');
