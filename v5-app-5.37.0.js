@@ -21,8 +21,11 @@ let traceSettingsRevision=null,traceWritesBlocked=false;
 // request cannot report the entire workspace synchronized while another
 // write still awaits confirmation.
 let tracePendingWrites=0,traceBatchHadFailure=false;
+// A different successful save must not erase an outstanding local edit warning.
+const traceUnsavedWriteKeys=new Set();
 function traceSyncConfirmed(){
- if(traceBatchHadFailure)sync('error','Certaines écritures n’ont pas été enregistrées');
+ if(traceUnsavedWriteKeys.size)sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
+ else if(traceBatchHadFailure)sync('error','Certaines écritures n’ont pas été enregistrées');
  else if(tracePendingWrites>1)sync('saving','Autres écritures en cours…');
  else sync('synced');
 }
@@ -1861,7 +1864,7 @@ async function removeDocument(collection,id){if(internationalPreviewMode())retur
    p_expected_revision:traceRevision(traceDocRevisions.get(key))});
   if(error)throw traceSaveFailure(error);
   if(data!==true)throw traceSaveFailure(new Error('Suppression non confirmée'));
-  traceDocRevisions.delete(key);traceSyncConfirmed();
+  traceDocRevisions.delete(key);traceUnsavedWriteKeys.delete(key);traceSyncConfirmed();
  });}
 function categoryKind(c){return c.budgetKind||(c.type==='income'?'income':['rent','subscriptions','phone','taxes'].includes(c.id)?'fixed':'variable');}
 function manageCategories(){
@@ -5100,10 +5103,12 @@ async function saveHouseholdSettings(){
    // using the newly confirmed server revision.
    const latestLocalSettings={...queuedSettings,...state.household,schemaVersion:5};
    if(JSON.stringify(latestLocalSettings)!==JSON.stringify(queuedSettings)){
-    // Another successful document must not hide an unsaved local settings edit.
-    traceBatchHadFailure=true;
+    traceUnsavedWriteKeys.add('settings:'+household.id);
     sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
-   }else traceSyncConfirmed();
+   }else{
+    traceUnsavedWriteKeys.delete('settings:'+household.id);
+    traceSyncConfirmed();
+   }
   });
 }
 async function saveDocument(collection,item){
@@ -5139,10 +5144,11 @@ async function saveDocument(collection,item){
    // 'Synchronisé' badge until the edited value is actually posted.
    let matchesConfirmed=false;
    try{matchesConfirmed=JSON.stringify(item)===JSON.stringify(requested);}catch{}
-   if(matchesConfirmed)traceSyncConfirmed();
-   else{
-    // Preserve this unsaved local edit across other concurrent successes.
-    traceBatchHadFailure=true;
+   if(matchesConfirmed){
+    traceUnsavedWriteKeys.delete(key);
+    traceSyncConfirmed();
+   }else{
+    traceUnsavedWriteKeys.add(key);
     sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
    }
   });

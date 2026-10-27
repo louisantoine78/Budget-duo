@@ -499,6 +499,47 @@ test('investment operation referencing a deferred legacy bank ID is held before 
   bankAccountId:'real-checking',status:'pending'});
  assert.equal(calls.filter(x=>x.method==='trace_cas_save_document').length,1);
 });
+test('an unrelated successful save does not clear an outstanding unsaved document warning',async()=>{
+ const {app,syncLog,saved}=createContext();
+ const changed={id:'still-local',amountCAD:10};
+ const first=app.saveDocument('transactions',changed);
+ changed.amountCAD=20;
+ await first;
+ assert.equal(syncLog.at(-1)?.status,'error');
+ await app.saveDocument('transactions',{id:'unrelated',amountCAD:50});
+ assert.equal(syncLog.at(-1)?.status,'error',
+  'Another later successful save cannot falsely confirm the edited document');
+ assert.equal(saved.get(app.traceWriteKey('transactions','still-local')).data.amountCAD,10);
+ await app.saveDocument('transactions',changed);
+ assert.equal(saved.get(app.traceWriteKey('transactions','still-local')).data.amountCAD,20);
+ assert.equal(syncLog.at(-1)?.status,'synced','Saving that same edited document clears its warning');
+});
+test('an unrelated financial save cannot hide outstanding unsaved household settings',async()=>{
+ const {app,client,state,syncLog}=createContext();
+ app.setRevision(0);
+ let entered,release;
+ const started=new Promise(done=>{entered=done;});
+ const blocked=new Promise(done=>{release=done;});
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_household_settings'){
+   entered();await blocked;
+  }
+  return original(method,args);
+ };
+ state.household.name='original';
+ const settings=app.saveHouseholdSettings();
+ await started;
+ state.household.name='edited after send';
+ release();await settings;
+ assert.equal(syncLog.at(-1)?.status,'error');
+ await app.saveDocument('transactions',{id:'unrelated',amountCAD:50});
+ assert.equal(syncLog.at(-1)?.status,'error',
+  'An unrelated transaction cannot confirm dirty household settings');
+ await app.saveHouseholdSettings();
+ assert.equal(syncLog.at(-1)?.status,'synced',
+  'A new confirmed settings revision clears the warning');
+});
 test('unsaved in-flight document edits remain visibly unsynchronized after another successful save',async()=>{
  const {app,client,syncLog}=createContext();
  let entered,release;
