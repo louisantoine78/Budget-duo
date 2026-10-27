@@ -1,5 +1,16 @@
 ## 27 octobre 2026 — Anti-faux-positif des tests natifs
 
+## 27 octobre — Contrôle natif supplémentaire du générateur (sans checkout intégral)
+
+Le commit candidat `036f63f4da9e496df9e710eab76293f6e0b254bb` (`[skip ci]`) complète `tests/trace-preview-native-preflight-isolation.test.cjs` par **trois scénarios Node natifs** : modification d'octets d'un actif à taille et nom constants, altération directe du SW alors que les noms d'actifs restent corrects, refus des URL externes et chemins parents au sein du laboratoire. Le SHA Git exact du fichier de tests après commit est `680b87bd106400bc27efd522945b70650d7aa680`.
+
+**Preuve exécutée en Node 22.16.0 : 20/20 scénarios ciblés**, répartis en **13** contrôles TAP et **7** essais du générateur officiel et préflight sur arborescence fictive temporaire. Les modules et tests utilisés ont des empreintes Git identiques aux fichiers GitHub candidats (générateur `2fbc9bd0`, runner `e638e0d4`, inventaire `6e4b69de`, contrôleur corrigé `5be1aa77`, tests TAP `63f5b378`, tests SW `680b87bd`). Le test octet prouve en laboratoire que `--check` utilise le contenu réel et pas seulement un inventaire de noms ; il ne régénère **pas** le SW enregistré dans Git.
+
+**État de porte A : toujours NO-GO.** Les 106 fichiers de tests du checkout intégral n'ont pas été exécutés, les six modules de débit différé manquent toujours dans le SW candidat, aucun Chromium/Safari ni SQL PGlite/PostgreSQL sur la candidate complète. Récupérer le checkout réel, lancer le générateur officiel et `--check`, le `--preflight`, puis les 106 suites et la qualification serveur. Aucune autorisation de CI, PR, merge, Vercel ou Supabase réel ; `main` et `TRACE_DEFERRED_NOT_RELEASED` inchangés. Estimation indicative globale **58 % ±10**, pas de réestimation.
+
+---
+
+
 - [x] Reproduit sous **Node v22.16.0 réel** : le résumé TAP `2 tests / 1 pass / 1 skipped / 0 fail` avait code de sortie 0 et était accepté à tort par `checkSuiteResult`.
 - [x] Commits candidats `2c0c4235` et `c169557c` (`[skip ci]`) : bloquer tout `skipped`, `todo` ou `cancelled` et toute suite partiellement exécutée ; tests anti-régression avec un vrai sous-processus Node.
 - [x] **13/13 tests Node natifs ciblés** réussis sur miroir local de **deux fichiers seulement** ; empreintes Git comparées et identiques aux fichiers GitHub (`5be1aa77...` et `63f5b378...`). Ne pas étiqueter ceci « 106 suites Node validées ».
