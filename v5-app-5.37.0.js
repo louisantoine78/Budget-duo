@@ -4502,7 +4502,7 @@ function renderActivitySharing(){
 function activityTabKey(event,button){
  const keys=['ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Home','End'];
  if(!keys.includes(event.key))return;
- const nodes=$('#activityTabs .tab'),at=nodes.indexOf(button);
+ const nodes=$$('#activityTabs .tab'),at=nodes.indexOf(button);
  if(at<0||!nodes.length)return;
  const next=event.key==='Home'?0:event.key==='End'?nodes.length-1:
   (at+(event.key==='ArrowRight'||event.key==='ArrowDown'?1:-1)+nodes.length)%nodes.length;
