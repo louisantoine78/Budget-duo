@@ -41,7 +41,9 @@ report.preflight={
 // A stale cache is an immediate NO-GO. Do not spend minutes running 104 suites
 // against a candidate whose shell cannot be loaded completely on iPhone.
 if(preflightOnly||!report.preflight.passed){
- report.passed=report.preflight.passed&&preflightOnly;
+ // A successful preflight is not proof that any native financial test passed.
+ // Reserve report.passed=true for the full suite with non-zero executed tests.
+ report.passed=false;
  report.summary={preflightPassed:report.preflight.passed,
   staticAssets:inventory.requiredCount,cachedAssets:inventory.cachedCount,
   missingAssets:inventory.missing.length,
