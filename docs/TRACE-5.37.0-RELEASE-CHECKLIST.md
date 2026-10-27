@@ -1,3 +1,20 @@
+## 27 octobre — CORRECTION BLOQUANTE : assets stables protégés, versions 5.37 isolées
+
+**Départ du lot :** `fc5e59b0f1b3d01c9c443b7a2a093678a925c7bc`, sur la branche exclusive `trace-5.37.0-international-accounts-fx`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Aucun merge, PR, CI déclenchée, Vercel, migration ou Supabase réel. Commits **`c61d0bff1d501e1dd292a9c9adfb150aa68c5821`**, **`42fe561210fb1fdef2b78b71299b570a5aa58a92`**, **`3b23d7581d29dc75cdf9596c0014c19ebf8752ca`** avec `[skip ci]`.
+
+**Écart réel découvert via arborescences GitHub immuables :** 2 des **51 pathspecs PROTECTED** de `scripts/check-trace-537-release-gates.cjs` différaient du commit de base immuable `6eb6c17e5c9eba2d3727ebea404cce5fec0424c6` et de `main` : `trace-operation-ui-1.0.0.js` et `trace-insights-1.0.0.js`. Les anciennes notes annonçant « zéro changement protégé » étaient **périmées/incorrectes pour la candidate de départ**. Cela aurait dû bloquer le release gate ; ne jamais assouplir ce garde-fou pour masquer l'écart.
+
+**Correction sur la seule candidate, atomique via arbre Git :**
+- Rétablissement des **octets exacts** des deux fichiers protégés, respectivement blobs Git `8fc44648c783698d790684210b09d7b1ae2ab2b1` et `4efc4bdb7009b6631e66a2a32b014c4758389b2c`.
+- Préservation intégrale des améliorations de 5.37 via `trace-operation-ui-5.37.0.js` (blob `ed1b2122c4fdafbb237d1d36a9628d2a3831d78d`) et `trace-insights-5.37.0.js` (blob `24132f644b9ff281df8474d8b6a97e7a2b03da13`). Ce sont les octets exacts des versions améliorées précédentes, sans recomposition ni perte.
+- `trace-international-preview.html` charge exclusivement les deux versions 5.37 ; `index.html` stable charge toujours les versions historiques. Le test de bootstrap fictif pointe désormais sur `trace-operation-ui-5.37.0.js`. Test `tests/trace-537-release-gates.test.cjs` ajouté pour attester les chemins et comparer les octets de chaque fichier stable à `git show MISSION_BASE:path` dans un **vrai checkout**. Ce test nouveau est **enregistré mais non exécuté nativement** ici.
+
+**Vérification GitHub après correction : 51/51 chemins protégés strictement identiques** au commit de base ; aucune modification de `main`. Le SW du labo enregistré reste **périmé** : **68 actifs requis** selon la nouvelle page, **62 dans ASSETS** ; **8 manquants** (6 scripts différés antérieurs + 2 modules dédiés 5.37), **2 désormais inattendus** (anciens modules partagés, qui ne doivent plus être cachés par la preview). Toutes les sources requises sont présentes dans GitHub. **Ne pas modifier le SW à la main** : uniquement `node scripts/build-trace-preview-pwa.mjs` puis `--check` sur checkout intégral, et ensuite `--preflight`, le runner natif **107 suites**, Chromium/Safari et PGlite/PostgreSQL fictif.
+
+**Qualification actuelle :** preuve d'arborescence GitHub réelle, **pas** un `git diff` local ou une suite Node complète. Le clone/archive GitHub reste inaccessible depuis le conteneur (DNS), donc le nouveau test et la régénération SW ne sont pas déclarés exécutés. **Porte A et production NO-GO** ; `TRACE_DEFERRED_NOT_RELEASED` inchangé, avancement général indicatif `~58 % ±10 points` non recalculé.
+
+---
+
 ## 27 octobre — Gate A : vérification des octets des suites, pas seulement des noms
 
 Branche de développement unique `trace-5.37.0-international-accounts-fx`, référence de départ **`95c94d3a1621896dd20a3bee6ea4b66f52c406a5`**. `main` vérifiée **`02c70f50e7e51da79b77a91dde96a03c6c719909`**. Commits candidats **`a2b6909e`**, **`0855d3e9`**, **`1946f267`**, **`0a85ca13`**, **`b40b3ade`** et **`2def3710`** ; chacun contient `[skip ci]`.
