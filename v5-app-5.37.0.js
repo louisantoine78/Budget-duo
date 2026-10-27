@@ -17,6 +17,15 @@ let internationalQuotes={},internationalQuoteAttempt=new Set(),internationalFxBu
 // 5.37 candidate: revisions are server-owned; never fall back to unchecked writes.
 const traceDocRevisions=new Map(),traceWriteQueues=new Map();
 let traceSettingsRevision=null,traceWritesBlocked=false;
+// Multiple distinct financial documents can save concurrently. A successful
+// request cannot report the entire workspace synchronized while another
+// write still awaits confirmation.
+let tracePendingWrites=0,traceBatchHadFailure=false;
+function traceSyncConfirmed(){
+ if(traceBatchHadFailure)sync('error','Certaines écritures n’ont pas été enregistrées');
+ else if(tracePendingWrites>1)sync('saving','Autres écritures en cours…');
+ else sync('synced');
+}
 const traceWriteKey=(collection,id)=>JSON.stringify([String(collection),String(id)]);
 // Safety quarantine until deferred postings, allocations and server-side CAS/RLS
 // are qualified on fictitious PostgreSQL. This is defense-in-depth on the
@@ -66,10 +75,20 @@ function traceRevision(value){
  return n;
 }
 async function traceSerialWrite(key,task){
+ if(tracePendingWrites===0)traceBatchHadFailure=false;
+ tracePendingWrites++;
  const prior=traceWriteQueues.get(key)||Promise.resolve();
  const next=prior.catch(()=>{}).then(task);
  traceWriteQueues.set(key,next);
- try{return await next;}finally{if(traceWriteQueues.get(key)===next)traceWriteQueues.delete(key);}
+ try{return await next;}
+ catch(error){
+  traceBatchHadFailure=true;
+  if(!traceWritesBlocked)sync('error','Enregistrement incomplet — vérifie les modifications');
+  throw error;
+ }finally{
+  if(traceWriteQueues.get(key)===next)traceWriteQueues.delete(key);
+  tracePendingWrites--;
+ }
 }
 function traceConflictNotice(){
  traceWritesBlocked=true;
@@ -1842,7 +1861,7 @@ async function removeDocument(collection,id){if(internationalPreviewMode())retur
    p_expected_revision:traceRevision(traceDocRevisions.get(key))});
   if(error)throw traceSaveFailure(error);
   if(data!==true)throw traceSaveFailure(new Error('Suppression non confirmée'));
-  traceDocRevisions.delete(key);sync('synced');
+  traceDocRevisions.delete(key);traceSyncConfirmed();
  });}
 function categoryKind(c){return c.budgetKind||(c.type==='income'?'income':['rent','subscriptions','phone','taxes'].includes(c.id)?'fixed':'variable');}
 function manageCategories(){
@@ -5082,7 +5101,7 @@ async function saveHouseholdSettings(){
    const latestLocalSettings={...queuedSettings,...state.household,schemaVersion:5};
    if(JSON.stringify(latestLocalSettings)!==JSON.stringify(queuedSettings))
     sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
-   else sync('synced');
+   else traceSyncConfirmed();
   });
 }
 async function saveDocument(collection,item){
@@ -5117,7 +5136,7 @@ async function saveDocument(collection,item){
    // 'Synchronisé' badge until the edited value is actually posted.
    let matchesConfirmed=false;
    try{matchesConfirmed=JSON.stringify(item)===JSON.stringify(requested);}catch{}
-   if(matchesConfirmed)sync('synced');
+   if(matchesConfirmed)traceSyncConfirmed();
    else sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
   });
 }

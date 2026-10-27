@@ -485,3 +485,50 @@ test('investment operation referencing a deferred legacy bank ID is held before 
   bankAccountId:'real-checking',status:'pending'});
  assert.equal(calls.filter(x=>x.method==='trace_cas_save_document').length,1);
 });
+test('concurrent financial saves never report synchronized before every request finishes',async()=>{
+ const {app,client,syncLog,saved}=createContext();
+ let entered,release;
+ const started=new Promise(done=>{entered=done;});
+ const blocked=new Promise(done=>{release=done;});
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_document'&&args.p_item_id==='slow'){
+   entered();await blocked;
+  }
+  return original(method,args);
+ };
+ const slow=app.saveDocument('transactions',{id:'slow',amountCAD:40});
+ await started;
+ const fast=app.saveDocument('transactions',{id:'fast',amountCAD:20});
+ await fast;
+ assert.equal(saved.size,1);
+ assert.notEqual(syncLog.at(-1)?.status,'synced',
+  'A pending transaction must keep the workspace status unsynchronized');
+ release();await slow;
+ assert.equal(saved.size,2);
+ assert.equal(syncLog.at(-1)?.status,'synced');
+});
+test('a failed concurrent transaction cannot be hidden by a different successful save',async()=>{
+ const {app,client,syncLog,saved}=createContext();
+ let entered,release;
+ const started=new Promise(done=>{entered=done;});
+ const blocked=new Promise(done=>{release=done;});
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_document'&&args.p_item_id==='slow'){
+   entered();await blocked;
+  }
+  if(method==='trace_cas_save_document'&&args.p_item_id==='conflict')
+   return {error:{message:'TRACE_WRITE_CONFLICT: fictional concurrent device'},data:null};
+  return original(method,args);
+ };
+ const slow=app.saveDocument('transactions',{id:'slow',amountCAD:40});
+ await started;
+ await assert.rejects(app.saveDocument('transactions',{id:'conflict',amountCAD:80}),
+  error=>{assert.match(String(error?.message||''),/TRACE_WRITE_CONFLICT/);return true;});
+ release();await slow;
+ assert.equal(saved.size,1);
+ assert.equal(app.blocked(),true);
+ assert.notEqual(syncLog.at(-1)?.status,'synced',
+  'The green badge must never hide a rejected concurrent financial write');
+});
