@@ -86,10 +86,32 @@ begin
         select jsonb_object_keys(after_map) as key
       ) slots
     loop
-      if (before_map->entry_key) is distinct from (after_map->entry_key)
-         and entry_key <> caller_slot then
-        raise exception 'TRACE_SETTINGS_FORBIDDEN: personal setting belongs to another member'
-          using errcode = '42501';
+      if (before_map->entry_key) is distinct from (after_map->entry_key) then
+        if entry_key <> caller_slot then
+          raise exception 'TRACE_SETTINGS_FORBIDDEN: personal setting belongs to another member'
+            using errcode = '42501';
+        end if;
+        -- Owning a preference key does not confer ownership of the account
+        -- selected by its value. Validate the target account as well, or a
+        -- member could point their personal primary account at the partner's
+        -- checking account through a SECURITY DEFINER settings RPC.
+        -- Removing one's own preference is allowed (fallback chosen in UI).
+        if field_name = 'primaryBankAccountByOwner'
+           and entry_key = caller_slot and after_map ? entry_key then
+          if jsonb_typeof(after_map->entry_key) is distinct from 'string'
+             or not exists (
+               select 1 from public.documents d
+               where d.household_id = old.id
+                 and d.collection = 'accounts'
+                 and d.item_id = after_map->>entry_key
+                 and d.data->>'owner' = caller_slot
+                 and d.data->>'type' = 'checking'
+                 and coalesce(d.data->>'archived','false') = 'false'
+             ) then
+            raise exception 'TRACE_SETTINGS_FORBIDDEN: primary account must be an active checking account owned by caller'
+              using errcode = '42501';
+          end if;
+        end if;
       end if;
     end loop;
   end loop;

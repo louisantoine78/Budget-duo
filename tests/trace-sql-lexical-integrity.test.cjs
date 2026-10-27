@@ -83,3 +83,15 @@ test('candidate policy, trigger and capability declarations occur exactly once',
   assert.equal(sql.split(needle).length-1,1,needle+' declaration must be singular');
  }
 });
+
+test('primary-account owner guard verifies a real active checking account belonging to caller',()=>{
+ const sql=fs.readFileSync(path.join(root,'migrations/08-trace-personal-settings-owner-guard.sql'),'utf8');
+ assert.match(sql,/field_name = 'primaryBankAccountByOwner'/);
+ assert.match(sql,/entry_key = caller_slot/);
+ assert.match(sql,/d\.collection = 'accounts'/);
+ assert.match(sql,/d\.item_id = after_map->>entry_key/);
+ assert.match(sql,/d\.data->>'owner' = caller_slot/);
+ assert.match(sql,/d\.data->>'type' = 'checking'/);
+ assert.match(sql,/coalesce\(d\.data->>'archived','false'\) = 'false'/);
+ assert.match(sql,/TRACE_SETTINGS_FORBIDDEN: primary account must be an active checking account owned by caller/);
+});

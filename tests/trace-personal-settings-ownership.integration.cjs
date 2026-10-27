@@ -27,8 +27,12 @@ async function run(){
   const household=(await asUser(1,tx=>tx.query("select * from public.create_household('Fictional','A')"))).rows[0];
   await asUser(2,tx=>tx.query('select * from public.join_household($1,$2)',[household.invite_code,'B']));
   const hid=household.household_id;
-  for(const a of [{id:'la-current',owner:'la',currency:'CAD'},
-    {id:'partner-current',owner:'partner',currency:'EUR'}]){
+  for(const a of [
+    {id:'la-current',owner:'la',currency:'CAD',type:'checking'},
+    {id:'la-secondary',owner:'la',currency:'CAD',type:'checking'},
+    {id:'la-card',owner:'la',currency:'CAD',type:'card'},
+    {id:'la-archived',owner:'la',currency:'CAD',type:'checking',archived:true},
+    {id:'partner-current',owner:'partner',currency:'EUR',type:'checking'}]){
    await db.query(`insert into public.documents(household_id,collection,item_id,data,updated_by)
     values($1,'accounts',$2,$3,$4)`,[hid,a.id,JSON.stringify(a),uid(1)]);
   }
@@ -85,6 +89,17 @@ async function run(){
    assert.equal(s.accountOpeningBalances['la-current'],125);
    assert.equal(s.accountOpeningBalances['partner-current'],240);
    assert.equal(s.memberNicknames.partner,'Bibi');
+  });
+  await test('primary bank account reference must point to caller-owned active checking account',async()=>{
+   await denied(1,['primaryBankAccountByOwner','la'],'partner-current');
+   await denied(1,['primaryBankAccountByOwner','la'],'la-card');
+   await denied(1,['primaryBankAccountByOwner','la'],'la-archived');
+   await denied(1,['primaryBankAccountByOwner','la'],'missing-account');
+   await denied(2,['primaryBankAccountByOwner','partner'],'la-current');
+   await patch(1,['primaryBankAccountByOwner','la'],'la-secondary');
+   assert.equal((await read()).primaryBankAccountByOwner.la,'la-secondary');
+   await patch(1,['primaryBankAccountByOwner','la'],'la-current');
+   assert.equal((await read()).primaryBankAccountByOwner.la,'la-current');
   });
   await test('validated shared split stays editable by either member',async()=>{
    await patch(1,['defaultSplit'],{la:60,partner:40});
