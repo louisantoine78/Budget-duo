@@ -46,3 +46,29 @@ Sur le code candidat au SHA `832bbbb8186cd99fac41637cdb322444b595625b`, les cont
 **Exécution réellement native et séparée : 7/7 sous Node 22**, exclusivement pour `tests/trace-native-suite-evidence.test.cjs` et sa dépendance `scripts/trace-native-suite-evidence.cjs`. Les copies locales ont été validées par `git hash-object` contre les SHA des **deux blobs exacts** du dépôt (`f1c1922d449639d6cf0d4e78c5c36d29270b16da` et `6677e7b2195632505871cf5aa787b07feae4c13d`). Pas d'exécution native de la suite entière, ni de serveur SQL, ni de Safari.
 
 Verdict inchangé : **la démo fictive est un objectif distinct et plus proche que la production**, mais un nouveau déploiement ne doit pas être présenté comme terminé ; sa vérification de cache et son autorisation restent à obtenir. Pour les vraies finances, production **NO-GO**.
+
+
+## 26 octobre 2026 — renforcer le vrai parcours de démo fictive
+
+**Code candidat examiné :** \`9693735854f59461718c455c3c110fa02d26b5e7\`. Cette section complète, sans remplacer, le plan des trois niveaux de livraison ci-dessus.
+
+### Avancements enregistrés
+
+- **Carte française à débit différé fictive** : possède maintenant un calendrier versionné depuis le \`2026-09-01\` (clôture au 20, prélèvement prévu au 5). Elle sert uniquement à **simuler** une future modification et l'échéance d'un achat. Aucune transaction bancaire réelle.
+- **Données fictives cohérentes** : le prélèvement initial de la carte fictive est **0 EUR explicite**, avec date et mode de référence, plutôt qu'un solde de carte absent. Le virement fictif CAD → EUR possède désormais une **jambe de réception \`toBankCurrency:'EUR'\` et \`toBankAmount:95\`**, en plus du débit source de 150 CAD. Aucune conversion/taux déduits du néant.
+- **Démarrage de la préversion** : 7/7 scénarios de bootstrap de l'**application candidate réelle** (mais DOM/Node simulés dans V8) passent avec ces données : session fictive isolée et sans Supabase, Accueil CAD, changement de principal → EUR (solde ~1 208,80 EUR), Couple, taux tests, ajout compte fictif, absence de redirection.
+- **Tests de fixture** : 6/6 vérifications ciblées dans V8, calendrier effectif, historique non rétroactif, ouverture de carte explicitement 0 EUR et jambe CAD/EUR. Le test boot inclut en plus les nouvelles assertions.
+- **Runner Node natif** : distingue une suite \`node:test\` d'un **script historique** lancé via \`node --test\`. Ce dernier peut produire une enveloppe TAP avec \`# tests 1\` même lorsqu'**aucun** scénario métier n'a réellement tourné ; désormais seuls les marqueurs \`PASS\` explicites qualifient un script historique. L'analyse de code source distingue les véritables appels \`require('node:test')\`/\`import from 'node:test'\`.
+- **Preuve Node réelle** : les fichiers CJS \`scripts/trace-native-suite-evidence.cjs\` et \`tests/trace-native-suite-evidence.test.cjs\` ont été reconstitués octet pour octet dans un répertoire de QA isolé, \`git hash-object\` égal aux blobs GitHub respectifs \`4e01b47ebda981912c33f91a9e9314fc09004cdf\` et \`7485266824371cd47b2f246a17e5b3b877182249\`. **\`node --test --test-reporter=tap\` sous Node v22.16.0 : 11 tests / 11 réussis, 0 échec.** Deux scripts jetables (sans aucun \`PASS\` puis avec deux \`PASS\`) ont confirmé via vrai sous-processus Node qu'un script vide échoue malgré exit 0, mais deux scénarios \`PASS\` sont comptés. Les fichiers jetables sont **hors dépôt**, sans données réelles.
+
+### Commits associés (tous \`[skip ci]\`)
+
+- \`5854dd24\` / \`9f057c59\` : calendrier versionné sur carte fictive et ses contrôles.
+- \`202c4c10\` / \`1adca0d2\` / \`4f3aa1dc\` : classification du runner, tests et raccordement à la QA native.
+- \`80d021b4\` / \`8d5613a0\` / \`96937358\` : correction de la jambe reçue EUR, solde de carte et test de bootstrap.
+
+### Important : cet avancement ne déploie rien
+
+Le \`trace-international-preview-sw.js\` courant du dépôt est **potentiellement obsolète depuis les changements de fixture et d'UI**. Il doit être régénéré **uniquement** par \`node scripts/build-trace-preview-pwa.mjs\` sur checkout propre, puis passé en \`--check\`; **ne pas publier** une preview qui ne passe pas cette porte. Le déploiement Vercel READY découvert précédemment correspond à \`2c312f00\`, et non au HEAD de cette reprise ; SSO activé, déploiement automatique de la branche candidat désactivé.
+
+**À faire en priorité :** checkout entier → Node natif complet et SW labo généré/contrôlé → véritable navigateur Chromium + Safari iPhone → autorisation explicite **d'une nouvelle prévisualisation fictive isolée**, distincte des écritures financières. Aucun test PostgreSQL 05–12/RLS/CAS ni certification navigateur n'a été effectué ici. **PRODUCTION NO-GO**.
