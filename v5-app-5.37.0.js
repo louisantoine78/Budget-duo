@@ -4389,7 +4389,11 @@ function renderActivity(){
   legacy.querySelectorAll('[data-import-pending]').forEach(button=>
    button.onclick=()=>editTransaction(button.dataset.importPending,true));
   const more=legacy.querySelector?.('[data-review-more]');
-  if(more)more.onclick=()=>{activityReviewVisibleCount+=40;renderActivity();};
+  if(more)more.onclick=()=>{
+   const previous=activityReviewVisibleCount;
+   activityReviewVisibleCount+=40;renderActivity();
+   legacy.querySelectorAll('[data-import-pending]')[previous]?.focus?.();
+  };
  }
  const picker=$('#activityMonthPicker');if(picker)picker.value=activityMonth;
  const label=$('#activityMonthDisplay');if(label)label.textContent=monthLabel(activityMonth);
@@ -4479,12 +4483,23 @@ function renderActivitySharing(){
  if(advance)advance.onclick=()=>openManualTransaction('expense');
 }
 
+function activityTabKey(event,button){
+ const keys=['ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Home','End'];
+ if(!keys.includes(event.key))return;
+ const nodes=$('#activityTabs .tab'),at=nodes.indexOf(button);
+ if(at<0||!nodes.length)return;
+ const next=event.key==='Home'?0:event.key==='End'?nodes.length-1:
+  (at+(event.key==='ArrowRight'||event.key==='ArrowDown'?1:-1)+nodes.length)%nodes.length;
+ event.preventDefault();
+ showTab(nodes[next].dataset.tab);nodes[next].focus?.();
+}
 function showTab(t){
  tab=['transactions','review','sharing','import'].includes(t)?t:'transactions';
  $$('#activityTabs .tab').forEach(b=>{
   const selected=b.dataset.tab===tab;
   b.classList.toggle('active',selected);
   b.setAttribute?.('aria-selected',String(selected));
+  b.setAttribute?.('tabindex',selected?'0':'-1');
  });
  $('#activityTransactions').classList.toggle('hidden',tab!=='transactions');
  const review=$('#activityReview');if(review)review.classList.toggle('hidden',tab!=='review');
@@ -5923,7 +5938,10 @@ function fatal(e){
   openSheet('Trace a rencontré un problème','<div class="empty-note">Une partie de Trace n’a pas pu se charger correctement.</div><button class="primary full" id="traceReloadBtn" type="button" style="margin-top:14px">Recharger Trace</button>');
   $('#traceReloadBtn').onclick=()=>location.reload();
 }
-function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#homeAccountsBtn').onclick=event=>{event.stopPropagation();openAccountsOverview();};$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=openActivitySharing;$('#shareOpen').onclick=openActivitySharing;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};if(internationalPreviewMode())window.TraceMonthlyStatementUI?.mount?.({
+function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=e=>{if(e.target.id==='sheetBackdrop')closeSheet();};$$('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#homeAccountsBtn').onclick=event=>{event.stopPropagation();openAccountsOverview();};$('#quickAdd').onclick=openManualTransaction;$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=openActivitySharing;$('#shareOpen').onclick=openActivitySharing;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$('#activityTabs .tab').forEach(b=>{
+ b.onclick=()=>showTab(b.dataset.tab);
+ b.onkeydown=e=>activityTabKey(e,b);
+});$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};if(internationalPreviewMode())window.TraceMonthlyStatementUI?.mount?.({
  host:$('#traceStatementControl'),
  accounts:()=>visibleBankAccounts(me).map(a=>({...a,type:accountType(a),
    currency:window.TraceInternational.currency(a)})),
