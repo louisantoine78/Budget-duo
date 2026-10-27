@@ -40,6 +40,7 @@ function mount(original=null){
   $:node,openSheet:(title,html)=>openings.push({title,html}),
   closeSheet:()=>{},coupleBalance:()=>50,
   shortMemberName:n=>n==='la'?'Membre A':'Membre B',
+  shortAccountLabel:a=>a.name,
   traceEditorDateLabel:x=>x,localDateISO:()=> '2026-10-20',
   money:n=>n+' CAD',esc:x=>String(x??'').replace(/"/g,'&quot;'),
   traceFeedback:()=>'',visibleBankAccounts:owner=>accounts.filter(a=>a.owner===owner&&!a.archived),
