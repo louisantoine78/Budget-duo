@@ -900,3 +900,15 @@ Le contrôle `node scripts/trace-release-preflight.mjs` est local et en lecture 
 - [ ] Valider la totalité des maquettes premium, devises Moi/Couple, import/avances/remboursements, sauvegarde et rollback de bout en bout.
 
 **NO-GO maintenu** ; préserver `main`, les comptes utilisateurs et les données bancaires réelles.
+
+
+## Voie rapide vers une démonstration **fictive** — 26 octobre 2026
+
+- [x] Isoler le parcours `trace-international-preview.html` en CSP sans connexion réseau et en fixtures, distinct de `index.html` stable.
+- [x] Corriger le raccourci des paramètres FR différés pour focaliser le vrai formulaire plutôt que quitter la feuille du compte.
+- [x] Runner de qualification : zéro assertion exécutée, sortie `FAIL`, TAP contradictoire ou processus non zéro = échec. **7 tests exacts de ce module exécutés sous Node 22 réel** en local ; Git blob SHA correspond.
+- [ ] Exécuter les **95 suites** `*.test.cjs` actuelles du dépôt en Node natif sur checkout complet, puis Chromium/Safari, et régénérer **uniquement** le SW laboratoire via générateur.
+- [ ] Décider explicitement d'un nouveau déploiement **preview isolé uniquement**, vérifier le commit exact, SSO et l'absence de données réelles avant diffusion ; ancienne preview READY correspond à `2c312f00`, **pas** à la branche actuelle.
+- [ ] Compléter ensuite toute l'intégration financière / PG 05–12 / sécurité / reprise avant utilisation réelle.
+
+Voir `docs/TRACE-5.37.0-PREVIEW-READINESS.md`. **Production NO-GO**, pas de déploiement dans cette session.
