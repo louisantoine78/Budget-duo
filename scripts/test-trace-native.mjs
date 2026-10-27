@@ -4,6 +4,7 @@ import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
+import {checkSuiteResult} from './trace-native-suite-evidence.cjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const reportIndex=process.argv.indexOf('--report');
@@ -30,13 +31,10 @@ for(const file of [...active].sort()){
 for(const file of readdirSync(join(root,'tests')).filter(n=>n.endsWith('.test.cjs')).sort()){
  const run=spawnSync(process.execPath,['--test','--test-reporter=tap',join('tests',file)],{cwd:root,encoding:'utf8',
   timeout:60000,maxBuffer:8*1024*1024});
- const custom=(run.stdout?.match(/^(?:# )?PASS /gm)||[]).length;
- const native=Number(run.stdout?.match(/^# tests (\d+)$/m)?.[1]||0);
- const passed=run.status===0;
- // Legacy scripts print one PASS per scenario; their TAP file wrapper is not
- // another financial scenario. Native node:test files report their own count.
- const reportedScenarios=custom||native;
- report.suites.push({file,passed,reportedScenarios});
+ const {passed,reportedScenarios,reason}=checkSuiteResult(run);
+ // Suites with zero reported assertions cannot pass; neither can hidden
+ // FAIL markers or contradictory TAP summaries when process exit is zero.
+ report.suites.push({file,passed,reportedScenarios,reason});
  process.stdout.write((passed?'PASS ':'FAIL ')+file+' ('+reportedScenarios+' scenarios)\n');
  if(!passed)process.stderr.write((run.stdout||'')+(run.stderr||'')+(run.error?.message||''));
 }
