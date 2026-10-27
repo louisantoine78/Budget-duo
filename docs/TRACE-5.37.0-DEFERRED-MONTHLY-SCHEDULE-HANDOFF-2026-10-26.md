@@ -127,3 +127,42 @@ Production **NO-GO** ; `main` intacte ; aucune PR, fusion, Action déclenchée m
 **Limites de sortie et sécurité :** les résultats restent `persistable:false`, `eligibleForServerConfirmation:false`, `confirmed:false`, `writes:0`. Tous les PDF/CSV et relevés des tests sont fictifs. La quarantaine `TRACE_DEFERRED_NOT_RELEASED` reste intacte. La preview a changé : **service worker candidat à régénérer exclusivement via le générateur, puis `--check` sur checkout local avant tout test PWA**. Aucune migration réellement appliquée, aucun changement `main`, PR, fusion, déploiement, action CI déclenchée manuellement ou accès Supabase financier réel. Production **NO-GO**.
 
 Prochaine étape de fiabilité : rattacher les attestations à l'identité immuable des sources et à la version serveur/CAS dans un environnement fictif réellement exécuté sur PostgreSQL ; vérifier à deux sessions, deux membres, deux cartes, remboursements et frais, dates prévues/réelles avant de considérer la persistance. Refaire ensuite toute la recette Node/Safari/PWA et restauration isolée. **Estimation globale ~58 % ±10 points**, sans hausse artificielle avant les vérifications bloquantes.
+
+
+## Reprise du 26 octobre 2026 — garde SQL et justification des règlements affichés
+
+**HEAD de départ :** `a8d5f533921d2201aa9ac38330ebd2565dc6c0af` ; **HEAD du code testé :** `3ff991a93629ef5d5a8cae249665344a735c5dcd`.
+
+### Correctifs réellement enregistrés en branche candidate
+
+1. **Quarantaine SQL migration 10 (NON APPLIQUÉE)** : les documents `accounts` contenant `deferredDebitDay`, `deferredClosingDay` ou `deferredScheduleVersions` sont refusés même si `paymentMode` est absent ou falsifié en `credit`. Les nouvelles métadonnées transactionnelles `scheduledDueDate` et `allocationDueDate` sont également réservées pendant le NO-GO. La logique canadienne ordinaire sans ces champs reste autorisée.
+2. **Tests en attente du vrai moteur SQL** : `tests/trace-cas-writes.integration.cjs` ajoute des tentatives de création CAS et directe avec une carte faussement ordinaire, les alias de dates et un contrôle Mastercard CAD classique. Fichier JavaScript syntaxiquement validé sous V8, **aucune** migration ni vérification SQL/PostgreSQL native effectuée.
+3. **Affichage carte différée** : `traceDeferredAccountReview` refuse désormais de projeter un solde « réglé » si des transferts marqués `confirmed` ne sont pas reliés à une preuve de débit bancaire **indépendante** dans ce parcours. Une métadonnée `deferredBankEvidence.reviewed` auto-déclarée ne constitue pas une preuve. Tant que le module de source/provenance n'est pas relié à la fiche, ce blocage couvre tous les règlements confirmés. Les achats sans règlement confirmé et règlements `pending` peuvent être présentés comme **théoriques**, sous les gardes existants. Les soldes bancaires TRACE enregistrés ne sont pas réécrits.
+4. **Non-régression** : aucun changement dans les moteurs de transferts CAD/MC, fichiers production `main`, migrations appliquées ou états Supabase.
+
+### Commits de ce lot (tous `[skip ci]`)
+
+- `ce3ad2d21d272d17826e96037eee7892f7f200bf` — garde SQL contre les calendriers différés sous carte falsifiée.
+- `6e850fe4862bd0a0191413c52fdec71cf3e94ad9` — assertions statiques correspondantes.
+- `ffb3629e6f29c3bad652951a53f657115b1a4c6d` — cas PostgreSQL fictifs à exécuter dans un environnement isolé.
+- `601026fbbb27ce5a345fc043af6430e3df718c84` — refus de soldes apparemment réglés sans preuve bancaire liée.
+- `3ff991a93629ef5d5a8cae249665344a735c5dcd` — scénarios de régression de la fiche compte.
+
+### Tests réellement effectués
+
+**354 / 354 contrôles ciblés V8 simulés, zéro échec sur 17 suites au HEAD `3ff991a9`.** Ces contrôles incluent :
+- 20 fiche de compte différé, 17 calendrier mensuel, 11 trésorerie prévisionnelle, 13 calendriers versionnés, 7 paramètres UI, 24 achats simulés, 16 vie des comptes ;
+- 40 preuves de règlement, 20 rapprochements sur modules réels en mémoire, 7 conversion de relevés, 19 cycle réel de fonctions Mastercard + amis, 12 budget différé, 17 préparation d'écriture, 6 contrôles SQL **purement textuels** ;
+- 84 scénarios comptables du moteur, 27 intake des preuves, 14 labo fictif.
+La syntaxe JS de `v5-app-5.37.0.js` et du fichier de tests PG ajouté a été analysée dans V8, pas par le runner Node CLI complet.
+
+**Non exécutés** : tests Node natifs sur clone intégral, migrations 05–12 sous vrai PostgreSQL/PGlite, Auth/RLS/CAS à deux sessions, sources bancaires authentifiées, vraie chaîne de publication du SW, Chromium/iPhone Safari, restauration. L'environnement local dispose de Node 22 mais ne peut pas accéder au dépôt privé par git (résolution DNS GitHub impossible) et n'a aucun serveur PostgreSQL/PGlite isolé accessible ; les sources ont été lues/éditées via le connecteur GitHub. **Ne jamais transformer les 354 tests simulés en « 354 tests natifs ».**
+
+### Bloquants et suite à donner
+
+- Qualifier migration 10, notamment nouvelle clause `accounts`, sur PostgreSQL isolé avec fixtures CAS/directes, lecture de compte adversarial, anciens documents et régression Mastercard.
+- Définir un protocole de preuve durable (identifiant source SHA, lignes typées, revue non périmée, unicité serveur et CAS) pour déverrouiller conditionnellement la **lecture** des règlements confirmés ; ne pas accepter les seuls marqueurs client.
+- Réexaminer les effets éventuels du champ transactionnel générique `scheduledDueDate` sur les modules non différés lors du test SQL complet ; garder les systèmes CA non modifiés.
+- Après qualification SQL/Node, vérifier PWA preview/SW régénéré par générateur, puis Safari iPhone et scénario rollback. Ne pas lever `TRACE_DEFERRED_NOT_RELEASED` maintenant.
+
+**Production NO-GO.** Aucun accès aux données financières réelles, aucune fusion, PR, déploiement, exécution d'Actions ni changement de `main`. Estimation globale inchangée : ~58 % ±10 points, en attendant les portes de qualification.
