@@ -3,7 +3,7 @@
 // checkout's files. A count floor alone cannot detect swapped/missing suites.
 const TEST_PATH=/^tests\/[^/]+\.test\.cjs$/;
 function checkCommittedSuiteInventory({treeOutput='',files=[],exitCode=0,signal=null,error=null,
-  contentDiffStatus=0,contentDiffError=null,contentDiffSignal=null}={}){
+  contentDiffStatus=null,contentDiffError=null,contentDiffSignal=null}={}){
  const names=String(treeOutput).split(/\r?\n/).filter(Boolean);
  const tracked=names.filter(name=>TEST_PATH.test(name));
  const actual=files.map(name=>'tests/'+name).filter(name=>TEST_PATH.test(name));
