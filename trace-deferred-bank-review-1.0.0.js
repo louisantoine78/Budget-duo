@@ -9,8 +9,12 @@
   const d=new Date(s+'T12:00:00Z');
   return Number.isFinite(+d)&&d.toISOString().slice(0,10)===s;
  };
+ // Bank evidence must be normalized to native decimal cents before review.
+ // JS numeric syntax (hex, exponent), locales, coercible objects and boolean
+ // amounts are not acceptable as bank provenance.
  const money=v=>{
-  if(v===null||v===undefined||String(v).trim()==='')return null;
+  if(typeof v!=='number'&&typeof v!=='string')return null;
+  if(typeof v==='string'&&!/^\d{1,8}(?:\.\d{1,2})?$/.test(v))return null;
   const n=Number(v),c=Math.round(n*100);
   return Number.isFinite(n)&&n>0&&n<=1e7&&Number.isSafeInteger(c)&&
    Math.abs(n*100-c)<1e-6?c:null;
