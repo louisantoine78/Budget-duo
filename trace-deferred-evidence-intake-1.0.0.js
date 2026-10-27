@@ -84,6 +84,19 @@
   }
   const card=purchase.review({plan,statements:cardStatements,
    selection:cardSelection,receipts:cardReceipts,otherClaims:purchaseClaims});
+  // For "fully settled" against exactly one purchase, the source must
+  // contain ONLY the selected card charge. Even a correctly classified
+  // refund, fee, payment, or second purchase leaves the batch net ambiguous.
+  // Other statements may exist outside this review: this is still only a
+  // local completeness flag, NEVER proof of the global card balance.
+  if(settlements.some(s=>s?.settlementMode==='full')){
+   const selected=cardStatements.length===1&&cardStatements[0]&&
+    cardStatements[0].statementId===cardSelection?.statementId&&
+    cardStatements[0].rows?.length===1&&
+    cardStatements[0].rows[0]?.lineId===cardSelection?.lineId&&
+    cardStatements[0].rows[0]?.type==='card_purchase';
+   if(!selected)fullBatchEvidenceComplete=false;
+  }
   // Comparing the checking statement must never be a substitute for
   // a matching purchase line on the card, nor automatically book a payment.
   const checking=bank.compare({statements:checkingStatements,
