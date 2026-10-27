@@ -926,3 +926,17 @@ Voir `docs/TRACE-5.37.0-PREVIEW-READINESS.md`. **Production NO-GO**, pas de dép
 - [ ] **Bloquant déploiement :** confirmation explicite d'un déploiement **preview uniquement**, SHA exact et contrôle SSO sans exposition de données utilisateur.
 
 **Aucune publication, migration, PR ni merge. Production NO-GO.** Nouvelle référence : \`docs/TRACE-5.37.0-PREVIEW-READINESS.md\`.
+
+
+## 26 octobre 2026 — Activité quatre vues et simulation de validation multi-mois
+
+- [x] Activité : sous-navigation `Historique | À valider | Partage | Imports` (quatre vraies vues ; cinq onglets principaux préservés).
+- [x] « À valider » : file multi-mois uniquement sur comptes bancaires actifs du membre, ouverte sans écriture ; montants natifs documentés ou valeur inconnue explicite.
+- [x] Version fictive : une ligne EUR en attente du mois précédent et une ligne du mois actuel, sans impact sur le budget, le compte ou les sources bancaires.
+- [x] Garde-fou client contre les calendriers différés falsifiés et alias d'échéance, miroir de la migration 10 candidate.
+- [x] **291/291 tests ciblés V8 simulés sur 13 suites**, plus bootstrap 7/7 et fixtures 7/7 ; pas une certification PostgreSQL/Node global/Safari.
+- [ ] QUALIFICATION PREVIEW : checkout local, runner Node complet, SW laboratoire généré et `--check`, navigateur réel + Safari iPhone.
+- [ ] QUALIFICATION PERSISTANCE : PostgreSQL/PGlite migrations 05–12, Auth/RLS/CAS à deux sessions fictives, preuve bancaire atomique, suite générale Moi/Couple/devise/réconciliation.
+- [ ] Déploiement preview distinct soumis à autorisation explicite et contrôle exact du commit rendu. Aucun déploiement automatique sur la branche.
+
+**NO-GO production.** Conserver `main` et la PWA 5.36.5 intacts.
