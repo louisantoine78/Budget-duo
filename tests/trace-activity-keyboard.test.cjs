@@ -66,3 +66,9 @@ test('event binding and progressive review focus are implemented',()=>{
  assert.match(app,/b\.onkeydown=e=>activityTabKey\(e,b\)/);
  assert.match(app,/legacy\.querySelectorAll\('\[data-import-pending\]'\)\[previous\]\?\.focus\?\.\(\)/);
 });
+
+test('tab binding uses the multi-element query and cannot crash lab bootstrap',()=>{
+ const bind=app.slice(app.indexOf('function bind(){'),app.indexOf('function bootTrace('));
+ assert.match(bind,/\$\$\('#activityTabs \.tab'\)\.forEach\(b=>\{/);
+ assert.doesNotMatch(bind,/(^|[^\$])\$\('#activityTabs \.tab'\)\.forEach/);
+});
