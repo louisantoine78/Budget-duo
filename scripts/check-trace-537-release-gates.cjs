@@ -92,7 +92,7 @@ function isolatedEnv(env={}){
 // Validate the child runner's complete, committed-suite evidence. The exit
 // code alone cannot prove that a truncated checkout executed the 5.37 QA.
 // Keep the floor independent of the child script, which might regress.
-const MINIMUM_NATIVE_SUITES=106;
+const MINIMUM_NATIVE_SUITES=107;
 function validNativeSummary(s){
  return !!s&&s.committedSuiteInventoryPassed===true&&s.suiteFloorMet===true&&
   Number.isSafeInteger(s.expectedMinTestFiles)&&s.expectedMinTestFiles>=MINIMUM_NATIVE_SUITES&&

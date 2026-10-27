@@ -31,7 +31,7 @@ function scenario({branch=EXPECTED,dirty=false,untracked='',gitStatusFail=false,
   if(args.includes('scripts/test-trace-native.mjs')){
    status=native;
    stdout=nativeSummary?JSON.stringify({syntaxFiles:12,testFiles:107,
-    expectedMinTestFiles:106,suiteFloorMet:true,
+    expectedMinTestFiles:107,suiteFloorMet:true,
     committedSuiteInventoryPassed:true,trackedSuiteFiles:107,
     reportedScenarios:815,failedFiles:0,...nativeEvidence})+'\n':'';
   }
@@ -137,12 +137,21 @@ test('native gate refuses a zero-exit runner with incomplete or forged suite pro
    JSON.stringify(nativeEvidence));
  }
 });
+test('independent release gate refuses a superficially green 106-suite report',()=>{
+ const {validNativeSummary,MINIMUM_NATIVE_SUITES}=
+  require('../scripts/check-trace-537-release-gates.cjs');
+ assert.equal(MINIMUM_NATIVE_SUITES,107);
+ assert.equal(validNativeSummary({syntaxFiles:12,testFiles:106,
+  expectedMinTestFiles:106,suiteFloorMet:true,
+  committedSuiteInventoryPassed:true,trackedSuiteFiles:106,
+  reportedScenarios:815,failedFiles:0}),false);
+});
 test('valid native evidence still cannot authorize production',()=>{
  const {validNativeSummary,MINIMUM_NATIVE_SUITES}=
   require('../scripts/check-trace-537-release-gates.cjs');
- assert.equal(MINIMUM_NATIVE_SUITES,106);
+ assert.equal(MINIMUM_NATIVE_SUITES,107);
  assert.equal(validNativeSummary({syntaxFiles:12,testFiles:107,
-  expectedMinTestFiles:106,suiteFloorMet:true,
+  expectedMinTestFiles:107,suiteFloorMet:true,
   committedSuiteInventoryPassed:true,trackedSuiteFiles:107,
   reportedScenarios:815,failedFiles:0}),true);
  assert.equal(scenario().releaseReady,false);
