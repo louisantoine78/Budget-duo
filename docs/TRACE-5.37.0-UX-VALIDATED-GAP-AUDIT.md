@@ -301,3 +301,12 @@ La comparaison réemploie sans modification les moteurs préexistants TraceState
 - QA : **6/6 assertions de rendu de la fonction exacte enregistrée sur GitHub** en faux DOM V8, couvrant 80 propositions et 60 lignes non interprétées, attestation non automatique, bouton volontaire. Le fichier de 5 tests natifs est commité mais non exécuté depuis un checkout intégral. Aucun PDF.js réel, Safari réel ni PDF bancaire de production testé.
 
 **Bloqueurs persistants :** bibliothèque PDF.js réelle toujours non embarquée ; CSP worker `none`, loader non activé ; E2E financiers multi-utilisateurs, débit différé réel, tests natifs de toutes les suites, navigateur iPhone Safari/PWA offline, base fictive isolée et plan de rollback. Préversion distante antérieure non redéployée ; **NO-GO production**.
+
+
+## 26 octobre 2026 — actualisation de conformité UX (code `e4220adf`)
+
+**Écart Activité résolu côté source candidat :** l'ancien rendu à trois sous-onglets n'est plus d'actualité. Les quatre sections validées `Historique | À valider | Partage | Imports` existent réellement dans la preview ; « À valider » a une vue indépendante, porte sur les opérations en attente de toutes périodes des comptes du membre actif et affiche le montant bancaire natif uniquement s'il est prouvé. Les réglages de filtres du journal, Couple/Proches, CSV/PDF et la navigation à cinq onglets restent en place.
+
+**Contrats contrôlés :** 7 nouveaux tests de structure/navigation/file ; 14 partage ; 18 journal/filtres ; 12 smoke UI ; 13 layout premium ; tests financiers de verrouillage et carte. Prévisualisation fictive enrichie d'une opération antérieure ; bootstrap 7/7 en DOM synthétique. Les **291/291 contrôles ciblés V8** ne constituent pas une validation tactile/navigateur.
+
+**Reste impérativement à qualifier :** vraie navigation à 320/375/390/430 px et sur iPhone Safari (notamment quatre sous-onglets sans débordement), contrôle accessible de la file et des états de focus, service worker laboratoire régénéré, sessions Auth/RLS/CAS isolées et persistance sans doublons. **Production NO-GO**. Les diagnostics historiques d'absence d'onglet « À valider » décrivent leurs HEAD d'origine, pas l'état actuel.
