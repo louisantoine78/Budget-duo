@@ -887,3 +887,16 @@ Le contrôle `node scripts/trace-release-preflight.mjs` est local et en lecture 
 - [ ] Contrôle UX/UI premium complet, retour réseau, sauvegarde/rollback, puis autorisation explicite de mise en production distincte.
 
 **NO-GO.** Le sous-ensemble V8 n'est pas une qualification intégrale ni une confirmation de relevé bancaire.
+
+
+## Simulation de calendrier daté et strict contrôle des centimes — 26 octobre 2026
+
+- [x] UI non enregistrable : pour un achat fictif à la prise d'effet, afficher clôture et prélèvement théorique ; sans clôture, ne jamais inventer de lot exigible.
+- [x] Moteur différé : rejeter formats monétaires coercibles (exposant, hex, virgules locales, fractions de centime, booléens, objets) dans achats/frais/remboursements/règlements.
+- [x] 362/362 contrôles ciblés **V8 simulés** (17 suites) au HEAD de code `5484afe9`, dont 6 assertions **SQL statiques**, sans aucune qualification PostgreSQL native.
+- [ ] Tester le candidat sur clone Git propre avec `node scripts/test-trace-native.mjs` et PostgreSQL/PGlite local fictif, quatre suites PG, deux membres et écritures concurrentes.
+- [ ] Connecter de manière atomique et authentifiée le calendrier par carte, les règlements réels, la séparation des preuves et le CAS versionné ; maintenir l'interdiction des écritures différées avant QA serveur.
+- [ ] Refaire le cache SW uniquement via générateur du laboratoire ; vérifications navigateur, PWA hors ligne et Safari iPhone physique.
+- [ ] Valider la totalité des maquettes premium, devises Moi/Couple, import/avances/remboursements, sauvegarde et rollback de bout en bout.
+
+**NO-GO maintenu** ; préserver `main`, les comptes utilisateurs et les données bancaires réelles.
