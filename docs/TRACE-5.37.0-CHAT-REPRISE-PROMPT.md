@@ -1,3 +1,15 @@
+## 27 octobre — Gate A : vérification des octets des suites, pas seulement des noms
+
+Branche de développement unique `trace-5.37.0-international-accounts-fx`, référence de départ **`95c94d3a1621896dd20a3bee6ea4b66f52c406a5`**. `main` vérifiée **`02c70f50e7e51da79b77a91dde96a03c6c719909`**. Commits candidats **`a2b6909e`**, **`0855d3e9`**, **`1946f267`**, **`0a85ca13`**, **`b40b3ade`** et **`2def3710`** ; chacun contient `[skip ci]`.
+
+**Défaut confirmé et corrigé :** la comparaison du nom exact des suites au `git ls-tree HEAD` ne contrôlait pas les octets d'une suite modifiée sous le même nom, y compris dans l'index Git. Le runner lance maintenant une commande locale et en lecture seule `git diff --quiet HEAD -- tests/` ; le vérificateur exige son code de sortie **0 explicite** et l'absence d'erreur/signal en plus de l'inventaire de noms. Aucun résultat `git diff` fourni = échec **fail-closed**. Les protections du release gate principal sur les autres fichiers et les 51 dépendances de `main` restent également applicables.
+
+**Tests réellement exécutés :** **11/11 tests Node v22.16.0 natifs** sur copie locale réduite du nouveau vérificateur, incluant un vrai dépôt Git temporaire avec suite modifiée, suite modifiée et indexée avec `git add`, puis restaurée via `git checkout HEAD`, et absence explicite de preuve Git. Empreintes blob calculées depuis les octets locaux **identiques aux blobs enregistrés sur GitHub** : `scripts/trace-native-suite-inventory.cjs` = `bbd9afca52c66434938b8334f25ce9b7f7ad9482`, `tests/trace-native-suite-inventory.test.cjs` = `46474630039d4a980d6ddc4dd8c0518aeec8e693`. Résultat TAP local SHA-256 `fd388a6462ab51ae294f68ab455c4926d876b3d6fc329ce061d745d11f630b16`. Nouveau test d'intégration de runner sur un checkout fictif **enregistré**, mais non exécuté nativement dans cette reprise.
+
+**Le checkout complet n'est toujours pas récupéré.** `git clone` échoue par DNS et les téléchargements directs ne sont pas accessibles dans le conteneur. Le connecteur GitHub confirme **107 suites `*.test.cjs`** et les **68 assets du labo présents sur GitHub** ; le SW existant n'en cache que **62**, six modules différés restent manquants. Aucun script de génération sur la candidate complète, aucun Node natif intégral, PostgreSQL/PGlite ni Safari physique. **Porte A non franchie, production NO-GO**, `TRACE_DEFERRED_NOT_RELEASED` intact, aucune PR, merge, CI, Vercel, migration ou écriture Supabase réelle. Estimation globale historique **~58 % ±10**, non recalculée.
+
+---
+
 ## 27 octobre — Porte A : inventaire exact des suites à partir du HEAD local
 
 **GitHub vérifié** : départ `4eeb01ccae6e285345725323740b3f7c7ea8620e`, branche exclusive `trace-5.37.0-international-accounts-fx`. `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Six commits `[skip ci]` enregistrés : `ce192fe5` (vérificateur), `e1c52030` (7 tests), `ba301edb` (intégration dans le runner), `a0a5fbde` (tests isolés contre checkout remplacé/tronqué), `2bd7940d` (compatibilité rapport zéro-suite), `c1ac5eed` (huitième test avec vrai dépôt Git temporaire). Aucun commit sur `main`, CI, PR/merge, déploiement ou Supabase réel.
