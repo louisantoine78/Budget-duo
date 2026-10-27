@@ -72,3 +72,25 @@ test('input objects are immutable and schedule has no side effects',()=>{
  assert.equal(S(p).dueDate,'2026-10-28');
  assert.equal(p.debitDay,28);
 });
+
+test('all 2027 and leap-year 2028 cutoff/debit combinations keep a future, valid allocation',()=>{
+ let scenarios=0;
+ for(const year of [2027,2028])for(let month=1;month<=12;month++){
+  const last=new Date(Date.UTC(year,month,0)).getUTCDate();
+  for(let day=1;day<=last;day++){
+   const purchaseDate=String(year)+'-'+String(month).padStart(2,'0')+'-'+
+    String(day).padStart(2,'0');
+   for(let closingDay=1;closingDay<=31;closingDay++){
+    for(let debitDay=1;debitDay<=31;debitDay++){
+     const p=S({purchaseDate,debitDay,closingDay});
+     assert.ok(p.cutoffDate>=purchaseDate,'cutoff precedes purchase: '+purchaseDate);
+     assert.ok(p.dueDate>p.cutoffDate,'debit not after cutoff: '+JSON.stringify(p));
+     assert.equal(p.nextDebitDate,p.dueDate);
+     assert.equal(p.allocationVerified,true);
+     scenarios++;
+    }
+   }
+  }
+ }
+ assert.equal(scenarios,731*31*31,'test must cover all days including February 29');
+});
