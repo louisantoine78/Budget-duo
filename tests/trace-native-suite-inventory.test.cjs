@@ -55,3 +55,41 @@ test('real git ls-tree identifies a missing tracked test replaced by another',t=
  assert.deepEqual(mismatched.missing,['tests/expected.test.cjs']);
  assert.deepEqual(mismatched.unexpected,['tests/replacement.test.cjs']);
 });
+
+test('matching paths cannot certify modified or staged suite contents',()=>{
+ const files=['alpha.test.cjs','beta.test.cjs'];
+ for(const input of [{contentDiffStatus:1},{contentDiffStatus:128},
+  {contentDiffError:new Error('git failed')},{contentDiffSignal:'SIGKILL'}]){
+  const r=check({treeOutput:tree,files,...input});
+  assert.equal(r.passed,false);
+  assert.equal(r.trackedContentsClean,false);
+  assert.deepEqual(r.missing,[]);
+  assert.deepEqual(r.unexpected,[]);
+ }
+});
+test('actual git diff detects same-name mutation and staged mutation',t=>{
+ const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+ const {spawnSync}=require('node:child_process');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'trace-git-bytes-'));
+ t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const git=(...args)=>spawnSync('git',args,{cwd:dir,encoding:'utf8',timeout:10000});
+ fs.mkdirSync(path.join(dir,'tests'));
+ const file=path.join(dir,'tests/account.test.cjs');
+ fs.writeFileSync(file,"const {test}=require('node:test');test('bank',()=>{});");
+ assert.equal(git('init','-q','-b','sandbox').status,0);
+ assert.equal(git('add','tests/account.test.cjs').status,0);
+ assert.equal(git('-c','user.name=QA','-c','user.email=qa@localhost','commit','-qm','fixture').status,0);
+ const treeResult=git('ls-tree','-r','--name-only','HEAD','--','tests/');
+ const probe=()=>{
+  const d=git('diff','--quiet','HEAD','--','tests/');
+  return check({treeOutput:treeResult.stdout,files:['account.test.cjs'],
+   exitCode:treeResult.status,contentDiffStatus:d.status,contentDiffError:d.error});
+ };
+ assert.equal(probe().passed,true);
+ fs.writeFileSync(file,"const {test}=require('node:test');test('fake passed',()=>{});");
+ assert.equal(probe().passed,false,'modified test bytes must not qualify');
+ assert.equal(git('add','tests/account.test.cjs').status,0);
+ assert.equal(probe().passed,false,'staged test bytes must not qualify');
+ assert.equal(git('checkout','HEAD','--','tests/account.test.cjs').status,0);
+ assert.equal(probe().passed,true);
+});
