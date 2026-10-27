@@ -26,7 +26,7 @@ function mountedKeyboard(){
   dataset:{tab},focus:()=>focused.push(tab)
  }));
  const f=new Function('$','$$','showTab',app.slice(begin,end)+';return activityTabKey;')(
-  ()=>buttons,()=>buttons,t=>selected.push(t));
+  ()=>buttons[0],()=>buttons,t=>selected.push(t));
  return{f,buttons,selected,focused};
 }
 test('keyboard arrows wrap, Home and End land on the correct tab',()=>{
@@ -71,4 +71,16 @@ test('tab binding uses the multi-element query and cannot crash lab bootstrap',(
  const bind=app.slice(app.indexOf('function bind(){'),app.indexOf('function bootTrace('));
  assert.match(bind,/\$\$\('#activityTabs \.tab'\)\.forEach\(b=>\{/);
  assert.doesNotMatch(bind,/(^|[^\$])\$\('#activityTabs \.tab'\)\.forEach/);
+});
+
+test('keyboard list must use $$ instead of single-element $',()=>{
+ const x=mountedKeyboard();
+ let count=0;
+ x.f({key:'ArrowRight',preventDefault:()=>count++},x.buttons[0]);
+ assert.equal(count,1);
+ assert.deepEqual(x.selected,['review']);
+ assert.deepEqual(x.focused,['review']);
+ const body=app.slice(app.indexOf('function activityTabKey(event,button){'),app.indexOf('function showTab(t){'));
+ assert.match(body,/const nodes=\$\$\('#activityTabs \.tab'\)/);
+ assert.doesNotMatch(body,/const nodes=\$\('#activityTabs \.tab'\)/);
 });
