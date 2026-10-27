@@ -5054,7 +5054,15 @@ async function saveHouseholdSettings(){
     p_expected_revision:traceRevision(traceSettingsRevision)});
    if(error)throw traceSaveFailure(error);
    traceSettingsRevision=traceRevision(data);
-   household.settings=queuedSettings;sync('synced');
+   household.settings=queuedSettings;
+   // The server confirmed exactly queuedSettings, not any changes the user
+   // made while the RPC was in flight. Never show a green 'Synchronisé'
+   // badge for those later local edits; the user can save again safely
+   // using the newly confirmed server revision.
+   const latestLocalSettings={...queuedSettings,...state.household,schemaVersion:5};
+   if(JSON.stringify(latestLocalSettings)!==JSON.stringify(queuedSettings))
+    sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
+   else sync('synced');
   });
 }
 async function saveDocument(collection,item){

@@ -202,6 +202,71 @@ test('household CAS freezes nested settings before an asynchronous RPC resolves'
   'Later unsaved UI edits must not be discarded');
 });
 
+test('later local household edits must not be shown as synchronized after an in-flight save',async()=>{
+ const {app,client,state,house,syncLog}=createContext();
+ app.setRevision(0);
+ state.household.memberNicknames={la:'Before upload',partner:'Partner'};
+ let entered,release;
+ const requestStarted=new Promise(resolve=>{entered=resolve;});
+ const waiting=new Promise(resolve=>{release=resolve;});
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_household_settings'){
+   entered();
+   await waiting;
+  }
+  return original(method,args);
+ };
+ const pending=app.saveHouseholdSettings();
+ await requestStarted;
+ state.household.memberNicknames.la='Edited while uploading';
+ release();await pending;
+ assert.equal(house.settings.memberNicknames.la,'Before upload');
+ assert.equal(state.household.memberNicknames.la,'Edited while uploading');
+ assert.notEqual(syncLog.at(-1)?.status,'synced',
+  'An edit made after RPC send is still unsaved, so a green sync badge is misleading');
+ assert.match(syncLog.at(-1)?.detail||'',/non enregistrée/i);
+ // The legitimate new revision remains usable: retrying should persist the
+ // later edit rather than blocking it as a cross-device conflict.
+ await app.saveHouseholdSettings();
+ assert.equal(house.settings.memberNicknames.la,'Edited while uploading');
+ assert.equal(syncLog.at(-1)?.status,'synced');
+});
+
+test('two fictional devices detect stale edits and deletions without overwriting server data',async()=>{
+ const one=createContext(),two=createContext(),three=createContext();
+ // Separate browser instances share one fictional server, not revision maps.
+ two.client.rpc=(...a)=>one.client.rpc(...a);
+ three.client.rpc=(...a)=>one.client.rpc(...a);
+ const k=one.app.traceWriteKey('transactions','two-devices');
+ await one.app.saveDocument('transactions',{id:'two-devices',amountCAD:50});
+ two.app.traceDocRevisions.set(k,0);
+ three.app.traceDocRevisions.set(k,0);
+ await one.app.saveDocument('transactions',{id:'two-devices',amountCAD:55});
+ await assert.rejects(two.app.saveDocument('transactions',{id:'two-devices',amountCAD:500}),
+  error=>{assert.match(String(error?.message||''),/TRACE_WRITE_CONFLICT/);return true;});
+ assert.equal(two.app.blocked(),true);
+ assert.equal(one.saved.get(k).data.amountCAD,55);
+ await assert.rejects(three.app.removeDocument('transactions','two-devices'),
+  error=>{assert.match(String(error?.message||''),/TRACE_WRITE_CONFLICT/);return true;});
+ assert.equal(one.saved.get(k).revision,1);
+});
+
+test('two fictional devices cannot overwrite each other’s household preferences',async()=>{
+ const first=createContext(),second=createContext();
+ second.client.rpc=(...args)=>first.client.rpc(...args);
+ first.app.setRevision(0);second.app.setRevision(0);
+ first.state.household.defaultSplit={la:70,partner:30};
+ second.state.household.defaultSplit={la:50,partner:50};
+ await first.app.saveHouseholdSettings();
+ await assert.rejects(second.app.saveHouseholdSettings(),
+  error=>{assert.match(String(error?.message||''),/TRACE_WRITE_CONFLICT/);return true;});
+ assert.equal(second.app.blocked(),true);
+ assert.deepEqual(first.house.settings.defaultSplit,{la:70,partner:30});
+ // A conflicted device must not pretend that retrying without reload is safe.
+ await assert.rejects(second.app.saveHouseholdSettings(),/recharge TRACE/);
+});
+
 test('deferred card creation is blocked before RPC but normal bank accounts still save',async()=>{
  const {app,calls}=createContext();
  await assert.rejects(app.saveDocument('accounts',{id:'deferred-fr',type:'card',
