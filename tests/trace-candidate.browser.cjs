@@ -68,9 +68,9 @@ let base;
  page.on('console',msg=>{if(msg.type()==='error')errors.push(msg.text())});
  page.on('worker',worker=>workers.push(worker.url()));
  await boot();
- await test('real candidate boots with eight fictional operations and zero external requests',async()=>{
+ await test('real candidate boots with nine fictional operations and zero external requests',async()=>{
   const status=await page.evaluate(()=>window.__TRACE_PREVIEW_STATUS__);
-  assert.equal(status.fixtureCount,8);assert.equal(status.noSupabase,true);
+  assert.equal(status.fixtureCount,9);assert.equal(status.noSupabase,true);
   assert.match(await text('homeBalance'),/3\s*670,00/);
   assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
  });
@@ -201,14 +201,18 @@ let base;
   assert.match(await text('manualMovementError'),/centime/);
   await page.locator('#cancelManualTx').click();
  });
- await test('a CAD card cannot be paid from the EUR account',async()=>{
+ await test('EUR settlement excludes the CAD Mastercard while retaining the French deferred card',async()=>{
   await page.locator('#quickAdd').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualKind').selectOption('card_payment');
-  assert.equal(await page.locator('#manualTarget option').count(),0);
-  await page.locator('#manualTxAmount').fill('100');
-  await page.locator('#saveManualTx').click();
-  assert.match(await text('manualMovementError'),/compte courant/);
+  const destinations=await page.locator('#manualTarget option').evaluateAll(
+   options=>options.map(option=>option.value));
+  assert.ok(!destinations.includes('demo-ca-card'),
+   'A EUR current account must never settle the CAD Mastercard');
+  assert.ok(destinations.includes('demo-fr-deferred-card'),
+   'The French deferred card remains visible as an eligible EUR target');
+  // Eligibility is read-only here; do not submit a fictitious deferred
+  // settlement in the browser smoke without its complete monthly evidence.
   await page.locator('#cancelManualTx').click();
  });
  await test('100 CAD credit purchase and 100 CAD repayment create one expense and one neutral transfer',async()=>{
