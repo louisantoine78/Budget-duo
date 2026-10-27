@@ -11,6 +11,7 @@ function preview(filter='all',cap=40,owner='la',large=false){
  const accounts=[
   {id:'eur',owner:'la',name:'Compte France',currency:'EUR'},
   {id:'cad',owner:'la',name:'Compte Canada',currency:'CAD'},
+  {id:'empty',owner:'la',name:'Compte sans attente',currency:'CHF'},
   {id:'partner',owner:'partner',name:'Compte privé',currency:'GBP'},
   {id:'closed',owner:'la',name:'Compte archivé',currency:'USD',archived:true}
  ];
@@ -48,10 +49,11 @@ function preview(filter='all',cap=40,owner='la',large=false){
 }
 test('filter lists only active accounts of signed-in owner, with native currency',()=>{
  const a=preview();
- assert.deepEqual(a.chosen.items.map(x=>x[0]),['all','eur','cad']);
+ assert.deepEqual(a.chosen.items.map(x=>x[0]),['all','eur','cad','empty']);
  assert.match(a.chosen.items[0][1],/3/);
  assert.match(a.chosen.items[1][1],/EUR · 2 à valider/);
  assert.match(a.chosen.items[2][1],/CAD · 1 à valider/);
+ assert.match(a.chosen.items[3][1],/CHF · 0 à valider/);
  assert.doesNotMatch(a.chosen.items.map(x=>x[1]).join(' '),/Compte privé|Compte archivé/);
  assert.deepEqual(a.remaining,['cad-pending','eur-october','eur-september']);
 });
@@ -97,10 +99,13 @@ test('switching account resets progressive pagination without altering transacti
  assert.deepEqual(a.renderCalls,['render']);
  assert.equal(JSON.stringify(a.state),a.before);
 });
-test('empty account-specific state names the selected account scope',()=>{
- const a=preview('cad','40','partner');
- assert.equal(a.filter(),'all');
- assert.match(a.legacy.innerHTML,/Compte privé/);
+test('empty account-specific state never fabricates a pending operation',()=>{
+ const a=preview('empty');
+ assert.equal(a.filter(),'empty');
+ assert.deepEqual(a.remaining,[]);
+ assert.match(a.legacy.innerHTML,/Aucune opération à valider sur ce compte/);
+ assert.doesNotMatch(a.legacy.innerHTML,/data-import-pending/);
+ assert.equal(JSON.stringify(a.state),a.before);
 });
 test('visual selector exists before the queue, with a large tactile target',()=>{
  const review=html.indexOf('id="activityReview"'),select=html.indexOf('id="activityReviewAccountFilter"'),
