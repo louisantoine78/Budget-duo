@@ -57,7 +57,7 @@ test('old validation shortcuts open dedicated review and never upload',()=>{
  assert.match(app,/showTab\(tx\.status==='confirmed'\?'transactions':'review'\)/);
  assert.match(app,/pendingBtn\.onclick=\(\)=>showTab\('review'\)/);
 });
-function queue(){
+function queue(extra=0,cap=40){
  const i=app.indexOf(' const active=new Set(visibleBankAccounts(me).map(a=>a.id));',
   app.indexOf('function renderActivity(){'));
  const j=app.indexOf("\n const picker=$('#activityMonthPicker')",i);
@@ -72,16 +72,19 @@ function queue(){
  {id:'partner',accountId:'other',status:'pending',date:'2026-10-18',bankAmount:100},
  {id:'settled',accountId:'eur',status:'confirmed',date:'2026-10-20',bankAmount:5}
  ]};
+ for(let n=0;n<extra;n++)state.transactions.push({id:'historical-'+n,accountId:'eur',status:'pending',date:'2026-08-02',name:'Archive',bankCurrency:'EUR',bankAmount:n+.01});
  const before=JSON.stringify(state);
- const buttons=[{dataset:{importPending:'late'},onclick:null}],node={
- innerHTML:'',classList:{toggle(){}},querySelectorAll:()=>buttons};
- let writes=0,opened=[];
+ const buttons=[{dataset:{importPending:'late'},onclick:null}],more={onclick:null},node={
+ innerHTML:'',classList:{toggle(){}},querySelectorAll:()=>buttons,
+ querySelector(s){return s==='[data-review-more]'&&this.innerHTML.includes('data-review-more')?more:null}};
+ let writes=0,opened=[],rendered=0;
  const f=new Function('state','me','visibleBankAccounts','$','esc',
- 'shortAccountLabel','window','editTransaction',app.slice(i,j)+';return remaining.map(t=>t.id);');
- const listed=f(state,'la',()=>[account],()=>node,s=>String(s),a=>a.name,{
+ 'shortAccountLabel','window','editTransaction','activityReviewVisibleCount','renderActivity',
+ app.slice(i,j)+';return {listed:remaining.map(t=>t.id),shown:visiblePending.map(t=>t.id),getCap:()=>activityReviewVisibleCount};');
+ const result=f(state,'la',()=>[account],()=>node,s=>String(s),a=>a.name,{
  TraceInternational:{currency:a=>a.currency,amountOnAccount:t=>t.bankAmount,
- money:(v,c)=>v+' '+c}},(id,review)=>opened.push([id,review]));
- return{listed,node,buttons,before,state,opened,writes};
+ money:(v,c)=>v+' '+c}},(id,review)=>opened.push([id,review]),cap,()=>rendered++);
+ return{listed:result.listed,shown:result.shown,getCap:result.getCap,node,buttons,more,before,state,opened,writes,rerenders:()=>rendered};
 }
 test('pending shows every month for owner only, no phantom CAD-to-EUR amount',()=>{
  const a=queue();
@@ -102,4 +105,29 @@ test('the 5 main navigation items stay intact',()=>{
  const nav=html.slice(begin,end);
  assert.doesNotMatch(nav,/data-nav="review"|data-nav="sharing"/);
  assert.match(nav,/data-nav="wealth"/);
+});
+
+test('review displays a bounded first page but keeps all months accessible',()=>{
+ const a=queue(95);
+ assert.equal(a.listed.length,97);
+ assert.equal(a.shown.length,40);
+ assert.ok(a.listed.includes('early'));
+ assert.ok(a.listed.includes('historical-0'));
+ assert.match(a.node.innerHTML,/Voir 40 opérations de plus/);
+ assert.match(a.node.innerHTML,/57 restantes/);
+ assert.equal(JSON.stringify(a.state),a.before);
+ assert.equal(typeof a.more.onclick,'function');
+ a.more.onclick();
+ assert.equal(a.getCap(),80);
+ assert.equal(a.rerenders(),1);
+ assert.equal(JSON.stringify(a.state),a.before);
+});
+test('remaining review rows can be displayed without dropping historical evidence',()=>{
+ const later=queue(95,80),complete=queue(95,120);
+ assert.equal(later.shown.length,80);
+ assert.match(later.node.innerHTML,/17 restantes/);
+ assert.equal(complete.shown.length,97);
+ assert.doesNotMatch(complete.node.innerHTML,/data-review-more/);
+ assert.equal(complete.more.onclick,null);
+ assert.equal(JSON.stringify(complete.state),complete.before);
 });
