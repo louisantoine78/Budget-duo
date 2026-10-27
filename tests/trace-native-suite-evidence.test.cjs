@@ -56,7 +56,7 @@ test('detect true Node test imports while ignoring comments and legacy test help
 });
 test('single real node:test case is valid without printed legacy PASS markers',()=>{
  assert.equal(checkSuiteResult({status:0,nativeSuite:true,
-  stdout:'# tests 1\n# pass 1\n# fail 0\n'}).passed,true);
+  stdout:'# Subtest: a real bank check\n# tests 1\n# pass 1\n# fail 0\n'}).passed,true);
 });
 
 test('one ignored, TODO or cancelled case never counts as an entirely passing native suite',()=>{
@@ -103,4 +103,19 @@ test('native imports remain detectable among comments and unrelated literal stri
   'const test = require("test");',
   "require('node:test').test('ok',()=>{});",
  ]) assert.equal(sourceUsesNodeTest(source),true,source);
+});
+
+test('native no-test CJS wrapper cannot masquerade as a real Node assertion',t=>{
+ const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+ const {spawnSync}=require('node:child_process');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'trace-empty-native-'));
+ t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const file=path.join(dir,'no-tests.test.cjs');
+ fs.writeFileSync(file,"const unused=require('node:test');\n");
+ const env={...process.env};delete env.NODE_TEST_CONTEXT;
+ const run=spawnSync(process.execPath,['--test','--test-reporter=tap',file],
+  {encoding:'utf8',timeout:10000,env});
+ assert.equal(run.status,0,run.stderr);
+ assert.match(run.stdout,/# tests 1/,'Node wraps an empty CJS file as one successful TAP case');
+ assert.equal(checkSuiteResult({status:run.status,stdout:run.stdout,nativeSuite:true}).passed,false);
 });
