@@ -5081,10 +5081,11 @@ function uiIcon(name){
   return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(paths[name]||paths.user)+'</svg>';
 }
 async function saveHouseholdSettings(){
-  sync('saving');
   const settings={...(household.settings||{}),...state.household,schemaVersion:5};
   if(internationalPreviewMode()){household.settings=settings;sync('synced','Démo locale');return;}
   if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+  // A blocked workspace must retain its visible conflict instead of falsely saving.
+  sync('saving');
   return traceSerialWrite('settings:'+household.id,async()=>{
    if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
    // Rebuild after earlier queued writes: a stale local snapshot must not

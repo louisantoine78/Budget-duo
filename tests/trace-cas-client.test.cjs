@@ -169,6 +169,24 @@ test('CAS household settings increments version without writing client-owned rev
  assert.equal(calls.at(-1).p.p_expected_revision,1);
  assert.equal(house.settings.schemaVersion,5);
 });
+test('settings attempt after CAS conflict never hides the blocked warning with saving',async()=>{
+ const {app,client,syncLog}=createContext();
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_document')
+   return {data:null,error:{message:'TRACE_WRITE_CONFLICT: fictional remote device'}};
+  return original(method,args);
+ };
+ await assert.rejects(app.saveDocument('transactions',{id:'conflict',amountCAD:10}),
+  /TRACE_WRITE_CONFLICT/);
+ assert.equal(app.blocked(),true);
+ assert.equal(syncLog.at(-1)?.status,'error');
+ const countBefore=syncLog.length;
+ await assert.rejects(app.saveHouseholdSettings(),/Conflit de données/);
+ assert.equal(syncLog.length,countBefore,
+  'Refused settings save must not create a false saving status');
+ assert.equal(syncLog.at(-1)?.status,'error');
+});
 test('Missing server revision blocks household settings',async()=>{
  const {app,calls}=createContext();
  await assert.rejects(app.saveHouseholdSettings(),/Révision serveur absente/);
