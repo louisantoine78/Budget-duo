@@ -3054,7 +3054,7 @@ function txRow(t){
  const target=state.accounts.find(a=>a.id===t.toAccountId);
  // Display the selected bank leg; in the all-account view a currency
  // filter can select the receiving leg of an international transfer.
- const receive=!!target&&(activityAccountFilter!=='all'?
+ const receive=t.type==='transfer'&&!!target&&(activityAccountFilter!=='all'?
   activityAccountFilter===target.id:
   activityFilters.currency!=='all'&&I.currency(source)!==activityFilters.currency&&
   I.currency(target)===activityFilters.currency);
@@ -4173,7 +4173,7 @@ function traceActivityRows(){
  return state.transactions.filter(t=>{
   if(!String(t.date||'').startsWith(activityMonth))return false;
   if(activityAccountFilter!=='all'&&t.accountId!==activityAccountFilter&&
-     t.toAccountId!==activityAccountFilter)return false;
+     !(t.type==='transfer'&&t.toAccountId===activityAccountFilter))return false;
   if(activityFilters.category!=='all'&&t.categoryId!==activityFilters.category)return false;
   if(activityFilters.nature!=='all'&&t.type!==activityFilters.nature)return false;
   if(activityFilters.status==='confirmed'&&t.status!=='confirmed')return false;
@@ -4183,7 +4183,8 @@ function traceActivityRows(){
    // the recipient's EUR account must not hide it just because its source
    // account is CAD. For a selected account, use only that account's leg.
    const ids=activityAccountFilter==='all'?
-    [t.accountId,t.toAccountId]:[activityAccountFilter];
+    (t.type==='transfer'?[t.accountId,t.toAccountId]:[t.accountId]):
+    [activityAccountFilter];
    if(!ids.some(id=>{
     const account=state.accounts.find(a=>a.id===id);
     return account&&window.TraceInternational.currency(account)===activityFilters.currency;
@@ -4198,7 +4199,7 @@ function traceActivityPendingRow(t){
  // when the current Activity filter selects a EUR transfer recipient.
  const target=state.accounts.find(x=>x.id===t.toAccountId);
  const source=state.accounts.find(x=>x.id===t.accountId);
- const recipient=!!target&&(activityAccountFilter!=='all'?
+ const recipient=t.type==='transfer'&&!!target&&(activityAccountFilter!=='all'?
   t.toAccountId===activityAccountFilter:
   activityFilters.currency!=='all'&&window.TraceInternational.currency(source)!==
    activityFilters.currency&&window.TraceInternational.currency(target)===
