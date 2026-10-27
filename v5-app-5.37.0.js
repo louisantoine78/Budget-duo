@@ -596,6 +596,10 @@ function openSettlement(original){
      accountType(to)!=='checking'||I.currency(from)!=='CAD'||I.currency(to)!=='CAD'){
    $('#traceFeedback').textContent='Indique un montant au centime, une date valide et deux comptes courants CAD appartenant aux bons membres.';return;
   }
+  if(original&&(accountId!==original.accountId||toAccountId!==original.toAccountId||
+     (original.payerId&&payerId!==original.payerId))){
+   $('#traceFeedback').textContent='Un règlement confirmé reste lié à ses comptes bancaires d’origine. Vérifie le mouvement et ses justificatifs avant une réaffectation.';return;
+  }
   if(original&&((original.bankAmount!=null&&I.exactMoney(original.bankAmount)!==amount)||
      (original.toBankAmount!=null&&I.exactMoney(original.toBankAmount)!==amount))){
    $('#traceFeedback').textContent='Ce règlement possède déjà des montants bancaires. Ne modifie pas leur valeur sans revoir les deux preuves de relevé.';return;
