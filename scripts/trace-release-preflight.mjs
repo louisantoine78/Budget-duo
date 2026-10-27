@@ -11,12 +11,28 @@ function traceQualificationHeadMatches(current,reviewed){
  return typeof current==='string'&&typeof reviewed==='string'&&
   /^[a-f0-9]{40}$/.test(current)&&current===reviewed;
 }
+// The independent release preflight must not accept a tiny or fabricated
+// green report when native QA requires >=106 committed suite files.
+// Validate the actual per-file evidence, not merely summary counters.
 function traceQualifiedNativeEvidence(native){
- const s=native?.summary;
- return native?.passed===true&&s?.failedFiles===0&&
-  Number.isSafeInteger(s?.syntaxFiles)&&s.syntaxFiles>0&&
-  Number.isSafeInteger(s?.testFiles)&&s.testFiles>0&&
-  Number.isSafeInteger(s?.reportedScenarios)&&s.reportedScenarios>0;
+ const s=native?.summary, suites=native?.suites, syntax=native?.syntax;
+ const min=106;
+ if(native?.passed!==true||s?.committedSuiteInventoryPassed!==true||
+    s?.suiteFloorMet!==true||s?.failedFiles!==0||
+    !Number.isSafeInteger(s?.expectedMinTestFiles)||s.expectedMinTestFiles<min||
+    !Number.isSafeInteger(s?.testFiles)||s.testFiles<s.expectedMinTestFiles||
+    !Number.isSafeInteger(s?.trackedSuiteFiles)||s.trackedSuiteFiles!==s.testFiles||
+    !Number.isSafeInteger(s?.syntaxFiles)||s.syntaxFiles<1||
+    !Number.isSafeInteger(s?.reportedScenarios)||s.reportedScenarios<s.testFiles||
+    !Array.isArray(suites)||suites.length!==s.testFiles||
+    !Array.isArray(syntax)||syntax.length!==s.syntaxFiles||
+    !suites.every(x=>x?.passed===true&&typeof x.file==='string'&&
+      /^trace-[a-zA-Z0-9_.-]+\.test\.cjs$/.test(x.file)&&
+      Number.isSafeInteger(x.reportedScenarios)&&x.reportedScenarios>=1)||
+    !syntax.every(x=>x?.passed===true&&typeof x.file==='string'&&x.file.length>0))return false;
+ const names=suites.map(x=>x.file);
+ return new Set(names).size===names.length&&
+  suites.reduce((n,x)=>n+x.reportedScenarios,0)===s.reportedScenarios;
 }
 function traceQualifiedPostgresEvidence(db){
  return db?.testsPassed===true&&db?.hostedSupabase===false&&
