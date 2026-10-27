@@ -508,6 +508,26 @@ function openSharing(){
  $('#addSettlement').onclick=()=>openSettlement(null);$('#editTricountOpening').onclick=editTricountOpening;
 }
 function openSettlement(original){
+ const I=window.TraceInternational;
+ // This editor is CAD-only. Never reinterpret an imported EUR/CAD partner
+ // transfer, or a pending bank movement, as a settled CAD-to-CAD payment.
+ if(original){
+  const from=state.accounts.find(a=>a.id===original.accountId),
+   to=state.accounts.find(a=>a.id===original.toAccountId);
+  if(!from||!to||from.owner===to.owner||!['la','partner'].includes(from.owner)||
+     !['la','partner'].includes(to.owner)||
+     I.currency(from)!=='CAD'||I.currency(to)!=='CAD'||
+     String(original.bankCurrency||'CAD').toUpperCase()!=='CAD'||
+     String(original.toBankCurrency||'CAD').toUpperCase()!=='CAD'||
+     original.status!=='confirmed'){
+   openSheet('Règlement à vérifier',
+    '<p class="empty-note">Ce virement entre partenaires exige une vérification dans les devises natives et selon son statut bancaire. '+
+    'L’éditeur de règlement CAD ne peut pas le modifier sans risquer de fausser les soldes.</p>'+
+    '<button type="button" class="secondary full" id="settlementSafeClose">Fermer</button>');
+   $('#settlementSafeClose').onclick=closeSheet;
+   return;
+  }
+ }
  const balance=coupleBalance(),defaultPayer=balance>0?'partner':'la';
  const payer=original?.payerId||defaultPayer;
  const amount=original?.amountCAD??(Math.abs(balance)>.005?Math.abs(balance):0);
@@ -556,7 +576,8 @@ function openSettlement(original){
  $('#settlePayer').addEventListener('change',refreshSettlePreview);refreshSettlePreview();
  const refresh=()=>{
   const from=$('#settlePayer').value,to=from==='la'?'partner':'la';
-  const opts=owner=>visibleBankAccounts(owner).filter(a=>accountType(a)!=='card').map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
+  const opts=owner=>visibleBankAccounts(owner).filter(a=>accountType(a)==='checking'&&
+   I.currency(a)==='CAD').map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
   $('#settleFrom').innerHTML=opts(from);$('#settleTo').innerHTML=opts(to);
   if(original){if(original.accountId)$('#settleFrom').value=original.accountId;if(original.toAccountId)$('#settleTo').value=original.toAccountId;}
  };
@@ -564,10 +585,24 @@ function openSettlement(original){
  $('#cancelSettlement').onclick=openSharing;
  if(original)$('#removeSettlement').onclick=()=>deleteTransaction(original);
  $('#saveSettlement').onclick=async()=>{
-  const amount=Number($('#settleAmount').value),payerId=$('#settlePayer').value,beneficiary=payerId==='la'?'partner':'la',accountId=$('#settleFrom').value,toAccountId=$('#settleTo').value,date=$('#settleDate').value;
-  if(!(amount>0)||!Number.isFinite(amount)||!accountId||!toAccountId||accountId===toAccountId||!date){$('#traceFeedback').textContent='Indique un montant, une date et les deux comptes bancaires concernés.';return;}
+  const amount=I.exactMoney($('#settleAmount').value),
+   payerId=$('#settlePayer').value,beneficiary=payerId==='la'?'partner':'la',
+   accountId=$('#settleFrom').value,toAccountId=$('#settleTo').value,date=$('#settleDate').value,
+   from=state.accounts.find(a=>a.id===accountId),to=state.accounts.find(a=>a.id===toAccountId);
+  if(!(amount>0)||!I.calendarDate(date)||accountId===toAccountId||
+     !from||!to||from.archived||to.archived||from.owner!==payerId||
+     to.owner!==beneficiary||accountType(from)!=='checking'||
+     accountType(to)!=='checking'||I.currency(from)!=='CAD'||I.currency(to)!=='CAD'){
+   $('#traceFeedback').textContent='Indique un montant au centime, une date valide et deux comptes courants CAD appartenant aux bons membres.';return;
+  }
+  if(original&&((original.bankAmount!=null&&I.exactMoney(original.bankAmount)!==amount)||
+     (original.toBankAmount!=null&&I.exactMoney(original.toBankAmount)!==amount))){
+   $('#traceFeedback').textContent='Ce règlement possède déjà des montants bancaires. Ne modifie pas leur valeur sans revoir les deux preuves de relevé.';return;
+  }
   const next={...(original||{}),id:original?.id||txDocId(),type:'transfer',status:'confirmed',name:'Règlement '+member(payerId).name+' → '+member(beneficiary).name,
-   date,amountCAD:amount,amountOriginal:amount,currency:'CAD',rate:1,categoryId:'',accountId,toAccountId,payerId,beneficiary,...traceSplit(beneficiary,amount)};
+   date,amountCAD:amount,amountOriginal:amount,bankAmount:amount,toBankAmount:amount,
+   bankCurrency:'CAD',toBankCurrency:'CAD',currency:'CAD',rate:1,categoryId:'',
+   accountId,toAccountId,payerId,beneficiary,...traceSplit(beneficiary,amount)};
   $('#saveSettlement').disabled=true;
   try{await saveDocument('transactions',next);if(original)Object.assign(original,next);else state.transactions.push(next);closeSheet();renderAll();navigate('activity');showTab('transactions');}
   catch(e){$('#saveSettlement').disabled=false;traceNotice(e);}
