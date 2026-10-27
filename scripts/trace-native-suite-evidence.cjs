@@ -1,6 +1,9 @@
 'use strict';
 // Pure local QA policy, no I/O. A zero-exit script with zero tests is NO-GO.
-function checkSuiteResult({status,signal=null,error=null,stdout=''}={}){
+function sourceUsesNodeTest(source){
+ return /(?:require\s*\(\s*['"](?:node:)?test['"]\s*\)|\bfrom\s*['"](?:node:)?test['"])/.test(String(source||''));
+}
+function checkSuiteResult({status,signal=null,error=null,stdout='',nativeSuite=true}={}){
  const text=String(stdout||'').replace(/\r/g,'');
  const custom=(text.match(/^(?:# )?PASS /gm)||[]).length;
  const customFailures=(text.match(/^(?:# )?FAIL /gm)||[]).length;
@@ -12,7 +15,10 @@ function checkSuiteResult({status,signal=null,error=null,stdout=''}={}){
  const native=find('tests'),pass=find('pass'),failed=find('fail');
  const nativeGood=native!==null&&native>0&&pass!==null&&pass>0&&
   failed===0&&pass<=native;
- const scenarios=custom|| (nativeGood?pass:0);
+ // Node --test wraps a legacy script as one successful TAP case even
+ // if the script ran zero financial assertions. Require explicit PASS
+ // markers for legacy suites; use executed TAP pass count for node:test.
+ const scenarios=nativeSuite?(nativeGood?pass:0):custom;
  const passed=status===0&&!signal&&!error&&scenarios>0&&
   customFailures===0&&!/^not ok \d+\b/m.test(text)&&
   (native===null||nativeGood);
@@ -20,4 +26,4 @@ function checkSuiteResult({status,signal=null,error=null,stdout=''}={}){
   reason:passed?'ok':status!==0||signal||error?'process_failed':
    !scenarios?'no_executed_scenarios':'failed_assertion_reported'};
 }
-module.exports={checkSuiteResult};
+module.exports={checkSuiteResult,sourceUsesNodeTest};
