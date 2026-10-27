@@ -5105,7 +5105,6 @@ async function saveHouseholdSettings(){
   });
 }
 async function saveDocument(collection,item){
-  sync('saving');
   if(internationalPreviewMode()){sync('synced','Démo locale');return;}
   if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
   if(!item||item.id===undefined||item.id===null||String(item.id)==='')
@@ -5117,6 +5116,8 @@ async function saveDocument(collection,item){
   // snapshot, the queued RPC could unexpectedly post those later amounts.
   // A JSON roundtrip also matches what the database will serialize.
   const requested=JSON.parse(JSON.stringify(item));
+  // Only indicate saving after local validation and serialization succeeded.
+  sync('saving');
   return traceSerialWrite(key,async()=>{
    if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
    // Keep the existing fail-closed deferred check against the LIVE model

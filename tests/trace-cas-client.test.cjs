@@ -94,6 +94,20 @@ test('unserializable financial payload refuses RPC rather than sending a partial
   id:'unserializable-money',amountCAD:40n}),/BigInt|serialize/i);
  assert.equal(calls.length,0);
 });
+test('rejected invalid and deferred saves never show a phantom saving status',async()=>{
+ const {app,calls,state,syncLog}=createContext();
+ await assert.rejects(app.saveDocument('transactions',{amountCAD:5}),/Identifiant/);
+ assert.equal(syncLog.length,0,'Invalid document never started a write');
+ state.accounts=[{id:'eur-deferred',owner:'la',paymentMode:'deferred',currency:'EUR'}];
+ await assert.rejects(app.saveDocument('transactions',{id:'blocked',type:'expense',
+  accountId:'eur-deferred',amountEUR:5}),/TRACE_DEFERRED_NOT_RELEASED/);
+ assert.equal(syncLog.length,0,'Quarantined deferred document never started a write');
+ await assert.rejects(app.saveDocument('transactions',{id:'invalid-json',amountCAD:5n}),/BigInt|serialize/i);
+ assert.equal(syncLog.length,0,'Unserializable document never started a write');
+ assert.equal(calls.length,0);
+ await app.saveDocument('transactions',{id:'valid',amountCAD:5});
+ assert.equal(syncLog.at(-1)?.status,'synced','Actual successful write updates status');
+});
 test('queued write snapshots JSON but still blocks metadata promoted to deferred',async()=>{
  const {app,calls}=createContext();
  const row={id:'late-deferred',type:'expense',amountCAD:20,
