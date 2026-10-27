@@ -514,7 +514,8 @@ function openSettlement(original){
  if(original){
   const from=state.accounts.find(a=>a.id===original.accountId),
    to=state.accounts.find(a=>a.id===original.toAccountId);
-  if(!from||!to||from.owner===to.owner||!['la','partner'].includes(from.owner)||
+  if(original.type!=='transfer'||!from||!to||from.owner===to.owner||
+     !['la','partner'].includes(from.owner)||
      !['la','partner'].includes(to.owner)||
      I.currency(from)!=='CAD'||I.currency(to)!=='CAD'||
      String(original.bankCurrency||'CAD').toUpperCase()!=='CAD'||
