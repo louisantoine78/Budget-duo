@@ -167,4 +167,41 @@ test('real International engine confirms a cross-currency EUR recipient amount',
  tx.toBankCurrency='CAD';
  assert.match(realRow(tx,'fr','EUR',actualEngine),/Montant à vérifier/);
 });
+
+test('a non-transfer with stray toAccountId never appears in recipient bank or FX filter',()=>{
+ const odd={id:'not-a-transfer',date:'2026-10-24',accountId:'ca',toAccountId:'fr',
+  type:'expense',status:'confirmed',bankCurrency:'CAD',bankAmount:19.35,
+  toBankCurrency:'EUR',toBankAmount:999.99,amountCAD:19.35};
+ state.transactions.push(odd);
+ $('#activityAccountFilter').value='fr';$('#activityAccountFilter').onchange();
+ $('#activityCurrencyFilter').value='EUR';$('#activityCurrencyFilter').onchange();
+ $('#activityStatusFilter').value='confirmed';$('#activityStatusFilter').onchange();
+ assert.ok(!m.rows().some(t=>t.id===odd.id));
+ $('#activityAccountFilter').value='all';$('#activityAccountFilter').onchange();
+ assert.ok(!m.rows().some(t=>t.id===odd.id));
+ $('#activityCurrencyFilter').value='CAD';$('#activityCurrencyFilter').onchange();
+ assert.ok(m.rows().some(t=>t.id===odd.id));
+ state.transactions.pop();
+});
+test('non-transfer confirmed expense uses only source CAD leg even if destination exists',()=>{
+ const odd={id:'odd-confirmed',date:'2026-10-24',accountId:'ca',toAccountId:'fr',
+  type:'expense',status:'confirmed',bankCurrency:'CAD',bankAmount:19.35,
+  toBankCurrency:'EUR',toBankAmount:999.99,amountCAD:19.35};
+ const out=realRow(odd,'all','EUR');
+ assert.match(out,/19.35 CAD/);
+ assert.doesNotMatch(out,/Réception EUR|999.99 EUR/);
+});
+test('non-transfer pending entry cannot inherit unrelated EUR recipient amount',()=>{
+ const odd={id:'odd-pending',date:'2026-10-24',accountId:'ca',toAccountId:'fr',
+  type:'expense',status:'pending',bankCurrency:'CAD',bankAmount:19.35,
+  toBankCurrency:'EUR',toBankAmount:999.99};
+ const initial=app.indexOf('/* TRACE 5.37 — filter and journal display'),
+  limit=app.indexOf('\nfunction renderActivity(){',initial);
+ const fake={...ctx,activityAccountFilter:'all',
+  activityFilters:{category:'all',nature:'all',currency:'EUR',status:'pending'}};
+ const view=new Function(...Object.keys(fake),app.slice(initial,limit)+
+  '\nreturn traceActivityPendingRow;')(...Object.values(fake));
+ assert.match(view(odd),/19.35 CAD/);
+ assert.doesNotMatch(view(odd),/999.99 EUR/);
+});
 console.log(n+' Activity journal tests passed');
