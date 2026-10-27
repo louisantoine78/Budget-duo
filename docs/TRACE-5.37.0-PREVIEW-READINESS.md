@@ -72,3 +72,31 @@ Verdict inchangé : **la démo fictive est un objectif distinct et plus proche q
 Le \`trace-international-preview-sw.js\` courant du dépôt est **potentiellement obsolète depuis les changements de fixture et d'UI**. Il doit être régénéré **uniquement** par \`node scripts/build-trace-preview-pwa.mjs\` sur checkout propre, puis passé en \`--check\`; **ne pas publier** une preview qui ne passe pas cette porte. Le déploiement Vercel READY découvert précédemment correspond à \`2c312f00\`, et non au HEAD de cette reprise ; SSO activé, déploiement automatique de la branche candidat désactivé.
 
 **À faire en priorité :** checkout entier → Node natif complet et SW labo généré/contrôlé → véritable navigateur Chromium + Safari iPhone → autorisation explicite **d'une nouvelle prévisualisation fictive isolée**, distincte des écritures financières. Aucun test PostgreSQL 05–12/RLS/CAS ni certification navigateur n'a été effectué ici. **PRODUCTION NO-GO**.
+
+
+## 26 octobre 2026 — Activité quatre rubriques, validation multi-mois et protection des montants
+
+**Code vérifié :** `e4220adf294a425b05f75132761ce4db097e1b35`. Toujours sur la branche `trace-5.37.0-international-accounts-fx`, sans merge ni publication.
+
+**Fonctionnellement visible dans `trace-international-preview.html` :** l'onglet Activité contient désormais exactement les **quatre sous-rubriques approuvées** `Historique | À valider | Partage | Imports`, avec quatre boutons de taille tactile adaptée en CSS, attributs d'accessibilité `role=tablist/tab` et `aria-selected`, et quatre vues distinctes.
+
+- **Historique** : journal quotidien, filtres mois/compte/catégorie/nature/devise/statut inchangés ; liens depuis compte et catégorie conservés.
+- **À valider** : **vraie vue indépendante des imports**, affiche toutes les opérations non confirmées des **comptes bancaires actifs du membre connecté**, y compris celles des mois passés ; clic ouvre l'éditeur de vérification existant, sans création de mouvement au simple affichage. Les montants présentés sont **uniquement les montants natifs de la jambe bancaire source** via `TraceInternational.amountOnAccount`; en l'absence de preuve, message `Montant bancaire à vérifier` et jamais de contre-valeur CAD requalifiée en EUR. Le raccourci Accueil et les liens historiques vers `review` ouvrent cette vue.
+- **Partage** : modules Couple puis Proches et avances/remboursements conservés ; aucun sixième onglet principal, aucun second grand livre.
+- **Imports** : calendrier quotidien, CSV non interprétés et contrôle PDF, laboratoires fictifs inchangés ; la liste des transactions déjà enregistrées et en attente a été déplacée vers « À valider » pour éviter de la mélanger avec les sources importées.
+
+Les données **100 % fictives** de la préversion ajoutent `demo-previous-eur-pending` (8,75 EUR non confirmés, datés du mois précédent) à `demo-eur-pending` du mois courant. Aucune de ces opérations ne change le budget confirmé, les soldes ou les preuves bancaires ; la jambe CAD→EUR du transfert fictif reste explicitement datée et valorisée séparément.
+
+**Protection financière supplémentaire :** `traceRefuseUnqualifiedDeferredWrite` côté client refuse désormais les champs réservés `deferredDebitDay`, `deferredClosingDay`, `deferredScheduleVersions` même pour une carte falsifiée `paymentMode:'credit'`, ainsi que les alias transactionnels `scheduledDueDate` et `allocationDueDate`. Harmonisation avec la migration SQL candidate 10, **sans exécuter ni appliquer cette migration**.
+
+### Vérifications réellement effectuées
+
+- **291/291 scénarios ciblés V8 simulés, 13 suites**, zéro échec, au HEAD `e4220adf` : 186 contrôles Activité/Partage/Mastercard/calendriers/moteur différé et 105 de quarantaine/lecture de carte/preuve bancaire/rendu premium.
+- **7/7 scénarios bootstrap avec le vrai code 5.37 en DOM synthétique**, sans Supabase ni navigateur réel. **7/7** contrôles des fixtures de démonstration. Ils sont distincts des 291.
+- `v5-app-5.37.0.js` validé syntaxiquement via V8. Les tests V8 emploient des doublures `fs/path/vm/node:test`. Le lot **n'a pas exécuté la suite entière avec Node natif, ni une vraie instance PostgreSQL, ni Safari**.
+
+### Prochain seuil pour montrer une démo réellement à jour
+
+**Toujours non franchi** : récupérer un checkout complet, exécuter `node scripts/test-trace-native.mjs`, reconstruire **uniquement** `trace-international-preview-sw.js` avec `node scripts/build-trace-preview-pwa.mjs`, vérifier `--check`, essayer dans Chromium et sur Safari iPhone, puis demander une autorisation distincte pour un **déploiement de prévisualisation isolé**. La dernière preview READY sur Vercel demeure celle du **SHA historique `2c312f00`**, pas ces 14 nouveaux commits ; elle est protégée par SSO. Ne pas lui attribuer cette nouvelle interface avant une publication vérifiée.
+
+La production demeure **NO-GO**, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, aucun changement Supabase ni données réelles. Avancement global toujours indicatif autour de **58 % ±10 points** faute de qualification serveur/PWA globale.
