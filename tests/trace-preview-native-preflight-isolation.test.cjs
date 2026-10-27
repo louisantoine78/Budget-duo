@@ -31,8 +31,10 @@ function fixture(t){
  put('vendor/pdfjs/pdf.worker.mjs','export const worker=true;');
  put('vendor/pdfjs/LICENSE','Fictional test license only');
  put('vendor/pdfjs/trace-vendor-manifest.json','{}');
+ // Nested node --test must start in a fresh native test context.
+ const env={...process.env};delete env.NODE_TEST_CONTEXT;
  const cmd=(script,...argv)=>spawnSync(process.execPath,['scripts/'+script,...argv],
-  {cwd:dir,encoding:'utf8',timeout:20000});
+  {cwd:dir,encoding:'utf8',timeout:20000,env});
  const build=cmd('build-trace-preview-pwa.mjs');
  assert.equal(build.status,0,build.stderr);
  return{dir,put,cmd,lab};
@@ -129,4 +131,20 @@ test('official builder hashes actual PNG bytes and rejects a changed icon of equ
  const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
  assert.equal(report.preflight.inventory.passed,true);
  assert.equal(report.preflight.generatedCacheFresh,false);
+});
+
+test('real Node runner refuses a partial one-suite checkout despite a passing assertion',t=>{
+ const f=fixture(t);
+ f.put('tests/one.test.cjs',"const {test}=require('node:test');test('real assertion',()=>{require('node:assert/strict').equal(1,1)});");
+ const run=f.cmd('test-trace-native.mjs','--report','proof.json');
+ assert.equal(run.status,1);
+ const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
+ assert.equal(report.preflight.passed,true);
+ assert.equal(report.suites.length,1);
+ assert.equal(report.suites[0].passed,true);
+ assert.equal(report.suites[0].reportedScenarios,1);
+ assert.equal(report.summary.suiteFloorMet,false);
+ assert.equal(report.summary.expectedMinTestFiles,106);
+ assert.equal(report.passed,false);
+ assert.match(run.stderr,/incomplete checkout/);
 });
