@@ -4352,16 +4352,35 @@ function renderCsvUnparsedReviewQueue(){
 
 let activityReviewVisibleCount=40;
 let activityReviewAccountFilter='all';
+// Activity history stays complete; only initial DOM work is limited on mobile.
+let activityHistoryVisibleCount=60,activityHistoryQuerySignature='';
 function renderActivity(){
  renderCsvUnparsedReviewQueue();
  traceActivityControls();
+ const querySignature=JSON.stringify([me,activityMonth,activityAccountFilter,activityFilters]);
+ if(querySignature!==activityHistoryQuerySignature){
+  activityHistoryQuerySignature=querySignature;activityHistoryVisibleCount=60;
+ }
  const ts=traceActivityRows();
  const confirmed=ts.filter(t=>t.status==='confirmed');
  const counted=confirmed.filter(isFinancialPeriod);
  const expenses=counted.filter(t=>['expense','group_expense','person_payment'].includes(t.type)).reduce((v,t)=>v+Number(t.amountCAD||0),0),refunds=counted.filter(t=>t.type==='refund').reduce((v,t)=>v+Number(t.amountCAD||0),0),inc=counted.filter(t=>t.type==='income').reduce((v,t)=>v+Number(t.amountCAD||0),0),exp=Math.max(0,expenses-refunds);
  $('#activityMonthLabel').textContent=monthLabel(activityMonth);$('#activityExpenses').textContent=money(exp);$('#activityIncome').textContent=money(inc);$('#activityNet').textContent=money(inc-exp);
- $('#transactionList').innerHTML=traceActivityGroupHTML(ts);
+ const shownHistory=ts.slice(0,activityHistoryVisibleCount),
+  historyRemaining=ts.length-shownHistory.length;
+ const historyHost=$('#transactionList');
+ historyHost.innerHTML=traceActivityGroupHTML(shownHistory)+
+  (historyRemaining>0?
+   '<button type="button" id="activityHistoryLoadMore" class="trace-history-more">'+
+   'Afficher '+Math.min(60,historyRemaining)+' opérations suivantes · '+
+   historyRemaining+' restantes</button>':'');
  $$('[data-tx-open]').forEach(btn=>btn.onclick=()=>editTransaction(btn.dataset.txOpen));
+ const moreHistory=$('#activityHistoryLoadMore');
+ if(moreHistory)moreHistory.onclick=()=>{
+  const previous=activityHistoryVisibleCount;
+  activityHistoryVisibleCount+=60;renderActivity();
+  $('#transactionList')?.querySelectorAll('[data-tx-open]')?.[previous]?.focus?.();
+ };
  const reviewAccounts=visibleBankAccounts(me);
  const active=new Set(reviewAccounts.map(a=>a.id));
  // A pending bank transfer can belong to this member through either bank leg.
