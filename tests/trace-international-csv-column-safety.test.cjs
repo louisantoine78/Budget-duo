@@ -9,7 +9,7 @@ const exact=new Function('return ('+app.slice(i,j)+');')();
 let passed=0;async function test(label,fn){await fn();passed++;console.log('PASS '+label);}
 function load(lines,signed=false){
  const account={id:'ca',name:'Courant',currency:'CAD',type:'checking',owner:'la'};
- const state={accounts:[account],transactions:[]},nodes=new Map(),writes=[];
+ const state={accounts:[account],transactions:[],smartImports:[]},nodes=new Map(),writes=[];
  const $=id=>{if(!nodes.has(id))nodes.set(id,{value:'',dataset:{},textContent:'',
   innerHTML:'',disabled:false,onclick:null});return nodes.get(id)};
  class Reader{readAsText(f){this.result=f.csv;this.onload();}}
@@ -17,6 +17,7 @@ function load(lines,signed=false){
   visibleBankAccounts:()=>[account],shortAccountLabel:x=>x.name,esc:x=>String(x??''),
   txDocId:(()=>{let seq=0;return()=> 'fake-'+(++seq)})(),
   smartExactBankAmount:exact,
+  accountType:a=>a?.type,internationalPreviewMode:()=>true,
   dateGapDays:(a,b)=>Math.abs((Date.parse(a)-Date.parse(b))/86400000),
   traceSplit:()=>({split:{la:100,partner:0}}),
   saveDocument:async(c,item)=>writes.push({c,item:{...item}}),
@@ -30,6 +31,7 @@ function load(lines,signed=false){
  $('#csvDateFormat').value='dmy';$('#csvAccount').value='ca';$('#csvSign').value='income';
  $('#csvPreview').onclick();
  return{state,writes,preview:$('#csvPreviewResult').innerHTML,
+  acknowledgeInvalid:()=>{$('#csvInvalidAcknowledged').checked=true;},
   commit:async()=>{if($('#csvCommit').onclick)await $('#csvCommit').onclick()}};
 }
 async function main(){
@@ -78,8 +80,10 @@ async function main(){
     '15/10/2026;LEGITIMATE;50,00-;',
     '15/10/2026;NEGATIVE;-25,00;']);
   assert.match(h.preview,/1 ligne\(s\) invalide\(s\)/);
-  await h.commit();assert.equal(h.writes.length,2);
-  assert.deepEqual(h.writes.map(x=>x.item.bankAmount),[50,25]);
+  await h.commit();assert.equal(h.writes.length,0,'Partial import requires explicit acknowledgement');
+  h.acknowledgeInvalid();await h.commit();
+  assert.deepEqual(h.writes.filter(x=>x.c==='transactions').map(x=>x.item.bankAmount),[50,25]);
+  assert.equal(h.writes.filter(x=>x.c==='imports').length,1,'Unparsed row retained separately');
  });
  await test('mixed rows retain original physical row references',async()=>{
   const h=load(['15/10/2026;BAD;75,00;50,00',
@@ -87,8 +91,11 @@ async function main(){
     '15/10/2026;BAD;unknown;12,50',
     '15/10/2026;OK;;100,00']);
   assert.match(h.preview,/2 ligne\(s\) invalide\(s\)/);
-  await h.commit();assert.deepEqual(h.writes.map(x=>x.item.csvSourceRowIndex),[3,5]);
-  assert.ok(h.writes.every(x=>x.item.status==='pending'));
+  await h.commit();assert.equal(h.writes.length,0,'No partial import before acknowledgement');
+  h.acknowledgeInvalid();await h.commit();
+  assert.deepEqual(h.writes.filter(x=>x.c==='transactions').map(x=>x.item.csvSourceRowIndex),[3,5]);
+  assert.ok(h.writes.filter(x=>x.c==='transactions').every(x=>x.item.status==='pending'));
+  assert.deepEqual(h.writes.filter(x=>x.c==='imports').map(x=>x.item.sourceIndex),[2,4]);
  });
  await test('separate signed-amount CSV layout still works',async()=>{
   const h=load(['15/10/2026;DÉBIT;-23,50','15/10/2026;CRÉDIT;19,00'],true);

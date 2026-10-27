@@ -101,6 +101,10 @@ test('budget analysis scope selector responds',()=>{
 });
 const activity=compile('renderActivity','\n/* TRACE 5.37 — native Activity/Partage.',{
  ...ctx,activityMonth:activeMonth,activityAccountFilter:'all',tab:'transactions',
+ activityFilters:{category:'all',nature:'all',currency:'all',status:'confirmed'},
+ activityHistoryVisibleCount:60,activityHistoryQuerySignature:'',
+ activityReviewAccountFilter:'all',activityReviewVisibleCount:40,
+ traceActivitySelect(){},
  renderCsvUnparsedReviewQueue(){},traceActivityControls(){},
  traceActivityRows:()=>state.transactions.filter(t=>String(t.date).startsWith(activeMonth)&&t.status==='confirmed'),
  traceActivityGroupHTML:rows=>rows.length?rows.map(t=>'<button data-tx-open="'+t.id+'"></button>').join(''):

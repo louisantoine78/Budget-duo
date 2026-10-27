@@ -62,7 +62,7 @@ test('missing native bank amount cannot be treated as zero',()=>{
  assert.throws(()=>I.verifiedForeignFriendRefund({...repayment,bankAmount:null},euros),/historiques/);
 });
 const start=app.indexOf('function editForeignFriendRepayment('),
- end=app.indexOf('\nfunction editForeignExpenseMetadata(',start);
+ end=app.indexOf('\n/* Safe first foreign CSV route:',start);
 assert.ok(start>0&&end>start);
 function editor(bankTx=repayment){
  const nodes=new Map(),saved=[],state={accounts:[euros],transactions:[restaurant,groceries,older,partner,bankTx]};

@@ -69,8 +69,10 @@ test('fictional fixtures have two countries, one card and a two-person household
  const root={location:{pathname:'/trace-international-preview.html'}};
  vm.runInNewContext(fixture,{window:root});
  const data=root.TraceInternationalPreviewFixtures.create(),rate=root.TraceInternationalPreviewFixtures.quote();
- assert.equal(data.accounts.length,4);assert.ok(data.accounts.some(a=>a.currency==='EUR'&&a.country==='FR'));
+ assert.equal(data.accounts.length,5);assert.ok(data.accounts.some(a=>a.currency==='EUR'&&a.country==='FR'));
  assert.ok(data.accounts.some(a=>a.currency==='CAD'&&a.type==='card'));
+ assert.ok(data.accounts.some(a=>a.owner==='partner'&&a.type==='checking'));
+ assert.ok(data.accounts.some(a=>a.currency==='EUR'&&a.paymentMode==='deferred'));
  assert.ok(data.transactions.some(t=>t.currency==='USD'&&t.bankCurrency==='EUR'));
  assert.ok(data.transactions.some(t=>t.type==='transfer'&&t.toBankAmount===95));
  assert.equal(rate.source.includes('FICTIF'),true);

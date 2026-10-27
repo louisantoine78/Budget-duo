@@ -107,7 +107,8 @@ test('CAS refuses stale overwrites, preserving original server row',async()=>{
  const {app,saved,root}=createContext(),k=app.traceWriteKey('transactions','x');
  await app.saveDocument('transactions',{id:'x',amountCAD:10});
  saved.get(k).revision=1;saved.get(k).data.amountCAD=20;
- await assert.rejects(app.saveDocument('transactions',{id:'x',amountCAD:100}),/TRACE_WRITE_CONFLICT/);
+ await assert.rejects(app.saveDocument('transactions',{id:'x',amountCAD:100}),
+  err=>{assert.match(String(err?.message||''),/TRACE_WRITE_CONFLICT/);return true;});
  assert.equal(saved.get(k).data.amountCAD,20);
  assert.equal(app.blocked(),true);
  assert.equal(root.items.length,1);

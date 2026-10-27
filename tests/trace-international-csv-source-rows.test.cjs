@@ -14,7 +14,7 @@ const nativeFunctions=new Function(app.slice(start,app.indexOf('\nfunction impor
 const accounts=[{id:'ca',name:'Courant',type:'checking',currency:'CAD',owner:'la'},
  {id:'second',name:'Secondaire',type:'checking',currency:'CAD',owner:'la'}];
 function harness(existing=[]){
- const state={accounts,transactions:existing.map(x=>({...x}))},nodes=new Map(),writes=[];let counter=0;
+ const state={accounts,transactions:existing.map(x=>({...x})),smartImports:[]},nodes=new Map(),writes=[];let counter=0;
  const $=id=>{if(!nodes.has(id))nodes.set(id,{value:'',innerHTML:'',textContent:'',
   dataset:{},disabled:false,onclick:null});return nodes.get(id);};
  class FakeFileReader{readAsText(file){this.result=file.csv;this.onload();}}
@@ -22,6 +22,7 @@ function harness(existing=[]){
   visibleBankAccounts:()=>accounts,shortAccountLabel:a=>a.name,
   esc:x=>String(x??''),txDocId:()=> 'csv-test-'+(++counter),
   smartExactBankAmount:exact,
+  accountType:a=>a?.type,internationalPreviewMode:()=>true,
   dateGapDays:(a,b)=>Math.abs((Date.parse(a+'T12:00:00')-Date.parse(b+'T12:00:00'))/86400000),
   traceSplit:()=>({split:{la:100,partner:0},splitAmounts:{la:25,partner:0}}),
   saveDocument:async(c,item)=>writes.push({c,item:{...item}}),

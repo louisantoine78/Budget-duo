@@ -18,7 +18,7 @@ const tx=[
  {id:'eur-expense',type:'expense',status:'confirmed',date:'2026-10-15',name:'Restaurant',
   accountId:'fr',bankCurrency:'EUR',bankAmount:42,amountCAD:66},
  {id:'wire-fx',type:'transfer',status:'confirmed',date:'2026-10-16',name:'Europe',
-  accountId:'ca',toAccountId:'fr',bankCurrency:'CAD',bankAmount:150,toBankAmount:95,amountCAD:150},
+  accountId:'ca',toAccountId:'fr',bankCurrency:'CAD',bankAmount:150,toBankCurrency:'EUR',toBankAmount:95,amountCAD:150},
  {id:'card-evidence',type:'card_statement_evidence',status:'confirmed',
   date:'2026-10-12',name:'Paiement carte',accountId:'mc',amountCAD:100},
  {id:'pending-receipt',type:'external_refund',status:'pending',
@@ -223,7 +223,7 @@ async function importCsvIntegration(){
    name:'Règlement Mastercard',accountId:'ca',toAccountId:'mc',bankAmount:100,amountCAD:100},
   {id:'camille',type:'external_refund',status:'confirmed',date:'2026-10-13',
    name:'Camille',accountId:'ca',amountCAD:15,bankAmount:15}];
- const environment={accounts:[account],transactions:existing.slice()},writes=[];
+ const environment={accounts:[account],transactions:existing.slice(),smartImports:[]},writes=[];
  const nodes=new Map(),$=key=>{
   if(!nodes.has(key))nodes.set(key,{value:'',dataset:{},
    innerHTML:'',textContent:'',disabled:false,onclick:null});
@@ -234,6 +234,7 @@ async function importCsvIntegration(){
   visibleBankAccounts:()=>[account],shortAccountLabel:a=>a.name,
   esc:x=>String(x??''),txDocId:(()=>{let n=0;return()=> 'import-'+(++n)})(),
   smartExactBankAmount:exact,dateGapDays:getDateGap,
+  accountType:a=>a?.type,internationalPreviewMode:()=>true,
   traceSplit:()=>({split:{la:100,partner:0},splitAmounts:{la:15,partner:0}}),
   saveDocument:async(c,row)=>writes.push({c,row}),
   renderAll(){},navigate(){},showTab(){},console:{error(){}}};
