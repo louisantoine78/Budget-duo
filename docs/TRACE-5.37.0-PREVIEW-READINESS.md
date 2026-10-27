@@ -37,3 +37,12 @@ Il ne s'agit **pas** d'une mise en production et ce niveau ne requiert **pas** l
 - **Validation native réelle limitée mais vérifiée :** les empreintes Git des deux fichiers CJS du garde-fou correspondent exactement aux blobs de ce commit, et `node --test` (v22) a passé **7/7 tests**. Aucune suite native de l'application entière ni migration PostgreSQL exécutée par cette opération.
 
 La progression générale était précédemment estimée à environ **58 % ±10 points**. Ce chiffre n'augmente pas parce que la démonstration fictive devient plus facile d'accès : les portes de qualification et les fonctionnalités non intégrées sont toujours distinctes.
+
+
+## Qualification réexécutée sur le HEAD de ce lot
+
+Sur le code candidat au SHA `832bbbb8186cd99fac41637cdb322444b595625b`, les contrôles ciblés V8 ont été relancés : **364 / 364 réussis, zéro échec, 17 suites**. Répartition : 98 preuves bancaires/relevés, 150 comptabilité/calendriers/contrat SQL statique, 83 comptes/budget/paramètres, 19 Mastercard CA + amis et 14 laboratoire fictif. Les 6 contrôles SQL du groupe comptabilité vérifient du texte source seulement, pas PostgreSQL. Lors de la reprise d'un harnais d'intégration, des dépendances de test factices (`console`, `assert.throws`) manquaient : les tests concernés ont ensuite été relancés avec les dépendances adéquates et réussis. Ce comptage ne comprend pas les exécutions interrompues.
+
+**Exécution réellement native et séparée : 7/7 sous Node 22**, exclusivement pour `tests/trace-native-suite-evidence.test.cjs` et sa dépendance `scripts/trace-native-suite-evidence.cjs`. Les copies locales ont été validées par `git hash-object` contre les SHA des **deux blobs exacts** du dépôt (`f1c1922d449639d6cf0d4e78c5c36d29270b16da` et `6677e7b2195632505871cf5aa787b07feae4c13d`). Pas d'exécution native de la suite entière, ni de serveur SQL, ni de Safari.
+
+Verdict inchangé : **la démo fictive est un objectif distinct et plus proche que la production**, mais un nouveau déploiement ne doit pas être présenté comme terminé ; sa vérification de cache et son autorisation restent à obtenir. Pour les vraies finances, production **NO-GO**.
