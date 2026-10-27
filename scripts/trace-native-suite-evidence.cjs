@@ -15,7 +15,7 @@ function sourceUsesNodeTest(source){
    i+=2;while(i<input.length&&!(input[i]==='*'&&input[i+1]==='/'))i++;
    i=Math.min(input.length,i+2);continue;
   }
-  if(ch==='\''||ch==='"'||ch==='\`'){
+  if(ch==='\''||ch==='"'||ch==='`'){
    const quote=ch;let value='';i++;
    while(i<input.length){
     if(input[i]==='\\'){
@@ -25,7 +25,7 @@ function sourceUsesNodeTest(source){
     if(input[i]===quote){i++;break}
     value+=input[i++];
    }
-   tokens.push({type:quote==='\`'?'template':'string',value});continue;
+   tokens.push({type:quote==='`'?'template':'string',value});continue;
   }
   if(/[A-Za-z_$]/.test(ch)){
    let value='';while(i<input.length&&/[A-Za-z0-9_$]/.test(input[i]))value+=input[i++];
