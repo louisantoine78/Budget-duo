@@ -237,12 +237,13 @@
         </div>
         <button type="button" id="activityCurrentMonth" class="budget-current-link hidden">Ce mois</button>
       </div>
-      <div class="tabs trace-activity-three-tabs" id="activityTabs">
-        <button class="tab active" data-tab="transactions">Transactions</button>
-        <button class="tab" data-tab="import">Importer</button>
-        <button class="tab" data-tab="sharing">Partage</button>
+      <div class="tabs trace-activity-four-tabs" id="activityTabs" role="tablist" aria-label="Rubriques de l’activité">
+        <button class="tab active" data-tab="transactions" role="tab" aria-controls="activityTransactions" aria-selected="true">Historique</button>
+        <button class="tab" data-tab="review" role="tab" aria-controls="activityReview" aria-selected="false">À valider</button>
+        <button class="tab" data-tab="sharing" role="tab" aria-controls="activitySharing" aria-selected="false">Partage</button>
+        <button class="tab" data-tab="import" role="tab" aria-controls="activityImport" aria-selected="false">Imports</button>
       </div>
-      <div id="activityTransactions">
+      <div id="activityTransactions" role="tabpanel" aria-label="Historique des opérations">
         <div class="trace-activity-filters" aria-label="Filtres de l'historique">
           <label for="activityAccountFilter">Compte<select class="input" id="activityAccountFilter"><option value="all">Tous les comptes</option></select></label>
           <label for="activityCategoryFilter">Catégorie<select class="input" id="activityCategoryFilter"><option value="all">Toutes les catégories</option></select></label>
@@ -261,9 +262,15 @@
         </div>
         <article class="card" id="transactionList"></article>
       </div>
-      <div id="activityImport" class="hidden">
+      <div id="activityReview" class="hidden" role="tabpanel" aria-label="Opérations à valider">
+        <div class="trace-activity-review-intro">
+          <h2>Opérations à vérifier</h2>
+          <p>Retrouve toutes tes opérations en attente, même celles des mois précédents. Les consulter ne crée aucun mouvement financier.</p>
+        </div>
+        <div id="importPendingTransactions" aria-label="Transactions enregistrées à compléter"></div>
+      </div>
+      <div id="activityImport" class="hidden" role="tabpanel" aria-label="Imports et contrôles documentaires">
         <input type="file" id="importFile" accept=".csv,.pdf,image/*,text/csv,application/pdf" multiple hidden>
-        <div id="importPendingTransactions" class="hidden" aria-label="Transactions enregistrées à compléter"></div>
         <div id="importCalendar" aria-label="Suivi des journées et imports"></div>
         <details class="trace-import-secondary" id="importDrop">
           <summary><span class="trace-import-secondary-icon">▤</span><span><strong>Contrôle mensuel ou import CSV</strong><small>Relevé PDF, CSV ou import sans journée prédéfinie</small></span><span class="trace-import-secondary-chevron">⌄</span></summary>
@@ -307,7 +314,7 @@
           <p id="traceDeferredMessage" role="status" aria-live="polite" class="sub" style="margin-top:12px">Simulation fictive uniquement.</p>
         </article>
       </div>
-      <div id="activitySharing" class="hidden" aria-label="Partage du couple et des proches"></div>
+      <div id="activitySharing" class="hidden" role="tabpanel" aria-label="Partage du couple et des proches"></div>
     </section>
 
     <section class="page" data-page="wealth">
