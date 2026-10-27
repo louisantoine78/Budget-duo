@@ -1015,3 +1015,31 @@ Tous sur la candidate avec `[skip ci]`. La présente consolidation ajoute ensuit
 ## Invariants à préserver
 
 Soldes bancaires natifs ; taux traçable date/source et jamais 1 par défaut ; montants au centime ; `pending` distinct de `confirmed` ; paiement carte et transferts internes sans double dépense ; historique CAD figé ; remboursements selon leur nature et allocations conservées ; pas de réinitialisation, suppression automatique de doublon ou lecture des données réelles. Cinq onglets : Accueil — Budget — + — Activité — Patrimoine. Épargne puis Placements puis Patrimoine net. Identité TRACE validée conservée.
+
+## Reprise du 26 octobre 2026 — filtrage des validations, bootstrap et tests ciblés
+
+**Point de départ GitHub vérifié :** `e4e14910e59846a7afc0a2a3fba7bca9e23933e8`. La branche de travail reste **exclusivement** `trace-5.37.0-international-accounts-fx`. La branche `main` reste à `02c70f50e7e51da79b77a91dde96a03c6c719909` au point de contrôle après onze commits supplémentaires. **Résoudre le HEAD réel à chaque reprise ; le SHA de la présente note n'est pas un verrou de version.**
+
+### Code terminé et enregistré
+
+- Nouvelle sélection de compte dans **Activité → À valider**, avec décompte par compte actif et affichage des devises natives. N'afficher que les comptes de `visibleBankAccounts(me)`. Le filtre périmé, d'un autre membre ou d'un compte archivé revient automatiquement à « Tous mes comptes » ; les 40 premières opérations sont préservées et le changement de compte réinitialise la pagination. Aucune mutation du grand livre.
+- Formulaire tactile premium, libellé et focus, état vide spécifique au compte filtré.
+- Défaut bloquant du laboratoire trouvé pendant la requalification : écouteurs des quatre onglets liés par `$('#activityTabs .tab').forEach` au lieu de `$$('#activityTabs .tab').forEach`. Correction effective au commit `403dde415889b8f5945617294df65c87feb6df52` et anti-régression `35c1947575bb81b7afa1b1bf394352e798530ec2`. Ne pas réintroduire le sélecteur singulier.
+- Tests fictifs de compte EUR/CAD/CHF et propriétaire, sélection à zéro opération, compte étranger/archivé, anciens mois, absence d'écriture et maintien des contrôles de navigation.
+
+### Qualification exacte
+
+- **23/23 assertions V8 ciblées avec modules Node simulés**, sur sources réelles du HEAD candidat : 9 Activité, 6 navigation et binder, 8 revue filtrée ; zéro échec.
+- **7/7 scénarios de bootstrap avec le vrai JavaScript de la candidate mais DOM synthétique V8**, après correction effective du binder. Pas de requête Supabase ni d'accès à des comptes réels.
+- Syntaxe V8 du moteur candidat passée. **Aucune suite Node CLI complète exécutée sur un checkout**, aucun moteur PostgreSQL/PGlite, aucun vrai Chromium/Safari dans cette reprise. L'ancien résultat Node natif de garde-fou est distinct et ne doit pas être agrégé.
+
+### Toujours à faire, par priorité
+
+1. Obtenir un checkout propre du dernier HEAD réel ; relancer `node scripts/test-trace-native.mjs` sur toutes les suites, corriger les échecs éventuels.
+2. **Régénérer exclusivement** `trace-international-preview-sw.js` par `node scripts/build-trace-preview-pwa.mjs` puis `--check`. L'inventaire de cache actuel manque six scripts différés pourtant référencés par le HTML. Ne pas modifier manuellement le SW.
+3. Contrôler l'application dans un véritable navigateur, puis Safari iPhone (focus du sélecteur, pagination, voix/gestes, offline, données fictives). Préparer un éventuel déploiement de preview isolée **seulement après autorisation distincte**. La précédente preview Vercel `2c312f00` demeure ancienne.
+4. Qualifier les migrations 05–12 sur PostgreSQL fictif, les contrôles Auth/RLS/CAS, les conflits et les provenances bancaires avant tout déverrouillage. La quarantaine `TRACE_DEFERRED_NOT_RELEASED` demeure obligatoire.
+
+**Décision :** production **NO-GO**, `main` stable, aucune écriture de compte réel, aucun changement Vercel/Supabase/CI. Avancement global toujours indicatif environ **58 % ±10 points**, pas réévalué à la hausse faute de validation native et navigateur.
+
+Documentation détaillée : `docs/TRACE-5.37.0-PREVIEW-READINESS.md` et `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md`. Commits tous `[skip ci]`. Résoudre le véritable nouveau HEAD GitHub avant tout autre lot.
