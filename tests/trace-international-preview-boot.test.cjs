@@ -8,7 +8,7 @@ const root=path.join(__dirname,'..'),read=n=>fs.readFileSync(path.join(root,n),'
 const scripts=[
  'trace-international-preview-fixtures-1.0.0.js','trace-international-1.0.0.js',
  'trace-international-ui-1.0.0.js','trace-movement-5.36.0.js',
- 'trace-import-guide-1.2.1.js','trace-operation-ui-1.0.0.js'
+ 'trace-import-guide-1.2.1.js','trace-operation-ui-5.37.0.js'
 ];
 const handlers={},els=new Map(),buttons=new Map(),logs=[];
 function element(selector){
