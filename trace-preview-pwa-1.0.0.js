@@ -48,6 +48,9 @@
  };
  const updateNotice=registration=>{
   if(!registration.waiting||!navigator.serviceWorker.controller)return;
+  // The active page is now older than the waiting lab candidate.
+  // Never leave a stale 'ready' verdict visible in the application state.
+  verificationVersion++;status.ready=false;status.error=null;
   const node=document.getElementById('tracePreviewOfflineStatus');
   if(!node)return;
   node.textContent='Nouvelle version du laboratoire disponible. ';
