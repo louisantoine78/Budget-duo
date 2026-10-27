@@ -5392,7 +5392,13 @@ function openBankMetadata(id){
  $('#traceBankMetaBack').onclick=openAccountSettings;
  const previewCalendar=$('#traceBankMetaSchedulePreview');
  if(accountType(account)==='card'&&account.paymentMode==='deferred'&&previewCalendar)
-  previewCalendar.onclick=()=>openTraceAccountDetail(id,{onBack:openAccountSettings});
+  previewCalendar.onclick=()=>{
+   const input=$('#traceBankMetaRevisionDebit');
+   if(account.country==='FR'&&I.currency(account)==='EUR'&&input){
+    input.scrollIntoView?.({behavior:'smooth',block:'center'});
+    input.focus?.();
+   }else openTraceAccountDetail(id,{onBack:openAccountSettings});
+  };
  const previewRevision=$('#traceBankMetaRevisionRun');
  if(accountType(account)==='card'&&account.paymentMode==='deferred'&&
     account.country==='FR'&&I.currency(account)==='EUR'&&previewRevision)
