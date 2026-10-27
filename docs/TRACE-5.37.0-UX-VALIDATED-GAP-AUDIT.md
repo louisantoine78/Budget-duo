@@ -310,3 +310,23 @@ La comparaison réemploie sans modification les moteurs préexistants TraceState
 **Contrats contrôlés :** 7 nouveaux tests de structure/navigation/file ; 14 partage ; 18 journal/filtres ; 12 smoke UI ; 13 layout premium ; tests financiers de verrouillage et carte. Prévisualisation fictive enrichie d'une opération antérieure ; bootstrap 7/7 en DOM synthétique. Les **291/291 contrôles ciblés V8** ne constituent pas une validation tactile/navigateur.
 
 **Reste impérativement à qualifier :** vraie navigation à 320/375/390/430 px et sur iPhone Safari (notamment quatre sous-onglets sans débordement), contrôle accessible de la file et des états de focus, service worker laboratoire régénéré, sessions Auth/RLS/CAS isolées et persistance sans doublons. **Production NO-GO**. Les diagnostics historiques d'absence d'onglet « À valider » décrivent leurs HEAD d'origine, pas l'état actuel.
+
+## 26 octobre — navigation Activité et grandes listes (après `bb326c9c`)
+
+### Écarts UX corrigés dans la candidate
+
+- « À valider » rend au plus **40 opérations** au premier affichage, triées par date descendante, puis permet de dévoiler **40 opérations supplémentaires** par activation. Cela réduit le nombre de boutons construits initialement sur iPhone sans exclure les mois anciens et sans changement du grand livre.
+- La commande progressive possède une cible tactile d'au moins 44 px et un contour de focus. Après activation, le focus tente d'atteindre la première nouvelle opération rendue.
+- Les quatre onglets Historique / À valider / Partage / Imports disposent d'associations de panneaux explicites, d'une sélection et d'un `tabindex` cohérents ; flèches, Début et Fin déplacent la sélection/focalisation au clavier. Le clic tactile reste inchangé.
+- Les soldes, devises natives, avertissements de preuves bancaires et raccourcis vers les transactions sont conservés.
+
+**Vérification :** 14/14 assertions ciblées en JS V8 avec environnement Node/DOM simulé, sources GitHub candidat, zéro échec ; parseur syntaxique V8 de l'application. **Non qualifiés :** vraie navigation VoiceOver, Safari iPhone, endurance/performance avec plusieurs milliers d'opérations, données persistées, PostgreSQL/Auth/RLS/CAS et système hors ligne.
+
+### Écarts restant prioritaires
+
+1. Refaire la QA visuelle et tactile dans **un vrai navigateur**, puis Safari physique (focus après pagination, lecteurs d'écran, tabulations, panneaux, petits formats).
+2. Régénérer le SW **du laboratoire** avec le générateur officiel : l'inventaire actuel ne contient pas six nouveaux modules différés ; ne pas le modifier manuellement ni déployer une démo périmée.
+3. Revoir les états de chargement et grandes listes des autres sections, dont Budget, Imports, Partage et Patrimoine, sans masquer de mouvements.
+4. Poursuivre la qualification intégrée des flux de paiement, devises et justificatifs avec des données fictives persistantes avant de déverrouiller toute écriture différée.
+
+Commits : `c9a6b835`, `5ad71fa1`, `d64a2b0e`, `3f62b2db`, `7cbc58a0`, `eb878a36` (tous `[skip ci]`). Voir `docs/TRACE-5.37.0-PREVIEW-READINESS.md`. Aucune modification de `main`, de Supabase réel, de Vercel ou des workflows ; **production NO-GO**.
