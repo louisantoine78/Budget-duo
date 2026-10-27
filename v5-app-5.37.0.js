@@ -4364,7 +4364,7 @@ function renderActivity(){
   String(b.id||'').localeCompare(String(a.id||'')));
  const legacy=$('#importPendingTransactions');
  if(legacy){
-  legacy.classList.remove('hidden');
+  legacy.classList.toggle('hidden',false);
   legacy.innerHTML=remaining.length?'<div class="trace-unconfirmed-header"><strong>Transactions à compléter</strong><small>'+
    remaining.length+' opération(s) à contrôler, tous mois confondus</small></div>'+
    '<div class="trace-unconfirmed-rows">'+remaining.map(t=>{
