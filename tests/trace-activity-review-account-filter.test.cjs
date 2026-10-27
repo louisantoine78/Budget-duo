@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const app=read('v5-app-5.37.0.js'),html=read('trace-international-preview.html'),
  css=read('trace-international-1.0.0.css');
-function preview(filter='all',cap=40,owner='la',large=false){
+function preview(filter='all',cap=40,owner='la',large=false,opts={}){
  const a=app.indexOf(' const reviewAccounts=visibleBankAccounts(me);',app.indexOf('function renderActivity(){'));
  const b=app.indexOf("\n const picker=$('#activityMonthPicker')",a);
  assert.ok(a>=0&&b>a,'Expected current review implementation');
@@ -23,6 +23,25 @@ function preview(filter='all',cap=40,owner='la',large=false){
   {id:'closed-pending',accountId:'closed',status:'pending',date:'2026-09-10',bankAmount:55},
   {id:'settled',accountId:'eur',status:'confirmed',date:'2026-10-16',bankAmount:20}
  ];
+ if(opts.transfer)transactions.push({
+  id:'cad-to-eur',accountId:'cad',toAccountId:'eur',type:'transfer',
+  status:'pending',date:'2026-07-11',name:'Échange',bankCurrency:'CAD',
+  bankAmount:50,toBankCurrency:'EUR',toBankAmount:46.2
+ });
+ if(opts.incoming)transactions.push({
+  id:'partner-to-eur',accountId:'partner',toAccountId:'eur',type:'transfer',
+  status:'pending',date:'2026-06-04',name:'Virement partenaire',
+  bankCurrency:'GBP',bankAmount:100,toBankCurrency:'EUR',toBankAmount:91.34
+ });
+ if(opts.unproved)transactions.push({
+  id:'cad-to-eur-unproved',accountId:'cad',toAccountId:'eur',type:'transfer',
+  status:'pending',date:'2026-05-02',name:'Échange non prouvé',
+  bankCurrency:'CAD',bankAmount:80,toBankCurrency:'CAD',toBankAmount:72.3,amountCAD:80
+ });
+ if(opts.partnerOnly)transactions.push({
+  id:'partner-only',accountId:'partner',type:'expense',
+  status:'pending',date:'2026-04-01',name:'Privé',bankCurrency:'GBP',bankAmount:30
+ });
  if(large)for(let n=0;n<100;n++)transactions.push({
   id:'historic-'+n,accountId:'eur',status:'pending',date:'2026-08-10',bankCurrency:'EUR',bankAmount:n+.01
  });
@@ -37,7 +56,9 @@ function preview(filter='all',cap=40,owner='la',large=false){
  'remaining:remaining.map(x=>x.id),filter:()=>activityReviewAccountFilter,cap:()=>activityReviewVisibleCount};');
  const result=f(state,owner,who=>state.accounts.filter(x=>x.owner===who&&!x.archived),
  ()=>legacy,s=>String(s),a=>a.name,{TraceInternational:{
- amountOnAccount:(t,a)=>t.bankCurrency===a.currency?t.bankAmount:null,
+ amountOnAccount:(t,a,leg)=>leg==='destination'?
+  (t.toBankCurrency===a.currency?t.toBankAmount:null):
+  (t.bankCurrency===a.currency?t.bankAmount:null),
  money:(v,c)=>v+' '+c,currency:a=>a.currency
  }},(id,review)=>actions.push([id,review]),cap,()=>renderCalls.push('render'),filter,
  (id,items,value,onChange)=>{
@@ -114,4 +135,64 @@ test('visual selector exists before the queue, with a large tactile target',()=>
  assert.match(html,/for="activityReviewAccountFilter"/);
  assert.match(css,/trace-review-account-label/);
  assert.match(css,/min-height:44px/);
+});
+
+
+test('one CAD-to-EUR transfer counts exactly once overall, once on each linked bank',()=>{
+ const a=preview('all',40,'la',false,{transfer:true});
+ assert.equal(a.all.filter(id=>id==='cad-to-eur').length,1);
+ assert.equal(a.chosen.items[0][1],'Tous mes comptes · 4');
+ assert.match(a.chosen.items.find(x=>x[0]==='eur')[1],/EUR · 3 à valider/);
+ assert.match(a.chosen.items.find(x=>x[0]==='cad')[1],/CAD · 2 à valider/);
+ assert.match(a.legacy.innerHTML,/50 CAD/);
+ assert.doesNotMatch(a.legacy.innerHTML,/46.2 EUR/);
+ assert.match(a.legacy.innerHTML,/Virement émis/);
+ assert.equal(JSON.stringify(a.state),a.before);
+});
+test('EUR recipient filter displays true receiving amount, not CAD source value',()=>{
+ const a=preview('eur',40,'la',false,{transfer:true});
+ assert.ok(a.remaining.includes('cad-to-eur'));
+ assert.match(a.legacy.innerHTML,/46.2 EUR/);
+ assert.match(a.legacy.innerHTML,/Virement reçu/);
+ assert.doesNotMatch(a.legacy.innerHTML,/50 CAD/);
+ assert.equal(JSON.stringify(a.state),a.before);
+});
+test('CAD source filter displays only sending leg of the same foreign transfer',()=>{
+ const a=preview('cad',40,'la',false,{transfer:true});
+ assert.ok(a.remaining.includes('cad-to-eur'));
+ assert.match(a.legacy.innerHTML,/50 CAD/);
+ assert.doesNotMatch(a.legacy.innerHTML,/46.2 EUR/);
+ assert.equal(JSON.stringify(a.state),a.before);
+});
+test('inbound transfer from another member exposes own EUR proof only',()=>{
+ const a=preview('all',40,'la',false,{incoming:true,partnerOnly:true});
+ assert.ok(a.remaining.includes('partner-to-eur'));
+ assert.ok(!a.remaining.includes('partner-only'));
+ assert.match(a.legacy.innerHTML,/91.34 EUR/);
+ assert.match(a.legacy.innerHTML,/Virement reçu/);
+ assert.doesNotMatch(a.legacy.innerHTML,/100 GBP|30 GBP|Compte privé/);
+ assert.equal(JSON.stringify(a.state),a.before);
+});
+test('inbound other-owner transfer counts only receiving account and no foreign source',()=>{
+ const a=preview('eur',40,'la',false,{incoming:true});
+ assert.ok(a.remaining.includes('partner-to-eur'));
+ assert.equal(a.chosen.items[0][1],'Tous mes comptes · 4');
+ assert.match(a.chosen.items.find(x=>x[0]==='eur')[1],/EUR · 3 à valider/);
+ assert.match(a.chosen.items.find(x=>x[0]==='cad')[1],/CAD · 1 à valider/);
+ assert.equal(JSON.stringify(a.state),a.before);
+});
+test('recipient with mismatched bank evidence displays review warning, never an inferred FX',()=>{
+ const a=preview('eur',40,'la',false,{unproved:true});
+ assert.ok(a.remaining.includes('cad-to-eur-unproved'));
+ assert.match(a.legacy.innerHTML,/Échange non prouvé/);
+ assert.match(a.legacy.innerHTML,/Montant bancaire à vérifier/);
+ assert.doesNotMatch(a.legacy.innerHTML,/72.3 EUR|80 EUR/);
+ assert.equal(JSON.stringify(a.state),a.before);
+});
+test('a receiving account owned only by the other member is not added to review',()=>{
+ const a=preview('all',40,'partner',false,{transfer:true,partnerOnly:true});
+ assert.ok(!a.remaining.includes('cad-to-eur'));
+ assert.ok(a.remaining.includes('partner-only'));
+ assert.deepEqual(a.chosen.items.map(v=>v[0]),['all','partner']);
+ assert.equal(JSON.stringify(a.state),a.before);
 });
