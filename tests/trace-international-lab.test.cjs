@@ -61,8 +61,17 @@ test('lab boot returns before real authentication and before version redirects',
  assert.match(app,/if\(internationalPreviewMode\(\)\)return;.*The laboratory never requests/);
 });
 test('lab data can never be stored by ordinary Supabase helpers',()=>{
- assert.match(app,/async function saveDocument\(collection,item\)\{\s*sync\('saving'\);\s*if\(internationalPreviewMode\(\)\)\{/);
- assert.match(app,/async function saveHouseholdSettings\(\)\{\s*sync\('saving'\);[\s\S]{0,180}if\(internationalPreviewMode\(\)\)\{/);
+ // The preview guard runs before the sync indicator and any live RPC.
+ // Rejected non-preview saves now set saving only after local validation.
+ const saveDoc=app.slice(app.indexOf('async function saveDocument(collection,item){'));
+ const saveSettings=app.slice(app.indexOf('async function saveHouseholdSettings(){'));
+ for(const fn of [saveDoc,saveSettings]){
+  const preview=fn.indexOf('if(internationalPreviewMode())');
+  const network=fn.indexOf('client.rpc(');
+  assert.ok(preview>=0&&network>preview,'Preview must bypass server calls');
+ }
+ assert.match(saveDoc,/if\(internationalPreviewMode\(\)\)\{sync\('synced','Démo locale'\);return;\}/);
+ assert.match(saveSettings,/if\(internationalPreviewMode\(\)\)\{household.settings=settings;sync\('synced','Démo locale'\);return;\}/);
  assert.match(app,/async function removeDocument\(collection,id\)\{if\(internationalPreviewMode\(\)\)return;/);
 });
 test('fictional fixtures have two countries, one card and a two-person household',()=>{

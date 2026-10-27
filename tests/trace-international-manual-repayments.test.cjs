@@ -50,6 +50,9 @@ function run(){
  movementImpactText:()=>'',money:a=>String(a)+' CAD',suggestImportCategory:()=>({categoryId:''}),
  traceSplit:()=>({split:{la:100,partner:0},splitMode:'percent',splitAmounts:null}),
  traceCustomShares:()=>{throw Error('unneeded')},validateFriendLink:()=>{throw Error('single legacy function used for multi')},
+ // This test exercises reimbursement allocations; deferred quarantine has
+ // its own suite, and all synthetic fixture accounts are immediate checking.
+ traceRefuseUnqualifiedDeferredWrite:()=>{},
  txDocId:()=> 'bank-60',saveDocument:async(collection,item)=>saved.push({collection,item:JSON.parse(JSON.stringify(item))}),
  renderAll:()=>{},navigate:()=>{},showTab:()=>{}};
  const fn=new Function(...Object.keys(deps),'return ('+app.slice(start,end)+');')(...Object.values(deps));

@@ -117,6 +117,20 @@ test('queued write snapshots JSON but still blocks metadata promoted to deferred
  await assert.rejects(queued,/TRACE_DEFERRED_NOT_RELEASED/);
  assert.equal(calls.length,0);
 });
+test('Supabase RPC failures remain proper Error instances without dropping server context',async()=>{
+ const {app,client}=createContext();
+ const original=client.rpc;
+ client.rpc=async(method,args)=>method==='trace_cas_save_document'?
+  {data:null,error:{message:'Fictional write unavailable',code:'42501',details:'mock RLS context'}}:
+  original(method,args);
+ await assert.rejects(app.saveDocument('transactions',{id:'server-error',amountCAD:20}),error=>{
+  assert.equal(error instanceof Error,true);
+  assert.match(error.message,/Fictional write unavailable/);
+  assert.equal(error.code,'42501');
+  assert.equal(error.details,'mock RLS context');
+  return true;
+ });
+});
 test('CAS refuses stale overwrites, preserving original server row',async()=>{
  const {app,saved,root}=createContext(),k=app.traceWriteKey('transactions','x');
  await app.saveDocument('transactions',{id:'x',amountCAD:10});

@@ -317,6 +317,7 @@ test('clean HEAD and identical branch after Node+PG checks still require manual 
 test('international preview isolates UI and insights without changing stable 5.36.5 bytes',()=>{
  const fs=require('node:fs'),path=require('node:path');
  const {spawnSync}=require('node:child_process');
+ const {createHash}=require('node:crypto');
  const {MISSION_BASE,PROTECTED}=require('../scripts/check-trace-537-release-gates.cjs');
  const root=path.resolve(__dirname,'..');
  const stable=fs.readFileSync(path.join(root,'index.html'),'utf8');
@@ -333,10 +334,19 @@ test('international preview isolates UI and insights without changing stable 5.3
   assert.ok(!preview.includes('src="'+original+'"'),'Preview must not load shared '+original);
   const reference=spawnSync('git',['show',MISSION_BASE+':'+original],
    {cwd:root,encoding:null,timeout:10000,maxBuffer:1024*1024});
-  assert.equal(reference.status,0,'Cannot inspect immutable baseline '+original);
   const unchanged=fs.readFileSync(path.join(root,original));
   const enhanced=fs.readFileSync(path.join(root,candidate));
-  assert.deepEqual(unchanged,reference.stdout,'Stable file mutated: '+original);
+  // Source ZIPs omit .git history. Still pin these assets to Git blobs of
+  // MISSION_BASE; when history is available also compare its exact bytes.
+  const pinnedBaseline={
+   'trace-operation-ui-1.0.0.js':'8fc44648c783698d790684210b09d7b1ae2ab2b1',
+   'trace-insights-1.0.0.js':'4efc4bdb7009b6631e66a2a32b014c4758389b2c'
+  };
+  const blobSha=createHash('sha1').update('blob '+unchanged.length+'\0')
+   .update(unchanged).digest('hex');
+  assert.equal(blobSha,pinnedBaseline[original],'Stable Git blob mutated: '+original);
+  if(reference.status===0)
+   assert.deepEqual(unchanged,reference.stdout,'Stable file mutated: '+original);
   assert.notDeepEqual(enhanced,unchanged,'Candidate enhancement missing: '+candidate);
  }
 });

@@ -114,9 +114,14 @@ function traceConflictNotice(){
  sync('error','Conflit de données — rechargement nécessaire');
 }
 function traceSaveFailure(error){
- if(/TRACE_WRITE_CONFLICT/.test(String(error?.message||'')))traceConflictNotice();
+ // RPC clients may reject with a plain object. Preserve code/details but always
+ // raise a proper Error so callers and tests can inspect the failure reliably.
+ const failure=error instanceof Error?error:Object.assign(
+  new Error(String(error?.message||'Écriture serveur non confirmée.')),
+  error&&typeof error==='object'?error:{});
+ if(/TRACE_WRITE_CONFLICT/.test(failure.message))traceConflictNotice();
  else sync('error');
- return error;
+ return failure;
 }
 let activityAccountFilter='all';
 let activityFilters={category:'all',nature:'all',currency:'all',status:'confirmed'};

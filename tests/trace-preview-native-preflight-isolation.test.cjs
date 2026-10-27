@@ -156,7 +156,7 @@ test('real Node runner refuses a partial one-suite checkout despite a passing as
  assert.equal(report.suites[0].passed,true);
  assert.equal(report.suites[0].reportedScenarios,1);
  assert.equal(report.summary.suiteFloorMet,false);
- assert.equal(report.summary.expectedMinTestFiles,106);
+ assert.equal(report.summary.expectedMinTestFiles,107);
  assert.equal(report.passed,false);
  assert.match(run.stderr,/incomplete checkout/);
 });
