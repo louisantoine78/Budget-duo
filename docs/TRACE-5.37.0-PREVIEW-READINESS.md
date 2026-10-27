@@ -148,32 +148,32 @@ La production demeure **NO-GO**, `main` stable `02c70f50e7e51da79b77a91dde96a03c
 
 ## 26 octobre — Reprise complémentaire : clavier et vérité du statut hors connexion
 
-**Base de reprise vérifiée :** \`ffbe25a0d64c7858791905c4b03eb54b94b2213b\` ; cette référence de départ n'est pas le HEAD final. Branche candidate seule ; \`main\` préservée.
+**Base de reprise vérifiée :** `ffbe25a0d64c7858791905c4b03eb54b94b2213b` ; cette référence de départ n'est pas le HEAD final. Branche candidate seule ; `main` préservée.
 
 ### Défaut d'accessibilité confirmé et corrigé
 
-Le gestionnaire \`activityTabKey(event,button)\` utilisait encore \`$('#activityTabs .tab')\` pour déterminer l'onglet suivant puis appelait \`.indexOf\` sur **un seul élément DOM**. L'ancien test injectait incorrectement une liste même pour \`$\` ; il masquait donc l'erreur réelle. Correction à \`$$('#activityTabs .tab')\` au commit \`9eb0e244db06ed677976d64a96491a52890cd103\`. Le test \`tests/trace-activity-keyboard.test.cjs\` distingue désormais la requête unique de la requête multiple et exerce flèches, Home, End et focus.
+Le gestionnaire `activityTabKey(event,button)` utilisait encore `$('#activityTabs .tab')` pour déterminer l'onglet suivant puis appelait `.indexOf` sur **un seul élément DOM**. L'ancien test injectait incorrectement une liste même pour `$` ; il masquait donc l'erreur réelle. Correction à `$$('#activityTabs .tab')` au commit `9eb0e244db06ed677976d64a96491a52890cd103`. Le test `tests/trace-activity-keyboard.test.cjs` distingue désormais la requête unique de la requête multiple et exerce flèches, Home, End et focus.
 
 ### Plus de faux « Disponible hors connexion »
 
-Dans \`trace-preview-pwa-1.0.0.js\`, le badge hors connexion ne devient \`ready=true\` que si un **même cache privé de laboratoire** contient, après le chargement complet de la page, tous les fichiers statiques référencés par ses \`script[src]\` et \`link[href]\`, son HTML et **PDF.js + pdf.worker.mjs chargés dynamiquement**. Cette vérification se fait avec \`CacheStorage\` en **lecture seule**, sans téléchargement, accès Supabase ou documents bancaires. Aucun cache de production ne peut satisfaire la vérification. Les ressources manquantes sont signalées et le statut reste non prêt.
+Dans `trace-preview-pwa-1.0.0.js`, le badge hors connexion ne devient `ready=true` que si un **même cache privé de laboratoire** contient, après le chargement complet de la page, tous les fichiers statiques référencés par ses `script[src]` et `link[href]`, son HTML et **PDF.js + pdf.worker.mjs chargés dynamiquement**. Cette vérification se fait avec `CacheStorage` en **lecture seule**, sans téléchargement, accès Supabase ou documents bancaires. Aucun cache de production ne peut satisfaire la vérification. Les ressources manquantes sont signalées et le statut reste non prêt.
 
 **Limite volontaire :** c'est une preuve de **présence de fichiers nommés**, **pas** une preuve cryptographique que chaque octet du cache correspond au HEAD ni un véritable parcours Safari hors ligne. La version de cache sera garantie par le générateur au moment du checkout, puis par tests navigateur. Ne jamais utiliser ce voyant comme autorisation de publication.
 
 **Vérification de l'état GitHub le 26 octobre :** l'ancien SW du laboratoire présente toujours 62 ressources et manque exactement six modules différés appelés par le HTML :
-- \`trace-deferred-write-plan-1.0.0.js\`
-- \`trace-deferred-purchase-evidence-1.0.0.js\`
-- \`trace-deferred-evidence-intake-1.0.0.js\`
-- \`trace-deferred-evidence-lab-1.0.0.js\`
-- \`trace-deferred-statement-bridge-1.0.0.js\`
-- \`trace-deferred-statement-review-ui-1.0.0.js\`
+- `trace-deferred-write-plan-1.0.0.js`
+- `trace-deferred-purchase-evidence-1.0.0.js`
+- `trace-deferred-evidence-intake-1.0.0.js`
+- `trace-deferred-evidence-lab-1.0.0.js`
+- `trace-deferred-statement-bridge-1.0.0.js`
+- `trace-deferred-statement-review-ui-1.0.0.js`
 
-La nouvelle garde **ne remplace pas** la régénération : **exécuter exclusivement** \`node scripts/build-trace-preview-pwa.mjs\`, puis \`node scripts/build-trace-preview-pwa.mjs --check\` depuis le checkout intégral et vérifier l'installation/offline dans un vrai navigateur.
+La nouvelle garde **ne remplace pas** la régénération : **exécuter exclusivement** `node scripts/build-trace-preview-pwa.mjs`, puis `node scripts/build-trace-preview-pwa.mjs --check` depuis le checkout intégral et vérifier l'installation/offline dans un vrai navigateur.
 
 ### Qualification sur les sources GitHub après corrections
 
 - **24/24 scénarios ciblés V8 simulés**, source réelle du HEAD candidat : 9 Activité, **7** navigation clavier, 8 filtres par compte ; syntaxe V8 du moteur validée.
-- **6/6 scénarios ciblés CacheStorage V8 simulés**, isolant présence/absence des fichiers statiques, des modules différés, PDF.js, cache de production et attente de l'événement \`load\`. Le \`vm\` et les primitives Node sont simulés pour ce contrôle.
+- **6/6 scénarios ciblés CacheStorage V8 simulés**, isolant présence/absence des fichiers statiques, des modules différés, PDF.js, cache de production et attente de l'événement `load`. Le `vm` et les primitives Node sont simulés pour ce contrôle.
 - **7/7 scénarios de bootstrap de l'application en DOM synthétique V8** avec sources réelles, sans Supabase ou accès bancaire.
 
-**Non testés dans cette reprise :** Node natif sur dépôt complet, Chromium réel, Safari physique, PGlite/PostgreSQL et migrations, PWA installée réellement. Aucun déploiement, aucun changement \`main\`, aucune migration réelle, quarantaine \`TRACE_DEFERRED_NOT_RELEASED\` maintenue. **Production toujours NO-GO**.
+**Non testés dans cette reprise :** Node natif sur dépôt complet, Chromium réel, Safari physique, PGlite/PostgreSQL et migrations, PWA installée réellement. Aucun déploiement, aucun changement `main`, aucune migration réelle, quarantaine `TRACE_DEFERRED_NOT_RELEASED` maintenue. **Production toujours NO-GO**.
