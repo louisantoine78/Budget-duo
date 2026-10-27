@@ -4349,6 +4349,7 @@ function renderCsvUnparsedReviewQueue(){
 }
 
 let activityReviewVisibleCount=40;
+let activityReviewAccountFilter='all';
 function renderActivity(){
  renderCsvUnparsedReviewQueue();
  traceActivityControls();
@@ -4359,8 +4360,21 @@ function renderActivity(){
  $('#activityMonthLabel').textContent=monthLabel(activityMonth);$('#activityExpenses').textContent=money(exp);$('#activityIncome').textContent=money(inc);$('#activityNet').textContent=money(inc-exp);
  $('#transactionList').innerHTML=traceActivityGroupHTML(ts);
  $$('[data-tx-open]').forEach(btn=>btn.onclick=()=>editTransaction(btn.dataset.txOpen));
- const active=new Set(visibleBankAccounts(me).map(a=>a.id));
- const remaining=state.transactions.filter(t=>t.status!=='confirmed'&&active.has(t.accountId));
+ const reviewAccounts=visibleBankAccounts(me);
+ const active=new Set(reviewAccounts.map(a=>a.id));
+ const pendingAll=state.transactions.filter(t=>t.status!=='confirmed'&&active.has(t.accountId));
+ // The review filter is ephemeral and must never expose a previous member's bank.
+ if(activityReviewAccountFilter!=='all'&&!active.has(activityReviewAccountFilter)){
+  activityReviewAccountFilter='all';activityReviewVisibleCount=40;
+ }
+ const countByAccount=new Map();
+ pendingAll.forEach(t=>countByAccount.set(t.accountId,(countByAccount.get(t.accountId)||0)+1));
+ traceActivitySelect('activityReviewAccountFilter',[
+  ['all','Tous mes comptes · '+pendingAll.length],
+  ...reviewAccounts.map(a=>[a.id,shortAccountLabel(a)+' · '+
+   window.TraceInternational.currency(a)+' · '+(countByAccount.get(a.id)||0)+' à valider'])
+ ],activityReviewAccountFilter,v=>{activityReviewAccountFilter=v;activityReviewVisibleCount=40;});
+ const remaining=pendingAll.filter(t=>activityReviewAccountFilter==='all'||t.accountId===activityReviewAccountFilter);
  remaining.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||
   String(b.id||'').localeCompare(String(a.id||'')));
  const visiblePending=remaining.slice(0,activityReviewVisibleCount);
@@ -4385,7 +4399,9 @@ function renderActivity(){
     '<button type="button" class="trace-review-more" data-review-more>Voir '+
     Math.min(40,remaining.length-visiblePending.length)+' opérations de plus · '+
     (remaining.length-visiblePending.length)+' restantes</button>':''):
-   '<p class="empty-note">Aucune opération à valider sur tes comptes actifs.</p>';
+   '<p class="empty-note">'+(activityReviewAccountFilter==='all'?
+    'Aucune opération à valider sur tes comptes actifs.':
+    'Aucune opération à valider sur ce compte.')+'</p>';
   legacy.querySelectorAll('[data-import-pending]').forEach(button=>
    button.onclick=()=>editTransaction(button.dataset.importPending,true));
   const more=legacy.querySelector?.('[data-review-more]');
