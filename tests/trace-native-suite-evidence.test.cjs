@@ -83,3 +83,24 @@ test('native child-process TAP with a skipped banking case is rejected',t=>{
  assert.match(run.stdout,/# skipped 1/);
  assert.equal(checkSuiteResult({status:run.status,stdout:run.stdout}).passed,false);
 });
+
+test('commentary and quoted import examples never masquerade as native suites',()=>{
+ const {sourceUsesNodeTest}=require('../scripts/trace-native-suite-evidence.cjs');
+ for(const source of [
+  "// const {test}=require('node:test')\nconsole.log('PASS financial')",
+  "/* import test from 'node:test' */\nconsole.log('PASS financial')",
+  'const note = "require(\\\'node:test\\\')"; console.log("PASS financial")',
+  'const example = `import test from "node:test"`; console.log("PASS financial")',
+  "const note = 'require(\"node:test\")';\nconsole.log('PASS financial')",
+ ]) assert.equal(sourceUsesNodeTest(source),false,source);
+});
+test('native imports remain detectable among comments and unrelated literal strings',()=>{
+ const {sourceUsesNodeTest}=require('../scripts/trace-native-suite-evidence.cjs');
+ for(const source of [
+  "// noop\nconst {test}=require('node:test');",
+  "/* noop */ import {test} from 'node:test';",
+  "import 'node:test';",
+  'const test = require("test");',
+  "require('node:test').test('ok',()=>{});",
+ ]) assert.equal(sourceUsesNodeTest(source),true,source);
+});
