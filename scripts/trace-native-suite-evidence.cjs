@@ -13,8 +13,11 @@ function checkSuiteResult({status,signal=null,error=null,stdout='',nativeSuite=t
   return matches.length?Number(matches.at(-1)[1]):null;
  };
  const native=find('tests'),pass=find('pass'),failed=find('fail');
+ const skipped=find('skipped'),cancelled=find('cancelled'),todo=find('todo');
+ // A partial suite is not a valid release gate: even one skipped, cancelled
+ // or TODO case leaves an unverified behaviour. Reject contradictory TAP.
  const nativeGood=native!==null&&native>0&&pass!==null&&pass>0&&
-  failed===0&&pass<=native;
+  failed===0&&pass===native&&[skipped,cancelled,todo].every(n=>n===null||n===0);
  // Node --test wraps a legacy script as one successful TAP case even
  // if the script ran zero financial assertions. Require explicit PASS
  // markers for legacy suites; use executed TAP pass count for node:test.
