@@ -100,3 +100,20 @@ Les données **100 % fictives** de la préversion ajoutent `demo-previous-eur-pe
 **Toujours non franchi** : récupérer un checkout complet, exécuter `node scripts/test-trace-native.mjs`, reconstruire **uniquement** `trace-international-preview-sw.js` avec `node scripts/build-trace-preview-pwa.mjs`, vérifier `--check`, essayer dans Chromium et sur Safari iPhone, puis demander une autorisation distincte pour un **déploiement de prévisualisation isolé**. La dernière preview READY sur Vercel demeure celle du **SHA historique `2c312f00`**, pas ces 14 nouveaux commits ; elle est protégée par SSO. Ne pas lui attribuer cette nouvelle interface avant une publication vérifiée.
 
 La production demeure **NO-GO**, `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`, aucun changement Supabase ni données réelles. Avancement global toujours indicatif autour de **58 % ±10 points** faute de qualification serveur/PWA globale.
+
+## 26 octobre 2026 — Activité plus fluide et porte cache confirmée (reprise depuis `bb326c9c`)
+
+**Lots enregistrés uniquement sur la branche candidate, tous en `[skip ci]` :**
+
+- `c9a6b835` : « À valider » affiche au maximum 40 opérations au premier rendu ; chaque clic sur « Voir plus » révèle 40 lignes supplémentaires. La liste source continue de couvrir toutes les dates et uniquement les comptes actifs accessibles ; aucun solde, statut ou montant natif n'est modifié.
+- `5ad71fa1` : commande « Voir plus » compatible petits écrans, cible tactile ≥44 px, focus visible et animations respectueuses des préférences.
+- `d64a2b0e` : vérification de la pagination de 97 opérations fictives (40, 80 et totalité), y compris historique antérieur et absence d'écriture à la consultation.
+- `3f62b2db` : navigation clavier entre les quatre sous-onglets (flèches, Début/Fin), tabindex cohérent et retour du focus sur la première nouvelle ligne après « Voir plus ».
+- `7cbc58a0` : associations HTML explicites entre chaque onglet et son panneau (`aria-controls` / `aria-labelledby`).
+- `eb878a36` : nouveaux tests d'accessibilité et de navigation des onglets.
+
+**Qualification réellement effectuée :** 14/14 scénarios ciblés en V8 avec `fs/path/node:test` simulés et avec les sources finales de l'app, du HTML et du CSS lues sur GitHub ; analyse syntaxique du JS 5.37 sous V8. Ce ne sont **pas** 14 tests Node natifs sur checkout intégral, ni des tests navigateur/Safari/PG. Les scénarios antérieurs de la session précédente ne sont pas à additionner comme une campagne globale requalifiée.
+
+**Blocage concret de l'aperçu hors ligne :** lecture statique du service worker de laboratoire sur GitHub (`trace-international-preview-sw.js` : 62 ressources cachées) et des références `script/link` du HTML. Six scripts chargés par la page ne figurent pas dans son inventaire actuel : `trace-deferred-write-plan-1.0.0.js`, `trace-deferred-purchase-evidence-1.0.0.js`, `trace-deferred-evidence-intake-1.0.0.js`, `trace-deferred-evidence-lab-1.0.0.js`, `trace-deferred-statement-bridge-1.0.0.js`, `trace-deferred-statement-review-ui-1.0.0.js`. C'est une **preuve de cache périmé**, pas une exécution du générateur ou de son `--check`.
+
+**À faire avant de montrer une nouvelle prévisualisation hors ligne :** checkout complet du HEAD, `node scripts/test-trace-native.mjs`, génération `node scripts/build-trace-preview-pwa.mjs` **uniquement via son générateur**, puis `--check`, Chromium sur petits écrans, Safari physique et contrôle strict des données fictives/SSO. Le conteneur de cette reprise ne résout pas `github.com` en Git ; le connecteur GitHub a permis les commits, pas un checkout intégral. Aucun SW modifié, aucune prévisualisation publiée, aucune connexion Supabase réelle, quarantaine maintenue et **production NO-GO**. L'ancienne preview Vercel `2c312f00` reste obsolète.
