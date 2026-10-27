@@ -874,3 +874,16 @@ Le contrôle `node scripts/trace-release-preflight.mjs` est local et en lecture 
 - [ ] Safari iPhone réel, sauvegarde/restauration et protocole de rollback ; autorisation explicite ultérieure avant fusion ou publication.
 
 **NO-GO maintenu.** Ne déduire aucune qualification PostgreSQL d'une inspection V8 de fichiers SQL.
+
+
+## Débit différé — lot complet avec mouvements annexes et montants normalisés (26 octobre 2026)
+
+- [x] Un règlement intégral d'un seul achat ne peut plus revendiquer un lot complet en présence d'autres lignes du relevé carte : frais, remboursement, deuxième achat ou paiement carte.
+- [x] Validation stricte des montants déjà structurés issus de PDF/CSV ; absence de coercition JS en exonérations ou sommes bancaires fictives.
+- [x] **358/358 scénarios V8 simulés sur 17 suites** après correctifs (HEAD code `bf4d8a0e`) ; Mastercard CAD, achats, remboursements, règlements et budget inclus.
+- [ ] Requalifier l'identité physique de chaque justificatif, les allocations multi-achat/frais et la clôture comptable sur serveur CAS Auth/RLS isolé ; conserver les dates bancaires et les historiques.
+- [ ] Runner Node natif de `scripts/test-trace-native.mjs` sur véritable checkout, quatre suites PG avec PGlite et deux sessions authentifiées.
+- [ ] Régénérer le **SW de laboratoire uniquement par générateur** sur checkout complet ; vérifier `--check`, mode hors ligne et Safari iPhone physique.
+- [ ] Contrôle UX/UI premium complet, retour réseau, sauvegarde/rollback, puis autorisation explicite de mise en production distincte.
+
+**NO-GO.** Le sous-ensemble V8 n'est pas une qualification intégrale ni une confirmation de relevé bancaire.
