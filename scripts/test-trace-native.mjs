@@ -70,7 +70,11 @@ for(const file of readdirSync(join(root,'tests')).filter(n=>n.endsWith('.test.cj
  process.stdout.write((passed?'PASS ':'FAIL ')+file+' ('+reportedScenarios+' scenarios)\n');
  if(!passed)process.stderr.write((run.stdout||'')+(run.stderr||'')+(run.error?.message||''));
 }
-report.passed=report.syntax.every(x=>x.passed)&&report.suites.every(x=>x.passed);
+// An empty checkout is never a successful quality gate, even if every
+// reported (empty) array would otherwise pass vacuously.
+report.passed=report.preflight.passed&&report.syntax.length>0&&
+ report.suites.length>0&&report.suites.some(x=>x.reportedScenarios>0)&&
+ report.syntax.every(x=>x.passed)&&report.suites.every(x=>x.passed);
 report.summary={syntaxFiles:report.syntax.length,testFiles:report.suites.length,
  reportedScenarios:report.suites.reduce((n,x)=>n+x.reportedScenarios,0),
  failedFiles:report.suites.filter(x=>!x.passed).length};
