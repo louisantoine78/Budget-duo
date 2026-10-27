@@ -43,6 +43,7 @@ test('real Node --preflight succeeds on generated, complete fictional isolated s
  const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
  assert.equal(report.preflight.passed,true);
  assert.equal(report.preflight.generatedCacheFresh,true);
+ assert.equal(report.passed,false,'preflight cannot certify the full financial suite');
  assert.equal(report.summary.testFilesExecuted,0);
  assert.equal(report.suites.length,0);
 });
