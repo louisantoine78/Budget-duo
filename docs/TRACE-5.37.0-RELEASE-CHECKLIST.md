@@ -1,3 +1,14 @@
+## 27 octobre 2026 — Anti-faux-positif des tests natifs
+
+- [x] Reproduit sous **Node v22.16.0 réel** : le résumé TAP `2 tests / 1 pass / 1 skipped / 0 fail` avait code de sortie 0 et était accepté à tort par `checkSuiteResult`.
+- [x] Commits candidats `2c0c4235` et `c169557c` (`[skip ci]`) : bloquer tout `skipped`, `todo` ou `cancelled` et toute suite partiellement exécutée ; tests anti-régression avec un vrai sous-processus Node.
+- [x] **13/13 tests Node natifs ciblés** réussis sur miroir local de **deux fichiers seulement** ; empreintes Git comparées et identiques aux fichiers GitHub (`5be1aa77...` et `63f5b378...`). Ne pas étiqueter ceci « 106 suites Node validées ».
+- [ ] **Porte A non franchie :** checkout complet propre impossible dans le conteneur actuel (DNS GitHub), SW de laboratoire non régénéré, six scripts différés absents du cache ; exécutables officiels `build`, `--check`, `--preflight` et 106 suites natives intégrales à exécuter sur checkout exact.
+- [ ] Chromium/Safari physique, PGlite/PostgreSQL (migrations 05–12, RLS/Auth/CAS), conservation des données, restauration/rollback et accord explicite distinct pour toute publication.
+- [ ] **Production NO-GO** ; aucun déploiement, CI/Actions, PR, merge, changement `main`, Supabase réel ou levée de `TRACE_DEFERRED_NOT_RELEASED`.
+
+---
+
 ## 26 octobre 2026 — Intégrité reproductible du candidat
 
 - [x] `e45ffa93` : toutes les vérifications de provenance et d'état Git/Vercel doivent passer **AVANT** l'exécution de scripts Node, preview ou PostgreSQL.
