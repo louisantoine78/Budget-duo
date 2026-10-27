@@ -47,7 +47,7 @@ function setup({solo=false,unassigned=false}={}){
 }
 let n=0;function test(name,fn){fn();n++;console.log('PASS '+name);}
 test('Partage lives in Activity, not a sixth bottom navigation tab',()=>{
- assert.match(html,/data-tab="sharing">Partage/);
+ assert.match(html,/data-tab="sharing"[^>]*>Partage/);
  assert.match(html,/id="activitySharing"/);
  const nav=html.slice(html.indexOf('<nav class="nav"'),html.indexOf('</nav>'));
  assert.doesNotMatch(nav,/data-nav="sharing"/);
@@ -115,9 +115,9 @@ test('entry forms are preselected only for explicit string kind',()=>{
  assert.match(src,/choose\(typeof preferredKind==='string'&&M\.get\(preferredKind\)\?preferredKind:'expense'\)/);
 });
 test('tab control retains old review links and hides irrelevant period',()=>{
- assert.match(src,/if\(t==='review'\)t='import'/);
- assert.match(src,/\['transactions','import','sharing'\]\.includes\(t\)/);
- assert.match(src,/period\.classList\.toggle\('hidden',tab==='sharing'\)/);
+ assert.match(src,/\['transactions','review','sharing','import'\]\.includes\(t\)/);
+ assert.doesNotMatch(src,/if\(t==='review'\)t='import'/);
+ assert.match(src,/tab==='sharing'\|\|tab==='review'/);
 });
 test('CSP, legacy imports and deferred guard remain unchanged',()=>{
  assert.match(html,/connect-src 'none'/);
