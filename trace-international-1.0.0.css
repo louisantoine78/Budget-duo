@@ -340,3 +340,14 @@
 .trace-bank-proof-review .trace-bank-proof-link:focus-visible{
  outline:2px solid #406b51;outline-offset:2px;
 }
+
+/* Activity history: bounded initial DOM, full access to all filtered months. */
+.trace-history-more{
+ display:block;width:100%;min-height:48px;margin:12px 0 0;padding:12px 16px;
+ border:1px solid #c7ded3;border-radius:13px;background:#f2f8f4;
+ color:#205c48;font:inherit;font-size:13px;font-weight:750;
+ line-height:1.4;text-align:center;cursor:pointer;
+}
+.trace-history-more:hover{background:#e9f4ee}
+.trace-history-more:focus-visible{outline:3px solid #26755f;outline-offset:3px}
+@media(max-width:380px){.trace-history-more{font-size:12px;padding-inline:10px}}
