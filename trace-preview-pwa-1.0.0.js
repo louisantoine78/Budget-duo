@@ -12,6 +12,33 @@
   const node=document.getElementById('tracePreviewOfflineStatus');
   if(node)node.textContent=text;
  };
+
+ // A registered SW is not proof that every current module is cached.
+ // Cache Storage is read-only here; never fetch statements or use cloud storage.
+ const checkOfflineShell=async()=>{
+  if(!window.caches)throw Error('Cache Storage indisponible');
+  if(document.readyState!=='complete')await new Promise(resolve=>
+   window.addEventListener('load',resolve,{once:true}));
+  const urls=[...document.querySelectorAll('script[src],link[href]')]
+   .map(el=>el.getAttribute('src')||el.getAttribute('href'))
+   .filter(Boolean).map(value=>new URL(value,location.href))
+   .filter(url=>url.origin===location.origin)
+   .map(url=>{url.search='';url.hash='';return url.href;});
+  urls.push(scope.href);
+  const required=[...new Set(urls)];
+  const prefix='trace-lab-537:'+encodeURIComponent(new URL('./',location.href).pathname)+':';
+  const keys=(await window.caches.keys()).filter(key=>key.startsWith(prefix));
+  let missing=required;
+  for(const key of keys){
+   const cache=await window.caches.open(key);
+   const current=[];
+   for(const url of required)if(!await cache.match(url))current.push(url);
+   if(!current.length)return;
+   if(current.length<missing.length)missing=current;
+  }
+  status.missingAssets=missing.map(url=>new URL(url).pathname.split('/').pop());
+  throw Error('Cache statique incomplet : '+missing.length+' ressource(s) manquante(s)');
+ };
  const updateNotice=registration=>{
   if(!registration.waiting||!navigator.serviceWorker.controller)return;
   const node=document.getElementById('tracePreviewOfflineStatus');
@@ -33,11 +60,14 @@
   });
   updateNotice(registration);
   await navigator.serviceWorker.ready;
+  await checkOfflineShell();
   status.ready=true;
   notice('Laboratoire disponible hors connexion · données fictives réinitialisées au rechargement.');
   updateNotice(registration);
  }).catch(error=>{
   status.error=error.message;
-  notice('Mode hors connexion non disponible sur ce navigateur.');
+  notice(status.missingAssets?.length?
+   'Mode hors connexion incomplet : des fichiers du laboratoire manquent au cache.':
+   'Mode hors connexion non disponible sur ce navigateur.');
  });
 })();
