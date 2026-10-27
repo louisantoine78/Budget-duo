@@ -71,3 +71,53 @@ test('unknown, archived, and foreign account shortcuts cannot expose hidden revi
  for(const id of ['old','partner','unknown'])m.openHomeReviewAccount(id);
  assert.equal(m.captures.length,0);assert.deepEqual(m.nav,[]);
 });
+
+
+function homeBadge({owner='la',extraRows=[],transactionsExtra=[]}={}){
+ const homeStart=app.indexOf('function renderHomeReview(){'),
+  homeEnd=app.indexOf('\n// Insights are derived from confirmed entries',homeStart);
+ assert.ok(homeStart>0&&homeEnd>homeStart);
+ const badges={'#pendingCountBadge':{textContent:''},'#pendingText':{textContent:''}};
+ const visible=id=>accounts.filter(a=>a.owner===id&&!a.archived);
+ const allTx=[...transactions,...transactionsExtra];
+ const count=id=>allTx.filter(t=>t.status!=='confirmed'&&
+  (t.accountId===id||(t.type==='transfer'&&t.toAccountId===id))).length;
+ const rows=visible(owner).map(a=>({id:a.id,total:count(a.id),existing:count(a.id),unresolved:0}))
+  .concat(extraRows);
+ const fn=new Function('state','me','visibleBankAccounts','homeReviewAccounts','$','window',
+  app.slice(homeStart,homeEnd)+'\nreturn renderHomeReview;');
+ fn({transactions:allTx},owner,visible,()=>rows,id=>badges[id]||null,{})();
+ return {number:Number(badges['#pendingCountBadge'].textContent),
+  text:badges['#pendingText'].textContent,rows};
+}
+test('Accueil badge deduplicates internal CAD to EUR transfer while account counts show each leg',()=>{
+ const m=homeBadge();
+ assert.equal(m.number,3);
+ assert.equal(m.rows.find(a=>a.id==='ca').existing,1);
+ assert.equal(m.rows.find(a=>a.id==='eur').existing,3);
+ assert.match(m.text,/3 éléments à vérifier/);
+});
+test('Accueil badge counts partner-to-EUR receipt once, without partner-only expense',()=>{
+ const m=homeBadge({transactionsExtra:[{
+  id:'external-receipt',type:'transfer',status:'pending',
+  accountId:'partner',toAccountId:'eur',toBankCurrency:'EUR',toBankAmount:16.5
+ }]});
+ assert.equal(m.number,4);
+});
+test('Accueil badge adds smart-import counts without subtracting them as duplicate bank legs',()=>{
+ const m=homeBadge({extraRows:[{id:'import-only',total:2,unresolved:0}]});
+ assert.equal(m.number,5);
+});
+test('Accueil badge remains zero for no visible pending operations',()=>{
+ const f=homeBadge({transactionsExtra:[]});
+ assert.ok(f.number>0);
+ const homeStart=app.indexOf('function renderHomeReview(){'),
+  homeEnd=app.indexOf('\n// Insights are derived from confirmed entries',homeStart);
+ const info={'#pendingCountBadge':{textContent:''},'#pendingText':{textContent:''}};
+ const fn=new Function('state','me','visibleBankAccounts','homeReviewAccounts','$','window',
+  app.slice(homeStart,homeEnd)+'\nreturn renderHomeReview;');
+ fn({transactions:[]},'la',id=>accounts.filter(a=>a.owner===id&&!a.archived),
+  ()=>[],id=>info[id]||null,{})();
+ assert.equal(info['#pendingCountBadge'].textContent,'0');
+ assert.match(info['#pendingText'].textContent,/Tout est à jour/);
+});
