@@ -190,3 +190,25 @@ La nouvelle garde **ne remplace pas** la régénération : **exécuter exclusive
 **Tests vérifiés en V8 isolé avec le code candidat réel :** `35/35` scénarios de navigation/activité/comptes en attente (9 quatre onglets, 7 clavier, **19** filtre et transfert). Les nouveaux tests couvrent source et destinataire CAD/EUR, reçu depuis un compte partenaire sans révéler sa devise bancaire, comptes non accessibles/archivés, statut confirmé, unicité globale, compteurs et précision **du moteur International réel** (46,20 EUR et refus de 72,30 EUR déduit d'un montant CAD). Syntaxe JavaScript candidat interprétable : OK. Les `7/7` scénarios de bootstrap fictif ont aussi été relancés avec succès.
 
 **Limites explicites :** ce sont des harnais V8 synthétiques ; pas de test Node natif sur clone, PGlite/PostgreSQL/Auth/RLS/CAS, navigateur Chromium réel ni Safari iPhone. Le conteneur avec Node 22 n'a toujours pas accès DNS à `github.com`, empêchant le checkout complet. Le SW hors ligne **n'a pas été régénéré** et continue à manquer six scripts différés. Ne le modifier que via `node scripts/build-trace-preview-pwa.mjs` + `--check` sur checkout complet. Aucun déploiement, aucune migration, aucune CI ; quarantaine `TRACE_DEFERRED_NOT_RELEASED` ; **production NO-GO**.
+
+## 26 octobre 2026 — Garde-fou service worker contrôlant la page
+
+**Départ de session confirmé :** `c1e5d4daf2f21f59e7fe9440e0804671018e091e`. Toutes modifications exclusivement sur `trace-5.37.0-international-accounts-fx`, chaque commit avec `[skip ci]`.
+
+### Amélioration enregistrée
+
+- Le contrôleur `trace-preview-pwa-1.0.0.js` n'affiche plus `ready=true` simplement parce qu'une inscription PWA existe et que des noms de fichiers apparaissent en cache. Le navigateur doit être **effectivement contrôlé** par le service worker du laboratoire (`navigator.serviceWorker.controller.scriptURL` égale à l'URL exacte du SW fictif).
+- Lors du premier chargement sans contrôleur, la PWA reste **non prête** et se recontrôle lors de `controllerchange`, sans prétendre que le mode hors connexion est utilisable.
+- Le contrôle des ressources refuse la présence de **plusieurs générations** de cache `trace-lab-537` ou leur absence, même si un ancien cache contient tous les noms de fichiers. Les caches de production ne sont jamais consultés.
+- Une mise à jour en attente (`registration.waiting`) révoque immédiatement le statut prêt, y compris lorsqu'elle survient **après** une première vérification réussie. Le message existant propose la réactivation manuelle du seul laboratoire fictif.
+- Aucun accès Supabase, aucun chargement réseau, aucun effacement de cache, aucune modification du SW généré ou du SW de production n'est introduit par ces vérifications.
+
+### Qualité attestée dans cette session
+
+- **11/11 tests ciblés de l'indicateur hors connexion en environnement V8 simulé**, complétant les 6 cas précédents : prise de contrôle tardive, mauvais SW, deux générations de cache, mise à jour en attente et arrivant après une précédente réussite.
+- **35/35 scénarios ciblés d'Activité en V8 simulé** sur l'application candidate courante, syntaxe JS interprétable ; ce lot ne modifie pas les règles financières.
+- Ce ne sont PAS des tests Node CLI natifs, ni des tests Safari/Chromium réels. Ils ne prouvent ni la correspondance cryptographique des octets du cache avec le HEAD ni son fonctionnement sur iPhone.
+
+### Blocages inchangés
+
+Le SW de laboratoire enregistré manque encore six modules différés et **n'a pas été régénéré**. Un vrai checkout est nécessaire pour `node scripts/build-trace-preview-pwa.mjs` puis `--check`, suivi de la suite native et d'essais de navigation/offline Chromium et Safari. Le conteneur ne résout toujours pas github.com pour Git ; le connecteur GitHub a servi seulement à lire et enregistrer le code. Aucun Vercel, CI, Supabase, PR, main ou donnée réelle modifié. `TRACE_DEFERRED_NOT_RELEASED` demeure. **Production NO-GO.**
