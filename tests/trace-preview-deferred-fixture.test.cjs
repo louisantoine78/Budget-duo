@@ -58,3 +58,14 @@ test('CAD to EUR sample provides independent booked EUR destination amount',()=>
  assert.equal(transfer.toBankAmount,95);
  assert.equal(transfer.amountCAD,150);
 });
+
+test('review demo includes an older unconfirmed EUR row without creating a budget expense',()=>{
+ const d=get(),current=d.transactions.find(t=>t.id==='demo-eur-pending'),
+  old=d.transactions.find(t=>t.id==='demo-previous-eur-pending');
+ assert.equal(old.status,'pending');
+ assert.equal(old.bankCurrency,'EUR');assert.equal(old.bankAmount,8.75);
+ assert.equal(old.amountCAD,null);
+ assert.notEqual(old.date.slice(0,7),current.date.slice(0,7));
+ assert.equal(d.transactions.some(t=>t.id==='demo-previous-eur-pending'&&
+  t.status==='confirmed'),false);
+});
