@@ -11,7 +11,9 @@
    {id:'demo-ca-current',owner:'la',name:'Canada · compte courant (fictif)',type:'checking',country:'CA',currency:'CAD',paymentMode:'immediate'},
    {id:'demo-ca-card',owner:'la',name:'Canada · carte Mastercard (fictive)',type:'card',country:'CA',currency:'CAD',paymentMode:'credit',settlementAccountId:'demo-ca-current'},
    {id:'demo-fr-current',owner:'la',name:'France · compte EUR (fictif)',type:'checking',country:'FR',currency:'EUR',paymentMode:'immediate'},
-   {id:'demo-fr-deferred-card',owner:'la',name:'France · carte à débit différé (fictive, labo)',type:'card',country:'FR',currency:'EUR',paymentMode:'deferred',settlementAccountId:'demo-fr-current'},
+   {id:'demo-fr-deferred-card',owner:'la',name:'France · carte à débit différé (fictive, labo)',type:'card',country:'FR',currency:'EUR',paymentMode:'deferred',settlementAccountId:'demo-fr-current',
+    deferredDebitDay:5,deferredClosingDay:20,
+    deferredScheduleVersions:[{effectiveDate:'2026-09-01',debitDay:5,closingDay:20}]},
    {id:'demo-partner-current',owner:'partner',name:'Élise · compte courant (fictif)',type:'checking',country:'CA',currency:'CAD',paymentMode:'immediate'}
   ];
   const transactions=[
