@@ -12,11 +12,11 @@ function traceQualificationHeadMatches(current,reviewed){
   /^[a-f0-9]{40}$/.test(current)&&current===reviewed;
 }
 // The independent release preflight must not accept a tiny or fabricated
-// green report when native QA requires >=106 committed suite files.
+// green report when native QA requires >=107 committed suite files.
 // Validate the actual per-file evidence, not merely summary counters.
 function traceQualifiedNativeEvidence(native){
  const s=native?.summary, suites=native?.suites, syntax=native?.syntax;
- const min=106;
+ const min=107;
  if(native?.passed!==true||s?.committedSuiteInventoryPassed!==true||
     s?.suiteFloorMet!==true||s?.failedFiles!==0||
     !Number.isSafeInteger(s?.expectedMinTestFiles)||s.expectedMinTestFiles<min||

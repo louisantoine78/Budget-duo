@@ -14,7 +14,7 @@ const old='94c613cd4e1c547a38671083c1da773967bded70',
 const native={passed:true,
  suites:Array.from({length:107},(_,i)=>({file:'trace-qa-'+i+'.test.cjs',passed:true,reportedScenarios:3})),
  syntax:[{file:'scripts/test-trace-native.mjs',passed:true}],
- summary:{syntaxFiles:1,testFiles:107,expectedMinTestFiles:106,
+ summary:{syntaxFiles:1,testFiles:107,expectedMinTestFiles:107,
   suiteFloorMet:true,committedSuiteInventoryPassed:true,trackedSuiteFiles:107,
   reportedScenarios:321,failedFiles:0}};
 const pg={testsPassed:true,hostedSupabase:false,checks:[{passed:true}],findings:[]};
@@ -31,6 +31,16 @@ test('positive native scenario and syntax counts are required',()=>{
   {trackedSuiteFiles:106},{expectedMinTestFiles:1},{testFiles:1},
   {reportedScenarios:320}])
   assert.equal(x.native({...native,summary:{...native.summary,...v}}),false);
+});
+test('a fabricated 106-suite report cannot qualify the 107-suite release baseline',()=>{
+ const incomplete={...native,suites:native.suites.slice(1),
+  summary:{...native.summary,testFiles:106,trackedSuiteFiles:106,
+   expectedMinTestFiles:106,reportedScenarios:318}};
+ assert.equal(x.native(incomplete),false);
+});
+test('native runner enforces the same 107-suite minimum as release preflight',()=>{
+ const runner=fs.readFileSync(path.join(__dirname,'..','scripts/test-trace-native.mjs'),'utf8');
+ assert.match(runner,/const MINIMUM_TEST_FILES=107;/);
 });
 test('missing native summary or nonnumeric counts cannot qualify',()=>{
  assert.equal(x.native(null),false);

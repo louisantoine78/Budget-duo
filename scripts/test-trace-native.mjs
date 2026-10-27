@@ -12,9 +12,9 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const reportIndex=process.argv.indexOf('--report');
 const reportPath=reportIndex>=0?process.argv[reportIndex+1]:null;
 const preflightOnly=process.argv.includes('--preflight');
-// Gate A baseline: 106 committed *.test.cjs suites as of 27 Oct 2026.
+// Gate A baseline: 107 committed *.test.cjs suites as of 27 Oct 2026.
 // A partial checkout must never qualify because its surviving suites pass.
-const MINIMUM_TEST_FILES=106;
+const MINIMUM_TEST_FILES=107;
 if(reportIndex>=0&&!reportPath)throw Error('--report requires an output path');
 const active=new Set(['sw.js','trace-international-preview-sw.js','trace-pdfjs-local-loader-1.0.0.mjs']);
 for(const entry of ['index.html','trace-international-preview.html']){
