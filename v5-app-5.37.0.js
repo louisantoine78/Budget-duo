@@ -664,7 +664,13 @@ function openHomeReviewAccount(id){
  showTab('import');window.TraceImportCalendar?.selectAccount?.(id);
 }
 function renderHomeReview(){
- const rows=homeReviewAccounts(),total=rows.reduce((n,r)=>n+r.total,0),
+ const rows=homeReviewAccounts(),active=new Set(visibleBankAccounts(me).map(a=>a.id)),
+  // Each linked bank sees its own pending transfer leg, but the Home badge
+  // must count that single transaction only once for this member.
+  twoLegged=state.transactions.filter(t=>t.type==='transfer'&&
+   t.status!=='confirmed'&&t.accountId!==t.toAccountId&&
+   active.has(t.accountId)&&active.has(t.toAccountId)).length,
+  total=rows.reduce((n,r)=>n+r.total,0)-twoLegged,
   ocrToReview=rows.reduce((n,r)=>n+r.unresolved,0);
  const badge=$('#pendingCountBadge'),summary=$('#pendingText'),root=$('#homeReviewAccounts');
  if(badge)badge.textContent=String(total);
