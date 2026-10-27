@@ -1053,4 +1053,15 @@ Documentation détaillée : `docs/TRACE-5.37.0-PREVIEW-READINESS.md` et `docs/TR
 - L'inventaire du SW **reste périmé** : 62 assets, six scripts différés présents dans le HTML mais absents du cache. Le garde-fou signale le défaut ; il ne le résout pas. Obtenir checkout intégral, exécuter `node scripts/build-trace-preview-pwa.mjs` puis `--check`, relancer suite native et navigateur réel avant toute preview.
 - `TRACE_DEFERRED_NOT_RELEASED` inchangé, migrations 05–12 et Auth/RLS/CAS non qualifiés, production **NO-GO**, pas de Vercel ou Supabase réel, pas de CI, pas de PR/merge.
 
-Lire `docs/TRACE-5.37.0-PREVIEW-READINESS.md` pour les détails et la liste exacte des six modules. 
+Lire `docs/TRACE-5.37.0-PREVIEW-READINESS.md` pour les détails et la liste exacte des six modules.
+
+
+## Reprise du 26 octobre au soir — virements reçus enfin visibles dans « À valider »
+
+Point de départ de ce lot : `dd36208e0eef873918e667a378924094685b0d83`. **Vérifier le nouveau HEAD exact** avant la prochaine modification et conserver exclusivement `trace-5.37.0-international-accounts-fx`. `main` inchangée au commit stable `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+
+**Correctif GitHub réel :** `v5-app-5.37.0.js` inclut dorénavant la jambe `toAccountId` des **transferts bancaires en attente** lorsque le compte destinataire appartient au membre actif et n'est pas archivé. Ce contrôle s'applique à la liste « À valider », à son filtre par compte et au compteur du raccourci. Une transaction reste comptée une fois dans la vue globale, y compris si les deux comptes appartiennent au même membre. Le montant affiché suit exactement le compte examiné : `source` pour un virement émis, `destination` pour un virement reçu, avec preuve en devise native, avertissement si la preuve manque ou ne correspond pas. Une entrée provenant du compte bancaire d'un autre membre n'affiche **jamais** son montant source dans la revue personnelle. « Virement émis » / « Virement reçu » distingués. Aucune nouvelle transaction, aucun montant CAD utilisé pour inventer une jambe EUR.
+
+**QA exécutée sur sources GitHub :** 35/35 contrôles ciblés V8 simulés (9 listes, 7 clavier, 19 revue/provenance), 7/7 bootstrap fictif V8, syntaxe V8 du candidat. Le jeu de 19 tests comprend le moteur `TraceInternational.amountOnAccount` **réel**, une réception EUR 46,20 au centime, un virement source CAD 50,00, une jambe EUR non prouvée, la propriété par membre, les compteurs et les mois anciens. Aucun test Node natif complet, PGlite, PostgreSQL, Safari ou Chromium réel n'a été exécuté. Conteneur Node 22 disponible mais `github.com` ne résout toujours pas : pas de clone.
+
+**Portes restantes :** obtenir clone intégral pour la suite native ; générer le SW du laboratoire **uniquement par** `node scripts/build-trace-preview-pwa.mjs` puis `--check` (six modules différés toujours absents), tester Chromium et Safari iPhone réels, qualifier la persistance fictive PGlite/PostgreSQL/Auth/RLS/CAS et migrations 05–12. **Aucun Vercel/Supabase/CI/merge/main** dans le lot ; `TRACE_DEFERRED_NOT_RELEASED` et **NO-GO production** maintenus.
