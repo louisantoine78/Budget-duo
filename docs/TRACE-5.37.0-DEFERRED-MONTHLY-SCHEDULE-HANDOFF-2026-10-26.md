@@ -237,3 +237,12 @@ Le JS du fichier candidat principal a passé l'analyse syntaxique V8. Les module
 - **Blocage n°4 :** relecture UX premium globale et maîtrise des flux Moi/Couple, devises indépendantes, patrimoine/avances, tests complets de non-régression avant toute release.
 
 Production **NO-GO**. Aucun déploiement, CI forcée, merge, PR, ni transaction réelle. Estimation globale indicative ~58 % ±10 points tant que ces qualifications ne sont pas effectuées.
+
+
+## 26 octobre 2026 — préparer à montrer TRACE plus tôt, sans débloquer les comptes
+
+HEAD de départ de cette reprise `6945fb18431b551db0062b6bcdbc889f5ae8b756`. Commits candidats : `a77f1576` (bouton calendrier vers le simulateur réellement visible), `cc6b0762` (11 assertions UX V8) ; `6bf0267c` (politique pure de sorties des tests Node), `86a6ffb2` (7 tests d'invalidation TAP), `8b298a03` (intégration runner). **Les octets des deux nouveaux fichiers CJS correspondent aux blobs Git** et leurs 7 tests ont réellement été exécutés avec Node v22 : 7/7. Ce n'est **pas** une qualification du dépôt complet. Des tests V8 des paramètres de carte ont également réussi 11/11.
+
+La liste Vercel en lecture seule montre `trace-v5-preview` READY au vieux commit `2c312f00`, avec SSO Vercel ; le dernier code de la branche n'est donc pas publié. `vercel.json` désactive le déploiement auto sur cette branche et la CSP `connect-src 'none'` de la preview est en place. **Aucun nouveau déploiement effectué.**
+
+**Trois portes séparées** dans `docs/TRACE-5.37.0-PREVIEW-READINESS.md` : (A) aperçu fictif avec vérifications natives, SW labo régénéré et test iPhone, (B) candidate fonctionnelle persistée avec PostgreSQL fictif/Auth/RLS/CAS, (C) autorisation de production avec validation financière/rollback. Cette scission doit permettre de *voir* l'avancement avant d'utiliser des comptes réels, mais ne constitue aucune permission d'écriture bancaire ni de déploiement implicite. `main`/5.36.5 inchangée ; `TRACE_DEFERRED_NOT_RELEASED` maintenu. Production NO-GO.
