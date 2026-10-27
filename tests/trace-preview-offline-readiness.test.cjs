@@ -9,7 +9,9 @@ function fixture({missing=[],prodOnly=false,loaded=true,hasWorker=true,
  controlled=true,foreignController=false,multipleLabCaches=false,waiting=false}={}){
  const requests=[],events={},label={textContent:'',appendChild:()=>{}};
  const location={href:entry,pathname:'/app/trace-international-preview.html',origin:'https://fictional.invalid'};
- const registration={scope:entry,active:{},waiting:waiting?{postMessage:()=>{}}:null,addEventListener(){}};
+ const installing={addEventListener:(name,fn)=>{events['installing-'+name]=fn}};
+ const registration={scope:entry,active:{},waiting:waiting?{postMessage:()=>{}}:null,
+  installing,addEventListener:(name,fn)=>{events['registration-'+name]=fn}};
  const controller=controlled?{scriptURL:foreignController?base+'sw.js':base+'trace-international-preview-sw.js'}:null;
  const worker={controller,addEventListener:(name,fn)=>{events['sw-'+name]=fn},register:async(src,opt)=>{
   requests.push(['register',src,opt.scope]);return registration;},ready:Promise.resolve(registration)};
@@ -99,5 +101,18 @@ test('waiting updated worker cannot advertise older cache as current offline ver
  const f=fixture({waiting:true});await settle();await settle();
  assert.equal(f.window.TracePreviewPWA.ready,false);
  assert.equal(f.requests.some(x=>x[0]==='open'),false);
+ assert.match(f.label.textContent,/Nouvelle version du laboratoire/);
+});
+
+test('new worker arriving after a successful offline check instantly revokes ready flag',async()=>{
+ const f=fixture();await settle();await settle();
+ assert.equal(f.window.TracePreviewPWA.ready,true);
+ f.registration.waiting={postMessage(){}};
+ assert.equal(typeof f.events['registration-updatefound'],'function');
+ f.events['registration-updatefound']();
+ assert.equal(typeof f.events['installing-statechange'],'function');
+ f.events['installing-statechange']();
+ assert.equal(f.window.TracePreviewPWA.ready,false);
+ assert.equal(f.window.TracePreviewPWA.error,null);
  assert.match(f.label.textContent,/Nouvelle version du laboratoire/);
 });
