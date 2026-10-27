@@ -11,7 +11,8 @@ function fixture(t){
  for(const name of ['scripts','tests','assets','vendor/pdfjs'])
   fs.mkdirSync(path.join(dir,name),{recursive:true});
  for(const name of ['build-trace-preview-pwa.mjs','test-trace-native.mjs',
-  'trace-native-suite-evidence.cjs','trace-preview-static-inventory.cjs']){
+  'trace-native-suite-evidence.cjs','trace-preview-static-inventory.cjs',
+  'trace-native-suite-inventory.cjs']){
   fs.copyFileSync(path.join(root,'scripts',name),path.join(dir,'scripts',name));
  }
  const put=(file,text)=>fs.writeFileSync(path.join(dir,file),text);
@@ -133,9 +134,20 @@ test('official builder hashes actual PNG bytes and rejects a changed icon of equ
  assert.equal(report.preflight.generatedCacheFresh,false);
 });
 
+
+function commitSandbox(f){
+ const git=(...args)=>spawnSync('git',args,{cwd:f.dir,encoding:'utf8',timeout:10000});
+ assert.equal(git('init','-q','-b','fixture').status,0);
+ assert.equal(git('add','-A').status,0);
+ const saved=git('-c','user.name=TRACE Test','-c','user.email=trace@localhost',
+  'commit','-qm','fictional fixture');
+ assert.equal(saved.status,0,saved.stderr);
+}
+
 test('real Node runner refuses a partial one-suite checkout despite a passing assertion',t=>{
  const f=fixture(t);
  f.put('tests/one.test.cjs',"const {test}=require('node:test');test('real assertion',()=>{require('node:assert/strict').equal(1,1)});");
+ commitSandbox(f);
  const run=f.cmd('test-trace-native.mjs','--report','proof.json');
  assert.equal(run.status,1);
  const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
@@ -147,4 +159,34 @@ test('real Node runner refuses a partial one-suite checkout despite a passing as
  assert.equal(report.summary.expectedMinTestFiles,106);
  assert.equal(report.passed,false);
  assert.match(run.stderr,/incomplete checkout/);
+});
+
+test('real Node runner refuses an untracked swapped test before executing any tests',t=>{
+ const f=fixture(t);
+ f.put('tests/expected.test.cjs',"const {test}=require('node:test');test('expected',()=>{});");
+ commitSandbox(f);
+ fs.rmSync(path.join(f.dir,'tests/expected.test.cjs'));
+ f.put('tests/replacement.test.cjs',"throw Error('should never execute this untracked file');");
+ const run=f.cmd('test-trace-native.mjs','--report','proof.json');
+ assert.equal(run.status,1);
+ const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
+ assert.equal(report.preflight.passed,true);
+ assert.equal(report.committedSuites.passed,false);
+ assert.deepEqual(report.committedSuites.missing,['tests/expected.test.cjs']);
+ assert.deepEqual(report.committedSuites.unexpected,['tests/replacement.test.cjs']);
+ assert.equal(report.summary.testFilesExecuted,0);
+ assert.equal(report.suites.length,0);
+});
+test('real Node runner rejects a missing committed test before executing financial code',t=>{
+ const f=fixture(t);
+ f.put('tests/expected.test.cjs',"throw Error('not supposed to execute');");
+ commitSandbox(f);
+ fs.rmSync(path.join(f.dir,'tests/expected.test.cjs'));
+ const run=f.cmd('test-trace-native.mjs','--report','proof.json');
+ assert.equal(run.status,1);
+ const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
+ assert.equal(report.committedSuites.passed,false);
+ assert.deepEqual(report.committedSuites.missing,['tests/expected.test.cjs']);
+ assert.equal(report.summary.testFilesExecuted,0);
+ assert.equal(report.suites.length,0);
 });
