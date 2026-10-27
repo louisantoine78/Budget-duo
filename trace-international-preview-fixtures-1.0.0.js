@@ -6,7 +6,10 @@
  root.__TRACE_INTERNATIONAL_PREVIEW__=true;
  const iso=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
  const create=()=>{
-  const month=iso().slice(0,7),day=n=>month+'-'+String(n).padStart(2,'0');
+  const month=iso().slice(0,7),day=n=>month+'-'+String(n).padStart(2,'0'),
+   // An old, unverified source row should appear in À valider across months.
+   previousDay=new Date(Date.UTC(Number(month.slice(0,4)),
+    Number(month.slice(5,7))-2,24)).toISOString().slice(0,10);
   const accounts=[
    {id:'demo-ca-current',owner:'la',name:'Canada · compte courant (fictif)',type:'checking',country:'CA',currency:'CAD',paymentMode:'immediate'},
    {id:'demo-ca-card',owner:'la',name:'Canada · carte Mastercard (fictive)',type:'card',country:'CA',currency:'CAD',paymentMode:'credit',settlementAccountId:'demo-ca-current'},
@@ -47,6 +50,11 @@
    {id:'demo-eur-pending',accountId:'demo-fr-current',date:day(13),type:'expense',
     name:'SEPA à vérifier — exemple',status:'pending',bankCurrency:'EUR',currency:'EUR',
     bankAmount:23.4,amountOriginal:23.4,amountCAD:null,categoryId:'',
+    payerId:'la',beneficiary:'la',source:'csv'},
+   {id:'demo-previous-eur-pending',accountId:'demo-fr-current',date:previousDay,
+    type:'expense',name:'Ligne ancienne à vérifier — fictive',
+    status:'pending',bankCurrency:'EUR',currency:'EUR',bankAmount:8.75,
+    amountOriginal:8.75,amountCAD:null,categoryId:'',
     payerId:'la',beneficiary:'la',source:'csv'}
   ];
   return{
