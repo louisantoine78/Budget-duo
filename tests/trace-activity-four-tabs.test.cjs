@@ -58,7 +58,7 @@ test('old validation shortcuts open dedicated review and never upload',()=>{
  assert.match(app,/pendingBtn\.onclick=\(\)=>showTab\('review'\)/);
 });
 function queue(extra=0,cap=40){
- const i=app.indexOf(' const active=new Set(visibleBankAccounts(me).map(a=>a.id));',
+ const i=app.indexOf(' const reviewAccounts=visibleBankAccounts(me);',
   app.indexOf('function renderActivity(){'));
  const j=app.indexOf("\n const picker=$('#activityMonthPicker')",i);
  assert.ok(i>0&&j>i);
@@ -80,10 +80,10 @@ function queue(extra=0,cap=40){
  let writes=0,opened=[],rendered=0;
  const f=new Function('state','me','visibleBankAccounts','$','esc',
  'shortAccountLabel','window','editTransaction','activityReviewVisibleCount','renderActivity',
- app.slice(i,j)+';return {listed:remaining.map(t=>t.id),shown:visiblePending.map(t=>t.id),getCap:()=>activityReviewVisibleCount};');
+ 'activityReviewAccountFilter','traceActivitySelect',app.slice(i,j)+';return {listed:remaining.map(t=>t.id),shown:visiblePending.map(t=>t.id),getCap:()=>activityReviewVisibleCount};');
  const result=f(state,'la',()=>[account],()=>node,s=>String(s),a=>a.name,{
  TraceInternational:{currency:a=>a.currency,amountOnAccount:t=>t.bankAmount,
- money:(v,c)=>v+' '+c}},(id,review)=>opened.push([id,review]),cap,()=>rendered++);
+ money:(v,c)=>v+' '+c}},(id,review)=>opened.push([id,review]),cap,()=>rendered++,'all',()=>{});
  return{listed:result.listed,shown:result.shown,getCap:result.getCap,node,buttons,more,before,state,opened,writes,rerenders:()=>rendered};
 }
 test('pending shows every month for owner only, no phantom CAD-to-EUR amount',()=>{
