@@ -54,13 +54,17 @@ function preview(filter='all',cap=40,owner='la',large=false,opts={}){
  'activityReviewAccountFilter','traceActivitySelect',
  app.slice(a,b)+';return {all:pendingAll.map(x=>x.id),shown:visiblePending.map(x=>x.id),'+
  'remaining:remaining.map(x=>x.id),filter:()=>activityReviewAccountFilter,cap:()=>activityReviewVisibleCount};');
+ const engine=opts.realEngine?{}:null;
+ if(engine)new Function('window',read('trace-international-1.0.0.js'))(engine);
+ const fake={TraceInternational:{
+  amountOnAccount:(t,a,leg)=>leg==='destination'?
+   (t.toBankCurrency===a.currency?t.toBankAmount:null):
+   (t.bankCurrency===a.currency?t.bankAmount:null),
+  money:(v,c)=>v+' '+c,currency:a=>a.currency
+ }};
  const result=f(state,owner,who=>state.accounts.filter(x=>x.owner===who&&!x.archived),
- ()=>legacy,s=>String(s),a=>a.name,{TraceInternational:{
- amountOnAccount:(t,a,leg)=>leg==='destination'?
-  (t.toBankCurrency===a.currency?t.toBankAmount:null):
-  (t.bankCurrency===a.currency?t.bankAmount:null),
- money:(v,c)=>v+' '+c,currency:a=>a.currency
- }},(id,review)=>actions.push([id,review]),cap,()=>renderCalls.push('render'),filter,
+ ()=>legacy,s=>String(s),a=>a.name,engine||fake,
+ (id,review)=>actions.push([id,review]),cap,()=>renderCalls.push('render'),filter,
  (id,items,value,onChange)=>{
   assert.equal(id,'activityReviewAccountFilter');
   chosen.items=items;chosen.value=value;
@@ -236,4 +240,20 @@ test('review shortcut counts pending transfer once regardless of number of owned
   sel=>sel==='#activityShowPending'?pending:null,()=>{},tab=>opened=tab)();
  assert.equal(pending.textContent,'À valider · 2');
  pending.onclick();assert.equal(opened,'review');
+});
+
+test('actual international renderer displays destination EUR cents, not CAD cents',()=>{
+ const a=preview('eur',40,'la',false,{transfer:true,realEngine:true});
+ assert.ok(a.remaining.includes('cad-to-eur'));
+ assert.match(a.legacy.innerHTML,/46,20\s*€/);
+ assert.doesNotMatch(a.legacy.innerHTML,/50,00\s*\$|50 CAD/);
+ assert.equal(JSON.stringify(a.state),a.before);
+});
+test('actual international renderer rejects wrong destination currency, never 72.30 EUR',()=>{
+ const a=preview('eur',40,'la',false,{unproved:true,realEngine:true});
+ assert.ok(a.remaining.includes('cad-to-eur-unproved'));
+ assert.match(a.legacy.innerHTML,/Échange non prouvé/);
+ assert.match(a.legacy.innerHTML,/Montant bancaire à vérifier/);
+ assert.doesNotMatch(a.legacy.innerHTML,/72,30\s*€|80,00\s*€/);
+ assert.equal(JSON.stringify(a.state),a.before);
 });
