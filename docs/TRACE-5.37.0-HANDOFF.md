@@ -1075,3 +1075,15 @@ Modifications enregistrées du contrôleur PWA fictif `trace-preview-pwa-1.0.0.j
 Tests supplémentaires dans `tests/trace-preview-offline-readiness.test.cjs` : **11/11 contrôles PWA V8 simulés** ; tests Activité inchangés **35/35 V8 simulés** sur les sources GitHub du candidat. Les qualifications Node réelles, Chromium, Safari, PGlite/PostgreSQL, Auth/RLS/CAS restent À FAIRE. Il ne faut pas mélanger ces chiffres avec une suite intégrale réussie.
 
 Le SW statique du laboratoire est **toujours périmé** : six modules de débit différé présents dans le HTML manquent à son inventaire. Ne pas générer les octets du SW manuellement ; checkout entier requis avant `node scripts/build-trace-preview-pwa.mjs`, puis `--check`, suite Node native et navigations réelles. L'impossibilité DNS de cloner GitHub dans le conteneur persiste. Aucune CI, aucun déploiement Vercel, aucun changement `main` ou Supabase réel ; `TRACE_DEFERRED_NOT_RELEASED` intact et **production NO-GO**.
+
+## Reprise finale du 26 octobre — sécurisation du journal et affichage progressif
+
+HEAD de départ de cette reprise : `9908ee5a84c196b7936dbfa67dd2d5a4f0ad11b7`. Résoudre le véritable HEAD GitHub **avant chaque nouveau lot** et conserver la seule branche `trace-5.37.0-international-accounts-fx`, sans modifier la stable `main`.
+
+**Code réalisé :** dans `v5-app-5.37.0.js`, l'historique d'Activité filtre les jambes destinataires **exclusivement** pour `type==='transfer'`. Une dépense avec `toAccountId` étranger parasite ne doit plus apparaître sur le compte/devises de ce dernier ni emprunter son montant bancaire. Trois tests de régression ajoutés dans `tests/trace-activity-daily-filters.test.cjs`.
+
+L'onglet **Historique** affiche désormais 60 lignes initiales, puis 60 supplémentaires sur commande ; le focus suit la première nouvelle ligne, le calcul du mois utilise **la liste complète** ; l'avancement se conserve lors d'un re-render simple et revient à 60 sur changement de personne, mois, compte ou filtre. Bouton style TRACE, 48px et focus accessible. Source JS et CSS modifiés. Sept tests dédiés dans `tests/trace-activity-history-progressive.test.cjs`. Aucune modification de la base ni du grand livre.
+
+**Résultats V8 simulés sur les sources GitHub :** 7/7 pagination Historique, 21/21 journal/FX, 35/35 Activité/validation, 37/37 intégrité financière (relancée après pagination), 27/27 moteur international, 11/11 badge SW et 7/7 démarrage fictif. Tous succès dans leurs harnais simulés, non dans la suite native complète. Le JS principal est syntaxiquement valide.
+
+**Déploiement :** toujours interdit sans accord explicite. `main` stable, Vercel, Supabase, CI et écritures différées en quarantaine `TRACE_DEFERRED_NOT_RELEASED`. Le SW statique de laboratoire reste périmé (six modules différés référencés par le HTML et absents du cache) ; ces six modules **existent et se parsèment** dans GitHub. Régénérer exclusivement avec `node scripts/build-trace-preview-pwa.mjs` + `--check` sur un checkout local complet, puis tester Node CLI, Chromium, Safari iPhone, PGlite/PostgreSQL/Auth/RLS/CAS. Le conteneur n'a toujours pas accès DNS à GitHub pour Git. **Production NO-GO.**
