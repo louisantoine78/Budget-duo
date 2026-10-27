@@ -21,8 +21,11 @@
   const d=new Date(s+'T12:00:00Z');
   return Number.isFinite(+d)&&d.toISOString().slice(0,10)===s?s:null;
  };
+ // Bank-native amounts must be actual decimals; JavaScript coercion is not
+ // an accounting parser. PDF/CSV source text must be normalized separately.
  const cents=v=>{
-  if(v===null||v===undefined||String(v).trim()==='')return null;
+  if(typeof v!=='number'&&typeof v!=='string')return null;
+  if(typeof v==='string'&&!/^\d{1,8}(?:\.\d{1,2})?$/.test(v))return null;
   const n=Number(v),rounded=Math.round(n*100);
   return Number.isFinite(n)&&n>0&&n<=1e7&&
    Number.isSafeInteger(rounded)&&Math.abs(n*100-rounded)<1e-6?rounded:null;
