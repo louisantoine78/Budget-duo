@@ -1,6 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
-require('../trace-insights-1.0.0.js');
+// The isolated 5.37 preview loads the candidate insights module, not stable 5.36.
+require('../trace-insights-5.37.0.js');
 const I=globalThis.TraceInsights;
 function render(options){
  const target={innerHTML:'',querySelector:()=>null,querySelectorAll:()=>[]};
