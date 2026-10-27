@@ -861,3 +861,16 @@ Le contrôle `node scripts/trace-release-preflight.mjs` est local et en lecture 
 - [ ] Régressions documentaires multi-cartes, frais/remboursements, contre-valeurs FX, protections Mastercard CAD et conservation historique, puis sauvegarde/restauration/rollback.
 
 **Production NO-GO** : cette revue est une préparation locale de preuve, **pas** une authentification bancaire ni une écriture financière autorisée.
+
+
+## Quarantaine serveur du calendrier et statut « réglé » — 26 octobre 2026
+
+- [x] Quarantaine SQL candidate 10 renforcée pour les métadonnées calendrier sur carte falsifiée en mode normal ; vérification statique et fixtures d'attaque PG ajoutées.
+- [x] Fiche compte différé bloque toute projection « règlement confirmé » sans provenance bancaire indépendante reliée à cette fiche ; un champ client `reviewed` n'est pas une preuve.
+- [x] 354/354 contrôles ciblés **V8 simulés** sur 17 suites au code `3ff991a9` ; cycle Mastercard CA/amis inclus ; 6 contrôles SQL textuels seulement.
+- [ ] Exécuter les nouveaux scénarios de contournement et de non-régression sur vrai PostgreSQL/PGlite isolé (migrations 05–12) ; Auth/RLS/CAS et accès concurrents.
+- [ ] Raccorder les preuves d'achat et de débit immuables aux écritures déjà confirmées, puis justifier et tester la réactivation **en lecture seule** du statut réglé.
+- [ ] Runner Node natif sur checkout complet, protection anti-doublons PDF/CSV/OCR et cache PWA généré/contrôlé.
+- [ ] Safari iPhone réel, sauvegarde/restauration et protocole de rollback ; autorisation explicite ultérieure avant fusion ou publication.
+
+**NO-GO maintenu.** Ne déduire aucune qualification PostgreSQL d'une inspection V8 de fichiers SQL.
