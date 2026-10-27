@@ -4358,20 +4358,30 @@ function renderActivity(){
  $('#activityMonthLabel').textContent=monthLabel(activityMonth);$('#activityExpenses').textContent=money(exp);$('#activityIncome').textContent=money(inc);$('#activityNet').textContent=money(inc-exp);
  $('#transactionList').innerHTML=traceActivityGroupHTML(ts);
  $$('[data-tx-open]').forEach(btn=>btn.onclick=()=>editTransaction(btn.dataset.txOpen));
- const remaining=state.transactions.filter(t=>t.status!=='confirmed'&&visibleBankAccounts(me).some(a=>a.id===t.accountId));
+ const active=new Set(visibleBankAccounts(me).map(a=>a.id));
+ const remaining=state.transactions.filter(t=>t.status!=='confirmed'&&active.has(t.accountId));
+ remaining.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||
+  String(b.id||'').localeCompare(String(a.id||'')));
  const legacy=$('#importPendingTransactions');
  if(legacy){
-  legacy.classList.toggle('hidden',!remaining.length);
+  legacy.classList.remove('hidden');
   legacy.innerHTML=remaining.length?'<div class="trace-unconfirmed-header"><strong>Transactions à compléter</strong><small>'+
-   remaining.length+' déjà enregistrée(s), encore à vérifier</small></div>'+
-    '<div class="trace-unconfirmed-rows">'+remaining.map(t=>
-     '<button type="button" class="trace-unconfirmed-row" data-import-pending="'+esc(t.id)+'">'+
-      '<span><strong>'+esc(t.name||'Opération')+'</strong><small>'+esc(shortAccountLabel(state.accounts.find(a=>a.id===t.accountId)))+
-      ' · '+esc(t.date||'Date à préciser')+'</small></span><b>'+
-       (t.amountCAD===null||t.amountCAD===undefined?
-         window.TraceInternational.money(t.bankAmount,window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId)))+' · CAD à valider':
-         money(t.amountCAD))+'</b></button>').join('')+'</div>':'';
-  legacy.querySelectorAll('[data-import-pending]').forEach(button=>button.onclick=()=>editTransaction(button.dataset.importPending,true));
+   remaining.length+' opération(s) à contrôler, tous mois confondus</small></div>'+
+   '<div class="trace-unconfirmed-rows">'+remaining.map(t=>{
+    const account=state.accounts.find(a=>a.id===t.accountId);
+    const amount=account?window.TraceInternational.amountOnAccount(t,account,'source'):null;
+    // Unknown native bank proof must not borrow a historical CAD valuation.
+    const value=amount===null||!Number.isFinite(amount)?
+     'Montant bancaire à vérifier':
+     window.TraceInternational.money(Math.abs(amount),window.TraceInternational.currency(account));
+    return '<button type="button" class="trace-unconfirmed-row" data-import-pending="'+esc(t.id)+'">'+
+     '<span><strong>'+esc(t.name||'Opération')+'</strong><small>'+
+     esc(shortAccountLabel(account))+' · '+esc(t.date||'Date à préciser')+
+     '</small></span><b>'+esc(value)+'</b></button>';
+   }).join('')+'</div>':
+   '<p class="empty-note">Aucune opération à valider sur tes comptes actifs.</p>';
+  legacy.querySelectorAll('[data-import-pending]').forEach(button=>
+   button.onclick=()=>editTransaction(button.dataset.importPending,true));
  }
  const picker=$('#activityMonthPicker');if(picker)picker.value=activityMonth;
  const label=$('#activityMonthDisplay');if(label)label.textContent=monthLabel(activityMonth);
