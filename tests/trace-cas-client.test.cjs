@@ -267,6 +267,35 @@ test('two fictional devices cannot overwrite each other’s household preference
  await assert.rejects(second.app.saveHouseholdSettings(),/recharge TRACE/);
 });
 
+test('a financial edit made during an RPC remains explicitly unsaved until retried',async()=>{
+ const {app,client,saved,syncLog}=createContext();
+ const transaction={id:'during-upload',type:'expense',amountCAD:40,
+  bankCurrency:'CAD',bankEvidence:{note:'first'}},key=app.traceWriteKey('transactions','during-upload');
+ let entered,release;
+ const started=new Promise(resolve=>{entered=resolve;});
+ const suspended=new Promise(resolve=>{release=resolve;});
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_document'){entered();await suspended;}
+  return original(method,args);
+ };
+ const inFlight=app.saveDocument('transactions',transaction);
+ await started;
+ transaction.amountCAD=75;
+ transaction.bankEvidence.note='edited during upload';
+ release();await inFlight;
+ assert.equal(saved.get(key).data.amountCAD,40,
+  'The server must receive only the original snapshot');
+ assert.equal(saved.get(key).data.bankEvidence.note,'first');
+ assert.notEqual(syncLog.at(-1)?.status,'synced',
+  'A newer locally edited financial amount cannot display Synchronisé');
+ assert.match(syncLog.at(-1)?.detail||'',/non enregistrée/i);
+ await app.saveDocument('transactions',transaction);
+ assert.equal(saved.get(key).data.amountCAD,75);
+ assert.equal(saved.get(key).data.bankEvidence.note,'edited during upload');
+ assert.equal(syncLog.at(-1)?.status,'synced');
+});
+
 test('deferred card creation is blocked before RPC but normal bank accounts still save',async()=>{
  const {app,calls}=createContext();
  await assert.rejects(app.saveDocument('accounts',{id:'deferred-fr',type:'card',

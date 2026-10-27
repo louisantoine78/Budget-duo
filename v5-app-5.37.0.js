@@ -5090,7 +5090,15 @@ async function saveDocument(collection,item){
     p_household_id:household.id,p_collection:collection,p_item_id:id,
     p_data:requested,p_expected_revision:expected});
    if(error)throw traceSaveFailure(error);
-   traceDocRevisions.set(key,traceRevision(data));sync('synced');
+   traceDocRevisions.set(key,traceRevision(data));
+   // A user's amount or evidence may change while the previous request is
+   // still in flight. The server saved `requested`, not those later edits.
+   // The next save uses the confirmed revision, but must not show a green
+   // 'Synchronisé' badge until the edited value is actually posted.
+   let matchesConfirmed=false;
+   try{matchesConfirmed=JSON.stringify(item)===JSON.stringify(requested);}catch{}
+   if(matchesConfirmed)sync('synced');
+   else sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
   });
 }
 function settingsBack(){return '<button class="secondary full settings-back" type="button" style="margin-top:16px">Retour aux paramètres</button>';}
