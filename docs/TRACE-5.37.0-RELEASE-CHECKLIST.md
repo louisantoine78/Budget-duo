@@ -912,3 +912,17 @@ Le contrôle `node scripts/trace-release-preflight.mjs` est local et en lecture 
 - [ ] Compléter ensuite toute l'intégration financière / PG 05–12 / sécurité / reprise avant utilisation réelle.
 
 Voir `docs/TRACE-5.37.0-PREVIEW-READINESS.md`. **Production NO-GO**, pas de déploiement dans cette session.
+
+
+## 26 octobre — correctif bloquant de la preview fictive
+
+- [x] Calendrier d'exemple FR différé prospectif, versionné, sans recalcul rétrospectif.
+- [x] Solde initial fictif de carte FR à **0 EUR**, daté et déclaré ; virement de 150 CAD vers **95 EUR reçus explicitement**, sans taux FX inventé.
+- [x] 7/7 scenarios de bootstrap des modules candidats dans **DOM simulé** (Accueil, switch principal EUR, Couple, taux fictifs, nouvelle banque, réseau désactivé).
+- [x] 6/6 contrôles V8 sur fixtures + preuve d'une variation prospective du calendrier à écriture 0.
+- [x] Node natif 22.16.0 : 11/11 tests réels du garde-fou de runner avec empreintes blobs Git vérifiées ; un script historique vide ne peut plus passer grâce à son enveloppe TAP, vérifié aussi via deux vrais sous-processus locaux jetables.
+- [ ] **Bloquant preview :** récupérer le checkout entier, exécuter tous les tests Node et régénérer le **SW labo uniquement** via générateur, puis vérifier \`--check\` et iPhone Safari/Chromium.
+- [ ] **Bloquant données réelles :** tests migrations 05–12, PGlite/PostgreSQL fictif, RLS/CAS multiutilisateurs, preuve bancaire et mise en place des autres parcours budgétaires/devise Couple.
+- [ ] **Bloquant déploiement :** confirmation explicite d'un déploiement **preview uniquement**, SHA exact et contrôle SSO sans exposition de données utilisateur.
+
+**Aucune publication, migration, PR ni merge. Production NO-GO.** Nouvelle référence : \`docs/TRACE-5.37.0-PREVIEW-READINESS.md\`.
