@@ -12,7 +12,7 @@ test('empty or skipped suites fail closed even on exit zero',()=>{
   assert.equal(evaluate(stdout).passed,false);
 });
 test('custom cases counted rather than single TAP wrapper',()=>{
- const r=evaluate('# PASS bank proof\n# PASS budget\n# tests 1\n# pass 1\n# fail 0\n');
+ const r=checkSuiteResult({status:0,nativeSuite:false,stdout:'# PASS bank proof\n# PASS budget\n# tests 1\n# pass 1\n# fail 0\n'});
  assert.equal(r.passed,true);assert.equal(r.reportedScenarios,2);
 });
 test('explicit FAIL marker or native not-ok overrides exit zero',()=>{
@@ -33,4 +33,28 @@ test('contradictory or incomplete TAP summaries never authorize QA',()=>{
 });
 test('unrelated prose does not masquerade as test scenarios',()=>{
  assert.equal(evaluate('PASSAGE after deploy\n').passed,false);
+});
+
+test('an empty legacy script cannot inherit a passing TAP wrapper',()=>{
+ const stdout='TAP version 13\n1..1\n# tests 1\n# pass 1\n# fail 0\n';
+ const r=checkSuiteResult({status:0,stdout,nativeSuite:false});
+ assert.equal(r.passed,false);assert.equal(r.reportedScenarios,0);
+});
+test('legacy script with two PASS cases retains two rather than wrapper count',()=>{
+ const stdout='# PASS bank\n# PASS checking\n# tests 1\n# pass 1\n# fail 0\n';
+ const r=checkSuiteResult({status:0,stdout,nativeSuite:false});
+ assert.equal(r.passed,true);assert.equal(r.reportedScenarios,2);
+});
+test('detect true Node test imports while ignoring comments and legacy test helpers',()=>{
+ const {sourceUsesNodeTest}=require('../scripts/trace-native-suite-evidence.cjs');
+ for(const v of ["const {test}=require('node:test')",
+   'const test=require("test")',"import test from 'node:test'"])
+   assert.equal(sourceUsesNodeTest(v),true);
+ for(const v of ["const test=(name,fn)=>fn()", '// node:test only comment',
+   "const assert=require('node:assert/strict')"])
+   assert.equal(sourceUsesNodeTest(v),false);
+});
+test('single real node:test case is valid without printed legacy PASS markers',()=>{
+ assert.equal(checkSuiteResult({status:0,nativeSuite:true,
+  stdout:'# tests 1\n# pass 1\n# fail 0\n'}).passed,true);
 });
