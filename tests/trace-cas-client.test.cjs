@@ -499,6 +499,27 @@ test('investment operation referencing a deferred legacy bank ID is held before 
   bankAccountId:'real-checking',status:'pending'});
  assert.equal(calls.filter(x=>x.method==='trace_cas_save_document').length,1);
 });
+test('failed network write stays unsynchronized until the same financial document is retried',async()=>{
+ const {app,client,syncLog,saved}=createContext();
+ const original=client.rpc;
+ let disconnected=true;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_document'&&args.p_item_id==='failed-a'&&disconnected)
+   return {error:{message:'Fictional network unavailable'},data:null};
+  return original(method,args);
+ };
+ await assert.rejects(app.saveDocument('transactions',{id:'failed-a',amountCAD:10}),/network/);
+ assert.equal(syncLog.at(-1)?.status,'error');
+ await app.saveDocument('transactions',{id:'good-b',amountCAD:20});
+ assert.equal(syncLog.at(-1)?.status,'error',
+  'Another successful write must not hide a failed network write');
+ assert.equal(saved.has(app.traceWriteKey('transactions','failed-a')),false);
+ disconnected=false;
+ await app.saveDocument('transactions',{id:'failed-a',amountCAD:10});
+ assert.equal(saved.get(app.traceWriteKey('transactions','failed-a')).data.amountCAD,10);
+ assert.equal(syncLog.at(-1)?.status,'synced',
+  'A confirmed retry of the failed financial document can clear its warning');
+});
 test('an unrelated successful save does not clear an outstanding unsaved document warning',async()=>{
  const {app,syncLog,saved}=createContext();
  const changed={id:'still-local',amountCAD:10};

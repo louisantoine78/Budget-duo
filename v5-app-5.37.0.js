@@ -85,6 +85,8 @@ async function traceSerialWrite(key,task){
  traceWriteQueues.set(key,next);
  try{return await next;}
  catch(error){
+  // Retain failed document/settings intent until that same key is confirmed.
+  traceUnsavedWriteKeys.add(key);
   traceBatchHadFailure=true;
   if(!traceWritesBlocked)sync('error','Enregistrement incomplet — vérifie les modifications');
   throw error;
