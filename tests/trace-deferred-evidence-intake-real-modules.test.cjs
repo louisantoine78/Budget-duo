@@ -183,7 +183,14 @@ test('complete EUR settlement reviewed on checking statement keeps real bank del
   debitDate:'2026-12-08',amount:'40.00'}]};
  const token=f.root.TraceDeferredBankReview.reviewSnapshot({
   statement:d,settlement:s});
+ // A full-single-purchase claim must have an isolated card charge,
+ // not the extra merchant refund in the generic fixture.
+ const cardDoc={...f.cardDoc,rows:[f.cardDoc.rows[0]]};
+ const rechecked=f.root.TraceDeferredPurchaseEvidence.review({
+  plan:f.plan,statements:[cardDoc],selection:f.args.cardSelection});
+ const receipt={...f.args.cardReceipts[0],snapshot:rechecked.reviewToken};
  const r=f.root.TraceDeferredEvidenceIntake.review({...f.args,
+  cardStatements:[cardDoc],cardReceipts:[receipt],
   checkingStatements:[d],settlements:[s],
   settlementReceipts:[{settlementId:'full-payment',approved:true,snapshot:token}]});
  assert.equal(r.localEvidenceReviewed,true);
@@ -223,4 +230,45 @@ test('full payment spanning another purchase cannot become locally batch-complet
  assert.equal(r.fullBatchEvidenceComplete,false);
  assert.equal(r.localEvidenceReviewed,false);
  assert.equal(r.persistable,false);
+});
+
+test('full single-purchase claim cannot be locally complete with a card refund',()=>{
+ const f=fixture(),s={...f.settlement,settlementMode:'full',
+  scheduledDueDate:'2026-12-05',allocationDueDate:undefined,amount:'40.00',
+  bankEvidence:{...f.settlement.bankEvidence,amount:'40.00'}};
+ const checkingDoc={...f.checkingDoc,rows:[{...f.checkingDoc.rows[0],amount:'40.00'}]};
+ const token=f.root.TraceDeferredBankReview.reviewSnapshot({
+  statement:checkingDoc,settlement:s});
+ const r=f.root.TraceDeferredEvidenceIntake.review({...f.args,
+  checkingStatements:[checkingDoc],settlements:[s],settlementReceipts:[
+   {settlementId:s.id,approved:true,snapshot:token}]});
+ assert.equal(r.purchaseStatus,'manual_review_current');
+ assert.equal(r.settlementStatuses[0].status,'manual_review_current');
+ assert.equal(r.fullBatchEvidenceComplete,false);
+ assert.equal(r.localEvidenceReviewed,false);
+ assert.equal(r.checkingDebitBooked,0);assert.equal(r.persistable,false);
+});
+test('a second card purchase or card fee blocks false full-batch completeness',()=>{
+ for(const kind of ['card_purchase','card_fee','card_payment']){
+  const f=fixture(),line={lineId:'extra',type:kind,
+   ...(kind==='card_purchase'?{purchaseDate:'2026-10-20'}:{debitDate:'2026-10-20'}),
+   direction:kind==='card_payment'?'credit':'debit',status:'confirmed',amount:'5.00'};
+  const cardDoc={...f.cardDoc,rows:[f.cardDoc.rows[0],line]};
+  const purchase=f.root.TraceDeferredPurchaseEvidence.review({plan:f.plan,
+   statements:[cardDoc],selection:f.args.cardSelection});
+  const receipt={...f.args.cardReceipts[0],snapshot:purchase.reviewToken};
+  const s={...f.settlement,settlementMode:'full',scheduledDueDate:'2026-12-05',
+   allocationDueDate:undefined,amount:'40.00',
+   bankEvidence:{...f.settlement.bankEvidence,amount:'40.00'}};
+  const checkingDoc={...f.checkingDoc,rows:[{...f.checkingDoc.rows[0],amount:'40.00'}]};
+  const snapshot=f.root.TraceDeferredBankReview.reviewSnapshot({
+   statement:checkingDoc,settlement:s});
+  const r=f.root.TraceDeferredEvidenceIntake.review({...f.args,
+   cardStatements:[cardDoc],cardReceipts:[receipt],
+   checkingStatements:[checkingDoc],settlements:[s],
+   settlementReceipts:[{settlementId:s.id,approved:true,snapshot}]});
+  assert.equal(r.settlementStatuses[0].status,'manual_review_current');
+  assert.equal(r.localEvidenceReviewed,false);
+  assert.equal(r.fullBatchEvidenceComplete,false);
+ }
 });
