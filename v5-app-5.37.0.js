@@ -5099,9 +5099,11 @@ async function saveHouseholdSettings(){
    // badge for those later local edits; the user can save again safely
    // using the newly confirmed server revision.
    const latestLocalSettings={...queuedSettings,...state.household,schemaVersion:5};
-   if(JSON.stringify(latestLocalSettings)!==JSON.stringify(queuedSettings))
+   if(JSON.stringify(latestLocalSettings)!==JSON.stringify(queuedSettings)){
+    // Another successful document must not hide an unsaved local settings edit.
+    traceBatchHadFailure=true;
     sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
-   else traceSyncConfirmed();
+   }else traceSyncConfirmed();
   });
 }
 async function saveDocument(collection,item){
@@ -5138,7 +5140,11 @@ async function saveDocument(collection,item){
    let matchesConfirmed=false;
    try{matchesConfirmed=JSON.stringify(item)===JSON.stringify(requested);}catch{}
    if(matchesConfirmed)traceSyncConfirmed();
-   else sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
+   else{
+    // Preserve this unsaved local edit across other concurrent successes.
+    traceBatchHadFailure=true;
+    sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
+   }
   });
 }
 function settingsBack(){return '<button class="secondary full settings-back" type="button" style="margin-top:16px">Retour aux paramètres</button>';}

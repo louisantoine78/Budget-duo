@@ -499,6 +499,59 @@ test('investment operation referencing a deferred legacy bank ID is held before 
   bankAccountId:'real-checking',status:'pending'});
  assert.equal(calls.filter(x=>x.method==='trace_cas_save_document').length,1);
 });
+test('unsaved in-flight document edits remain visibly unsynchronized after another successful save',async()=>{
+ const {app,client,syncLog}=createContext();
+ let entered,release;
+ const started=new Promise(done=>{entered=done;});
+ const blocked=new Promise(done=>{release=done;});
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_document'&&args.p_item_id==='held'){
+   entered();await blocked;
+  }
+  return original(method,args);
+ };
+ const held=app.saveDocument('transactions',{id:'held',amountCAD:10});
+ await started;
+ const item={id:'dirty',amountCAD:40};
+ const changed=app.saveDocument('transactions',item);
+ item.amountCAD=90;
+ await changed;
+ assert.equal(syncLog.at(-1)?.status,'error');
+ release();await held;
+ assert.notEqual(syncLog.at(-1)?.status,'synced',
+  'Success of held transaction must never hide a locally unsaved edit');
+});
+test('unsaved settings edits remain unsynchronized after a separate financial write succeeds',async()=>{
+ const {app,client,state,syncLog}=createContext();
+ app.setRevision(0);
+ let docEntered,releaseDoc,settingsEntered,releaseSettings;
+ const docStarted=new Promise(done=>{docEntered=done;});
+ const docBlocked=new Promise(done=>{releaseDoc=done;});
+ const settingsStarted=new Promise(done=>{settingsEntered=done;});
+ const settingsBlocked=new Promise(done=>{releaseSettings=done;});
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_save_document'&&args.p_item_id==='held'){
+   docEntered();await docBlocked;
+  }
+  if(method==='trace_cas_save_household_settings'){
+   settingsEntered();await settingsBlocked;
+  }
+  return original(method,args);
+ };
+ const held=app.saveDocument('transactions',{id:'held',amountCAD:10});
+ await docStarted;
+ state.household.name='original';
+ const settings=app.saveHouseholdSettings();
+ await settingsStarted;
+ state.household.name='edited while pending';
+ releaseSettings();await settings;
+ assert.equal(syncLog.at(-1)?.status,'error');
+ releaseDoc();await held;
+ assert.notEqual(syncLog.at(-1)?.status,'synced',
+  'A successful document must never cover an unsaved local settings edit');
+});
 test('concurrent financial saves never report synchronized before every request finishes',async()=>{
  const {app,client,syncLog,saved}=createContext();
  let entered,release;
