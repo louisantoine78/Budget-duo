@@ -57,10 +57,15 @@ async function main(){
  await test('fixture mode enters real 5.37 bootstrap without auth or network',()=>{
   assert.equal(window.__TRACE_PREVIEW_STATUS__.boot,'ok');
   assert.equal(window.__TRACE_PREVIEW_STATUS__.build,'5.37.0');
-  assert.equal(window.__TRACE_PREVIEW_STATUS__.fixtureCount,8);
+  assert.equal(window.__TRACE_PREVIEW_STATUS__.fixtureCount,9);
   const data=window.TraceInternationalPreviewFixtures.create();
   assert.equal(data.household.accountOpeningBalances['demo-fr-deferred-card'],0);
   assert.equal(data.transactions.find(t=>t.id==='demo-ca-eur-transfer').toBankCurrency,'EUR');
+  const last=data.transactions.find(t=>t.id==='demo-previous-eur-pending');
+  assert.equal(last.status,'pending');
+  assert.equal(last.bankCurrency,'EUR');
+  assert.notEqual(last.date.slice(0,7),data.transactions.find(t=>t.id==='demo-eur-pending').date.slice(0,7));
+  assert.match(element('#importPendingTransactions').innerHTML,/demo-previous-eur-pending/);
   assert.equal(window.__TRACE_PREVIEW_STATUS__.noSupabase,true);
   assert.equal(externalRequests,0);assert.deepEqual(logs,[]);
  });
