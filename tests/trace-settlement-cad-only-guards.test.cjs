@@ -10,6 +10,7 @@ const engine={};new Function('window',foreign)(engine);
 const I=engine.TraceInternational;
 const accounts=[
  {id:'la-ca',owner:'la',type:'checking',country:'CA',currency:'CAD',name:'Source CAD'},
+ {id:'la-alt',owner:'la',type:'checking',country:'CA',currency:'CAD',name:'Autre CAD'},
  {id:'partner-ca',owner:'partner',type:'checking',country:'CA',currency:'CAD',name:'Recipient CAD'},
  {id:'la-eur',owner:'la',type:'checking',country:'FR',currency:'EUR',name:'Source EUR'},
  {id:'partner-eur',owner:'partner',type:'checking',country:'FR',currency:'EUR',name:'Recipient EUR'},
@@ -129,4 +130,12 @@ test('unchanged CAD statement-based settlement remains editable without double e
  assert.equal(m.writes[0].item.toBankAmount,50);
  assert.equal(m.writes[0].item.type,'transfer');
  assert.equal(row.amountCAD,50);
+});
+
+test('confirmed settlement cannot change its statement-linked source bank',async()=>{
+ const row=existing(),before=JSON.stringify(row),m=mount(row);
+ await m.submit({from:'la-alt',amount:'50'});
+ assert.equal(m.writes.length,0);
+ assert.match(m.node('#traceFeedback').textContent,/comptes bancaires d’origine/);
+ assert.equal(JSON.stringify(row),before);
 });
