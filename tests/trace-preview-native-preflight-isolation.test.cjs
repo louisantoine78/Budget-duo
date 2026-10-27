@@ -75,3 +75,38 @@ test('real Node regular runner cannot pass a sandbox with zero test suites',t=>{
  assert.equal(report.summary.testFiles,0);
  assert.equal(report.passed,false);
 });
+test('binary asset changed without changing its name invalidates SHA-256 generated cache',t=>{
+ const f=fixture(t),icon=path.join(f.dir,'assets/test.svg');
+ const before=fs.readFileSync(icon);
+ const replacement=Buffer.from(before);
+ replacement[replacement.length-3]^=1;
+ f.put('assets/test.svg',replacement);
+ assert.equal(fs.statSync(icon).size,before.length,'the asset retains the same size');
+ const check=f.cmd('build-trace-preview-pwa.mjs','--check');
+ assert.equal(check.status,1,'generator --check must compare real asset bytes');
+ const run=f.cmd('test-trace-native.mjs','--preflight','--report','proof.json');
+ assert.equal(run.status,1);
+ const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
+ assert.equal(report.preflight.inventory.passed,true,'names remain present');
+ assert.equal(report.preflight.generatedCacheFresh,false,'cryptographic check catches modified bytes');
+ assert.equal(report.summary.testFilesExecuted,0);
+});
+test('tampering with worker source is rejected despite an intact static asset list',t=>{
+ const f=fixture(t),sw=path.join(f.dir,'trace-international-preview-sw.js');
+ f.put('trace-international-preview-sw.js',fs.readFileSync(sw,'utf8')+'\n// altered without regenerating\n');
+ const run=f.cmd('test-trace-native.mjs','--preflight','--report','proof.json');
+ assert.equal(run.status,1);
+ const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
+ assert.equal(report.preflight.inventory.passed,true);
+ assert.equal(report.preflight.generatedCacheFresh,false);
+});
+test('generator refuses remote and parent-directory assets without network access',t=>{
+ const f=fixture(t),entry=path.join(f.dir,f.lab);
+ const original=fs.readFileSync(entry,'utf8');
+ for(const unsafe of ['https://example.org/not-in-lab.js','../config.js']){
+  f.put(f.lab,original+'<script src="'+unsafe+'"></script>');
+  const run=f.cmd('build-trace-preview-pwa.mjs');
+  assert.equal(run.status,1,unsafe);
+  assert.match(run.stderr,/Asset interdit/,unsafe);
+ }
+});
