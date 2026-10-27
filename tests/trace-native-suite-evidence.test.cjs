@@ -3,7 +3,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const {checkSuiteResult}=require('../scripts/trace-native-suite-evidence.cjs');
 const evaluate=(stdout,status=0)=>checkSuiteResult({stdout,status});
 test('native seven passing cases',()=>{
- const r=evaluate('TAP version 13\n# tests 7\n# pass 7\n# fail 0\n');
+ const r=evaluate('TAP version 13\n# Subtest: banking\n# tests 7\n# pass 7\n# fail 0\n');
  assert.equal(r.passed,true);assert.equal(r.reportedScenarios,7);
 });
 test('empty or skipped suites fail closed even on exit zero',()=>{
