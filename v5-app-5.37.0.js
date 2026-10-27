@@ -5410,12 +5410,28 @@ function openBankMetadata(id){
      effectiveDate:$('#traceBankMetaRevisionEffective').value,
      debitDay:$('#traceBankMetaRevisionDebit').value,
      closingDay:$('#traceBankMetaRevisionClosing').value});
+    const forecast=window.TraceDeferredDebit?.scheduleForPurchase;
+    if(typeof forecast!=='function')
+     throw Error('Simulation des échéances de débit indisponible.');
+    // Hypothetical purchase at the very beginning of the new calendar.
+    // Never infer a real transaction or change historical bank dates.
+    const example=forecast({card:{...account,
+     deferredScheduleVersions:proposal.versions},
+     purchaseDate:proposal.effectiveDate});
+    const exampleText=example.allocationVerified&&example.dueDate?
+     ' Pour un achat fictif le '+example.purchaseDate+
+     ' : clôture le '+example.cutoffDate+
+     ', prélèvement théorique le '+example.dueDate+'.':
+     ' Pour un achat fictif le '+example.purchaseDate+
+     ' : prochain prélèvement indicatif le '+(example.nextDebitDate||'à vérifier')+
+     ', mais aucune échéance ne peut être attribuée sans clôture vérifiée.';
     output.textContent='Proposition non enregistrée · prise d’effet le '+
      proposal.effectiveDate+' · prélèvement chaque '+proposal.proposedVersion.debitDay+
      ' du mois'+(proposal.proposedVersion.closingDay===null?
       ' · clôture inconnue (aucune affectation automatique des achats)':
       ' · clôture chaque '+proposal.proposedVersion.closingDay+
-      ' du mois')+'. Les achats antérieurs gardent leurs échéances. '+
+      ' du mois')+'.'+exampleText+
+     ' Les achats antérieurs gardent leurs échéances. '+
      'Vérification bancaire et activation sécurisée encore nécessaires.';
    }catch(err){
     output.textContent='Proposition non validée : '+String(err?.message||'Contrôle indisponible');
