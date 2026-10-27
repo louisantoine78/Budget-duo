@@ -65,9 +65,15 @@ if(preflightOnly||!report.preflight.passed){
 const localTestFiles=readdirSync(join(root,'tests')).filter(n=>n.endsWith('.test.cjs')).sort();
 const committed=spawnSync('git',['ls-tree','-r','--name-only','HEAD','--','tests/'],
  {cwd:root,encoding:'utf8',timeout:10000,maxBuffer:1024*1024});
+// Do not mistake an altered/staged test file with an identically named HEAD file.
+// Exit 1 from git diff means unequal content; any other error also fails closed.
+const testDiff=spawnSync('git',['diff','--quiet','HEAD','--','tests/'],
+ {cwd:root,encoding:'utf8',timeout:10000,maxBuffer:1024*1024});
 report.committedSuites=checkCommittedSuiteInventory({
  treeOutput:committed.stdout,files:localTestFiles,
- exitCode:committed.status,signal:committed.signal,error:committed.error
+ exitCode:committed.status,signal:committed.signal,error:committed.error,
+ contentDiffStatus:testDiff.status,contentDiffSignal:testDiff.signal,
+ contentDiffError:testDiff.error
 });
 if(!report.committedSuites.passed){
  report.summary={preflightPassed:true,committedSuiteInventoryPassed:false,
