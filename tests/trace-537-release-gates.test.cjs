@@ -270,3 +270,30 @@ test('clean HEAD and identical branch after Node+PG checks still require manual 
  assert.ok(q.results.some(r=>r.id==='candidate_head_after'&&r.passed));
  assert.ok(q.results.some(r=>r.id==='final_worktree'&&r.passed));
 });
+
+test('international preview isolates UI and insights without changing stable 5.36.5 bytes',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const {spawnSync}=require('node:child_process');
+ const {MISSION_BASE,PROTECTED}=require('../scripts/check-trace-537-release-gates.cjs');
+ const root=path.resolve(__dirname,'..');
+ const stable=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const preview=fs.readFileSync(path.join(root,'trace-international-preview.html'),'utf8');
+ const matches=[
+  ['trace-operation-ui-1.0.0.js','trace-operation-ui-5.37.0.js'],
+  ['trace-insights-1.0.0.js','trace-insights-5.37.0.js']
+ ];
+ for(const [original,candidate] of matches){
+  assert.ok(PROTECTED.includes(original),'Stable asset must be guarded: '+original);
+  assert.ok(stable.includes('src="'+original+'"'),'Stable entry must keep '+original);
+  assert.ok(!stable.includes('src="'+candidate+'"'),'Stable entry cannot load '+candidate);
+  assert.ok(preview.includes('src="'+candidate+'"'),'Preview must load '+candidate);
+  assert.ok(!preview.includes('src="'+original+'"'),'Preview must not load shared '+original);
+  const reference=spawnSync('git',['show',MISSION_BASE+':'+original],
+   {cwd:root,encoding:null,timeout:10000,maxBuffer:1024*1024});
+  assert.equal(reference.status,0,'Cannot inspect immutable baseline '+original);
+  const unchanged=fs.readFileSync(path.join(root,original));
+  const enhanced=fs.readFileSync(path.join(root,candidate));
+  assert.deepEqual(unchanged,reference.stdout,'Stable file mutated: '+original);
+  assert.notDeepEqual(enhanced,unchanged,'Candidate enhancement missing: '+candidate);
+ }
+});
