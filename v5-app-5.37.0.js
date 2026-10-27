@@ -25,7 +25,14 @@ function traceRefuseUnqualifiedDeferredWrite(collection,item){
  const accounts=Array.isArray(state?.accounts)?state.accounts:[];
  // Legacy card rows may have no 'type'; accountType() infers card by name.
  // Any reserved deferred payment mode must remain non-persistable, fail closed.
- const deferred=a=>a?.paymentMode==='deferred';
+ const reservedCardFields=['deferredDebitDay','deferredClosingDay','deferredScheduleVersions'];
+ const reservedTransactionFields=['scheduledDueDate','allocationDueDate'];
+ const owns=(v,k)=>v&&typeof v==='object'&&
+  Object.prototype.hasOwnProperty.call(v,k);
+ // Server quarantine has the same reserved fields. A user-supplied
+ // paymentMode='credit' does not make deferred calendar metadata safe.
+ const deferred=a=>a?.paymentMode==='deferred'||
+  reservedCardFields.some(k=>owns(a,k));
  const stored=accounts.find(a=>String(a?.id||'')===String(item?.id||''));
  if(collection==='accounts'){
   if(deferred(item)||deferred(stored))
@@ -47,7 +54,8 @@ function traceRefuseUnqualifiedDeferredWrite(collection,item){
   item.purchaseIds!==undefined||item.feeIds!==undefined||
   ['deferredPurchaseId','deferredPurchaseIds','deferredFeeIds',
    'deferredSettlementMode','deferredDueDate','deferredBankEvidence',
-   'deferredBankEvidenceReviewed'].some(field=>Object.prototype.hasOwnProperty.call(item,field));
+   'deferredBankEvidenceReviewed',...reservedTransactionFields].some(field=>
+    Object.prototype.hasOwnProperty.call(item,field));
  if(mentionsDeferred||explicitDeferred)
   throw Error('TRACE_DEFERRED_NOT_RELEASED : écriture différée en attente de qualification bancaire/serveur.');
 }
