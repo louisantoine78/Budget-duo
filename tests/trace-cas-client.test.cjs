@@ -128,6 +128,30 @@ test('CAS refuses stale overwrites, preserving original server row',async()=>{
  assert.equal(root.items.length,1);
  await assert.rejects(app.saveDocument('transactions',{id:'new',amountCAD:20}),/recharge TRACE/);
 });
+test('in-flight financial deletion displays saving until server confirms removal',async()=>{
+ const {app,client,syncLog,saved}=createContext();
+ await app.saveDocument('transactions',{id:'delete-pending',amountCAD:30});
+ assert.equal(syncLog.at(-1)?.status,'synced');
+ let entered,release;
+ const started=new Promise(done=>{entered=done;});
+ const blocked=new Promise(done=>{release=done;});
+ const original=client.rpc;
+ client.rpc=async(method,args)=>{
+  if(method==='trace_cas_delete_document'&&args.p_item_id==='delete-pending'){
+   entered();await blocked;
+  }
+  return original(method,args);
+ };
+ const removing=app.removeDocument('transactions','delete-pending');
+ await started;
+ assert.equal(syncLog.at(-1)?.status,'saving',
+  'An unconfirmed deletion must never leave the workspace green');
+ assert.equal(saved.has(app.traceWriteKey('transactions','delete-pending')),true);
+ release();await removing;
+ assert.equal(saved.has(app.traceWriteKey('transactions','delete-pending')),false);
+ assert.equal(syncLog.at(-1)?.status,'synced',
+  'Successful confirmed deletion restores synchronized status');
+});
 test('CAS deletion requires loaded version and removes revision on success',async()=>{
  const {app,saved}=createContext();
  await app.saveDocument('transactions',{id:'x',amountCAD:10});

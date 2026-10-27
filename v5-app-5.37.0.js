@@ -1861,9 +1861,12 @@ async function removeDocument(collection,id){if(internationalPreviewMode())retur
    collection==='reconciliations'?state.reconciliations?.find(t=>String(t.id)===String(id)):null;
   if(old)traceRefuseUnqualifiedDeferredWrite(collection,old);
   if(!traceDocRevisions.has(key))throw Error('Document non chargé : suppression refusée.');
+  const expectedRevision=traceRevision(traceDocRevisions.get(key));
+  // A deletion is an in-flight financial write; the badge cannot stay green.
+  sync('saving');
   const {data,error}=await client.rpc('trace_cas_delete_document',{
    p_household_id:household.id,p_collection:collection,p_item_id:String(id),
-   p_expected_revision:traceRevision(traceDocRevisions.get(key))});
+   p_expected_revision:expectedRevision});
   if(error)throw traceSaveFailure(error);
   if(data!==true)throw traceSaveFailure(new Error('Suppression non confirmée'));
   traceDocRevisions.delete(key);traceUnsavedWriteKeys.delete(key);traceSyncConfirmed();
