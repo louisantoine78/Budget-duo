@@ -58,6 +58,9 @@ async function main(){
   assert.equal(window.__TRACE_PREVIEW_STATUS__.boot,'ok');
   assert.equal(window.__TRACE_PREVIEW_STATUS__.build,'5.37.0');
   assert.equal(window.__TRACE_PREVIEW_STATUS__.fixtureCount,8);
+  const data=window.TraceInternationalPreviewFixtures.create();
+  assert.equal(data.household.accountOpeningBalances['demo-fr-deferred-card'],0);
+  assert.equal(data.transactions.find(t=>t.id==='demo-ca-eur-transfer').toBankCurrency,'EUR');
   assert.equal(window.__TRACE_PREVIEW_STATUS__.noSupabase,true);
   assert.equal(externalRequests,0);assert.deepEqual(logs,[]);
  });
