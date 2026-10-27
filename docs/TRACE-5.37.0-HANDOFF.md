@@ -1087,3 +1087,18 @@ L'onglet **Historique** affiche désormais 60 lignes initiales, puis 60 supplém
 **Résultats V8 simulés sur les sources GitHub :** 7/7 pagination Historique, 21/21 journal/FX, 35/35 Activité/validation, 37/37 intégrité financière (relancée après pagination), 27/27 moteur international, 11/11 badge SW et 7/7 démarrage fictif. Tous succès dans leurs harnais simulés, non dans la suite native complète. Le JS principal est syntaxiquement valide.
 
 **Déploiement :** toujours interdit sans accord explicite. `main` stable, Vercel, Supabase, CI et écritures différées en quarantaine `TRACE_DEFERRED_NOT_RELEASED`. Le SW statique de laboratoire reste périmé (six modules différés référencés par le HTML et absents du cache) ; ces six modules **existent et se parsèment** dans GitHub. Régénérer exclusivement avec `node scripts/build-trace-preview-pwa.mjs` + `--check` sur un checkout local complet, puis tester Node CLI, Chromium, Safari iPhone, PGlite/PostgreSQL/Auth/RLS/CAS. Le conteneur n'a toujours pas accès DNS à GitHub pour Git. **Production NO-GO.**
+
+
+## 27 octobre — Garde-fous règlement Couple et Accueil + feuille de route
+
+**Départ de session vérifié :** `e0dcb2cade5e1bed36d22f475051cfc5e2338d07`; `main` stable `02c70f50e7e51da79b77a91dde96a03c6c719909`. Toujours résoudre le HEAD réel avant reprise et rester sur `trace-5.37.0-international-accounts-fx`.
+
+**Code réellement sauvegardé :** `openSettlement` refuse désormais l'édition CAD de transferts entre partenaires si la transaction n'est pas un virement confirmé entre comptes CAD des deux membres. Le formulaire de création limite les comptes aux comptes courants CAD, exige date réelle et centimes exacts ; les deux jambes bancaires CAD sont écrites explicitement, sans nouvelle dépense/revenu. Une ligne bancaire confirmée dont le montant ou les comptes changent est refusée sans contrôle des preuves. Tests `tests/trace-settlement-cad-only-guards.test.cjs` : **8/8 V8 simulés**. Une édition international/pending conserve son montant et son statut intacts (fiche non modifiable).
+
+**Accueil :** `homeReviewAccounts` / `openHomeReviewAccount` retrouvent désormais les virements reçus sur chaque compte du membre, utilisent sa seule jambe bancaire native en émission/réception et signalent les montants EUR non justifiés. Ni affichage des montants source du partenaire ni fallbacks CAD/0. Tests `tests/trace-home-incoming-review.test.cjs` : **5/5 V8 simulés**.
+
+**Régression rejouée :** **35/35** tests Activité sur le moteur réel dans V8 simulé, **7/7** démarrages fictifs du laboratoire en DOM synthétique ; syntaxe V8 du JS. Ce ne sont toujours pas les tests Node CLI natifs complets ni une qualification navigateur/iPhone/PG.
+
+**NOUVEAU document prioritaire :** `docs/TRACE-5.37.0-NEXT-GATES-2026-10-27.md`. Cette feuille de route ordonne : A) clone intégral / reconstruction SW labo par générateur / runner Node 104 suites ; B) Chromium et Safari/VoiceOver sur laboratoire 100 % fictif et preview séparément autorisée ; C) PGlite/PostgreSQL migrations 05–12, RLS/Auth/CAS, restauration, opérations et taux ; D) validation intégrée, sécurité, réception et décisions de publication distinctes.
+
+**Sécurité :** aucun SW réécrit, aucun déploiement/PR/CI, aucune donnée réelle/migration Supabase ni changement `main`. Six scripts différés toujours absents du SW de la candidate (les fichiers sources existent). `TRACE_DEFERRED_NOT_RELEASED` préservé ; **production NO-GO**.
