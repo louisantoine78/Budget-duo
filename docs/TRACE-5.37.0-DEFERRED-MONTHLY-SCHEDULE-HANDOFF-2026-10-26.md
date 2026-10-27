@@ -246,3 +246,14 @@ HEAD de départ de cette reprise `6945fb18431b551db0062b6bcdbc889f5ae8b756`. Com
 La liste Vercel en lecture seule montre `trace-v5-preview` READY au vieux commit `2c312f00`, avec SSO Vercel ; le dernier code de la branche n'est donc pas publié. `vercel.json` désactive le déploiement auto sur cette branche et la CSP `connect-src 'none'` de la preview est en place. **Aucun nouveau déploiement effectué.**
 
 **Trois portes séparées** dans `docs/TRACE-5.37.0-PREVIEW-READINESS.md` : (A) aperçu fictif avec vérifications natives, SW labo régénéré et test iPhone, (B) candidate fonctionnelle persistée avec PostgreSQL fictif/Auth/RLS/CAS, (C) autorisation de production avec validation financière/rollback. Cette scission doit permettre de *voir* l'avancement avant d'utiliser des comptes réels, mais ne constitue aucune permission d'écriture bancaire ni de déploiement implicite. `main`/5.36.5 inchangée ; `TRACE_DEFERRED_NOT_RELEASED` maintenu. Production NO-GO.
+
+
+## 26 octobre — corrections preview et validité du runner
+
+Départ \`902817e0b8387ccab4ff51b3e4f606f56f3d7d0d\` → code \`9693735854f59461718c455c3c110fa02d26b5e7\` (comparer le dernier HEAD lors de reprise).
+
+La carte FR fictive \`demo-fr-deferred-card\` propose désormais un calendrier versionné \`2026-09-01\` avec \`deferredDebitDay:5\`, \`deferredClosingDay:20\`, et une ouverture **0 EUR explicite** datée. \`demo-ca-eur-transfer\` déclare \`toBankCurrency:'EUR'\` pour une réception de \`95\` face à un débit source \`150 CAD\`. Cette précision a résolu un échec du bootstrap : le compte principal EUR affichait « À configurer » car le transfert vers EUR ne prouvait pas sa devise native, et la carte différée liée manquait de solde initial.
+
+**Validation :** bootstrap 7/7 dans DOM synthétique avec scripts réels, fichiers de fixture 6/6 V8, nouveau garde-fou de runner **11/11 Node natif réel** (hashes de blobs vérifiés) et deux enfants Node jetables vérifiant le rejet des scripts historiques sans scénarios. ATTENTION : bootstrap, comptes et finances **non exécutés en Node complet**. La dernière suite plus large antérieure : 364/364 V8 ciblés, pas une qualification intégrale. La nouvelle sortie SW **non générée**, cache labo potentiellement obsolète : 반드시 régénérer via générateur sur checkout entier, jamais éditer le SW manuellement.
+
+Candidature GitHub uniquement ; ni production ni Vercel ni base réelle modifiés. \`main\` stable. **NO-GO financier**, preview fictive à soumettre à sa QA distincte. Détails dans \`docs/TRACE-5.37.0-PREVIEW-READINESS.md\`.
