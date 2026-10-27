@@ -4271,7 +4271,8 @@ function traceActivityControls(){
  const pendingBtn=$('#activityShowPending');
  if(pendingBtn){
   const active=new Set(visibleBankAccounts(me).map(a=>a.id));
-  const total=state.transactions.filter(t=>t.status!=='confirmed'&&active.has(t.accountId)).length;
+  const total=state.transactions.filter(t=>t.status!=='confirmed'&&
+   (active.has(t.accountId)||(t.type==='transfer'&&active.has(t.toAccountId)))).length;
   pendingBtn.textContent='À valider · '+total;
   pendingBtn.onclick=()=>showTab('review');
  }
@@ -4362,19 +4363,28 @@ function renderActivity(){
  $$('[data-tx-open]').forEach(btn=>btn.onclick=()=>editTransaction(btn.dataset.txOpen));
  const reviewAccounts=visibleBankAccounts(me);
  const active=new Set(reviewAccounts.map(a=>a.id));
- const pendingAll=state.transactions.filter(t=>t.status!=='confirmed'&&active.has(t.accountId));
+ // A pending bank transfer can belong to this member through either bank leg.
+ // Count each movement once globally, regardless of whether both legs are ours.
+ const pendingAll=state.transactions.filter(t=>t.status!=='confirmed'&&
+  (active.has(t.accountId)||(t.type==='transfer'&&active.has(t.toAccountId))));
  // The review filter is ephemeral and must never expose a previous member's bank.
  if(activityReviewAccountFilter!=='all'&&!active.has(activityReviewAccountFilter)){
   activityReviewAccountFilter='all';activityReviewVisibleCount=40;
  }
  const countByAccount=new Map();
- pendingAll.forEach(t=>countByAccount.set(t.accountId,(countByAccount.get(t.accountId)||0)+1));
+ pendingAll.forEach(t=>{
+  if(active.has(t.accountId))countByAccount.set(t.accountId,(countByAccount.get(t.accountId)||0)+1);
+  if(t.type==='transfer'&&t.toAccountId!==t.accountId&&active.has(t.toAccountId))
+   countByAccount.set(t.toAccountId,(countByAccount.get(t.toAccountId)||0)+1);
+ });
  traceActivitySelect('activityReviewAccountFilter',[
   ['all','Tous mes comptes · '+pendingAll.length],
   ...reviewAccounts.map(a=>[a.id,shortAccountLabel(a)+' · '+
    window.TraceInternational.currency(a)+' · '+(countByAccount.get(a.id)||0)+' à valider'])
  ],activityReviewAccountFilter,v=>{activityReviewAccountFilter=v;activityReviewVisibleCount=40;});
- const remaining=pendingAll.filter(t=>activityReviewAccountFilter==='all'||t.accountId===activityReviewAccountFilter);
+ const remaining=pendingAll.filter(t=>activityReviewAccountFilter==='all'||
+  t.accountId===activityReviewAccountFilter||
+  (t.type==='transfer'&&t.toAccountId===activityReviewAccountFilter));
  remaining.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||
   String(b.id||'').localeCompare(String(a.id||'')));
  const visiblePending=remaining.slice(0,activityReviewVisibleCount);
@@ -4384,8 +4394,13 @@ function renderActivity(){
   legacy.innerHTML=remaining.length?'<div class="trace-unconfirmed-header"><strong>Transactions à compléter</strong><small>'+
    remaining.length+' opération(s) à contrôler, tous mois confondus</small></div>'+
    '<div class="trace-unconfirmed-rows">'+visiblePending.map(t=>{
-    const account=state.accounts.find(a=>a.id===t.accountId);
-    const amount=account?window.TraceInternational.amountOnAccount(t,account,'source'):null;
+    // Filtered transfers use the real receiving bank leg. In the unfiltered
+    // view, show the source only when it is one of this member's accounts.
+    const destination=t.type==='transfer'&&active.has(t.toAccountId)&&
+     (activityReviewAccountFilter===t.toAccountId||!active.has(t.accountId));
+    const account=state.accounts.find(a=>a.id===(destination?t.toAccountId:t.accountId));
+    const amount=account?window.TraceInternational.amountOnAccount(t,account,
+     destination?'destination':'source'):null;
     // Unknown native bank proof must not borrow a historical CAD valuation.
     const value=amount===null||!Number.isFinite(amount)?
      'Montant bancaire à vérifier':
