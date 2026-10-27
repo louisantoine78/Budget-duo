@@ -330,3 +330,15 @@ La comparaison réemploie sans modification les moteurs préexistants TraceState
 4. Poursuivre la qualification intégrée des flux de paiement, devises et justificatifs avec des données fictives persistantes avant de déverrouiller toute écriture différée.
 
 Commits : `c9a6b835`, `5ad71fa1`, `d64a2b0e`, `3f62b2db`, `7cbc58a0`, `eb878a36` (tous `[skip ci]`). Voir `docs/TRACE-5.37.0-PREVIEW-READINESS.md`. Aucune modification de `main`, de Supabase réel, de Vercel ou des workflows ; **production NO-GO**.
+
+## 26 octobre — Filtre de compte dans « À valider » et correction du démarrage fictif
+
+**Implémentation :** `v5-app-5.37.0.js`, `trace-international-preview.html`, `trace-international-1.0.0.css`. Le sélecteur de compte affiche le total en attente pour chaque compte actif du membre courant, avec devise native (EUR, CAD, etc.). Il reste distinct de « Historique » et conserve l'accès aux mois précédents. Un compte archivé, étranger au membre ou inexistant ne reste jamais sélectionnable après relecture. Le changement de compte revient à 40 lignes, sans écriture.
+
+**États UX :** liste complète « Tous mes comptes », filtre d'un compte actif, compte sans aucune opération (état vide ciblé), devise étrangère, montant natif inconnu, anciennes périodes, longs historiques, sélection qui devient périmée après changement de membre. Cible tactile 44 px et focus visibles.
+
+**Régression critique corrigée :** le binder des onglets utilisait accidentellement un sélecteur unique avec `.forEach`. Correction à `$$('#activityTabs .tab')` et test spécifique ajouté pour empêcher le retour de ce blocage. Le bootstrap fictif revient à 7/7 scénarios simulés.
+
+**QA de cette reprise :** 23/23 contrôles V8 ciblés (9 navigation/listes, 6 clavier/binder, 8 propriétaires/comptes/devises), et 7/7 bootstrap en DOM synthétique V8. **Ni tests Node natifs complets, ni navigateur réel, ni Safari, ni PostgreSQL.** Un contrôle de cache statique confirme toujours six modules différés absents du SW généré ; reconstruction avec l'outil officiel obligatoire sur checkout complet.
+
+**Restant UX à qualifier :** filtre sur iPhone physique et VoiceOver, grands volumes en navigateur, comportement au retour d'un écran et au changement de propriétaire dans une session authentifiée fictive, parité des autres sections premium, mode hors-ligne après régénération du cache. Aucun changement `main`, aucune publication, quarantaine bancaire inchangée. **Production NO-GO**.
