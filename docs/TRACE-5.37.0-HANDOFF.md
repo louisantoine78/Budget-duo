@@ -1,3 +1,15 @@
+## 27 octobre — Reprise porte A : faux succès TAP supprimé, sans certification complète
+
+Branche candidate seulement ; contrôle initial GitHub : `1aa3077a4a481139284fda802893e6d83a0f85a8`, `main` : `02c70f50e7e51da79b77a91dde96a03c6c719909`. Deux commits `[skip ci]` : `2c0c4235f98ea35e2294e594148c424326812796` (contrôleur des preuves des suites Node), `c169557c7d6fe268f8855107745cbda29226c257` (tests). Documentation actualisée à `docs/TRACE-5.37.0-NEXT-GATES-2026-10-27.md`.
+
+**Défaut réel démontré :** un `node --test --test-reporter=tap` natif avec un test passé et un test `skip` sort code 0. Le contrôleur précédent acceptait cette suite (1/2 exécuté), donnant un faux vert de publication. Il requiert dorénavant `pass===tests`, `failed===0`, `skipped/todo/cancelled===0` ; une contradiction TAP est rejetée. Les suites historiques `PASS` conservent le comportement existant.
+
+**Preuve limitée mais authentique :** **13/13 tests Node 22.16.0 natifs ciblés** sur *miroir local isolé* de ces deux fichiers avec SHA Git **strictement identiques aux nouveaux blobs GitHub** (`5be1aa77` et `63f5b378`). Le scénario inclut la reproduction d'un vrai sous-processus Node contenant un test bancaire `skip` ; après correction il retourne `passed=false`. **Pas** un `node scripts/test-trace-native.mjs` sur le repo complet, ni une qualification du laboratoire ou des migrations.
+
+**Porte A toujours fermée :** le conteneur ne résout toujours pas GitHub pour un clone complet, et aucun checkout candidat intégral fiable n'a pu être matérialisé. Le SW de laboratoire **n'a pas été régénéré** et manque les six scripts différés constatés. Le runner complet des **106 fichiers `*.test.cjs`**, Chromium/Safari et quatre suites PostgreSQL/PGlite restent à faire sur un checkout fictif isolé. Exécuter exclusivement le générateur officiel, `--check`, préflight et QA native sur le même HEAD ; ne pas fabriquer le SW/les empreintes. Aucun déploiement, CI, PR/merge, migration ou écriture Supabase réelle, ni modification de `main`. `TRACE_DEFERRED_NOT_RELEASED` inchangé. **Production NO-GO** ; estimation historique **58 % ±10**, sans mise à jour sans validation intégrée.
+
+---
+
 ## 26 octobre 2026 — Porte de publication : intégrité AVANT et APRÈS tests
 
 Branche exclusive : `trace-5.37.0-international-accounts-fx`. **HEAD code/test contrôlé avant ce document :** `7e49a21c8eeb02bd963a43289c2eb29c0a504b37`. Base de ce lot `2aefb6b04787a68b7c0e9e9c76b0aa9f9de60746` (le HEAD a évolué dans d'autres reprises ; toujours re-vérifier). `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`, inchangée. Pas de PR, merge, Actions/CI, déploiement ni écriture Supabase. Commits `[skip ci]` uniquement.
