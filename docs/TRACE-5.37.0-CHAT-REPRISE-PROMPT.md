@@ -850,3 +850,13 @@ Les nouveaux scripts JS sont syntaxiquement compilés sous V8. La comparaison Gi
 7. Sauvegarde réelle fraîche **sous autorisation**, restauration isolée, plan de gel/rollback compatible avec de nouvelles écritures FX. Checklist GO/NO-GO avec preuves puis autorisation explicite avant fusion/publication.
 
 Les changements doivent s'enchaîner sans solliciter un accord après chaque lot déjà validé. Commencer par vérifier GitHub et les documents, inspecter le code, lancer les tests possibles et avancer sur des corrections effectives ; si l'environnement ne permet pas une dépendance, passer à un chantier indépendant. À chaque bilan significatif : fichiers, commits exacts, tests **effectivement** lancés et niveaux de preuve, bugs corrigés, limites, NO-GO/GO. Surveiller la longueur de la conversation et préparer un nouveau prompt complet si nécessaire.
+
+## Addendum de reprise — 26 octobre 2026, après le lot « validation par compte »
+
+**Toujours vérifier le HEAD GitHub réel**, puis lire `docs/TRACE-5.37.0-HANDOFF.md`, `docs/TRACE-5.37.0-PREVIEW-READINESS.md` et `docs/TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md` : ce prompt contient aussi des repères plus anciens qui ne doivent pas remplacer la branche candidate courante.
+
+Dernières modifications conservées : « À valider » par compte personnel actif, avec compteur et devise native, filtre périmé automatiquement réinitialisé, pagination de 40, cible tactile premium. Correction d'un **défaut de démarrage introduit dans la précédente reprise** : binder les quatre boutons d'Activité via `$$('#activityTabs .tab').forEach` et **jamais** `$('#activityTabs .tab').forEach`. Correctif effectif `403dde415889b8f5945617294df65c87feb6df52` ; anti-régression `35c1947575bb81b7afa1b1bf394352e798530ec2`.
+
+QA effectivement refaite sur sources du candidat : **23/23 tests ciblés V8 simulés** (9 Activité, 6 clavier/démarrage binder, 8 comptes) ; **7/7 scénarios bootstrap V8 avec DOM synthétique**, le code réel de l'app et des fixtures, sans Supabase. Aucun vrai checkout Node intégral, Chromium, Safari ni PostgreSQL requalifié. Les résultats doivent rester catégorisés correctement.
+
+Urgence niveau A : obtenir un checkout complet, exécuter `node scripts/test-trace-native.mjs`, **générer le SW uniquement par `node scripts/build-trace-preview-pwa.mjs`** puis `--check` (six modules différés nouveaux absents du SW actuel), tester navigateur réel/iPhone et demander autorisation distincte avant une nouvelle preview Vercel. La preview antérieure au SHA `2c312f00` est obsolète. **Aucun changement main, aucune migration Supabase réelle, aucun déploiement, aucun déverrouillage de `TRACE_DEFERRED_NOT_RELEASED` et production NO-GO.**
