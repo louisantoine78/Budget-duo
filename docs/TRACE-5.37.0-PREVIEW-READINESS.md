@@ -177,3 +177,16 @@ La nouvelle garde **ne remplace pas** la régénération : **exécuter exclusive
 - **7/7 scénarios de bootstrap de l'application en DOM synthétique V8** avec sources réelles, sans Supabase ou accès bancaire.
 
 **Non testés dans cette reprise :** Node natif sur dépôt complet, Chromium réel, Safari physique, PGlite/PostgreSQL et migrations, PWA installée réellement. Aucun déploiement, aucun changement `main`, aucune migration réelle, quarantaine `TRACE_DEFERRED_NOT_RELEASED` maintenue. **Production toujours NO-GO**.
+
+
+## 26 octobre, reprise du soir — contrôle des deux jambes des virements en attente
+
+**Départ vérifié :** `dd36208e0eef873918e667a378924094685b0d83`. Le HEAD évolue ; toujours reconsulter GitHub. `main` est restée au stable `02c70f50e7e51da79b77a91dde96a03c6c719909`.
+
+**Défaut corrigé :** « Activité → À valider » ne référençait que `t.accountId`. Un virement en attente était donc absent du compte destinataire `t.toAccountId` (notamment CAD → EUR et les virements reçus du partenaire). `renderActivity` et le compteur du bouton « À valider » prennent maintenant en compte chacune des jambes **uniquement pour les `type==='transfer'`**, et seulement si ce compte appartient à `visibleBankAccounts(me)`. L'opération est **comptée une seule fois** dans « Tous mes comptes » ; chaque compte actif impliqué augmente individuellement son propre compteur de 1.
+
+**Preuve et UX :** le filtre du compte destinataire, ou une opération reçue dont la source n'est pas visible au membre courant, emploie `TraceInternational.amountOnAccount(t,account,'destination')`, et jamais le montant CAD source ou `amountCAD`. Le filtre du compte source emploie la jambe `'source'`. Les lignes précisent « Virement émis » / « Virement reçu ». La date et la pagination intermensuelle sont préservées. En cas de preuve destination absente, incohérente ou fractionnaire au-delà du centime, affichage « Montant bancaire à vérifier ». Aucune création/mutation du journal et aucune deuxième dépense.
+
+**Tests vérifiés en V8 isolé avec le code candidat réel :** `35/35` scénarios de navigation/activité/comptes en attente (9 quatre onglets, 7 clavier, **19** filtre et transfert). Les nouveaux tests couvrent source et destinataire CAD/EUR, reçu depuis un compte partenaire sans révéler sa devise bancaire, comptes non accessibles/archivés, statut confirmé, unicité globale, compteurs et précision **du moteur International réel** (46,20 EUR et refus de 72,30 EUR déduit d'un montant CAD). Syntaxe JavaScript candidat interprétable : OK. Les `7/7` scénarios de bootstrap fictif ont aussi été relancés avec succès.
+
+**Limites explicites :** ce sont des harnais V8 synthétiques ; pas de test Node natif sur clone, PGlite/PostgreSQL/Auth/RLS/CAS, navigateur Chromium réel ni Safari iPhone. Le conteneur avec Node 22 n'a toujours pas accès DNS à `github.com`, empêchant le checkout complet. Le SW hors ligne **n'a pas été régénéré** et continue à manquer six scripts différés. Ne le modifier que via `node scripts/build-trace-preview-pwa.mjs` + `--check` sur checkout complet. Aucun déploiement, aucune migration, aucune CI ; quarantaine `TRACE_DEFERRED_NOT_RELEASED` ; **production NO-GO**.
