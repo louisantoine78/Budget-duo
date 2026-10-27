@@ -21,8 +21,9 @@ L'application comprend déjà les grands parcours de gestion individuelle/Couple
 
 1. Obtenir un checkout intégral, propre et vérifiable du HEAD actuel.
 2. Exécuter **uniquement** `node scripts/build-trace-preview-pwa.mjs` pour reconstruire le SW **du laboratoire** puis `node scripts/build-trace-preview-pwa.mjs --check`. Ne jamais écrire les octets SW à la main. L'ancien cache Git manque toujours **six scripts différés** effectivement présents sur la branche.
-3. Lancer `node scripts/test-trace-native.mjs --report trace-native-evidence.json`. L'inventaire de cette reprise compte **104 fichiers `*.test.cjs`**, avec les contrôles de syntaxe et scripts supplémentaires pilotés par le runner. Corriger tout échec : aucune suite ignorée et aucun zéro-test autorisé.
-4. Vérifier que les tests natifs, l'empreinte du SW et les garde-fous financiers sont cohérents avec **le même HEAD**. Ne pas mélanger les rapports d'anciennes branches.
+3. Préqualifier rapidement avec `node scripts/test-trace-native.mjs --preflight --report trace-preflight.json`. Ce contrôle **lecture seule** compare l'inventaire HTML/manifeste au cache SW et lance le générateur officiel en `--check`. Il refuse les six fichiers manquants, les sources externes, les anciens caches et les identifiants/scope incorrects. **Un préflight vert retourne code 0, mais `report.passed=false` : aucun test financier n'a été exécuté.**
+4. Lancer ensuite `node scripts/test-trace-native.mjs --report trace-native-evidence.json` pour vérifier l'intégralité des **106 suites `*.test.cjs`** actuellement recensées (dont les nouvelles suites `trace-preview-static-inventory.test.cjs` et `trace-preview-native-preflight-isolation.test.cjs`). Le runner refuse une suite manquante/vide et un résultat zéro-test. Corriger tout échec ; ne jamais ignorer une suite.
+5. Vérifier que les tests natifs, l'empreinte du SW et les garde-fous financiers sont cohérents avec **le même HEAD**. Ne pas mélanger les rapports d'anciennes branches.
 
 **Condition de sortie :** SW généré et `--check` vert + runner Node vert et identifié par SHA + zéro connexion/donnée réelle.
 
@@ -59,3 +60,11 @@ L'application comprend déjà les grands parcours de gestion individuelle/Couple
 **Avancement global préalablement indiqué : ~58 % ±10 points, estimation illustrative non recalculée.** Les pourcentages ne justifient jamais de franchir une porte sans preuves.
 
 Voir également `TRACE-5.37.0-HANDOFF.md`, `TRACE-5.37.0-PREVIEW-READINESS.md`, `TRACE-5.37.0-RELEASE-CHECKLIST.md` et `TRACE-5.37.0-UX-VALIDATED-GAP-AUDIT.md`.
+
+## 27 octobre — Nouvelle préqualification technique, sans publication
+
+- Nouveau fichier `scripts/trace-preview-static-inventory.cjs` : inventaire **pur et local** du cache (HTML, manifest, SW, CSS, JS, SVG, PNG, modules PDF.js) avec une liste explicite des fichiers manquants/non autorisés. Ce n'est pas une vérification de contenu cryptographique : seul **le générateur officiel `--check`** fait foi pour l'empreinte octet par octet.
+- `scripts/test-trace-native.mjs --preflight --report trace-preflight.json` fournit un **diagnostic rapide avant toute suite**, retourne immédiatement un échec si le cache est périmé, sans lancer les tests financiers. Sur la branche actuelle, il doit refuser le SW ancien qui omet six modules différés. Si l'inventaire est correct et `--check` vert, il retourne code de sortie 0 mais conserve `report.passed=false`, car la suite financière intégrale n'a pas tourné.
+- `scripts/test-trace-native.mjs` refuse aussi la réussite vacante si aucun fichier de test ni scénario n'a été exécuté. Test `tests/trace-preview-static-inventory.test.cjs` : **8/8 contrôles V8 simulés**. La logique du runner a été testée dans quatre scénarios V8 simulés (cache périmé, préflight vert, zéro suite, une suite fictive). La nouvelle suite `tests/trace-preview-native-preflight-isolation.test.cjs` embarque quatre scénarios **Node natifs à exécuter sur checkout**, avec reconstruction SW **dans un dossier temporaire fictif** uniquement.
+- Accueil : badge global ne double plus un virement en attente dont les deux jambes sont sur les comptes actifs du même membre ; les comptes individuels gardent chacun leur propre compte d'opérations en attente. **9/9 tests ciblés Accueil en V8**, plus **8/8 règlements Couple et 35/35 Activité** relancés avec les sources candidates.
+- **Porte A non franchie :** aucun checkout complet dans le conteneur, aucun SW candidat régénéré, aucune campagne Node native intégrale. Les 106 suites restent à exécuter dans un vrai checkout ; le SW actuel reste périmé. Aucune modification de `main`, aucune CI/déploiement/DB réelle, quarantaine `TRACE_DEFERRED_NOT_RELEASED` inchangée ; **production NO-GO**.
