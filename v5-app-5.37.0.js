@@ -1601,6 +1601,15 @@ function openManualTransaction(preferredKind='expense'){
    who=budget&&expense?$m('manualTxBeneficiary').value:me,
    friends=Number($m('manualFriendsAmount').value||0),otherPart=Number($m('manualPartnerAmount').value||0),
    selectedKind=kind;
+  // Read-only French deferred cards must not trigger an FX request while
+  // typing into a form that cannot save. No provisional CAD/budget impact.
+  try{
+   traceRefuseUnqualifiedDeferredWrite('transactions',{accountId:from?.id,
+    ...(['transfer','card_payment'].includes(kind)?{toAccountId:destination?.id}:{})});
+  }catch{
+   preview.textContent='Carte à débit différé : simulation uniquement en lecture seule. Aucune écriture possible.';
+   return;
+  }
   if(fromCurrency==='CAD'){
    preview.textContent=movementImpactText(kind,amount||0,who,friends,otherPart);
   }else if(amount===null||!(amount>0)){
@@ -1675,6 +1684,17 @@ function openManualTransaction(preferredKind='expense'){
    budget=def.budget!=='none',categoryId=budget?$m('manualTxCategory').value:'',
    beneficiary=budget&&def.budget!=='income'?$m('manualTxBeneficiary').value:me;
   if(!(amount>0)||!Number.isFinite(amount)||!date||!accountId||!bankAccount||budget&&!categoryId){error.textContent='Vérifie le montant au centime, le compte et la catégorie éventuelle.';return;}
+  // Deferred accounts are still read-only. Reject before FX lookup or any
+  // asynchronous work, including attempted settlement *to* such a card.
+  // The central persistence guard remains the final defense in depth.
+  try{
+   traceRefuseUnqualifiedDeferredWrite('transactions',{accountId,
+    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{})});
+  }catch(e){
+   error.textContent='Carte à débit différé : écritures non activées. ' +
+    'Utilise la simulation en lecture seule ; aucune opération enregistrée.';
+   return;
+  }
   if(def.legacyOnly||!Guide.allowed(kind,accountType(bankAccount),def.direction===1?'in':'out')){
    error.textContent='Cette nature ne correspond pas au compte bancaire choisi.';return;
   }

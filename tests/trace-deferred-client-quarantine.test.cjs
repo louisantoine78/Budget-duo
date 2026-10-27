@@ -70,3 +70,17 @@ test('unrelated collections cannot silently unlock any account change',()=>{
  assert.doesNotThrow(()=>run('household',{id:'settings'}));
  assert.doesNotThrow(()=>run('investments',{id:'nonbank'}));
 });
+
+test('manual deferred UX rejects before an FX lookup in both live preview and save',()=>{
+ const preview=app.indexOf(' const pending=manual?Promise.resolve(');
+ const previewGuard=app.lastIndexOf("traceRefuseUnqualifiedDeferredWrite('transactions'",preview);
+ const previewKind=app.lastIndexOf(' const amount=window.TraceInternational.exactMoney(',preview);
+ assert.ok(previewGuard>previewKind&&previewGuard<preview,
+  'Deferred preview must fail closed before attempting a historical FX quote');
+ const handler=app.indexOf(" $m('saveManualTx').onclick=async()=>{");
+ const quote=app.indexOf('await window.TraceInternational.getRate(currency,date)',handler);
+ const guard=app.indexOf("traceRefuseUnqualifiedDeferredWrite('transactions',{accountId,",handler);
+ assert.ok(handler>=0&&guard>handler&&guard<quote,
+  'Manual save must reject a deferred card or destination before asynchronous FX work');
+ assert.match(app.slice(guard,quote),/écritures non activées/);
+});
