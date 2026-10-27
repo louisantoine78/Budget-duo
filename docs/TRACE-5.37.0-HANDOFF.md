@@ -1,3 +1,11 @@
+## 27 octobre — Preuve supplémentaire des octets binaires (mise à jour des 20 scénarios)
+
+Un dernier test a été ajouté sur la branche candidate au commit **`31903f1fe23ac08ed62d705320090367b15abc51`**, `[skip ci]` : le **véritable générateur** cache une icône **PNG binaire** 1 × 1 du laboratoire temporaire, puis `--check` réussit. Une modification d'un octet du PNG **sans changement de nom ni de taille** fait échouer `--check` et le préflight natif ; l'inventaire nominal reste valide. Nouvelle empreinte Git du fichier de tests `tests/trace-preview-native-preflight-isolation.test.cjs` : **`a6813da97ed5da817a74e5a0717dea0f50ca818d`**, identique au miroir local exécuté.
+
+**Bilan ciblé final : 21/21 tests réellement exécutés par Node v22.16.0**, 13 contrôles TAP + 8 tests du vrai générateur/runner/preflight sur **mini-laboratoire local fictif vérifié par blobs Git** ; zéro échec, zéro `skip`, zéro `todo`. **Cela ne qualifie pas les 106 fichiers de tests de la candidate complète.** Le SW GitHub demeure périmé (six modules différés manquants) et n'a été ni régénéré ni modifié. Toujours besoin du clone complet, génération via script officiel et `--check` au même HEAD, campagne Node réelle, Chromium/Safari iPhone et PG/PGlite isolé. Aucune CI/PR/merge/Vercel/Supabase réel/main ni changement de quarantaine. **Production NO-GO, 58 % ±10 historique inchangé.**
+
+---
+
 ## 27 octobre — Reprise porte A : faux succès TAP supprimé, sans certification complète
 
 ## 27 octobre — Contrôle natif supplémentaire du générateur (sans checkout intégral)
