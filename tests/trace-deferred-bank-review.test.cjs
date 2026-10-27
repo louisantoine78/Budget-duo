@@ -278,3 +278,24 @@ test('two full settlements cannot reuse one physical bank line',()=>{
  assert.equal(r.cases[0].status,'conflicting_claim');
  assert.equal(r.cases[1].status,'conflicting_claim');
 });
+
+test('reject noncanonical or JavaScript-coerced bank amount strings',()=>{
+ for(const fake of ['1e3','0x10','+12.35',' 12.35 ','12,35','Infinity',
+  'NaN','-12.35','12.345',[],{},true]){
+  const s=settlement({amount:fake,bankEvidence:{
+   ...settlement().bankEvidence,amount:fake}});
+  assert.equal(run([doc()],[s]).cases[0].status,'invalid_settlement');
+  assert.throws(()=>reviewSnapshot({statement:doc(),settlement:s}),/incomplet/);
+  assert.equal(run([doc({rows:[row({amount:fake})]})]).
+   cases[0].status,'source_incomplete');
+ }
+});
+test('canonical one-cent native bank line remains locally reviewable',()=>{
+ const docOne=doc({rows:[row({amount:'0.01'})]});
+ const paid=settlement({amount:'0.01',bankEvidence:{
+  ...settlement().bankEvidence,amount:'0.01'}});
+ const snapshot=reviewSnapshot({statement:docOne,settlement:paid});
+ const result=run([docOne],[paid],[{settlementId:paid.id,approved:true,snapshot}]);
+ assert.equal(result.cases[0].status,'manual_review_current');
+ assert.equal(result.financialChanges,0);
+});
