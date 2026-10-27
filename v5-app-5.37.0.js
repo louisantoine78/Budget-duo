@@ -4348,6 +4348,7 @@ function renderCsvUnparsedReviewQueue(){
   btn.onclick=()=>openCsvUnparsedReview(btn.dataset.csvUnparsedOpen));
 }
 
+let activityReviewVisibleCount=40;
 function renderActivity(){
  renderCsvUnparsedReviewQueue();
  traceActivityControls();
@@ -4362,12 +4363,13 @@ function renderActivity(){
  const remaining=state.transactions.filter(t=>t.status!=='confirmed'&&active.has(t.accountId));
  remaining.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||
   String(b.id||'').localeCompare(String(a.id||'')));
+ const visiblePending=remaining.slice(0,activityReviewVisibleCount);
  const legacy=$('#importPendingTransactions');
  if(legacy){
   legacy.classList.toggle('hidden',false);
   legacy.innerHTML=remaining.length?'<div class="trace-unconfirmed-header"><strong>Transactions à compléter</strong><small>'+
    remaining.length+' opération(s) à contrôler, tous mois confondus</small></div>'+
-   '<div class="trace-unconfirmed-rows">'+remaining.map(t=>{
+   '<div class="trace-unconfirmed-rows">'+visiblePending.map(t=>{
     const account=state.accounts.find(a=>a.id===t.accountId);
     const amount=account?window.TraceInternational.amountOnAccount(t,account,'source'):null;
     // Unknown native bank proof must not borrow a historical CAD valuation.
@@ -4378,10 +4380,16 @@ function renderActivity(){
      '<span><strong>'+esc(t.name||'Opération')+'</strong><small>'+
      esc(shortAccountLabel(account))+' · '+esc(t.date||'Date à préciser')+
      '</small></span><b>'+esc(value)+'</b></button>';
-   }).join('')+'</div>':
+   }).join('')+'</div>'+
+   (remaining.length>visiblePending.length?
+    '<button type="button" class="trace-review-more" data-review-more>Voir '+
+    Math.min(40,remaining.length-visiblePending.length)+' opérations de plus · '+
+    (remaining.length-visiblePending.length)+' restantes</button>':''):
    '<p class="empty-note">Aucune opération à valider sur tes comptes actifs.</p>';
   legacy.querySelectorAll('[data-import-pending]').forEach(button=>
    button.onclick=()=>editTransaction(button.dataset.importPending,true));
+  const more=legacy.querySelector?.('[data-review-more]');
+  if(more)more.onclick=()=>{activityReviewVisibleCount+=40;renderActivity();};
  }
  const picker=$('#activityMonthPicker');if(picker)picker.value=activityMonth;
  const label=$('#activityMonthDisplay');if(label)label.textContent=monthLabel(activityMonth);
