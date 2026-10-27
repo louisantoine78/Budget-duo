@@ -58,3 +58,28 @@ test('single real node:test case is valid without printed legacy PASS markers',(
  assert.equal(checkSuiteResult({status:0,nativeSuite:true,
   stdout:'# tests 1\n# pass 1\n# fail 0\n'}).passed,true);
 });
+
+test('one ignored, TODO or cancelled case never counts as an entirely passing native suite',()=>{
+ const base='# tests 2\n# pass 1\n# fail 0\n';
+ for(const marker of ['# skipped 1\n','# todo 1\n','# cancelled 1\n']){
+  const report=evaluate(base+marker);
+  assert.equal(report.passed,false,marker);
+  assert.equal(report.reportedScenarios,0,marker);
+ }
+ // A maliciously contradictory summary must fail even if it says all passed.
+ for(const marker of ['# skipped 1\n','# todo 1\n','# cancelled 1\n'])
+  assert.equal(evaluate('# tests 2\n# pass 2\n# fail 0\n'+marker).passed,false);
+});
+test('native child-process TAP with a skipped banking case is rejected',t=>{
+ const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+ const {spawnSync}=require('node:child_process');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'trace-tap-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const file=path.join(dir,'sandbox.test.cjs');
+ fs.writeFileSync(file,"const {test}=require('node:test');test('ok',()=>{});test.skip('bank proof not checked',()=>{});");
+ const env={...process.env};delete env.NODE_TEST_CONTEXT;
+ const run=spawnSync(process.execPath,['--test','--test-reporter=tap',file],
+  {encoding:'utf8',timeout:10000,env});
+ assert.equal(run.status,0,run.stderr);
+ assert.match(run.stdout,/# skipped 1/);
+ assert.equal(checkSuiteResult({status:run.status,stdout:run.stdout}).passed,false);
+});
