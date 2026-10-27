@@ -1,5 +1,16 @@
 # TRACE 5.37.0 International — étapes restantes vérifiables (27 octobre 2026)
 
+## 27 octobre — Garde anti-faux-positifs Node renforcée (porte A encore NON franchie)
+
+- **GitHub contrôlé au début de cette reprise :** HEAD candidate `1aa3077a4a481139284fda802893e6d83a0f85a8` ; `main` inchangée `02c70f50e7e51da79b77a91dde96a03c6c719909`. Les commits du lot `2c0c4235` et `c169557c` sont exclusivement sur `trace-5.37.0-international-accounts-fx`, chacun avec `[skip ci]`.
+- **Faux vert reproduit avec Node 22 natif :** un processus `node --test` retournait statut 0, `# tests 2`, `# pass 1`, `# skipped 1` ; le contrôleur précédent déclarait `passed=true`. Le contrôle refuse maintenant `pass !== tests`, ainsi que toute valeur `skipped`, `todo` ou `cancelled` non nulle, y compris dans un résumé contradictoire. Aucun test ignoré ne certifie la campagne.
+- **Régression nouvelle : 13/13 tests `node --test` réels sous Node v22.16.0**, sur un *miroir isolé de deux fichiers* dont les SHA Git ont été comparés aux blobs exacts de GitHub après les deux commits : `5be1aa77fd1030a16751bf16f2af64df677a7ecc` (moteur) et `63f5b3787afa578345d23d5d327241f0a9db41d0` (tests). Cela comprend un vrai sous-processus Node avec test bancaire volontairement ignoré, maintenant refusé.
+- **Limites fermes :** ce résultat n'est **pas** une exécution native des **106 fichiers `*.test.cjs` du checkout complet**, ni une régénération ou validation du SW laboratoire, ni Chromium/Safari, ni PostgreSQL/PGlite. L'environnement local ne résout toujours pas `github.com` pour `git clone`; le connecteur permet la lecture/écriture par fichier, mais pas la matérialisation vérifiée d'un checkout complet ici. Aucun SW réécrit ; les six modules différés restent absents du cache enregistré. La porte A est **NON franchie**.
+- **Étape immédiate inchangée :** checkout intégral propre du SHA courant ; `node scripts/build-trace-preview-pwa.mjs` ; `node scripts/build-trace-preview-pwa.mjs --check` ; `node scripts/test-trace-native.mjs --preflight --report trace-preflight.json` ; puis `node scripts/test-trace-native.mjs --report trace-native-evidence.json`. Examiner chaque test ignoré comme blocage, sans le contourner. Sans droits supplémentaires : aucune CI, preview Vercel, Supabase réel, PR, merge ou changement de `main`. `TRACE_DEFERRED_NOT_RELEASED` maintenu. Production **NO-GO** ; estimation **58 % ±10**, non recalculée.
+
+---
+
+
 > Référence candidate au début de cette reprise : `e0dcb2cade5e1bed36d22f475051cfc5e2338d07`. Résoudre le HEAD réel lors de chaque reprise. Branche de développement unique : `trace-5.37.0-international-accounts-fx`. Stable `main` vérifiée : `02c70f50e7e51da79b77a91dde96a03c6c719909`.
 >
 > Cette page est un **suivi de portes de qualité**, pas une annonce de release. Aucun auto-déploiement, PR, merge, migration de base réelle ou passage en production. Tous les nouveaux commits sont `[skip ci]`. Quarantaine `TRACE_DEFERRED_NOT_RELEASED` maintenue.
