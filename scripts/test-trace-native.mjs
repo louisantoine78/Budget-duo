@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {checkSuiteResult,sourceUsesNodeTest} from './trace-native-suite-evidence.cjs';
 import {checkLabStaticInventory} from './trace-preview-static-inventory.cjs';
+import {checkCommittedSuiteInventory} from './trace-native-suite-inventory.cjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const reportIndex=process.argv.indexOf('--report');
@@ -59,12 +60,33 @@ if(preflightOnly||!report.preflight.passed){
  }
  process.exit(report.preflight.passed?0:1);
 }
+// Inspect the immutable local HEAD tree, not a mutable remote branch or a count.
+// Reject missing or unexpected suites before executing untrusted test code.
+const localTestFiles=readdirSync(join(root,'tests')).filter(n=>n.endsWith('.test.cjs')).sort();
+const committed=spawnSync('git',['ls-tree','-r','--name-only','HEAD','--','tests/'],
+ {cwd:root,encoding:'utf8',timeout:10000,maxBuffer:1024*1024});
+report.committedSuites=checkCommittedSuiteInventory({
+ treeOutput:committed.stdout,files:localTestFiles,
+ exitCode:committed.status,signal:committed.signal,error:committed.error
+});
+if(!report.committedSuites.passed){
+ report.summary={preflightPassed:true,committedSuiteInventoryPassed:false,
+  trackedSuites:report.committedSuites.trackedCount,
+  checkoutSuites:report.committedSuites.checkoutCount,
+  missingTrackedSuites:report.committedSuites.missing,
+  unexpectedSuites:report.committedSuites.unexpected,
+  testFilesExecuted:0};
+ if(reportPath)writeFileSync(resolve(reportPath),JSON.stringify(report,null,2)+'\n');
+ process.stderr.write('TRACE native suite inventory NO-GO: checkout does not match Git HEAD.\n');
+ process.stdout.write(JSON.stringify(report.summary)+'\n');
+ process.exit(1);
+}
 for(const file of [...active].sort()){
  const run=spawnSync(process.execPath,['--check',file],{cwd:root,encoding:'utf8'});
  report.syntax.push({file,passed:run.status===0});
  if(run.status!==0)process.stderr.write(run.stderr||run.error?.message||'Syntax check failed');
 }
-for(const file of readdirSync(join(root,'tests')).filter(n=>n.endsWith('.test.cjs')).sort()){
+for(const file of localTestFiles){
  const run=spawnSync(process.execPath,['--test','--test-reporter=tap',join('tests',file)],{cwd:root,encoding:'utf8',
   timeout:60000,maxBuffer:8*1024*1024});
  const nativeSuite=sourceUsesNodeTest(readFileSync(join(root,'tests',file),'utf8'));
@@ -77,11 +99,13 @@ for(const file of readdirSync(join(root,'tests')).filter(n=>n.endsWith('.test.cj
 }
 // An empty checkout is never a successful quality gate, even if every
 // reported (empty) array would otherwise pass vacuously.
-report.passed=report.preflight.passed&&report.syntax.length>0&&
+report.passed=report.preflight.passed&&report.committedSuites.passed&&report.syntax.length>0&&
  report.suites.length>=MINIMUM_TEST_FILES&&report.suites.some(x=>x.reportedScenarios>0)&&
  report.syntax.every(x=>x.passed)&&report.suites.every(x=>x.passed);
 report.summary={syntaxFiles:report.syntax.length,testFiles:report.suites.length,
  expectedMinTestFiles:MINIMUM_TEST_FILES,suiteFloorMet:report.suites.length>=MINIMUM_TEST_FILES,
+ committedSuiteInventoryPassed:report.committedSuites.passed,
+ trackedSuiteFiles:report.committedSuites.trackedCount,
  reportedScenarios:report.suites.reduce((n,x)=>n+x.reportedScenarios,0),
  failedFiles:report.suites.filter(x=>!x.passed).length};
 if(reportPath)writeFileSync(resolve(reportPath),JSON.stringify(report,null,2)+'\n');
