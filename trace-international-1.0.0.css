@@ -143,6 +143,9 @@
 .trace-activity-review-intro h2{margin:0 0 5px;font-size:17px;color:#174b3c}
 .trace-activity-review-intro p{margin:0;color:#516b60;font-size:13px;line-height:1.5}
 #activityReview{min-width:0;padding-bottom:22px}
+.trace-review-account-label{display:flex;flex-direction:column;gap:6px;margin:4px 0 12px;color:#365c4e;font-size:12px;font-weight:750;min-width:0}
+.trace-review-account-label .input{display:block;width:100%;min-height:44px;border-radius:13px;border:1px solid #c9dbd1;background:#fffefa;padding:10px 12px;color:#174b3c;font:inherit;font-size:14px;max-width:100%;text-overflow:ellipsis}
+.trace-review-account-label .input:focus-visible{outline:3px solid #2d8062;outline-offset:2px}
 #activityReview .trace-unconfirmed-row{min-height:55px}
 .trace-review-more{display:block;width:100%;margin:13px 0 4px;padding:12px 14px;min-height:44px;border:1px solid #bad8c8;border-radius:14px;background:#f4faf6;color:#164a3b;font:inherit;font-size:13px;font-weight:750;text-align:center;cursor:pointer}
 .trace-review-more:focus-visible{outline:3px solid #2d8062;outline-offset:2px}
