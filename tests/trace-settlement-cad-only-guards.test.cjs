@@ -36,7 +36,7 @@ function mount(original=null){
  };
  node('#settleAmount').value='50';
  node('#settleDate').value='2026-10-20';
- const deps={state:{accounts},window:{TraceInternational:I},
+ const deps={state:{accounts,transactions:[]},window:{TraceInternational:I},
   $:node,openSheet:(title,html)=>openings.push({title,html}),
   closeSheet:()=>{},coupleBalance:()=>50,
   shortMemberName:n=>n==='la'?'Membre A':'Membre B',
@@ -56,6 +56,7 @@ function mount(original=null){
   async submit({amount='50',date='2026-10-20',payer='la',from='la-ca',to='partner-ca'}={}){
    node('#settleAmount').value=amount;node('#settleDate').value=date;
    node('#settlePayer').value=payer;
+   node('#settlePayer').onchange?.();
    node('#settleFrom').value=from;node('#settleTo').value=to;
    const handler=node('#saveSettlement').onclick;
    if(typeof handler!=='function')return false;
@@ -101,8 +102,8 @@ test('new CAD settlement posts one transfer with two verified CAD legs, not inco
 test('foreign checking accounts and credit cards are absent from CAD settlement selector',()=>{
  const m=mount(),from=m.node('#settleFrom').innerHTML,
   to=m.node('#settleTo').innerHTML;
- assert.match(from,/la-ca/);assert.doesNotMatch(from,/la-eur|la-card/);
- assert.match(to,/partner-ca/);assert.doesNotMatch(to,/partner-eur/);
+ assert.match(from,/partner-ca/);assert.doesNotMatch(from,/partner-eur|la-card|la-ca/);
+ assert.match(to,/la-ca/);assert.doesNotMatch(to,/la-eur|la-card|partner-ca/);
 });
 test('fractional cents, invalid date, wrong owner and foreign account fail closed',async()=>{
  for(const input of [{amount:'42.001'},{amount:'NaN'}, {amount:'-5'},
