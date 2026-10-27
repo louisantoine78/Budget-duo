@@ -54,7 +54,7 @@ if(preflightOnly||!report.preflight.passed){
   process.stderr.write('TRACE laboratory preflight NO-GO: '+
    [...inventory.errors,report.preflight.generatorDiagnostic].filter(Boolean).join(' | ')+'\n');
  }
- process.exit(report.passed?0:1);
+ process.exit(report.preflight.passed?0:1);
 }
 for(const file of [...active].sort()){
  const run=spawnSync(process.execPath,['--check',file],{cwd:root,encoding:'utf8'});
