@@ -3,7 +3,7 @@
 const BASE=new URL('./',self.location.href);
 const ENTRY=new URL('trace-international-preview.html',BASE);
 const PREFIX='trace-lab-537:'+encodeURIComponent(BASE.pathname)+':';
-const CACHE=PREFIX+'e1cc947aa14baed163cdb713';
+const CACHE=PREFIX+'e57141296a5bb3c0b93343a9';
 const ASSETS=[
  "assets/trace-wallet-v1-180.png",
  "assets/trace-wallet-v1-192.png",
@@ -19,7 +19,13 @@ const ASSETS=[
  "trace-card-payment-detail-1.0.0.js",
  "trace-deferred-bank-review-1.0.0.js",
  "trace-deferred-debit-1.0.0.js",
+ "trace-deferred-evidence-intake-1.0.0.js",
+ "trace-deferred-evidence-lab-1.0.0.js",
  "trace-deferred-lab-ui-1.0.0.js",
+ "trace-deferred-purchase-evidence-1.0.0.js",
+ "trace-deferred-statement-bridge-1.0.0.js",
+ "trace-deferred-statement-review-ui-1.0.0.js",
+ "trace-deferred-write-plan-1.0.0.js",
  "trace-duplicate-compare-1.0.0.css",
  "trace-duplicate-compare-1.0.0.js",
  "trace-edit-compact-1.0.0.css",
@@ -36,7 +42,7 @@ const ASSETS=[
  "trace-import-guide-1.2.1.js",
  "trace-import-unified-1.0.0.css",
  "trace-insights-1.0.0.css",
- "trace-insights-1.0.0.js",
+ "trace-insights-5.37.0.js",
  "trace-install-1.1.0.css",
  "trace-international-1.0.0.css",
  "trace-international-1.0.0.js",
@@ -47,7 +53,7 @@ const ASSETS=[
  "trace-movement-5.32.0.css",
  "trace-movement-5.36.0.js",
  "trace-movement-guidance-1.0.0.css",
- "trace-operation-ui-1.0.0.js",
+ "trace-operation-ui-5.37.0.js",
  "trace-pdfjs-local-loader-1.0.0.mjs",
  "trace-preview-pwa-1.0.0.js",
  "trace-reminders-1.0.0.js",
