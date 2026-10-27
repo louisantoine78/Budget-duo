@@ -618,7 +618,8 @@ function homeReviewAccounts(){
  const accounts=visibleBankAccounts(me),notConfirmed=state.transactions.filter(t=>t.status!=='confirmed');
  const existingIds=new Set(state.transactions.map(t=>t.id));
  return accounts.map(a=>{
-  const existing=notConfirmed.filter(t=>t.accountId===a.id).length;
+  const existing=notConfirmed.filter(t=>t.accountId===a.id||
+   (t.type==='transfer'&&t.toAccountId===a.id)).length;
   const drafts=state.smartImports.filter(d=>d.kind==='smart_draft'&&d.status==='pending'&&d.accountId===a.id&&!existingIds.has('t_'+d.id)).length;
   const unresolved=state.importDays.filter(d=>d.accountId===a.id).reduce((n,d)=>n+Math.max(0,Number(d.unresolvedCount)||0),0);
   const csvReview=state.smartImports.filter(d=>d.kind==='csv_unparsed'&&
@@ -638,9 +639,21 @@ function openHomeReviewAccount(id){
  }
  if(row.existing){
   showTab('transactions');
-  const list=state.transactions.filter(t=>t.accountId===id&&t.status!=='confirmed');
+  const account=visibleBankAccounts(me).find(a=>a.id===id);
+  const list=state.transactions.filter(t=>t.status!=='confirmed'&&
+   (t.accountId===id||(t.type==='transfer'&&t.toAccountId===id)));
   openSheet('À vérifier · '+esc(row.name),'<p class="empty-note">Opérations enregistrées mais non confirmées sur ce compte.</p>'+
-   list.map(t=>'<button type="button" class="trace-list-btn" data-home-review-tx="'+esc(t.id)+'"><span><b>'+esc(t.name||'Opération')+'</b><small>'+esc(t.date||'Date à renseigner')+'</small></span><strong>'+money(t.amountCAD||0)+' ›</strong></button>').join(''));
+   list.map(t=>{
+    const incoming=t.type==='transfer'&&t.toAccountId===id;
+    const amount=window.TraceInternational.amountOnAccount(t,account,
+     incoming?'destination':'source');
+    const formatted=amount===null?'Montant bancaire à vérifier':
+     window.TraceInternational.money(Math.abs(amount),window.TraceInternational.currency(account));
+    return '<button type="button" class="trace-list-btn" data-home-review-tx="'+esc(t.id)+'"><span><b>'+
+     esc(t.name||'Opération')+'</b><small>'+esc(t.date||'Date à renseigner')+
+     (t.type==='transfer'?(incoming?' · Virement reçu':' · Virement émis'):'')+
+     '</small></span><strong>'+esc(formatted)+' ›</strong></button>';
+   }).join(''));
   $$('[data-home-review-tx]').forEach(b=>b.onclick=()=>editTransaction(b.dataset.homeReviewTx,true));
   return;
  }
