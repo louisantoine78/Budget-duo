@@ -66,15 +66,21 @@ function checkSuiteResult({status,signal=null,error=null,stdout='',nativeSuite=t
  const skipped=find('skipped'),cancelled=find('cancelled'),todo=find('todo');
  // A partial suite is not a valid release gate: even one skipped, cancelled
  // or TODO case leaves an unverified behaviour. Reject contradictory TAP.
- const nativeGood=native!==null&&native>0&&pass!==null&&pass>0&&
+ const subtests=[...text.matchAll(/^# Subtest: (.+)$/gm)].map(m=>m[1].trim());
+ // Node --test wraps a CJS file with zero registered tests in a successful
+ // one-test TAP file subtest. Require at least one named native test instead.
+ const registeredTests=subtests.some(name=>
+  !/(?:^|[\\/])[^\\/]+\.(?:test|spec)\.[cm]?js$/.test(name));
+ const summaryGood=native!==null&&native>0&&pass!==null&&pass>0&&
   failed===0&&pass===native&&[skipped,cancelled,todo].every(n=>n===null||n===0);
+ const nativeGood=summaryGood&&registeredTests;
  // Node --test wraps a legacy script as one successful TAP case even
  // if the script ran zero financial assertions. Require explicit PASS
  // markers for legacy suites; use executed TAP pass count for node:test.
  const scenarios=nativeSuite?(nativeGood?pass:0):custom;
  const passed=status===0&&!signal&&!error&&scenarios>0&&
   customFailures===0&&!/^not ok \d+\b/m.test(text)&&
-  (native===null||nativeGood);
+  (native===null||(nativeSuite?nativeGood:summaryGood));
  return{passed,reportedScenarios:scenarios,
   reason:passed?'ok':status!==0||signal||error?'process_failed':
    !scenarios?'no_executed_scenarios':'failed_assertion_reported'};
