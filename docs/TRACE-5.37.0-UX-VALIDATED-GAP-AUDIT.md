@@ -342,3 +342,10 @@ Commits : `c9a6b835`, `5ad71fa1`, `d64a2b0e`, `3f62b2db`, `7cbc58a0`, `eb878a36`
 **QA de cette reprise :** 23/23 contrôles V8 ciblés (9 navigation/listes, 6 clavier/binder, 8 propriétaires/comptes/devises), et 7/7 bootstrap en DOM synthétique V8. **Ni tests Node natifs complets, ni navigateur réel, ni Safari, ni PostgreSQL.** Un contrôle de cache statique confirme toujours six modules différés absents du SW généré ; reconstruction avec l'outil officiel obligatoire sur checkout complet.
 
 **Restant UX à qualifier :** filtre sur iPhone physique et VoiceOver, grands volumes en navigateur, comportement au retour d'un écran et au changement de propriétaire dans une session authentifiée fictive, parité des autres sections premium, mode hors-ligne après régénération du cache. Aucun changement `main`, aucune publication, quarantaine bancaire inchangée. **Production NO-GO**.
+
+
+## 26 octobre — Comptes émetteur/destinataire des mouvements à vérifier
+
+Écart UX corrigé : les transferts en attente ne figuraient précédemment que sur la banque `accountId`. Dorénavant, la revue filtrée du compte `toAccountId` retrouve également le virement sans créer une deuxième écriture. Comptage global unique ; comptage par compte de chaque jambe. Texte « Virement reçu » ou « Virement émis ». L'affichage utilise uniquement le montant bancaire **natif de la jambe sélectionnée** et le membre courant ne voit pas la preuve source bancaire du partenaire lors d'une réception. Les preuves destinataires invalides déclenchent « Montant bancaire à vérifier ». Historique et budget inchangés ; tous les mois toujours accessibles, pagination toujours limitée à 40 initialement.
+
+Validation ciblée en V8 simulé sur les véritables sources candidates : **35/35 cas** (9 historiques/sections, 7 clavier, 19 revue dont vrai moteur international) et **7/7 bootstrap**. Tests sur un navigateur et moteur Node natif, Safari iPhone, PGlite/PostgreSQL et tests d'accès serveur toujours nécessaires. Aucun déploiement ni libération des écritures différées, **production NO-GO**.
