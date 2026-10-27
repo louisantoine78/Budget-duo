@@ -1,3 +1,17 @@
+# ADDENDUM PRIORITAIRE — 27 OCTOBRE 2026 — ÉTAT NATIF EXACT APRÈS REPRISE
+
+Lire cet addendum avant les anciens SHA. Dernier HEAD vérifié **avant** cet addendum : `0f5af9fc9809e86452de173974dfc797a582e15c`. Branche exclusive : `trace-5.37.0-international-accounts-fx`. `main` stable contrôlée : `02c70f50e7e51da79b77a91dde96a03c6c719909`. Résoudre le vrai HEAD de nouveau avant chaque modification.
+
+**Code réellement modifié** : `scripts/trace-native-suite-evidence.cjs` (commit `2c0c4235`) et `tests/trace-native-suite-evidence.test.cjs` (`c169557c`). Un vrai Node 22 terminait auparavant 0 avec 2 tests TAP, 1 PASS et 1 SKIP, et la QA déclarait à tort `passed=true`. Maintenant le contrôleur exige `pass === tests`, zéro `fail/skipped/todo/cancelled`; faux vert refusé. **13/13 tests Node natifs ciblés** passés sur un miroir isolé aux SHA Git identiques aux blobs de la branche.
+
+**Tests supplémentaires enregistrés** : `tests/trace-preview-native-preflight-isolation.test.cjs` (commit `036f63f4`) ; trois anti-régressions de cache cryptographique : modification d'octets d'un actif sans changer son nom/taille, altération du SW malgré inventaire intact, interdiction d'URL ou de chemin hors du laboratoire. **7/7 tests Node natifs sur générateur, inventaire et préflight réels dans un laboratoire temporaire fictif**, donc **20/20 scénarios Node ciblés** au total sur six fichiers d'origine contrôlée par SHA. C'est une preuve native *isolée*, **pas** un passage des 106 suites natives de la candidate.
+
+**Documents actualisés :** `docs/TRACE-5.37.0-NEXT-GATES-2026-10-27.md`, `HANDOFF` et `RELEASE-CHECKLIST` (avec résultats, caveats et instructions). Les fichiers de test en GitHub correspondent byte par byte au code testé (empreintes Git de blob `5be1aa77`, `63f5b378`, `680b87bd`), ainsi que les sources du générateur, inventaire et runner.
+
+**Porte A encore non franchie :** DNS GitHub absent du conteneur, donc pas de checkout intégral ; SW candidat inchangé et six modules différés manquants dans le cache. Aucun `node scripts/build-trace-preview-pwa.mjs` / `--check` **sur le vrai checkout candidat**, aucune campagne intégrale 106 suites, aucun Chromium candidat/Safari iPhone ni base PGlite/PostgreSQL 05–12/RLS/CAS. PGlite non présent localement. Prochain chantier : **checkout complet propre**, reconstruction **exclusivement avec le générateur officiel** + `--check`, préflight, campagne native sur même SHA, puis Chromium/Safari et base fictive. Ne pas inventer les résultats ni générer manuellement le SW. Interdiction maintenue de modifier `main`, CI/Actions, PR/merge, Vercel même preview, Supabase hébergé, données bancaires réelles ; `TRACE_DEFERRED_NOT_RELEASED` inchangé, **production NO-GO**. Estimation indicative antérieure ~58 % ±10, non recalculée.
+
+---
+
 # ADDENDUM PRIORITAIRE — 26 OCTOBRE 2026 — GATE DE RELEASE IMMUTABLE
 
 **HEAD code/test vérifié :** `7e49a21c8eeb02bd963a43289c2eb29c0a504b37`, **branche autorisée uniquement** `trace-5.37.0-international-accounts-fx`. Base de ce lot `2aefb6b04787a68b7c0e9e9c76b0aa9f9de60746`. Résoudre à nouveau le vrai SHA à chaque nouvelle conversation, notamment en cas de travaux parallèles. `main` connue `02c70f50e7e51da79b77a91dde96a03c6c719909`.
