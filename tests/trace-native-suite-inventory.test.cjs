@@ -1,6 +1,8 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {checkCommittedSuiteInventory:check}=require('../scripts/trace-native-suite-inventory.cjs');
+const {checkCommittedSuiteInventory:checkRaw}=require('../scripts/trace-native-suite-inventory.cjs');
+// Tests which focus on path matching explicitly provide a clean Git content check.
+const check=input=>checkRaw({contentDiffStatus:0,...input});
 const tree='tests/alpha.test.cjs\ntests/beta.test.cjs\ntests/browser.browser.cjs\n';
 test('exact committed suites, no extras, qualifies locally',()=>{
  const r=check({treeOutput:tree,files:['alpha.test.cjs','beta.test.cjs']});
@@ -92,4 +94,11 @@ test('actual git diff detects same-name mutation and staged mutation',t=>{
  assert.equal(probe().passed,false,'staged test bytes must not qualify');
  assert.equal(git('checkout','HEAD','--','tests/account.test.cjs').status,0);
  assert.equal(probe().passed,true);
+});
+
+test('missing actual Git diff evidence never certifies unverified bytes',()=>{
+ const result=checkRaw({treeOutput:tree,files:['alpha.test.cjs','beta.test.cjs']});
+ assert.equal(result.passed,false);
+ assert.equal(result.gitReadable,true);
+ assert.equal(result.trackedContentsClean,false);
 });
