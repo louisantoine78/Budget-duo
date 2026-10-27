@@ -166,3 +166,37 @@ La syntaxe JS de `v5-app-5.37.0.js` et du fichier de tests PG ajouté a été an
 - Après qualification SQL/Node, vérifier PWA preview/SW régénéré par générateur, puis Safari iPhone et scénario rollback. Ne pas lever `TRACE_DEFERRED_NOT_RELEASED` maintenant.
 
 **Production NO-GO.** Aucun accès aux données financières réelles, aucune fusion, PR, déploiement, exécution d'Actions ni changement de `main`. Estimation globale inchangée : ~58 % ±10 points, en attendant les portes de qualification.
+
+
+## Complément qualité : remboursement/frais dans un prélèvement intégral et formats monétaires (26 octobre 2026)
+
+Départ de cette reprise : `f882545f4384b66909f40cfc2ba1ac61df4bd01a`. Code effectivement testé : `bf4d8a0e94b2c5fc1a21022cc226fdda4f04b7e4`.
+
+### Changements conservateurs
+
+- Le contrôleur `TraceDeferredEvidenceIntake.review` n'autorise plus `fullBatchEvidenceComplete:true` pour un règlement complet sur **un achat unique** si la source carte soumise contient des lignes supplémentaires, notamment remboursement commerçant, frais de carte, autre achat ou paiement reçu. La ligne courante et l'achat peuvent chacun être revus localement, mais cela ne démontre pas le solde net **complet** du cycle. Le marqueur `localEvidenceReviewed` reste donc faux. Un relevé carte limité à un achat unique avec revue renouvelée peut encore montrer un rapprochement documentaire local, non bancaire et sans droit d'écriture.
+- `TraceDeferredBankReview.money` valide désormais les montants importés déjà structurés en centimes natifs décimaux : nombres JS exacts ou chaînes décimales canoniques avec au plus 2 décimales. Rejette les notations exponentielles, hexadécimales, montants négatifs, fractions de centime, textes à virgule ou à espaces non normalisés, booléens/objets. Les parseurs PDF/CSV doivent normaliser leurs montants avant de créer une ligne typée de preuve, sans inventer de valeurs ou de taux FX.
+- Les contrats historiques des cartes Mastercard CAD et les anciens moteurs comptables restent non modifiés. Aucune écriture, confirmation bancaire, accès Supabase ou publication.
+
+Commits (tous `[skip ci]`) :
+
+1. `c11d69e9bae8d3cbc78100e034fa563056985c08` — revue de lot « complet » désormais conservatrice face aux autres mouvements.
+2. `d10ec75fa955831622d83b8d7cf4cca8cc4c9609` — tests de remboursement, frais, autre achat et prélèvement intégral isolé.
+3. `3a8c9cec970ff3a1fd4708e44156d91a4ea0578d` — vérification des chaînes de centimes structurées sans coercition JS.
+4. `bf4d8a0e94b2c5fc1a21022cc226fdda4f04b7e4` — tests des entrées malformées, de 0,01 EUR, des états de preuve.
+
+### Résultat des contrôles sur le HEAD du code
+
+**358 / 358 scénarios V8 simulés, sur 17 suites, aucun échec**. Repartis en quatre groupes distincts :
+- 98 : revue bancaire (42), intake réel entre modules (22), pont sources relevés (7), intake simulé (27) ;
+- 57 : calendrier (17), solde prévisionnel (11), versions futures (13), cycle vie comptes (16) ;
+- 63 : fiche différé (20), paramètres UI (7), projection achat (24), budget (12) ;
+- 140 : moteur bancaire différé (84), plan d'écriture (17), contrat SQL textuel (6), Mastercard + amis (19), labo fictif (14).
+Le JS du fichier candidat principal a passé l'analyse syntaxique V8. Les modules Node fs/path/vm/test étaient **simulés** ; les deux commits de tests ne certifient **pas** des tests natifs ou une base réelle. Une tentative de récupération groupée a échoué côté connecteur puis a été retentée avec succès par petits groupes. Aucun résultat n'a été compté pour le passage avorté.
+
+### Qualification restant obligatoirement ouverte
+
+- **PG/RLS/CAS :** pas de clone Git local, de PGlite/PostgreSQL isolé ou de tests concurrents serveur réellement exécutés dans cette session. La migration 10 demeure candidate, la migration 12 NON APPLIQUÉE. Le verrou `TRACE_DEFERRED_NOT_RELEASED` ne peut pas être relâché.
+- **SW/PWA :** les assets du labo ont changé depuis le cache généré `trace-international-preview-sw.js`. Le générateur `scripts/build-trace-preview-pwa.mjs` existe, mais ne peut pas être exécuté ici sur un checkout intégral ; son mode `--check`, Chromium hors ligne et Safari iPhone restent **non requalifiés**. Ne jamais éditer manuellement le SW ni le SW de production.
+- **Finance :** pour une vérification « complet » sur un relevé carte complexe ou multi-achat, compléter les allocations/remboursements avec preuve bancaire et contrôle serveur atomique avant de requalifier `fullBatchEvidenceComplete`. Les marqueurs `manual_review_current` restent une revue cliente, pas une authentification bancaire.
+- **Publication :** aucune PR, fusion, Action déclenchée manuellement, mise en production ou manipulation des transactions réelles ; `main` intacte. Production **NO-GO** et pourcentage d'avancement global indicatif inchangé (~58 % ±10 points).
