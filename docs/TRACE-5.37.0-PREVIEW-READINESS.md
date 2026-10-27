@@ -117,3 +117,31 @@ La production demeure **NO-GO**, `main` stable `02c70f50e7e51da79b77a91dde96a03c
 **Blocage concret de l'aperçu hors ligne :** lecture statique du service worker de laboratoire sur GitHub (`trace-international-preview-sw.js` : 62 ressources cachées) et des références `script/link` du HTML. Six scripts chargés par la page ne figurent pas dans son inventaire actuel : `trace-deferred-write-plan-1.0.0.js`, `trace-deferred-purchase-evidence-1.0.0.js`, `trace-deferred-evidence-intake-1.0.0.js`, `trace-deferred-evidence-lab-1.0.0.js`, `trace-deferred-statement-bridge-1.0.0.js`, `trace-deferred-statement-review-ui-1.0.0.js`. C'est une **preuve de cache périmé**, pas une exécution du générateur ou de son `--check`.
 
 **À faire avant de montrer une nouvelle prévisualisation hors ligne :** checkout complet du HEAD, `node scripts/test-trace-native.mjs`, génération `node scripts/build-trace-preview-pwa.mjs` **uniquement via son générateur**, puis `--check`, Chromium sur petits écrans, Safari physique et contrôle strict des données fictives/SSO. Le conteneur de cette reprise ne résout pas `github.com` en Git ; le connecteur GitHub a permis les commits, pas un checkout intégral. Aucun SW modifié, aucune prévisualisation publiée, aucune connexion Supabase réelle, quarantaine maintenue et **production NO-GO**. L'ancienne preview Vercel `2c312f00` reste obsolète.
+
+## 26 octobre — Reprise suivante : filtre de validation par compte et bootstrap rétabli
+
+**Base reprise sans réécriture de conception :** `e4e14910e59846a7afc0a2a3fba7bca9e23933e8`. Tous les changements de cette reprise sont dans `trace-5.37.0-international-accounts-fx`, avec `[skip ci]`.
+
+### Livraison réellement enregistrée
+
+- La rubrique **Activité → À valider** dispose désormais d'un sélecteur de compte indépendant des filtres de l'historique. Il présente les **comptes actifs appartenant au membre courant**, la devise native et le nombre d'opérations à examiner pour chacun, y compris zéro. Le mode « Tous mes comptes » continue d'afficher les mouvements de toutes les périodes.
+- La sélection ne persiste pas en banque : elle ne filtre que l'interface. Si le compte n'est plus accessible, a été archivé ou appartenait à l'autre membre, le filtre revient sur « Tous mes comptes ». Modifier le filtre réinitialise la pagination à 40 sans changer le journal. Les montants EUR ne sont jamais déduits d'une valorisation CAD.
+- Formulaire premium à cible tactile de 44 px, libellé explicite, contraste et focus visibles. L'état vide spécifique évite de laisser penser que l'intégralité du foyer n'a aucune opération.
+- **Défaut de bootstrap détecté et corrigé :** le branchement des quatre boutons d'Activité utilisait par erreur `$('#activityTabs .tab').forEach` au lieu du sélecteur multiple `$$('#activityTabs .tab').forEach`. Ce défaut bloquait l'initialisation de la page de laboratoire. Correction définitive au commit `403dde415889b8f5945617294df65c87feb6df52` et test de régression `35c1947575bb81b7afa1b1bf394352e798530ec2`. Une première tentative de correction n'avait pas modifié effectivement le sélecteur ; le démarrage a été relancé et la correction finale vérifiée.
+
+### Contrôles réellement exécutés sur les dernières sources GitHub
+
+- **23/23 scénarios ciblés V8 simulés** : 9 Activité + pagination, 6 navigation/clavier dont régression du sélecteur, 8 filtre par compte et isolation par propriétaire. Zéro échec.
+- **7/7 scénarios de bootstrap avec les vrais modules JavaScript de la candidate chargés ensemble dans un DOM synthétique V8**, sans réseau, ni Supabase. Après diagnostic de l'erreur du sélecteur, les 7 contrôles repassent : entrée fictive, carte canadienne, principal EUR, Couple, taux fictifs, création de compte local et absence de redirection.
+- Analyse syntaxique V8 de `v5-app-5.37.0.js` : réussite.
+
+**Interprétation impérative :** ni ces 23 assertions ni les 7 scénarios bootstrap ne sont des tests Node natifs du checkout intégral, ni des tests PostgreSQL, Chromium réel ou Safari. Les modules `fs/path/node:test` du harnais ciblé sont des doublures V8 ; le bootstrap est un DOM synthétique.
+
+### Portes maintenues ouvertes
+
+1. **Checkout local complet** encore indisponible : l'environnement conteneur ne résout pas `github.com`; la modification de code par le connecteur GitHub ne fournit pas un clone local utilisable.
+2. **Service worker du laboratoire non régénéré :** l'ancien manifeste de 62 ressources ne référence pas les six modules différés introduits depuis ; relancer seulement `node scripts/build-trace-preview-pwa.mjs` puis `--check` sur un checkout complet, jamais modifier le SW manuellement.
+3. Runner Node natif du dépôt entier, rendu réel Chromium, Safari iPhone, PGlite/PostgreSQL migrations 05–12, Auth/RLS/CAS, restauration et protocole de publication restent **non qualifiés** dans cette reprise.
+4. L'ancienne prévisualisation Vercel au SHA `2c312f00` reste distincte de cette version GitHub. Aucune demande ni opération de déploiement ici.
+
+**Sécurité :** `main` / 5.36.5 et données bancaires réelles non modifiées. Quarantaine `TRACE_DEFERRED_NOT_RELEASED` maintenue. Production **NO-GO** ; avancement général maintenu indicativement à **58 % ±10 points**, en attente des qualifications natives et serveur.
