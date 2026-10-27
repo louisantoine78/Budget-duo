@@ -71,7 +71,7 @@ report.committedSuites=checkCommittedSuiteInventory({
 });
 if(!report.committedSuites.passed){
  report.summary={preflightPassed:true,committedSuiteInventoryPassed:false,
-  trackedSuites:report.committedSuites.trackedCount,
+  testFiles:0,trackedSuites:report.committedSuites.trackedCount,
   checkoutSuites:report.committedSuites.checkoutCount,
   missingTrackedSuites:report.committedSuites.missing,
   unexpectedSuites:report.committedSuites.unexpected,
