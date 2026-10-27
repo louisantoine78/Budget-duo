@@ -37,16 +37,44 @@ test('an independently expected row count is checked without claiming completene
  const {createSnapshot,verifySnapshot}=await api;
  assert.throws(()=>verifySnapshot(createSnapshot(payload()),{expectedDocuments:3}),/comptage/);
 });
+test('independent member counts catch incomplete couple backups despite valid SHA-256',async()=>{
+ const {createSnapshot,verifySnapshot}=await api;
+ const couple=payload();
+ couple.household_members.push({household_id:household,
+  user_id:'00000000-0000-4000-8000-000000000003',slot:'partner',display_name:'Partner'});
+ assert.equal(verifySnapshot(createSnapshot(couple),{expectedMembers:2}).members,2);
+ const incomplete=createSnapshot(payload()); // SHA is valid but partner was omitted before snapshot.
+ assert.equal(verifySnapshot(incomplete).integrityVerified,true);
+ assert.throws(()=>verifySnapshot(incomplete,{expectedMembers:2}),/Nombre de membres/);
+});
+test('independent collection counts reject omissions and swapped inventory categories',async()=>{
+ const {createSnapshot,verifySnapshot}=await api;
+ const expectedCollections={accounts:1,transactions:1};
+ const full=createSnapshot(payload());
+ const checked=verifySnapshot(full,{expectedDocuments:2,expectedMembers:1,expectedCollections});
+ assert.deepEqual(checked.collections,expectedCollections);
+ assert.equal(checked.completenessVerified,false);
+ const missing=payload();missing.documents=missing.documents.filter(d=>d.collection==='accounts');
+ const incomplete=createSnapshot(missing); // Internally consistent but missing transaction.
+ assert.equal(verifySnapshot(incomplete).integrityVerified,true);
+ assert.throws(()=>verifySnapshot(incomplete,{expectedCollections}),/Collections différentes/);
+ for(const invalid of [[],null,{accounts:2},{accounts:1,transactions:0},
+  {accounts:1,transactions:1,other:1},{accounts:1,transactions:'1'}])
+  assert.throws(()=>verifySnapshot(full,{expectedCollections:invalid}),/Collections différentes/);
+});
 test('CLI creates and unpacks exclusively local files, refusing any overwrite',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'trace-fictional-snapshot-'));
  try{
-  const raw=path.join(dir,'input.json'),snapshot=path.join(dir,'snapshot.json'),out=path.join(dir,'restored.json');
+  const raw=path.join(dir,'input.json'),snapshot=path.join(dir,'snapshot.json'),out=path.join(dir,'restored.json'),counts=path.join(dir,'source-counts.json');
   await fs.writeFile(raw,JSON.stringify(payload()));
+  await fs.writeFile(counts,JSON.stringify({accounts:1,transactions:1}));
   const run=(...args)=>spawnSync(process.execPath,[path.resolve(__dirname,'../scripts/trace-snapshot.mjs'),...args],{encoding:'utf8'});
   assert.equal(run('create',raw,snapshot).status,0);
   assert.notEqual(run('create',raw,snapshot).status,0);
   assert.equal((await fs.stat(snapshot)).mode&0o777,0o600);
-  assert.equal(run('verify',snapshot,'--expected-documents','2').status,0);
+  assert.equal(run('verify',snapshot,'--expected-documents','2','--expected-members','1',
+   '--expected-collections',counts).status,0);
+  assert.notEqual(run('verify',snapshot,'--expected-members','2').status,0);
   assert.notEqual(run('verify',snapshot,'--expected-documents','3').status,0);
   assert.equal(run('unpack',snapshot,out).status,0);
   assert.deepEqual(JSON.parse(await fs.readFile(out,'utf8')),payload());

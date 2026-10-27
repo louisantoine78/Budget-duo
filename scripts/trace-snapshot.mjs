@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /* Portable local JSON backup, not a database client or a production restore.
  * create raw-export.json snapshot.json [--source-commit SHA]
- * verify snapshot.json [--expected-documents N]
+ * verify snapshot.json [--expected-documents N] [--expected-members N]
+ *   [--expected-collections source-counts.json]
  * unpack snapshot.json restored-export.json
  * Inputs are supplied explicitly; no credentials, network, deletion or overwrite.
  */
@@ -57,7 +58,7 @@ export function createSnapshot(payload,{createdAt=new Date().toISOString(),sourc
   payload:JSON.parse(canonical(payload))};
  return{...content,sha256:checksum(content)};
 }
-export function verifySnapshot(snapshot,{expectedDocuments}={}){
+export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expectedCollections}={}){
  if(!snapshot||snapshot.format!==FORMAT||!/^[a-f0-9]{64}$/.test(snapshot.sha256||''))
   throw Error('Format ou empreinte de sauvegarde invalide');
  const {sha256,...content}=snapshot;
@@ -69,6 +70,19 @@ export function verifySnapshot(snapshot,{expectedDocuments}={}){
   throw Error('Métadonnées de sauvegarde incohérentes');
  if(expectedDocuments!==undefined&&(!Number.isSafeInteger(expectedDocuments)||expectedDocuments<0||actual.documents!==expectedDocuments))
   throw Error('Nombre de documents différent du comptage indépendant attendu');
+ if(expectedMembers!==undefined&&(!Number.isSafeInteger(expectedMembers)||expectedMembers<1||
+    expectedMembers>2||actual.members!==expectedMembers))
+  throw Error('Nombre de membres différent du comptage indépendant attendu');
+ if(expectedCollections!==undefined){
+  if(!expectedCollections||typeof expectedCollections!=='object'||
+     Array.isArray(expectedCollections)||Object.getPrototypeOf(expectedCollections)!==Object.prototype||
+     !Object.entries(expectedCollections).every(([name,count])=>name.length>0&&
+      Number.isSafeInteger(count)&&count>0)||
+     canonical(expectedCollections)!==canonical(actual.collections))
+   throw Error('Collections différentes des comptages indépendants attendus');
+ }
+ // Expected counts must originate from independently queried source tables.
+ // Even matching counts cannot certify the provenance or completeness of the source query.
  return{...actual,sha256,integrityVerified:true,completenessVerified:false};
 }
 export function unpackSnapshot(snapshot){verifySnapshot(snapshot);return JSON.parse(canonical(snapshot.payload));}
@@ -81,8 +95,16 @@ async function main(args){
   if(!args[i+1])throw Error('Valeur manquante : '+name);return args[i+1];};
  if(action==='verify'){
   const expected=option('--expected-documents');
+  const members=option('--expected-members');
+  const collectionsPath=option('--expected-collections');
   if(expected!==undefined&&!/^\d+$/.test(expected))throw Error('Comptage attendu invalide');
-  console.log(JSON.stringify(verifySnapshot(json,{expectedDocuments:expected===undefined?undefined:Number(expected)})));
+  if(members!==undefined&&!/^[12]$/.test(members))throw Error('Comptage des membres attendu invalide');
+  const expectedCollections=collectionsPath===undefined?undefined:
+   JSON.parse(await readFile(resolve(collectionsPath),'utf8'));
+  console.log(JSON.stringify(verifySnapshot(json,{
+   expectedDocuments:expected===undefined?undefined:Number(expected),
+   expectedMembers:members===undefined?undefined:Number(members),expectedCollections
+  })));
  }else{
   const result=action==='create'?createSnapshot(json,{sourceCommit:option('--source-commit')||null}):unpackSnapshot(json);
   await writeFile(resolve(output),JSON.stringify(result,null,2)+'\n',{flag:'wx',mode:0o600});
