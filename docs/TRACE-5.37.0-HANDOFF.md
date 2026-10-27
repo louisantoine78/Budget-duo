@@ -1,5 +1,16 @@
 ## 27 octobre — Reprise porte A : faux succès TAP supprimé, sans certification complète
 
+## 27 octobre — Contrôle natif supplémentaire du générateur (sans checkout intégral)
+
+Le commit candidat `036f63f4da9e496df9e710eab76293f6e0b254bb` (`[skip ci]`) complète `tests/trace-preview-native-preflight-isolation.test.cjs` par **trois scénarios Node natifs** : modification d'octets d'un actif à taille et nom constants, altération directe du SW alors que les noms d'actifs restent corrects, refus des URL externes et chemins parents au sein du laboratoire. Le SHA Git exact du fichier de tests après commit est `680b87bd106400bc27efd522945b70650d7aa680`.
+
+**Preuve exécutée en Node 22.16.0 : 20/20 scénarios ciblés**, répartis en **13** contrôles TAP et **7** essais du générateur officiel et préflight sur arborescence fictive temporaire. Les modules et tests utilisés ont des empreintes Git identiques aux fichiers GitHub candidats (générateur `2fbc9bd0`, runner `e638e0d4`, inventaire `6e4b69de`, contrôleur corrigé `5be1aa77`, tests TAP `63f5b378`, tests SW `680b87bd`). Le test octet prouve en laboratoire que `--check` utilise le contenu réel et pas seulement un inventaire de noms ; il ne régénère **pas** le SW enregistré dans Git.
+
+**État de porte A : toujours NO-GO.** Les 106 fichiers de tests du checkout intégral n'ont pas été exécutés, les six modules de débit différé manquent toujours dans le SW candidat, aucun Chromium/Safari ni SQL PGlite/PostgreSQL sur la candidate complète. Récupérer le checkout réel, lancer le générateur officiel et `--check`, le `--preflight`, puis les 106 suites et la qualification serveur. Aucune autorisation de CI, PR, merge, Vercel ou Supabase réel ; `main` et `TRACE_DEFERRED_NOT_RELEASED` inchangés. Estimation indicative globale **58 % ±10**, pas de réestimation.
+
+---
+
+
 Branche candidate seulement ; contrôle initial GitHub : `1aa3077a4a481139284fda802893e6d83a0f85a8`, `main` : `02c70f50e7e51da79b77a91dde96a03c6c719909`. Deux commits `[skip ci]` : `2c0c4235f98ea35e2294e594148c424326812796` (contrôleur des preuves des suites Node), `c169557c7d6fe268f8855107745cbda29226c257` (tests). Documentation actualisée à `docs/TRACE-5.37.0-NEXT-GATES-2026-10-27.md`.
 
 **Défaut réel démontré :** un `node --test --test-reporter=tap` natif avec un test passé et un test `skip` sort code 0. Le contrôleur précédent acceptait cette suite (1/2 exécuté), donnant un faux vert de publication. Il requiert dorénavant `pass===tests`, `failed===0`, `skipped/todo/cancelled===0` ; une contradiction TAP est rejetée. Les suites historiques `PASS` conservent le comportement existant.
