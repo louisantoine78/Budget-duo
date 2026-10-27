@@ -144,6 +144,10 @@
 .trace-activity-review-intro p{margin:0;color:#516b60;font-size:13px;line-height:1.5}
 #activityReview{min-width:0;padding-bottom:22px}
 #activityReview .trace-unconfirmed-row{min-height:55px}
+.trace-review-more{display:block;width:100%;margin:13px 0 4px;padding:12px 14px;min-height:44px;border:1px solid #bad8c8;border-radius:14px;background:#f4faf6;color:#164a3b;font:inherit;font-size:13px;font-weight:750;text-align:center;cursor:pointer}
+.trace-review-more:focus-visible{outline:3px solid #2d8062;outline-offset:2px}
+.trace-review-more:active{background:#e8f3eb}
+@media(prefers-reduced-motion:no-preference){.trace-review-more{transition:background .14s ease}}
 @media(max-width:350px){.trace-activity-four-tabs{gap:3px}.trace-activity-four-tabs .tab{font-size:10px;padding:10px 2px}}
 #activitySharing{min-width:0;padding-bottom:8px}
 .trace-share-group{display:grid;gap:11px;min-width:0;margin-top:17px}
