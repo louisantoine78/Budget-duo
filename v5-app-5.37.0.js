@@ -4407,7 +4407,9 @@ function renderActivity(){
      window.TraceInternational.money(Math.abs(amount),window.TraceInternational.currency(account));
     return '<button type="button" class="trace-unconfirmed-row" data-import-pending="'+esc(t.id)+'">'+
      '<span><strong>'+esc(t.name||'Opération')+'</strong><small>'+
-     esc(shortAccountLabel(account))+' · '+esc(t.date||'Date à préciser')+
+     esc(shortAccountLabel(account))+(t.type==='transfer'?
+      (destination?' · Virement reçu':' · Virement émis'):'')+
+     ' · '+esc(t.date||'Date à préciser')+
      '</small></span><b>'+esc(value)+'</b></button>';
    }).join('')+'</div>'+
    (remaining.length>visiblePending.length?
