@@ -12,7 +12,8 @@ categories:[{id:'food',name:'Courses'}],transactions:[
 {id:'d',date:'2026-09-30',accountId:'ca',categoryId:'food',type:'expense',status:'confirmed',bankAmount:6}
 ]};
 const controls={},$=id=>(controls[id]??={innerHTML:'',value:'',onclick:null,onchange:null});
-const ctx={state,activityMonth:'2026-10',activityAccountFilter:'all',
+const ctx={state,me:'la',visibleBankAccounts:owner=>state.accounts.filter(a=>a.owner===owner),
+activityMonth:'2026-10',activityAccountFilter:'all',
 activityFilters:{category:'all',nature:'all',currency:'all',status:'confirmed'},
 $,esc:String,shortAccountLabel:a=>a.name,accountType:a=>a.type,
 window:{TraceInternational:{currency:a=>a.currency,money:(n,c)=>n+' '+c,
