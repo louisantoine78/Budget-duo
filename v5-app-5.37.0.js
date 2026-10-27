@@ -5042,7 +5042,13 @@ async function saveHouseholdSettings(){
    if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
    // Rebuild after earlier queued writes: a stale local snapshot must not
    // overwrite newer edits made in the same browser session.
-   const queuedSettings={...(household.settings||{}),...state.household,schemaVersion:5};
+   // Freeze nested member/account settings at RPC send time. A shallow
+   // spread retains mutable maps; an edit made while the network is pending
+   // could otherwise change the payload after submission, and the locally
+   // confirmed snapshot would no longer represent the committed version.
+   const queuedSettings=JSON.parse(JSON.stringify({
+    ...(household.settings||{}),...state.household,schemaVersion:5
+   }));
    const {data,error}=await client.rpc('trace_cas_save_household_settings',{
     p_household_id:household.id,p_settings:queuedSettings,
     p_expected_revision:traceRevision(traceSettingsRevision)});

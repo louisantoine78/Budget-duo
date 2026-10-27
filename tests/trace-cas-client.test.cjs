@@ -171,6 +171,37 @@ test('Queued settings save takes the latest in-memory values before each RPC',as
  assert.deepEqual(writes.map(x=>x.p.p_expected_revision),[0,1,2]);
 });
 
+test('household CAS freezes nested settings before an asynchronous RPC resolves',async()=>{
+ const {app,client,state,house}=createContext();
+ app.setRevision(0);
+ state.household.memberNicknames={la:'Alex',partner:'Sam'};
+ let entered,release;
+ const started=new Promise(resolve=>{entered=resolve;});
+ const gate=new Promise(resolve=>{release=resolve;});
+ const original=client.rpc;
+ let payload;
+ client.rpc=async(method,p)=>{
+  if(method==='trace_cas_save_household_settings'){
+   payload=p.p_settings;
+   entered();
+   await gate;
+  }
+  return original(method,p);
+ };
+ const saving=app.saveHouseholdSettings();
+ await started;
+ // User interacts with the profile while the HTTP request is pending.
+ state.household.memberNicknames.la='Modified after send';
+ release();
+ await saving;
+ assert.equal(payload.memberNicknames.la,'Alex',
+  'Server request must retain the values from RPC send time');
+ assert.equal(house.settings.memberNicknames.la,'Alex',
+  'Confirmed settings should match the server payload');
+ assert.equal(state.household.memberNicknames.la,'Modified after send',
+  'Later unsaved UI edits must not be discarded');
+});
+
 test('deferred card creation is blocked before RPC but normal bank accounts still save',async()=>{
  const {app,calls}=createContext();
  await assert.rejects(app.saveDocument('accounts',{id:'deferred-fr',type:'card',
