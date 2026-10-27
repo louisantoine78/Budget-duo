@@ -101,7 +101,7 @@ test('budget analysis scope selector responds',()=>{
 });
 const activity=compile('renderActivity','\n/* TRACE 5.37 — native Activity/Partage.',{
  ...ctx,activityMonth:activeMonth,activityAccountFilter:'all',tab:'transactions',
- traceActivityControls(){},
+ renderCsvUnparsedReviewQueue(){},traceActivityControls(){},
  traceActivityRows:()=>state.transactions.filter(t=>String(t.date).startsWith(activeMonth)&&t.status==='confirmed'),
  traceActivityGroupHTML:rows=>rows.length?rows.map(t=>'<button data-tx-open="'+t.id+'"></button>').join(''):
   '<div class="empty-note">Aucune opération confirmée ce mois-ci.</div>',
@@ -110,7 +110,8 @@ const activity=compile('renderActivity','\n/* TRACE 5.37 — native Activity/Par
  shortAccountLabel:a=>a?.name||'Courant',
  txRow:t=>'<button data-tx-open="'+t.id+'"></button>',
  editTransaction(){},showTab(t){elem('#activityTabCurrent').textContent=t;},
- window:{...ctx.window,TraceInternational:{currency:a=>a?.currency||'CAD'},TraceImportCalendar:{render(){elem('#calendarRendered').textContent='yes';}}}
+ window:{...ctx.window,TraceInternational:{currency:a=>a?.currency||'CAD',
+ amountOnAccount:(t,a)=>t.bankAmount??null,money:(v,c)=>v+' '+c},TraceImportCalendar:{render(){elem('#calendarRendered').textContent='yes';}}}
 });
 test('Activity renders existing confirmed expense and income',()=>{
  state.accounts=[{id:'checking',name:'Courant',owner:'la',type:'checking'}];
