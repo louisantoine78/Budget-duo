@@ -25,6 +25,9 @@
    .filter(url=>url.origin===location.origin)
    .map(url=>{url.search='';url.hash='';return url.href;});
   urls.push(scope.href);
+  // PDF extraction loads these modules dynamically rather than through a <script> tag.
+  for(const name of ['vendor/pdfjs/pdf.mjs','vendor/pdfjs/pdf.worker.mjs'])
+   urls.push(new URL(name,location.href).href);
   const required=[...new Set(urls)];
   const prefix='trace-lab-537:'+encodeURIComponent(new URL('./',location.href).pathname)+':';
   const keys=(await window.caches.keys()).filter(key=>key.startsWith(prefix));
