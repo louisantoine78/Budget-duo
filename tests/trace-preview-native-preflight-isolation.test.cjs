@@ -110,3 +110,23 @@ test('generator refuses remote and parent-directory assets without network acces
   assert.match(run.stderr,/Asset interdit/,unsafe);
  }
 });
+test('official builder hashes actual PNG bytes and rejects a changed icon of equal length',t=>{
+ const f=fixture(t),manifestPath=path.join(f.dir,'trace-international-preview.webmanifest');
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/fQUAAAAASUVORK5CYII=','base64');
+ const imagePath=path.join(f.dir,'assets/one-pixel.png');
+ fs.writeFileSync(imagePath,png);
+ const manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
+ manifest.icons[0].src='assets/one-pixel.png';
+ f.put('trace-international-preview.webmanifest',JSON.stringify(manifest));
+ assert.equal(f.cmd('build-trace-preview-pwa.mjs').status,0);
+ assert.equal(f.cmd('build-trace-preview-pwa.mjs','--check').status,0);
+ const changed=Buffer.from(png);changed[changed.length-13]^=1;
+ fs.writeFileSync(imagePath,changed);
+ assert.equal(fs.statSync(imagePath).size,png.length);
+ assert.equal(f.cmd('build-trace-preview-pwa.mjs','--check').status,1);
+ const run=f.cmd('test-trace-native.mjs','--preflight','--report','proof.json');
+ assert.equal(run.status,1);
+ const report=JSON.parse(fs.readFileSync(path.join(f.dir,'proof.json'),'utf8'));
+ assert.equal(report.preflight.inventory.passed,true);
+ assert.equal(report.preflight.generatedCacheFresh,false);
+});
