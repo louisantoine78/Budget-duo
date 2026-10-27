@@ -4,7 +4,7 @@ import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
-import {checkSuiteResult} from './trace-native-suite-evidence.cjs';
+import {checkSuiteResult,sourceUsesNodeTest} from './trace-native-suite-evidence.cjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const reportIndex=process.argv.indexOf('--report');
@@ -31,7 +31,8 @@ for(const file of [...active].sort()){
 for(const file of readdirSync(join(root,'tests')).filter(n=>n.endsWith('.test.cjs')).sort()){
  const run=spawnSync(process.execPath,['--test','--test-reporter=tap',join('tests',file)],{cwd:root,encoding:'utf8',
   timeout:60000,maxBuffer:8*1024*1024});
- const {passed,reportedScenarios,reason}=checkSuiteResult(run);
+ const nativeSuite=sourceUsesNodeTest(readFileSync(join(root,'tests',file),'utf8'));
+ const {passed,reportedScenarios,reason}=checkSuiteResult({...run,nativeSuite});
  // Suites with zero reported assertions cannot pass; neither can hidden
  // FAIL markers or contradictory TAP summaries when process exit is zero.
  report.suites.push({file,passed,reportedScenarios,reason});
