@@ -619,3 +619,43 @@
 @media(max-width:390px){
  #sheetBackdrop .trace-manual-category-pills .trace-manual-choice-chip{max-width:164px}
 }
+
+
+/* 5.37 premium budget zero states — guidance and a real entry point, not
+ * financial placeholder numbers or decorative dead-end controls. */
+.trace-budget-empty{
+ display:flex;align-items:center;flex-wrap:wrap;gap:12px;
+ padding:15px 13px;background:linear-gradient(135deg,#fbfdf9,#f3f8f4);
+ border:1px dashed #cadfd1;border-radius:17px;
+}
+.trace-budget-empty-icon{
+ flex:0 0 40px;width:40px;height:40px;border:1px solid #cfe5d5;
+ background:#e7f1e9;border-radius:13px;display:grid;place-items:center;
+ color:#245c47;font-size:20px;font-weight:760;
+}
+.trace-budget-empty-copy{flex:1 1 178px;min-width:0}
+.trace-budget-empty-copy strong{display:block;color:#1e503d;font-size:13px;line-height:1.4}
+.trace-budget-empty-copy p{
+ color:#526e5f;margin:4px 0 0;font-size:11px;line-height:1.55;
+}
+.trace-budget-empty-action{
+ display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+ min-height:44px;max-width:100%;padding:9px 14px;border:1px solid #1f674e;
+ border-radius:999px;background:#205742;color:#fff;font-size:12px;
+ font-weight:780;line-height:1.35;touch-action:manipulation;
+}
+.trace-budget-empty-action:focus-visible,.trace-budget-setup-empty+button:focus-visible{
+ outline:3px solid #6eb093;outline-offset:3px;
+}
+.trace-budget-setup-empty{
+ display:grid;gap:9px;padding:18px 15px;margin:8px 0 15px;
+ border-radius:18px;border:1px dashed #c8ddce;
+ background:linear-gradient(140deg,#fbfdf9,#f1f8f2);
+}
+.trace-budget-setup-symbol{font-size:23px;font-weight:800;color:#245c47}
+.trace-budget-setup-empty strong{color:#1e503d;font-size:15px}
+.trace-budget-setup-empty p{color:#526e5f;font-size:12px;line-height:1.6;margin:0}
+@media(max-width:390px){
+ .trace-budget-empty{gap:10px;padding:12px}
+ .trace-budget-empty-action{width:100%}
+}

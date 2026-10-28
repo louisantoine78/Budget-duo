@@ -69,3 +69,9 @@ Ce schéma représente un **principe UX documenté**, et non une capture d'écra
 ## Pastilles de catégories — finition du 28 octobre 2026
 
 Le champ de catégorie du formulaire d'ajout affiche les catégories éligibles sous forme de pastilles, recherchables à partir de sept choix, avec état actif vert profond et accessibilité. La recherche tolère les accents et présente un état vide. Les suggestions automatiques sont respectées **avant**, mais jamais **après**, le choix manuel de catégorie. Les catégories archivées ne sont pas proposées. L'original `manualTxCategory` reste l'état source du moteur, invisible à l'utilisateur. Voir la maquette `docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md`.
+
+## Budget — états vides contextualisés (28 octobre 2026)
+
+Les trois rubriques du budget (Revenus, Dépenses fixes, Dépenses variables) disposent désormais d'un message pédagogique court et d'un **vrai CTA** branché sur `openBudgetAdd(kind)`, à la place du simple « Aucun poste ». Si aucune catégorie correspondante n'existe, le dialogue d'ajout propose **Gérer les catégories** et renvoie vers le gestionnaire, sans enregistrer de montant.
+
+Les cartes conservent les couleurs premium, leurs boutons sont tactiles (44 px) et les catégories déjà configurées affichent toujours leurs postes sans modification. Les mêmes tests de budget et le scénario fictif « nouveau foyer sans catégories » doivent passer. Voir le schéma dans `docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md`.

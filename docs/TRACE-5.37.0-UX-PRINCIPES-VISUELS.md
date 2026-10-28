@@ -110,3 +110,25 @@ Au-delà de six catégories, le champ de recherche apparaît. La recherche est i
 Le champ natif `manualTxCategory` reste une source de valeur masquée et inaccessible au clavier, sans changement de logique financière. Une suggestion automatique est reflétée dans les pastilles. Dès qu'un choix manuel est effectué, une nouvelle suggestion ne doit jamais remplacer la catégorie sélectionnée. Un changement de nature recharge uniquement les catégories du type pertinent ; les catégories archivées sont exclues.
 
 **Schémas de principe, pas captures de Safari iPhone.** Production toujours NO-GO.
+
+## Budget — états vides premium et parcours « nouveau foyer » (28 octobre 2026)
+
+Dans Budget, chaque section sans poste configuré affiche une **carte explicative**, sans montant financier inventé. L'action doit conduire au **même formulaire budgétaire existant**, sans écriture ni catégorie créée au simple toucher.
+
+    ╭── Revenus ─────────────────────────╮
+    │ ↗  Commence par tes revenus        │
+    │    Ajoute un salaire ou une autre  │
+    │    source de revenus pour le mois  │
+    │           [Ajouter un revenu]      │
+    ╰────────────────────────────────────╯
+
+    Dépenses fixes : « Pose tes dépenses fixes »
+    [Ajouter une dépense fixe]
+
+    Dépenses variables :
+    « Prévois tes dépenses du quotidien »
+    [Ajouter une dépense variable]
+
+Style : ivoire chaud et vert profond, liseré discontinu discret, pictogramme arrondi, typographie lisible à 320 px, CTA tactile de 44 px minimum et focus visible. À largeur de petit iPhone, le CTA s'étend sur la largeur du panneau. Les sections **qui ont des postes continuent à afficher les montants d'origine**.
+
+Si un foyer n'a **aucune catégorie éligible** pour créer un poste, montrer un panneau « Une catégorie est nécessaire » avec les boutons **Gérer les catégories** et **Plus tard**, plutôt qu'une fenêtre qui ne peut qu'être fermée. Le bouton de gestion ouvre le flux de création de catégories existant. Les valeurs d'ouverture, budgets et transactions restent intacts jusqu'à confirmation explicite. C'est un aperçu de principe, pas une capture d'écran iPhone réelle.

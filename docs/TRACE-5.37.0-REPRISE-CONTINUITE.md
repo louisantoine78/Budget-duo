@@ -123,3 +123,7 @@ Le formulaire manuel remplace le menu natif visible de sélection de compte par 
 ## Checkpoint UX catégorie du formulaire manuel (28 octobre 2026)
 
 Dans « Ajouter une opération », les catégories se choisissent par boutons arrondis, avec recherche locale après six choix. Le moteur continue de lire `manualTxCategory` ; suggestion automatique synchronisée, choix manuel prioritaire, catégorie archivée exclue. Le test lab contient des catégories fictives supplémentaires et vérifie la recherche « epicerie » sans accents. Voir `docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md`. Ne pas toucher main ni aux données réelles.
+
+## Étape Budget — guidage premium au premier usage (28 octobre 2026)
+
+Le rendu `renderBudget()` utilise des cartes vides contextualisées pour les trois types de postes ; le CTA conserve le routage `data-budget-add` vers la même fonction `openBudgetAdd`, sans création automatique. `openBudgetAdd` sans catégories proposées maintenant un accès immédiat à `manageCategories()`, au lieu d'un cul-de-sac. Les montants et la logique des budgets remplis restent inchangés. Lire `docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md`. Ne pas toucher `main`, la 5.36.5 et Supabase réel.

@@ -63,6 +63,18 @@ const ctx={
  }}
 };
 const renderBudget=compile('renderBudget','\n/* Account defaults:',ctx);
+test('all three empty Budget groups provide an accessible real creation action',()=>{
+ renderBudget();
+ const html=elem('#budgetSections').innerHTML;
+ for(const kind of ['income','fixed','variable']){
+  assert.match(html,new RegExp('data-budget-empty="'+kind+'"'));
+  assert.match(html,new RegExp('data-budget-add="'+kind+'"'));
+ }
+ assert.match(html,/Commence par tes revenus/);
+ assert.match(html,/Pose tes dépenses fixes/);
+ assert.match(html,/Prévois tes dépenses du quotidien/);
+ assert.doesNotMatch(html,/Aucun poste\./);
+});
 test('renderBudget completes without selector error',()=>{
  renderBudget();assert.equal(elem('#annualBudgetChart').innerHTML,'annual rendered');
  assert.equal(elem('#budgetCategoryImpact').innerHTML,'cat rendered');

@@ -1472,7 +1472,20 @@ function renderBudget(){
     ['Dépenses fixes','fixed',b=>cat(b.categoryId).type==='expense'&&categoryKind(cat(b.categoryId))==='fixed'],
     ['Dépenses variables','variable',b=>cat(b.categoryId).type==='expense'&&categoryKind(cat(b.categoryId))!=='fixed']
   ];
-  $('#budgetSections').innerHTML='<div class="trace-budget-toolbar"><button class="linkbtn" type="button" id="manageBudgetCategories">Gérer les catégories</button></div>'+sectionDefs.map(([t,kind,f])=>'<div class="section-head"><h2>'+t+'</h2><button class="linkbtn budget-add-link" type="button" data-budget-add="'+kind+'">+ Ajouter</button></div><article class="card budget-section">'+(rows.filter(f).length?rows.filter(f).map(b=>'<button class="budget-card budget-edit-row" type="button" data-budget-edit="'+esc(b.id)+'"><span class="bicon">'+esc(cat(b.categoryId).icon||'•')+'</span><span class="bmain"><strong>'+esc(cat(b.categoryId).name)+'</strong><small>'+(b.scope==='couple'?(sId==='couple'?'Commun · réparti entre vous deux':'Ma part sur '+money(b.amount)+' au total'):'Personnel')+'</small></span><span class="bvalue"><strong>'+money(budgetAmt(b,sId))+'</strong></span></button>').join(''):'<div class="empty-note">Aucun poste.</div>')+'</article>').join('');
+  const emptyBudgetCopy={
+   income:{icon:'↗',title:'Commence par tes revenus',detail:'Ajoute un salaire ou une autre source de revenus pour préparer ton mois.',cta:'Ajouter un revenu'},
+   fixed:{icon:'⌂',title:'Pose tes dépenses fixes',detail:'Loyer, abonnements et factures : prévois ce qui revient chaque mois.',cta:'Ajouter une dépense fixe'},
+   variable:{icon:'◈',title:'Prévois tes dépenses du quotidien',detail:'Courses, sorties ou voyages : crée un montant à suivre ce mois-ci.',cta:'Ajouter une dépense variable'}
+  };
+  const emptyBudget=kind=>{
+   const item=emptyBudgetCopy[kind];
+   return '<div class="trace-budget-empty" data-budget-empty="'+kind+'">'+
+    '<span class="trace-budget-empty-icon" aria-hidden="true">'+item.icon+'</span>'+
+    '<div class="trace-budget-empty-copy"><strong>'+item.title+'</strong><p>'+item.detail+'</p></div>'+
+    '<button type="button" class="trace-budget-empty-action" data-budget-add="'+kind+'">'+item.cta+'</button>'+
+    '</div>';
+  };
+  $('#budgetSections').innerHTML='<div class="trace-budget-toolbar"><button class="linkbtn" type="button" id="manageBudgetCategories">Gérer les catégories</button></div>'+sectionDefs.map(([t,kind,f])=>'<div class="section-head"><h2>'+t+'</h2><button class="linkbtn budget-add-link" type="button" data-budget-add="'+kind+'">+ Ajouter</button></div><article class="card budget-section">'+(rows.filter(f).length?rows.filter(f).map(b=>'<button class="budget-card budget-edit-row" type="button" data-budget-edit="'+esc(b.id)+'"><span class="bicon">'+esc(cat(b.categoryId).icon||'•')+'</span><span class="bmain"><strong>'+esc(cat(b.categoryId).name)+'</strong><small>'+(b.scope==='couple'?(sId==='couple'?'Commun · réparti entre vous deux':'Ma part sur '+money(b.amount)+' au total'):'Personnel')+'</small></span><span class="bvalue"><strong>'+money(budgetAmt(b,sId))+'</strong></span></button>').join(''):emptyBudget(kind))+'</article>').join('');
   $('#manageBudgetCategories').onclick=manageCategories;
   document.querySelectorAll('[data-budget-add]').forEach(btn=>btn.onclick=()=>openBudgetAdd(btn.dataset.budgetAdd));
   document.querySelectorAll('[data-budget-edit]').forEach(btn=>btn.onclick=()=>openBudgetEdit(btn.dataset.budgetEdit));
@@ -3154,9 +3167,19 @@ function budgetAmountField(id,amount){
 function openBudgetAdd(kind='variable'){
  const cats=budgetCategoriesFor(kind);
  const initialScope=budgetScope==='mine'?me:'couple';
- if(!cats.length){openSheet('Ajouter au budget','<div class="empty-note">Ajoute d’abord une catégorie correspondant à ce poste. Si tu viens de créer ton foyer, initialise les catégories de départ dans Gérer les catégories.</div>'+
- '<button class="secondary full" id="budgetNoCatBack" type="button">Fermer</button>');
- $('#budgetNoCatBack').onclick=closeSheet;return;}
+ if(!cats.length){
+  openSheet('Préparer ton budget',
+   '<div class="trace-budget-setup-empty" role="status">'+
+   '<span class="trace-budget-setup-symbol" aria-hidden="true">＋</span>'+
+   '<strong>Une catégorie est nécessaire</strong>'+
+   '<p>Crée une catégorie '+esc(budgetKindLabel(kind).toLowerCase())+' ou récupère les catégories de départ. Aucune donnée budgétaire ne sera créée avant ta confirmation.</p>'+
+   '</div>'+
+   '<button class="primary full" id="budgetNoCatManage" type="button">Gérer les catégories</button>'+
+   '<button class="secondary full" id="budgetNoCatBack" type="button">Plus tard</button>');
+  $('#budgetNoCatManage').onclick=manageCategories;
+  $('#budgetNoCatBack').onclick=closeSheet;
+  return;
+ }
  const options=cats.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
  openSheet('Ajouter au budget',
   '<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(monthLabel(budgetMonth))+

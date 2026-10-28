@@ -164,6 +164,23 @@ async function main(){
       'Returning to Moi must restore the original financial summary');
      await activate(page.locator('.navbtn[data-nav="budget"]'));
      const mineBudget=await page.locator('.budget-hero-card').innerText();
+     // Empty budget sections must teach the next step and provide an actual
+     // accessible action rather than a bare "Aucun poste" placeholder.
+     for(const kind of ['income','fixed']){
+      const empty=page.locator('[data-budget-empty="'+kind+'"]');
+      assert.equal(await empty.count(),1,'A missing budget section needs a premium empty state');
+      assert.ok((await empty.locator('strong').innerText()).length>=12);
+      const button=empty.locator('[data-budget-add="'+kind+'"]');
+      assert.equal(await button.count(),1,'Empty-state action must use the real budget editor');
+      const height=await button.evaluate(el=>el.getBoundingClientRect().height);
+      assert.ok(height>=44,'Budget empty-state action needs a 44px touch target');
+     }
+     await activate(page.locator('[data-budget-empty="income"] [data-budget-add="income"]'));
+     assert.equal(await page.locator('#sheetTitle').innerText(),'Ajouter au budget');
+     assert.equal(await page.locator('#budgetAddCategory').count(),1);
+     await activate(page.locator('#cancelBudgetAdd'));
+     assert.equal(await page.locator('.budget-hero-card').innerText(),mineBudget,
+      'Closing an empty-budget creation form must preserve planned totals');
      await page.locator('#budgetScope [data-scope="couple"]').click();
      const coupleBudget=await page.locator('.budget-hero-card').innerText();
      assert.notEqual(coupleBudget,mineBudget,'Couple budget must reflect the shared view');
@@ -366,6 +383,37 @@ async function main(){
       assert.equal(await manyPage.locator('#manualTxCategoryNoResults').isVisible(),true);
       await manyPage.locator('#cancelManualTx').click();
       await manyPage.close();
+      // A brand-new household with zero budget categories must have a real
+      // path to configuration; nothing should be saved from an empty state.
+      const blankPage=await context.newPage();
+      await blankPage.addInitScript(()=>{
+       let fixture;
+       Object.defineProperty(window,'TraceInternationalPreviewFixtures',{
+        configurable:true,get:()=>fixture,set(source){
+         fixture=Object.freeze({...source,create(){
+          const data=source.create();
+          data.categories=[];data.budgets=[];
+          return data;
+         }});
+        }
+       });
+      });
+      await blankPage.route('**/*',route=>{
+       if(route.request().url().startsWith(origin))return route.continue();
+       outside.push(route.request().url());return route.abort();
+      });
+      await blankPage.goto(entry,{waitUntil:'load',timeout:25000});
+      await blankPage.locator('.navbtn[data-nav="budget"]').click();
+      assert.equal(await blankPage.locator('[data-budget-empty]').count(),3);
+      await blankPage.locator('[data-budget-empty="fixed"] [data-budget-add="fixed"]').click();
+      assert.equal(await blankPage.locator('#sheetTitle').innerText(),'Préparer ton budget');
+      assert.equal(await blankPage.locator('#budgetNoCatManage').count(),1,
+       'A household with zero categories needs a direct create-category route');
+      await blankPage.locator('#budgetNoCatManage').click();
+      assert.equal(await blankPage.locator('#sheetTitle').innerText(),'Catégories du budget');
+      assert.equal(await blankPage.locator('#newCategory').count(),1);
+      await blankPage.locator('#closeSheet').click();
+      await blankPage.close();
      }
     }
     if(engine==='webkit'&&width===390){

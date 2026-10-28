@@ -197,3 +197,7 @@ Le test `scripts/trace-browser-537-qa.cjs` vérifie sur mobile que la banque est
 ## Scénarios catégories budgétaires premium (28 octobre 2026)
 
 Le navigateur contrôle les zones tactiles de 44 px, la visibilité des pastilles, `aria-pressed`, le sélecteur natif masqué, le nombre de catégories réellement éligibles et la priorité du choix humain sur les suggestions par description. Une deuxième page de laboratoire, avec sept catégories fictives ajoutées et une archivée, teste la recherche « epicerie », l'exclusion des archives et l'état sans résultat. Les tests financiers existants utilisent toujours le même champ natif masqué. Aucun accès aux données de production. Ces tests ne certifient ni un iPhone physique ni l'authentification Vercel réelle.
+
+## Recette Budget — états vides premium (28 octobre 2026)
+
+La QA teste dans la page fictive normale les rubriques vides Revenus et Dépenses fixes, avec titre lisible, CTA 44 px et ouverture du formulaire budgétaire réel. Fermer ce formulaire doit conserver exactement les totaux. Une **troisième page de laboratoire**, dont la fabrique fictive renvoie zéro catégorie et zéro budget, vérifie trois états vides, l'ouverture de « Préparer ton budget », le bouton « Gérer les catégories » et l'accès effectif à la création de catégorie. Les tests gardent l'état du foyer principal intact. L'export permet Chromium et WebKit Linux, mais pas de déduire un accord Safari sur un iPhone physique, ni l'authentification Vercel réelle.
