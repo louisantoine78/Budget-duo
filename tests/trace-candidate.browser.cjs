@@ -470,6 +470,23 @@ let base;
   await page.locator('[data-primary-bank="demo-ca-current"]').click();
   await page.locator('#tracePrimaryConfirm').click();
   await page.locator('[data-config-bank="demo-fr-current"]').click();
+  await page.locator('#traceBankMetaArchive').click();
+  assert.match(await text('sheetBody'),/Réassocie ou archive d’abord les cartes liées/,
+   'Archiving a checking account must not strand its linked French card');
+  await page.locator('#traceArchiveBack').click();
+  await page.locator('#traceAddBankAccount').click();
+  await page.locator('#traceNewBankName').fill('EUR règlement de secours');
+  await page.locator('#traceNewBankCountry').selectOption('FR');
+  await page.locator('#traceNewBankCurrency').selectOption('EUR');
+  await page.locator('#traceNewBankAmount').fill('0');
+  await page.locator('#traceNewBankDate').fill('2026-10-01');
+  await page.locator('#traceSaveNewBank').click();
+  const euroBackupId=await page.locator('.trace-bank-account').filter({hasText:'EUR règlement de secours'})
+   .locator('[data-config-bank]').getAttribute('data-config-bank');
+  await page.locator('[data-config-bank="demo-fr-deferred-card"]').click();
+  await page.locator('#traceBankMetaSettlement').selectOption(euroBackupId);
+  await page.locator('#traceBankMetaSave').click();
+  await page.locator('[data-config-bank="demo-fr-current"]').click();
   await page.locator('#traceBankMetaArchive').click();await page.locator('#traceArchiveConfirm').click();
   assert.equal(await page.locator('[data-config-bank="demo-fr-current"]').count(),0);
   await page.locator('.trace-archived-accounts>summary').click();
@@ -514,7 +531,9 @@ let base;
  });
  await test('actual CSV upload shows all rows and bank matches, imports pending only and stays idempotent',async()=>{
   const budget=await text('homeBudgetAvailable'),cash=await text('homeBalance');
-  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  await go('activity');await page.locator('#activityTabs [data-tab="review"]').click();
+  const pendingBefore=await page.locator('[data-import-pending]').count();
+  await page.locator('#activityTabs [data-tab="import"]').click();
   const file={name:'fictional-canadian.csv',mimeType:'text/csv',buffer:Buffer.from(
    'Date;Libellé;Débit;Crédit\n12/10/2026;Paiement CSV;50,00;\n'+
    '15/10/2026;Ticket train;25,00;\n15/10/2026;Ticket train;25,00;\n'+
@@ -533,8 +552,15 @@ let base;
   assert.match(await page.locator('[data-csv-compare-id="demo-card-payment"]').innerText(),/Paiement Mastercard.*fictif/s);
   assert.match(await page.locator('[data-csv-compare-id="demo-card-payment"]').innerText(),/Confirmée/);
   await page.locator('#csvCommit').click();
-  await page.locator('#importResult').filter({hasText:'7 opération(s) placée(s)'}).waitFor();
-  assert.equal(await page.locator('[data-import-pending]').count(),8);
+  assert.match(await text('csvImportWarnings'),/confirme leur traitement séparé/,
+   'CSV with unreadable lines must require explicit human acknowledgement');
+  await page.locator('#csvInvalidAcknowledged').check();
+  await page.locator('#csvCommit').click();
+  await page.waitForFunction(()=>document.getElementById('importResult')?.textContent.includes('7 opération(s) placée(s)'));
+  assert.equal(await page.locator('#activityTabReview').getAttribute('aria-selected'),'true',
+   'Successful import must lead to the review screen');
+  assert.equal(await page.locator('[data-import-pending]').count(),pendingBefore+7,
+   'Every valid CSV row must be pending exactly once');
   assert.equal(await page.locator('[data-import-pending]').filter({hasText:'Ticket train'}).count(),2);
   await go('home');assert.equal(await text('homeBudgetAvailable'),budget);assert.equal(await text('homeBalance'),cash);
   await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
@@ -551,8 +577,9 @@ let base;
   await page.locator('#csvAccount').selectOption('demo-fr-current');await page.locator('#csvPreview').click();
   assert.match(await page.locator('[data-csv-preview-row]').innerText(),/18,40.*€/);
   await page.locator('#csvCommit').click();
-  await page.locator('#importResult').filter({hasText:'1 opération(s) placée(s)'}).waitFor();
-  assert.match(await page.locator('[data-import-pending]').filter({hasText:'Achat EUR fictif'}).innerText(),/18,40.*€.*CAD à valider/);
+  await page.waitForFunction(()=>document.getElementById('importResult')?.textContent.includes('1 opération(s) placée(s)'));
+  assert.equal(await page.locator('#activityTabReview').getAttribute('aria-selected'),'true');
+  assert.match(await page.locator('[data-import-pending]').filter({hasText:'Achat EUR fictif'}).innerText(),/18,40.*€.*CAD à valider/s);
   await go('home');assert.equal(await text('homeBalance'),cash);assert.equal(await text('homeBudgetAvailable'),budget);
  });
  await test('the dedicated laboratory worker caches no credentials, financial records or bank statements',async()=>{

@@ -25,7 +25,8 @@ test('invalid negative or fractional counts fail closed',()=>{
 });
 test('actual CSV UI requires explicit acknowledgment before disabled commit state',()=>{
  assert.match(source,/id="csvInvalidAcknowledged"/);
- assert.match(source,/if\(!csvPartialImportAllowed\(result\.invalid\.length/);
+ assert.match(source,/if\(!csvPartialImportAllowed\(newInvalidEvidence\.length/);
+ assert.match(source,/newInvalidEvidence=invalidEvidence\.filter/);
  assert.match(source,/TRACE les conservera dans/);
  assert.match(source,/await saveDocument\('imports',entry\)/);
  assert.match(source,/sans opération bancaire ni incidence sur le budget/);

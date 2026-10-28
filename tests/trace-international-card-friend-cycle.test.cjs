@@ -34,11 +34,11 @@ function pick(name,deps){
   app.slice(app.indexOf('function traceLinkedBankTransactionCovers('),from):'';
  return new Function(...Object.keys(deps),helper+'\nreturn ('+app.slice(from,to)+');')(...Object.values(deps));
 }
-function scenario(transactions=[],reconciliations=[]){
+function scenario(transactions=[],reconciliations=[],accountCatalogue=accounts){
  const state={household:{referenceDate:'2026-10-01',accountOpeningBalances:{ca:1000,mc:0},
   accountOpeningBalanceDates:{ca:'2026-10-01',mc:'2026-10-01'},
   defaultSplit:{la:50,partner:50},sharingOpeningBalance:0},
-  accounts,reconciliations,investmentOperations:[],categories:[],budgets:[],transactions};
+  accounts:accountCatalogue,reconciliations,investmentOperations:[],categories:[],budgets:[],transactions};
  const openingBoundary=pick('openingBoundary',{state});
  const afterBoundary=pick('afterBoundary',{});
  const accountType=pick('accountType',{});
@@ -53,7 +53,7 @@ function scenario(transactions=[],reconciliations=[]){
  const sharingHistory=pick('sharingHistory',{state,afterBoundary,isFinancialPeriod,sharingMovement});
  const coupleBalance=pick('coupleBalance',{state,sharingHistory});
  return{state,accountEstimate,summary,sharingHistory,coupleBalance,
-  balance:id=>accountEstimate(accounts.find(a=>a.id===id)),
+  balance:id=>accountEstimate(accountCatalogue.find(a=>a.id===id)),
   due:name=>M.friendReceivables(state.transactions,'la').find(x=>x.name===name)?.outstandingCAD,
   budget:scope=>summary('2026-10',scope).expense};
 }
@@ -158,6 +158,14 @@ test('historical mismatched Mastercard payment makes both balances unknown',()=>
  const x=scenario([purchase,mismatch]);
  assert.equal(x.balance('ca'),null);
  assert.equal(x.balance('mc'),null);
+});
+test('card settlement reassignment keeps historical balanced payments unchanged',()=>{
+ const backup={...accounts[0],id:'backup',name:'Backup CAD checking'};
+ const updated=accounts.map(a=>a.id==='mc'?{...a,settlementAccountId:'backup'}:a);
+ const x=scenario([purchase,mastercard],[],[...updated,backup]);
+ assert.equal(x.balance('ca'),900,'Previously debited checking remains correct');
+ assert.equal(x.balance('mc'),-20,'Valid historical repayment remains a card credit');
+ assert.equal(x.budget('couple'),70,'Card payment does not create additional expenses');
 });
 test('historic credit-card transfer with fee cannot be silently counted as debt repayment',()=>{
  const wrongFee={...mastercard,id:'fee-on-card-pay',bankAmount:100,

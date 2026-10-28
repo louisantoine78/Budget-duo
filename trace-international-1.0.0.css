@@ -432,3 +432,9 @@
  .trace-trend-bars{height:88px}
  .trace-trend-bars>i{width:12px}
 }
+
+/* Pending foreign bank evidence: never imply a CAD valuation without dated FX. */
+.trace-unconfirmed-row .trace-unconfirmed-fx-pending{
+ display:block;color:#4d695a;font-size:11px;line-height:1.35;
+ font-weight:650;white-space:normal;text-align:right
+}

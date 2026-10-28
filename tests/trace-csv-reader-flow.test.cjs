@@ -187,7 +187,10 @@ test('same invalid source row is not recreated on an identical later import',asy
  const content='Date,Description,Montant\n20/10/2026,Courses,-40.00\n21/10/2026,Source inconnue,??\n';
  const s=scenario({content});s.preview();s.node('#csvInvalidAcknowledged').checked=true;await s.commit();
  const again=scenario({content,transactionRows:s.state.transactions,importRows:s.state.smartImports});
- again.preview();again.node('#csvInvalidAcknowledged').checked=true;await again.commit();
+ again.preview();
+ assert.equal(typeof again.node('#csvCommit').onclick,'undefined',
+  'Unchanged unreadable rows have already been retained: no new commit offered');
+ assert.doesNotMatch(again.node('#csvPreviewResult').innerHTML,/id="csvInvalidAcknowledged"/);
  assert.equal(again.evidenceWrites.length,0);
  assert.equal(again.writes.length,0);
  assert.equal(again.state.smartImports.length,1);
@@ -333,7 +336,9 @@ test('exact long CSV source still imports idempotently with full-content fingerp
  const first=scenario({content});first.preview();
  first.node('#csvInvalidAcknowledged').checked=true;await first.commit();
  const second=scenario({content,importRows:first.state.smartImports});
- second.preview();second.node('#csvInvalidAcknowledged').checked=true;await second.commit();
+ second.preview();
+ assert.equal(typeof second.node('#csvCommit').onclick,'undefined',
+  'Identical long unreadable source must not be offered for a second import');
  assert.equal(second.evidenceWrites.length,0);
  assert.equal(second.writes.length,0);
  assert.match(first.evidenceWrites[0].rawFingerprint,/^[0-9a-f]{16}$/);

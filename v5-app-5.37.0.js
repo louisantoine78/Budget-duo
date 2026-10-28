@@ -364,9 +364,11 @@ function traceCardRepaymentMismatch(t){
  if(!target||accountType(target)!=='card')
   return t.transferPurpose==='card_repayment';
  const source=state.accounts.find(a=>a.id===t.accountId);
+ // A settlement link is mutable metadata: changing it must not invalidate a
+ // previously confirmed and balanced payment from the former checking account.
+ // New payments still require the current linked account in validCardTarget().
  if(!source||accountType(source)!=='checking'||source.owner!==target.owner||
-    I.currency(source)!==I.currency(target)||
-    (target.settlementAccountId&&target.settlementAccountId!==source.id))
+    I.currency(source)!==I.currency(target))
   return true;
  const debit=I.amountOnAccount(t,source,'source'),
   credit=I.amountOnAccount(t,target,'destination'),
@@ -3493,6 +3495,10 @@ function importFile(file){
       sourceConflicts=result.all.filter(t=>csvConflictingSourceRows(t,state.transactions).length||
         csvConflictingUnparsedEvidence(t,state.smartImports)),
       invalidConflicts=invalidEvidence.filter(t=>csvUnparsedSourceConflict(t,state.smartImports,state.transactions)),
+      // An unchanged unreadable source row is already kept for human review.
+      // Never offer a second import button when every row is already retained.
+      newInvalidEvidence=invalidEvidence.filter(t=>!state.smartImports.some(x=>
+       x.id===t.id&&x.kind==='csv_unparsed')),
       totalConflicts=sourceConflicts.length+invalidConflicts.length;
      const account=accts.find(a=>a.id===$('#csvAccount').value),I=window.TraceInternational,
       ccy=I.currency(account),accountAtPreview=csvImportAccountSnapshot(account,me),
@@ -3517,15 +3523,15 @@ function importFile(file){
        comparison(t)+'</details>').join('')+
       (result.invalid.length?'<details class="trace-csv-invalid"><summary>'+result.invalid.length+' ligne(s) non interprétée(s)</summary>'+result.invalid.map(n=>
        '<p class="empty-note">Ligne '+n+' : '+esc((rows[n-2]||[]).join(' | '))+'</p>').join('')+'</details>':'')+
-      (result.invalid.length&&!totalConflicts?
-       '<label class="trace-csv-partial-ack"><input type="checkbox" id="csvInvalidAcknowledged"> J’ai vérifié les '+result.invalid.length+' ligne(s) illisibles : TRACE les conservera dans « Imports · lignes CSV à revoir », sans opération bancaire ni incidence sur le budget. Elles resteront à contrôler séparément avec le relevé.</label>'+
+      (newInvalidEvidence.length&&!totalConflicts?
+       '<label class="trace-csv-partial-ack"><input type="checkbox" id="csvInvalidAcknowledged"> J’ai vérifié les '+newInvalidEvidence.length+' ligne(s) illisibles : TRACE les conservera dans « Imports · lignes CSV à revoir », sans opération bancaire ni incidence sur le budget. Elles resteront à contrôler séparément avec le relevé.</label>'+
        '<p id="csvImportWarnings" class="trace-csv-partial-warning" role="alert"></p>':'')+
-      ((result.all.length||result.invalid.length)&&!totalConflicts?
+      ((result.all.length||newInvalidEvidence.length)&&!totalConflicts?
        '<button class="primary full" id="csvCommit" style="margin-top:14px">'+
        (result.all.length?'Importer '+result.all.length+' opération(s) à vérifier':'Conserver les lignes à vérifier')+'</button>':'');
-     if((!result.all.length&&!result.invalid.length)||totalConflicts)return;
+     if((!result.all.length&&!newInvalidEvidence.length)||totalConflicts)return;
      $('#csvCommit').onclick=async()=>{
-      if(!csvPartialImportAllowed(result.invalid.length,$('#csvInvalidAcknowledged')?.checked)){
+      if(!csvPartialImportAllowed(newInvalidEvidence.length,$('#csvInvalidAcknowledged')?.checked)){
        const warning=$('#csvImportWarnings');
        if(warning)warning.textContent='Vérifie les lignes non interprétées et confirme leur traitement séparé avant cet import partiel.';
        return;
@@ -4547,12 +4553,16 @@ function renderActivity(){
     const value=amount===null||!Number.isFinite(amount)?
      'Montant bancaire à vérifier':
      window.TraceInternational.money(Math.abs(amount),window.TraceInternational.currency(account));
+    const pendingCAD=account&&t.source==='csv'&&
+     window.TraceInternational.currency(account)!=='CAD'&&
+     window.TraceInternational.exactMoney(t.amountCAD)===null?
+     '<small class="trace-unconfirmed-fx-pending">CAD à valider</small>':'';
     return '<button type="button" class="trace-unconfirmed-row" data-import-pending="'+esc(t.id)+'">'+
      '<span><strong>'+esc(t.name||'Opération')+'</strong><small>'+
      esc(shortAccountLabel(account))+(t.type==='transfer'?
       (destination?' · Virement reçu':' · Virement émis'):'')+
      ' · '+esc(t.date||'Date à préciser')+
-     '</small></span><b>'+esc(value)+'</b></button>';
+     '</small></span><b>'+esc(value)+pendingCAD+'</b></button>';
    }).join('')+'</div>'+
    (remaining.length>visiblePending.length?
     '<button type="button" class="trace-review-more" data-review-more>Voir '+
