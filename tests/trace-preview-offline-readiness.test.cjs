@@ -127,7 +127,9 @@ test('pending preview update warns inside any open modal without forcing a reloa
 
 test('real SW upgrade QA preserves an opt-in reload and isolated preview',()=>{
  const upgrade=fs.readFileSync(path.resolve(__dirname,'../scripts/trace-preview-upgrade-qa.cjs'),'utf8');
- assert.match(upgrade,/const root=path\.resolve\(__dirname,'\.\.'\)/);
+ assert.match(upgrade,/process\.env\.TRACE_LAB_ROOT\?path\.resolve\(process\.env\.TRACE_LAB_ROOT\)/);
+ assert.match(upgrade,/trace-lab-export-audit\.json/);
+ assert.match(upgrade,/path\.resolve\(__dirname,'\.\.'\)/);
  assert.match(upgrade,/server\.listen\(0,'127\.0\.0\.1'/);
  assert.match(upgrade,/revision='b'/);
  assert.match(upgrade,/Brouillon pendant mise à jour/);

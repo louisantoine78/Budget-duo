@@ -3,7 +3,7 @@
 const BASE=new URL('./',self.location.href);
 const ENTRY=new URL('trace-international-preview.html',BASE);
 const PREFIX='trace-lab-537:'+encodeURIComponent(BASE.pathname)+':';
-const CACHE=PREFIX+'ae2097aca9bb736cd27ddf3d';
+const CACHE=PREFIX+'4835595367aeecaf74e20ba3';
 const ASSETS=[
  "assets/trace-wallet-v1-180.png",
  "assets/trace-wallet-v1-192.png",
@@ -82,7 +82,17 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
  // Protected HTTPS preview requires its same-origin Vercel session cookie
  // for static assets. Never attach cookies to any remote origin; URLS is
  // the generated same-origin allowlist, never finance data or runtime APIs.
- await cache.addAll(URLS.map(url=>new Request(url,{cache:'reload',credentials:'same-origin'})));
+ // Never follow a sign-in redirect: a login page is not a static asset.
+ // Clear a partially populated generation after a failed install, while
+ // keeping the previous active version intact for offline use.
+ try{
+  await cache.addAll(URLS.map(url=>new Request(url,{
+   cache:'reload',credentials:'same-origin',redirect:'error'
+  })));
+ }catch(error){
+  await caches.delete(CACHE);
+  throw error;
+ }
  if(!self.registration.active)await self.skipWaiting();
 })()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{

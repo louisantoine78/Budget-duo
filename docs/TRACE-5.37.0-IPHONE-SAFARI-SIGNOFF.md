@@ -92,3 +92,7 @@ Si le site de prévisualisation demande une connexion Vercel, se connecter
 la prévisualisation publiquement. Les montants et comptes sont fictifs.
 Toute saisie est perdue au rechargement. Cela ne valide pas encore la
 résilience des données cloud de l'application finale.
+
+## Essai supplémentaire : session de prévisualisation expirée
+
+Sur l'URL HTTPS **privée et authentifiée**, vérifier que l'ajout à l'écran d'accueil et une mise à jour de worker sous session valide chargent réellement les ressources fictives. Simuler ensuite de manière autorisée l'expiration de l'accès avant une nouvelle installation ou mise à jour ; la PWA ne doit ni afficher une page de connexion en tant que ressource en cache ni déclarer un état hors connexion prêt sur un cache incomplet. Retrouver l'accès via la connexion normale, sans désactiver Vercel Authentication, et vérifier que l'ancienne version active reste utilisable si son cache est sain. Documenter les résultats réels sur iPhone et ne pas confondre ce test avec le simulateur HTTPS local.

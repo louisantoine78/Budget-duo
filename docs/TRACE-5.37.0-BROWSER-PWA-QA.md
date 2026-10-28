@@ -144,3 +144,22 @@ node scripts/trace-preview-upgrade-qa.cjs --report /tmp/trace-537-upgrade-export
 ```
 
 Restent impératifs : vraie session HTTPS protégée, Safari/iPhone physique, migration/rollback et validation financière finale. Aucun GO de production.
+
+## HTTPS protégé : refus des redirections d'authentification — 28 octobre 2026
+
+Base de cette nouvelle recette : `cf9216d2a30908a5ce08646ca2dfd74ad78c6569`.
+Un nouveau test isolé `scripts/trace-protected-preview-qa.cjs` crée une origine HTTPS locale avec certificat éphémère et cookie de session **entièrement fictif**, sans identifiants Vercel/Supabase. Il ne sert que les fichiers de l'export dont il vérifie les SHA-256 et bloque les requêtes navigateur externes.
+
+- Accès anonyme : redirection vers une page de connexion simulée.
+- Accès authentifié : cookie transmis aux ressources et au service worker ; 68 actifs statiques mis en cache (l'export compte 69 fichiers applicatifs, dont le service worker non mis en cache), puis chargement hors connexion réussi.
+- Session expirée pendant l'installation : une ressource est redirigée en HTTP 302 vers une fausse page de connexion. Le test reproduit une défaillance de l'ancienne génération : un cache non fiable subsistait. Le générateur `scripts/build-trace-preview-pwa.mjs` utilise désormais `Request(..., {credentials:'same-origin',redirect:'error'})`, et efface la nouvelle génération de cache en cas d'échec, sans supprimer le cache actif précédent.
+- Validation du nouveau scénario : PASS. Le test sur l'ancien export échoue au contrôle d'absence de cache de connexion, puis passe sur l'export corrigé.
+- Chromium/WebKit Linux sur l'export et test d'activation contrôlée : PASS sur les quatre formats déjà prévus. Le test statique de comportement du script `trace-preview-upgrade-qa.cjs` a été ajusté pour vérifier `TRACE_LAB_ROOT`.
+
+Exécution reproductible depuis un checkout isolé, après export fictif et installation hors dépôt de Chromium/Playwright et OpenSSL :
+
+```sh
+TRACE_LAB_ROOT=/tmp/trace-537-auth-hardening TRACE_PLAYWRIGHT_MODULE=/chemin/isole/node_modules/playwright-core TRACE_CHROMIUM_EXECUTABLE=/chemin/isole/chromium node scripts/trace-protected-preview-qa.cjs --report /tmp/trace-auth-qa.json
+```
+
+**Portée stricte :** le certificat HTTPS et le cookie sont simulés ; ce test ne prouve ni l'accès authentifié réel sur Vercel, ni le fonctionnement de Safari sur iPhone. Aucune URL de partage public, migration, donnée réelle ou publication Vercel n'a été créée dans cette recette. Production : NO-GO.
