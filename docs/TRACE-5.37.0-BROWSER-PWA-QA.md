@@ -122,3 +122,25 @@ session uniquement à son propre domaine HTTPS. Aucun accès aux API externes,
 à Supabase ou aux données financières n'est autorisé ; le cache demeure limité
 aux fichiers fictifs. Le comportement sur la véritable URL protégée doit
 être revérifié après chaque reconstruction du worker.
+
+## Nouvelle qualification isolée — reprise du 28 octobre 2026
+
+Référence du checkout réellement testé : `aa7f17025db1a14391832252b1ba4a21c174ad5c` (la documentation et le correctif décrits ci-dessous donnent lieu à un commit ultérieur). `main` est restée à `02c70f50e7e51da79b77a91dde96a03c6c719909` pendant la recette.
+
+- Export du laboratoire : `node scripts/build-trace-preview-pwa.mjs --check` et `node scripts/export-trace-537-preview.mjs --out /tmp/trace-537-qa-export` réussis ; 69 actifs autorisés, métadonnées d'audit séparées, aucune configuration ou migration réelle.
+- Tests export : 2/2 ; régression Node : 108 fichiers, 1 742 scénarios recensés, zéro suite en échec.
+- Chromium et WebKit Linux exécutés sur `TRACE_LAB_ROOT=/tmp/trace-537-qa-export` : quatre formats 320/390/768/1440 px, 16 transitions et chargement hors connexion réussis, aucun échec recensé.
+- Garde-fous : 17 vérifications automatisées réussies, y compris les quatre suites PostgreSQL/PGlite isolées, après récupération de l'historique Git complet. Production toujours NO-GO.
+- Le script `scripts/trace-preview-upgrade-qa.cjs` accepte désormais `TRACE_LAB_ROOT` et refuse explicitement une destination sans `trace-lab-export-audit.json`. Sa mise à jour à deux générations, exécutée sur l'export fictif, a réussi : brouillon protégé, activation volontaire et ancien cache supprimé.
+- Vercel : le projet distinct `trace-537-iphone-lab` a une authentification activée ; un déploiement antérieur (`bd930ce`) est déclaré READY. L'accès anonyme à sa page répond par HTTP 302 vers Vercel Authentication. Le contenu authentifié et le cache sous session réelle restent à vérifier : ne pas confondre ce contrôle avec une recette HTTPS authentifiée.
+
+Reproduire le test d'activation **sur l'export**, après avoir installé Playwright et Chromium dans un environnement isolé :
+
+```sh
+TRACE_LAB_ROOT=/tmp/trace-537-qa-export \
+TRACE_PLAYWRIGHT_MODULE=/chemin/isole/node_modules/playwright-core \
+TRACE_CHROMIUM_EXECUTABLE=/chemin/isole/chromium \
+node scripts/trace-preview-upgrade-qa.cjs --report /tmp/trace-537-upgrade-export.json
+```
+
+Restent impératifs : vraie session HTTPS protégée, Safari/iPhone physique, migration/rollback et validation financière finale. Aucun GO de production.

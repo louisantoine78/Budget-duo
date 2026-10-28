@@ -75,3 +75,13 @@ Les derniers tests complets rapportés avant ce checkpoint : **108 suites Node /
 ## Prompt minimal de secours
 
 > Reprends TRACE 5.37.0 International dans `louisantoine78/Budget-duo`, sur la seule branche `trace-5.37.0-international-accounts-fx`. Lis `docs/TRACE-5.37.0-REPRISE-CONTINUITE.md`, inspecte le HEAD réel et `main`, puis poursuis la préparation de la prévisualisation HTTPS privée et la qualification iPhone/financière sans toucher à la production. Ne recommence pas la conception ; teste puis commit uniquement des changements vérifiés avec `[skip ci]`. Explique ce que tu as réellement réalisé et les blockers.
+
+## Avancée de la qualification après le checkpoint `aa7f170` — 28 octobre 2026
+
+Une nouvelle sandbox Vercel isolée, réinitialisée depuis le SHA `aa7f170`, a regénéré l'export fictif, réussi les 2 tests d'export et rejoué la régression Node (108 fichiers / 1 742 scénarios / zéro échec). Les recettes Chromium et WebKit Linux sur **le dossier exporté** passent sur 320, 390, 768 et 1 440 px avec navigation et fonctionnement hors ligne. Le garde-fou officiel a validé ses 17 contrôles, dont les quatre suites SQL PGlite, sur un clone Git à historique complet. Ces résultats n'incluent pas Safari iOS physique.
+
+Le test de mise à jour `scripts/trace-preview-upgrade-qa.cjs` avait une lacune d'isolation : il servait directement le checkout. Il a été corrigé pour accepter `TRACE_LAB_ROOT` et refuser un répertoire sans preuve `trace-lab-export-audit.json`. Recette de mise à jour sur l'export : PASS (brouillon préservé, activation volontaire et cache périmé supprimé) ; répertoire non autorisé : refus vérifié. Les commandes et preuves de test sont détaillées dans `docs/TRACE-5.37.0-BROWSER-PWA-QA.md`.
+
+Une prévisualisation antérieure existe dans le projet Vercel indépendant `trace-537-iphone-lab`, marquée READY et protégée par Vercel Authentication. Une requête sans connexion a obtenu HTTP 302 vers SSO, mais aucune preuve de fonctionnement **authentifié** et de cache `credentials: same-origin` n'a été recueillie. Ne créer aucun lien de contournement public. Prochaine action : qualification HTTPS sous session autorisée, puis recette iPhone physique. **Production : NO-GO**, sans modification de `main` ni du Supabase réel.
+
+Toujours relire le HEAD distant avant de travailler : ce paragraphe documente un checkpoint, et non un SHA actuel immuable.

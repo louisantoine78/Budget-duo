@@ -7,7 +7,10 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const {chromium}=require(process.env.TRACE_PLAYWRIGHT_MODULE||'playwright-core');
 const executablePath=process.env.TRACE_CHROMIUM_EXECUTABLE;
 if(!executablePath)throw Error('TRACE_CHROMIUM_EXECUTABLE must be an isolated Chromium binary');
-const root=path.resolve(__dirname,'..'),file='trace-international-preview-sw.js';
+const root=process.env.TRACE_LAB_ROOT?path.resolve(process.env.TRACE_LAB_ROOT):path.resolve(__dirname,'..'),
+ file='trace-international-preview-sw.js';
+if(process.env.TRACE_LAB_ROOT&&!fs.existsSync(path.join(root,'trace-lab-export-audit.json')))
+ throw Error('TRACE_LAB_ROOT must point to a fictional-only PWA export');
 const initial=fs.readFileSync(path.join(root,file),'utf8');
 const match=initial.match(/const CACHE=PREFIX\+'([a-f0-9]+)';/);
 if(!match)throw Error('Unrecognized service-worker version');
