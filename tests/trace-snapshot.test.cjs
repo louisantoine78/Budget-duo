@@ -90,8 +90,10 @@ test('unpack CLI refuses incomplete but cryptographically valid backup without w
   await fs.writeFile(snapshot,JSON.stringify(createSnapshot(payload(),{sourceCommit:'a'.repeat(40)})));
   await fs.writeFile(counts,JSON.stringify({accounts:1,transactions:1}));
   const run=(...args)=>spawnSync(process.execPath,[path.resolve(__dirname,'../scripts/trace-snapshot.mjs'),...args],{encoding:'utf8'});
+  const {sourceFingerprint}=await api;
   const guards=['--expected-household-id',household,'--expected-source-commit','a'.repeat(40),
-   '--expected-documents','2','--expected-members','1','--expected-collections',counts];
+   '--expected-documents','2','--expected-members','1','--expected-collections',counts,
+   '--expected-payload-sha256',sourceFingerprint(payload()).payloadSha256];
   assert.notEqual(run('unpack',snapshot,out,...guards,'--expected-members','2').status,0);
   // A missing partner is NOT detected by the checksum; the independent count is mandatory.
   assert.notEqual(run('unpack',snapshot,out,'--expected-members','2').status,0);
@@ -108,6 +110,48 @@ test('unpack CLI refuses incomplete but cryptographically valid backup without w
   assert.notEqual(run('unpack',snapshot,out,...guards).status,0);
  }finally{await fs.rm(dir,{recursive:true,force:true});}
 });
+test('independent source fingerprint rejects same-count monetary tampering with a valid snapshot checksum',async()=>{
+ const {createSnapshot,verifySnapshot,unpackSnapshot,sourceFingerprint}=await api;
+ const source=payload(),evidence=sourceFingerprint(source);
+ assert.equal(evidence.documents,2);
+ assert.match(evidence.payloadSha256,/^[a-f0-9]{64}$/);
+ const changed=payload();changed.documents[0].data.bankAmount=982.15;
+ const regenerated=createSnapshot(changed,{sourceCommit:'a'.repeat(40)});
+ assert.equal(verifySnapshot(regenerated,{expectedDocuments:2}).integrityVerified,true);
+ const guards={expectedHouseholdId:household,expectedSourceCommit:'a'.repeat(40),
+  expectedDocuments:2,expectedMembers:1,expectedCollections:{accounts:1,transactions:1},
+  expectedPayloadSha256:evidence.payloadSha256};
+ assert.throws(()=>verifySnapshot(regenerated,guards),/Empreinte du contenu/);
+ assert.throws(()=>unpackSnapshot(regenerated,guards),/Empreinte du contenu/);
+ const original=createSnapshot(source,{sourceCommit:'a'.repeat(40)});
+ assert.deepEqual(unpackSnapshot(original,guards),source);
+});
+test('unpack CLI refuses missing independently verified guards and accepts fingerprinted raw export',async()=>{
+ const {createSnapshot}=await api;
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'trace-guarded-restore-'));
+ try{
+  const raw=path.join(dir,'raw.json'),snapshot=path.join(dir,'snapshot.json');
+  const out=path.join(dir,'extracted.json'),counts=path.join(dir,'counts.json');
+  const run=(...args)=>spawnSync(process.execPath,[path.resolve(__dirname,'../scripts/trace-snapshot.mjs'),...args],{encoding:'utf8'});
+  await fs.writeFile(raw,JSON.stringify(payload()));
+  await fs.writeFile(snapshot,JSON.stringify(createSnapshot(payload(),{sourceCommit:'a'.repeat(40)})));
+  await fs.writeFile(counts,JSON.stringify({accounts:1,transactions:1}));
+  const fingerprint=run('fingerprint',raw);
+  assert.equal(fingerprint.status,0,fingerprint.stderr);
+  const digest=JSON.parse(fingerprint.stdout).payloadSha256;
+  const guards=['--expected-household-id',household,'--expected-source-commit','a'.repeat(40),
+   '--expected-documents','2','--expected-members','1','--expected-collections',counts,
+   '--expected-payload-sha256',digest];
+  assert.notEqual(run('unpack',snapshot,out).status,0);
+  assert.notEqual(run('unpack',snapshot,out,...guards.slice(0,-2)).status,0);
+  assert.notEqual(run('unpack',snapshot,out,...guards.slice(2)).status,0);
+  assert.notEqual(run('unpack',snapshot,out,...guards.slice(0,-2),'--expected-payload-sha256','f'.repeat(64)).status,0);
+  await assert.rejects(fs.stat(out),{code:'ENOENT'});
+  const ok=run('unpack',snapshot,out,...guards);
+  assert.equal(ok.status,0,ok.stderr);
+  assert.deepEqual(JSON.parse(await fs.readFile(out,'utf8')),payload());
+ }finally{await fs.rm(dir,{recursive:true,force:true});}
+});
 test('CLI creates and unpacks exclusively local files, refusing any overwrite',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'trace-fictional-snapshot-'));
  try{
@@ -122,7 +166,12 @@ test('CLI creates and unpacks exclusively local files, refusing any overwrite',a
    '--expected-collections',counts).status,0);
   assert.notEqual(run('verify',snapshot,'--expected-members','2').status,0);
   assert.notEqual(run('verify',snapshot,'--expected-documents','3').status,0);
-  assert.equal(run('unpack',snapshot,out).status,0);
+  const {sourceFingerprint}=await api;
+  const guards=['--expected-household-id',household,
+   '--expected-documents','2','--expected-members','1','--expected-collections',counts,
+   '--expected-payload-sha256',sourceFingerprint(payload()).payloadSha256];
+  assert.notEqual(run('unpack',snapshot,out).status,0);
+  assert.equal(run('unpack',snapshot,out,...guards).status,0);
   assert.deepEqual(JSON.parse(await fs.readFile(out,'utf8')),payload());
   assert.notEqual(run('unpack',snapshot,raw).status,0);
  }finally{await fs.rm(dir,{recursive:true,force:true});}

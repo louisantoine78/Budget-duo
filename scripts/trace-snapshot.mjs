@@ -4,7 +4,9 @@
  * verify snapshot.json [--expected-documents N] [--expected-members N]
  *   [--expected-collections source-counts.json] [--expected-household-id UUID]
  *   [--expected-source-commit SHA]
- * unpack snapshot.json restored-export.json [same --expected-* guards]
+ * fingerprint independent-source-export.json (prints a read-only SHA-256 inventory)
+ * unpack snapshot.json restored-export.json [ALL --expected-* guards required,
+ *   including --expected-payload-sha256 SHA256 from an independent source export]
  * Inputs are supplied explicitly; no credentials, network, deletion or overwrite.
  */
 import {readFile,writeFile} from 'node:fs/promises';
@@ -22,6 +24,7 @@ function canonical(value){
  throw Error('Export non JSON : valeur non finie, absente ou objet spécial');
 }
 const checksum=value=>createHash('sha256').update(canonical(value)).digest('hex');
+const SHA256=/^[a-f0-9]{64}$/;
 function inventory(payload){
  if(!payload||typeof payload!=='object'||!payload.household||!UUID.test(payload.household.id)||
     !Array.isArray(payload.household_members)||!Array.isArray(payload.documents))
@@ -48,6 +51,12 @@ function inventory(payload){
  return{householdId,members:memberIds.size,documents:ids.size,
   collections:Object.fromEntries([...collections].sort(([a],[b])=>a.localeCompare(b)))};
 }
+// Derive this from a separately obtained, read-only export of the source tables,
+// NEVER from the snapshot currently being tested. A matching digest alone does
+// not attest that the upstream database export was exhaustive.
+export function sourceFingerprint(payload){
+ return{...inventory(payload),payloadSha256:checksum(payload),completenessVerified:false};
+}
 export function createSnapshot(payload,{createdAt=new Date().toISOString(),sourceCommit=null}={}){
  const counts=inventory(payload);
  if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(createdAt)||
@@ -60,7 +69,7 @@ export function createSnapshot(payload,{createdAt=new Date().toISOString(),sourc
  return{...content,sha256:checksum(content)};
 }
 export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expectedCollections,
- expectedHouseholdId,expectedSourceCommit}={}){
+ expectedHouseholdId,expectedSourceCommit,expectedPayloadSha256}={}){
  if(!snapshot||snapshot.format!==FORMAT||!/^[a-f0-9]{64}$/.test(snapshot.sha256||''))
   throw Error('Format ou empreinte de sauvegarde invalide');
  const {sha256,...content}=snapshot;
@@ -76,6 +85,9 @@ export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expec
  if(expectedSourceCommit!==undefined&&(!/^[a-f0-9]{40}$/.test(expectedSourceCommit)||
     snapshot.sourceCommit!==expectedSourceCommit))
   throw Error('Commit source différent de celui attendu');
+ if(expectedPayloadSha256!==undefined&&(!SHA256.test(expectedPayloadSha256)||
+    checksum(snapshot.payload)!==expectedPayloadSha256))
+  throw Error('Empreinte du contenu différente du relevé source indépendant');
  if(expectedDocuments!==undefined&&(!Number.isSafeInteger(expectedDocuments)||expectedDocuments<0||actual.documents!==expectedDocuments))
   throw Error('Nombre de documents différent du comptage indépendant attendu');
  if(expectedMembers!==undefined&&(!Number.isSafeInteger(expectedMembers)||expectedMembers<1||
@@ -99,17 +111,21 @@ export function unpackSnapshot(snapshot,expectations={}){
 }
 async function main(args){
  const [action,input,output]=args;
- if(!['create','verify','unpack'].includes(action)||!input||action!=='verify'&&!output)
-  throw Error('Usage : trace-snapshot.mjs create|verify|unpack entrée.json [sortie.json] [options]');
+ if(!['create','fingerprint','verify','unpack'].includes(action)||!input||!['fingerprint','verify'].includes(action)&&!output)
+  throw Error('Usage : trace-snapshot.mjs create|fingerprint|verify|unpack entrée.json [sortie.json] [options]');
  // Typos must never silently skip a restore safety guard or accept stray values.
- const validOptions=action==='create'?['--source-commit']:[
+ const validOptions=action==='create'?['--source-commit']:
+  action==='fingerprint'?[]:[
   '--expected-documents','--expected-members','--expected-collections',
-  '--expected-household-id','--expected-source-commit'];
- for(let i=action==='verify'?2:3;i<args.length;i+=2){
+  '--expected-household-id','--expected-source-commit','--expected-payload-sha256'];
+ for(let i=['verify','fingerprint'].includes(action)?2:3;i<args.length;i+=2){
   if(!validOptions.includes(args[i])||i+1>=args.length||
      args[i+1].startsWith('--'))throw Error('Option inconnue ou incomplète : '+args[i]);
  }
  const json=JSON.parse(await readFile(resolve(input),'utf8'));
+ if(action==='fingerprint'){
+  console.log(JSON.stringify(sourceFingerprint(json)));return;
+ }
  const option=name=>{const i=args.indexOf(name);if(i<0)return undefined;
   if(args.indexOf(name,i+1)!==-1)throw Error('Option répétée : '+name);
   if(!args[i+1]||args[i+1].startsWith('--'))throw Error('Valeur manquante : '+name);
@@ -120,7 +136,11 @@ async function main(args){
   const expected=option('--expected-documents'),members=option('--expected-members');
   const householdId=option('--expected-household-id');
   const sourceCommit=option('--expected-source-commit');
+  const payloadSha=option('--expected-payload-sha256');
   const collectionsPath=option('--expected-collections');
+  if(action==='unpack'&&(!householdId||!sourceCommit&&json.sourceCommit!==null||
+     !expected||!members||!collectionsPath||!payloadSha))
+   throw Error('Extraction refusée : foyer, commit source (si présent), inventaire et empreinte du relevé source indépendant obligatoires');
   if(expected!==undefined&&!/^\d+$/.test(expected))throw Error('Comptage attendu invalide');
   if(members!==undefined&&!/^[12]$/.test(members))throw Error('Comptage des membres attendu invalide');
   const expectedCollections=collectionsPath===undefined?undefined:
@@ -128,7 +148,8 @@ async function main(args){
   const expectations={
    expectedDocuments:expected===undefined?undefined:Number(expected),
    expectedMembers:members===undefined?undefined:Number(members),
-   expectedCollections,expectedHouseholdId:householdId,expectedSourceCommit:sourceCommit
+   expectedCollections,expectedHouseholdId:householdId,expectedSourceCommit:sourceCommit,
+   expectedPayloadSha256:payloadSha
   };
   if(action==='verify')console.log(JSON.stringify(verifySnapshot(json,expectations)));
   else{
