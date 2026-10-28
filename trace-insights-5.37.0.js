@@ -58,7 +58,7 @@ function renderTrend(target,{months=[],selected='',headline=true,compact=false}=
    ' <small>de dépenses</small></strong><p>'+(comparison===null?'Premier mois documenté':
    (comparison>0?'+':comparison<0?'−':'')+fmt(Math.abs(comparison))+' par rapport à '+esc(monthName(previous.month)))+
    (month.current?' · provisoire':'')+'</p></div>'+
-   '<div class="trace-trend-columns">'+data.map(v=>
+   '<div class="trace-trend-columns" tabindex="0" role="region" aria-label="Évolution des dépenses par mois · faire défiler horizontalement">'+data.map(v=>
     '<div class="trace-trend-col"><div class="trace-trend-bars" role="img" aria-label="'+esc(monthName(v.month))+' : '+
      (v.hasData?fmt(v.expense)+' dépensés'+(v.budget>0?' ; '+fmt(v.budget)+' prévus':''):'non renseigné')+'">'+
      (v.hasData?'<i class="is-planned" style="height:'+Math.max(0,Math.round(v.budget/scale*72))+'px"></i>'+

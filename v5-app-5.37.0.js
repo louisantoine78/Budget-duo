@@ -1531,30 +1531,30 @@ function openManualTransaction(preferredKind='expense'){
   '<div class="trace-movement-families" id="manualFamilies">'+M.families.map(f=>'<button type="button" class="trace-movement-family" data-manual-family="'+f.id+'">'+esc(f.label)+'</button>').join('')+'</div>'+
   '<label class="label2" for="manualKind">Nature précise</label><select class="input" id="manualKind"></select>'+ 
   '<p class="trace-movement-help" id="manualKindHelp" aria-live="polite"></p>'+
-  '<div class="trace-manual-fields"><label class="label2">Description</label><input class="input" id="manualTxName" maxlength="80" type="text" placeholder="Ex. Restaurant, remboursement Mathilde">'+
-  '<div class="formrow manual-money-row"><div><label class="label2">Montant</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
-  '<div><label class="label2">Date</label><input class="input" id="manualTxDate" type="date" value="'+localDateISO()+'"></div></div>'+
+  '<div class="trace-manual-fields"><label class="label2" for="manualTxName">Description</label><input class="input" id="manualTxName" maxlength="80" type="text" placeholder="Ex. Restaurant, remboursement Mathilde">'+
+  '<div class="formrow manual-money-row"><div><label class="label2" for="manualTxAmount">Montant</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
+  '<div><label class="label2" for="manualTxDate">Date</label><input class="input" id="manualTxDate" type="date" value="'+localDateISO()+'"></div></div>'+
   '<div class="trace-intl-transaction"><small id="manualBankCurrencyNote">Montant dans la devise du compte</small>'+
-  '<div class="formrow"><div><label class="label2">Devise d’achat</label><select class="input" id="manualPurchaseCurrency">'+window.TraceInternational.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></div>'+
-  '<div><label class="label2">Prix d’achat d’origine (facultatif)</label><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
-  '<label class="label2" id="manualFxRateLabel">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
+  '<div class="formrow"><div><label class="label2" for="manualPurchaseCurrency">Devise d’achat</label><select class="input" id="manualPurchaseCurrency">'+window.TraceInternational.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></div>'+
+  '<div><label class="label2" for="manualPurchaseAmount">Prix d’achat d’origine (facultatif)</label><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
+  '<label class="label2" id="manualFxRateLabel" for="manualFxRate">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
   '<p class="trace-intl-help">Le montant ci-dessus est celui réellement débité par la banque. En l’absence de taux de référence disponible, entre un taux vérifié.</p>'+
-  '<div id="manualDestAmountWrap" hidden><label class="label2" id="manualDestAmountLabel">Montant réellement reçu sur le compte destinataire</label><input class="input" id="manualDestAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
-  '<div id="manualTransferFeeWrap" class="trace-intl-transaction" hidden><label class="label2">Frais déjà inclus dans le débit bancaire (facultatif)</label><input class="input" id="manualTransferFee" type="number" min="0" step=".01" inputmode="decimal" placeholder="Montant dans la devise du compte de départ"><small>Le montant du virement est le débit total de la banque, frais compris. Les frais documentés ici ne créent pas un deuxième débit ni une dépense supplémentaire.</small></div>'+
-  '<div id="manualCategoryWrap"><label class="label2">Catégorie budgétaire</label><select class="input" id="manualTxCategory"></select><small id="manualCategorySuggestion"></small></div>'+
+  '<div id="manualDestAmountWrap" hidden><label class="label2" id="manualDestAmountLabel" for="manualDestAmount">Montant réellement reçu sur le compte destinataire</label><input class="input" id="manualDestAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
+  '<div id="manualTransferFeeWrap" class="trace-intl-transaction" hidden><label class="label2" for="manualTransferFee">Frais déjà inclus dans le débit bancaire (facultatif)</label><input class="input" id="manualTransferFee" type="number" min="0" step=".01" inputmode="decimal" placeholder="Montant dans la devise du compte de départ"><small>Le montant du virement est le débit total de la banque, frais compris. Les frais documentés ici ne créent pas un deuxième débit ni une dépense supplémentaire.</small></div>'+
+  '<div id="manualCategoryWrap"><label class="label2" for="manualTxCategory">Catégorie budgétaire</label><select class="input" id="manualTxCategory"></select><small id="manualCategorySuggestion"></small></div>'+
   ''+
-  '<div id="manualWhoWrap"><label class="label2">Cette dépense concerne</label><select class="input" id="manualTxBeneficiary">'+who+'</select></div>'+
+  '<div id="manualWhoWrap"><label class="label2" for="manualTxBeneficiary">Cette dépense concerne</label><select class="input" id="manualTxBeneficiary">'+who+'</select></div>'+
   '<div id="manualFriendsGroup" class="trace-manual-friends hidden"><b>Répartition réelle de la dépense</b>'+
-  '<div class="formrow"><div><label class="label2">Part avancée aux amis ($)</label><input class="input" id="manualFriendsAmount" type="number" min="0" step=".01" value="0"></div>'+
-  '<div><label class="label2">Part de '+esc(shortMemberName(partner))+' ($)</label><input class="input" id="manualPartnerAmount" type="number" min="0" step=".01" value="0"></div></div>'+ 
+  '<div class="formrow"><div><label class="label2" for="manualFriendsAmount">Part avancée aux amis ($)</label><input class="input" id="manualFriendsAmount" type="number" min="0" step=".01" value="0"></div>'+
+  '<div><label class="label2" for="manualPartnerAmount">Part de '+esc(shortMemberName(partner))+' ($)</label><input class="input" id="manualPartnerAmount" type="number" min="0" step=".01" value="0"></div></div>'+
   '<label class="label2" for="manualFriendDebtorName">Un seul proche (facultatif)</label><input class="input" id="manualFriendDebtorName" maxlength="45" placeholder="Ex. Camille">'+
    '<textarea id="manualFriendDebtorShares" hidden aria-hidden="true" tabindex="-1"></textarea>'+
   '<div id="manualFriendDebtorRows" class="trace-friend-debtors"></div></div>'+
   '<div id="manualTargetWrap" class="hidden"><label class="label2">Compte destinataire</label><select class="input" id="manualTarget"></select></div>'+
-  '<div id="manualSavingsWrap" class="hidden"><label class="label2">Compte épargne / CELI</label><select class="input" id="manualSavings"></select></div>'+
-  '<div id="manualFriendLink" class="hidden"><label class="label2">Prénom de la personne (facultatif)</label><input class="input" id="manualFriendName" maxlength="45" placeholder="Ex. Camille">'+
-  '<label class="label2">Première avance remboursée (facultatif)</label><select class="input" id="manualRelatedExpense"></select>'+
-  '<label class="label2">Montant attribué (CAD de référence)</label><input class="input" id="manualRelatedAmount" type="number" min=".01" step=".01" inputmode="decimal" placeholder="Montant total si une seule avance">'+
+  '<div id="manualSavingsWrap" class="hidden"><label class="label2" for="manualSavings">Compte épargne / CELI</label><select class="input" id="manualSavings"></select></div>'+
+  '<div id="manualFriendLink" class="hidden"><label class="label2" for="manualFriendName">Prénom de la personne (facultatif)</label><input class="input" id="manualFriendName" maxlength="45" placeholder="Ex. Camille">'+
+  '<label class="label2" for="manualRelatedExpense">Première avance remboursée (facultatif)</label><select class="input" id="manualRelatedExpense"></select>'+
+  '<label class="label2" for="manualRelatedAmount">Montant attribué (CAD de référence)</label><input class="input" id="manualRelatedAmount" type="number" min=".01" step=".01" inputmode="decimal" placeholder="Montant total si une seule avance">'+
   '<div id="manualFriendAllocationRows"></div><button type="button" class="secondary" id="manualAddFriendLink">+ Ajouter une autre avance</button>'+
   '<small>Un même virement rembourse plusieurs avances sans deuxième transaction ni nouveau revenu. Les montants attribués sont en CAD budgétaire, et leur somme doit égaler le remboursement converti.</small></div>'+
   '<div id="manualMovementImpact" class="trace-movement-preview" role="status" aria-live="polite"></div>'+
@@ -5776,12 +5776,12 @@ function openAccountSettings(){
     (editable?
      (accountType(a)==='checking'?'<button type="button" class="trace-intl-set-primary" data-primary-bank="'+esc(a.id)+'">'+
        (state.household.primaryBankAccountByOwner?.[me]===a.id?'★ Compte principal':'☆ Définir comme principal')+'</button>':'')+
-     '<label class="label2">'+(accountType(a)==='card'?'Dette de carte':'Solde de référence')+' à cette date ('+
+     '<label class="label2" for="traceBankOpening_'+esc(a.id)+'">'+(accountType(a)==='card'?'Dette de carte':'Solde de référence')+' à cette date ('+
       window.TraceInternational.currency(a)+')</label>'+
-     '<input class="input account-opening" data-id="'+esc(a.id)+'" type="number" '+(accountType(a)==='card'?'min="0" ':'')+'step="0.01" value="'+esc(accountType(a)==='card'&&balances[a.id]!=null?Math.abs(Number(balances[a.id])):(balances[a.id]??''))+'">'+
+     '<input class="input account-opening" id="traceBankOpening_'+esc(a.id)+'" data-id="'+esc(a.id)+'" type="number" '+(accountType(a)==='card'?'min="0" ':'')+'step="0.01" value="'+esc(accountType(a)==='card'&&balances[a.id]!=null?Math.abs(Number(balances[a.id])):(balances[a.id]??''))+'">'+
      (accountType(a)==='card'?'<small class="trace-account-amount-info">Entre la dette en positif (ex. 595,90). TRACE la soustrait du compte courant. Aucun paiement ni achat n’est créé.</small>':'')+
-     '<label class="label2">Date de ce solde</label><input class="input account-date" data-id="'+esc(a.id)+'" type="date" value="'+esc(dates[a.id]||state.household.referenceDate||CM+'-01')+'">'+
-     '<label class="label2">Moment du solde</label><select class="input account-mode" data-id="'+esc(a.id)+'">'+
+     '<label class="label2" for="traceBankDate_'+esc(a.id)+'">Date de ce solde</label><input id="traceBankDate_'+esc(a.id)+'" class="input account-date" data-id="'+esc(a.id)+'" type="date" value="'+esc(dates[a.id]||state.household.referenceDate||CM+'-01')+'">'+
+     '<label class="label2" for="traceBankMode_'+esc(a.id)+'">Moment du solde</label><select id="traceBankMode_'+esc(a.id)+'" class="input account-mode" data-id="'+esc(a.id)+'">'+
      '<option value="start"'+(modes[a.id]!=='end'?' selected':'')+'>Début de la journée (jour inclus)</option>'+
      '<option value="end"'+(modes[a.id]==='end'?' selected':'')+'>Fin de la journée (jour exclu)</option></select>':
      '<div class="trace-bank-partner-balance"><span>Solde estimé</span><b>'+esc(traceAccountNative(a))+

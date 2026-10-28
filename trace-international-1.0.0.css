@@ -438,3 +438,38 @@
  display:block;color:#4d695a;font-size:11px;line-height:1.35;
  font-weight:650;white-space:normal;text-align:right
 }
+
+/* 5.37 accessible horizontally scrollable financial trend. */
+.trace-trend-columns:focus-visible{outline:3px solid #2d8062;outline-offset:3px;border-radius:8px}
+
+/* TRACE 5.37 — readable premium accents on ivory/mint cards.
+ * The base 5.36 stylesheet and the production entry remain untouched.
+ * Secondary labels are information, not disabled controls: keep >=4.5:1.
+ */
+:root{--muted:#52685e;--teal:#21695e;--green:#216b52}
+.seg:not(.active){color:#50645a}
+.trace-home-review-info small{color:#4d695a}
+#reconcileBadge{color:#216b52}
+
+/* Insight data and reconciliation subtitles must remain readable on ivory
+ * even at 320px: never convey an actual financial value in washed-out grey.
+ */
+.trace-insights-head small,
+.trace-insight-category-main small,
+.trace-insight-category-value small,
+.trace-insight-statpair small,
+.trace-insight-yearname small,
+.trace-insight-yearfig small,
+.trace-insights-empty{color:#496458}
+.trace-insights-explain,.trace-insights-foot{color:#496458!important}
+.trace-insight-spending-share{color:#496458!important;opacity:1}
+.trace-kicker,.trace-cal-legend-help,
+.trace-premium-account-name small,.trace-premium-account-pending small,
+.trace-bank-setup-footer{color:#496458}
+.trace-intl-transaction .label2,.trace-edit-currency{color:#365a49}
+#traceStatementDrawer>summary small{color:#496458}
+
+/* Stronger panel specificity than legacy form surfaces, no global form changes. */
+#sheetBackdrop .trace-edit-currency,
+#sheetBackdrop label[for="manualPurchaseCurrency"],
+#sheetBackdrop label[for="manualPurchaseAmount"]{color:#365a49!important}

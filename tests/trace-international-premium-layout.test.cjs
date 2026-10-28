@@ -191,3 +191,45 @@ test('small iPhone finance trend shows legible month labels and wraps long value
  assert.match(css,/white-space:normal;overflow:visible;overflow-wrap:anywhere/);
  assert.match(css,/\.trace-trend-columns\{gap:10px;padding-bottom:12px/);
 });
+
+test('manual financial fields have explicit accessible label associations',()=>{
+ const form=app.slice(app.indexOf("openSheet('Ajouter une opération',"),
+  app.indexOf('window.TraceOperationUI.enhanceManual();'));
+ for(const id of ['manualTxName','manualTxAmount','manualTxDate',
+  'manualPurchaseCurrency','manualPurchaseAmount','manualFxRate',
+  'manualDestAmount','manualTransferFee','manualTxCategory',
+  'manualTxBeneficiary','manualFriendsAmount','manualPartnerAmount',
+  'manualSavings','manualFriendName','manualRelatedExpense','manualRelatedAmount'])
+  assert.match(form,new RegExp('for="'+id+'"'),id+' must have an explicit form label');
+});
+test('horizontal monthly trend can be focused and understood on the keyboard',()=>{
+ const insights=get('trace-insights-5.37.0.js');
+ assert.match(insights,/class="trace-trend-columns" tabindex="0" role="region" aria-label="Évolution des dépenses/);
+ assert.match(css,/\.trace-trend-columns:focus-visible\{outline:3px solid #2d8062/);
+});
+
+
+test('bank balances and cutoff dates have unique visible label associations',()=>{
+ const section=app.slice(app.indexOf('function openAccountSettings(){'),
+  app.indexOf('function ',app.indexOf('function openAccountSettings(){')+12));
+ for(const id of ['traceBankOpening_','traceBankDate_','traceBankMode_']){
+  assert.ok(section.includes('for="'+id+"'+esc(a.id)+'"),id+' label');
+  assert.ok(section.includes('id="'+id+"'+esc(a.id)+'"),id+' input');
+ }
+});
+
+test('candidate-only subdued labels use higher-contrast premium greens',()=>{
+ assert.match(css,/:root\{--muted:#52685e;--teal:#21695e;--green:#216b52\}/);
+ assert.match(css,/\.seg:not\(\.active\)\{color:#50645a\}/);
+ assert.match(css,/\.trace-home-review-info small\{color:#4d695a\}/);
+});
+
+test('foreign purchase fields keep readable premium contrast inside the sheet',()=>{
+ assert.match(css,/#sheetBackdrop \.trace-edit-currency,/);
+ assert.match(css,/#sheetBackdrop label\[for="manualPurchaseCurrency"\]/);
+ assert.match(css,/#sheetBackdrop label\[for="manualPurchaseAmount"\]\{color:#365a49!important\}/);
+});
+
+test('compact Budget copy action keeps an accessible name when its text is hidden',()=>{
+ assert.match(shell,/id="budgetCopyPrevious" type="button" aria-label="Recopier le budget du mois précédent"/);
+});
