@@ -26,7 +26,7 @@ const openssl=spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes',
  '-days','1','-subj','/CN=localhost','-addext','subjectAltName=DNS:localhost,IP:127.0.0.1',
  '-keyout',key,'-out',cert],{encoding:'utf8',timeout:15000});
 if(openssl.status!==0)throw Error('OpenSSL unavailable: '+(openssl.stderr||'').slice(-400));
-let forceLoginForLicense=false;
+let forceLoginForLicense=false,forceHtmlOkForLicense=false;
 const hits=[];
 const license='/vendor/pdfjs/LICENSE';
 const server=https.createServer({key:fs.readFileSync(key),cert:fs.readFileSync(cert)},(req,res)=>{
@@ -43,6 +43,8 @@ const server=https.createServer({key:fs.readFileSync(key),cert:fs.readFileSync(c
  if(pathname==='/__login')return send(200,{'content-type':'text/html'},'<title>Simulated Vercel login</title>');
  if(!authorized||(forceLoginForLicense&&pathname===license))
   return send(302,{location:'/__login'});
+ if(forceHtmlOkForLicense&&pathname===license)
+  return send(200,{'content-type':'text/html'},'<title>Simulated expired login</title>');
  const name=pathname.slice(1);
  if(pathname==='/'||!allowed.has(name))return send(404,{'content-type':'text/plain'},'Not found');
  const full=path.resolve(root,name);
@@ -108,11 +110,31 @@ let browser;
  assert.equal(remnants.filter(x=>x.startsWith('trace-lab-537:')).length,0,
   'Never retain incomplete/off-target login cache after auth redirect');
  await broken.close();
+ // Some gateways respond with HTTP 200 HTML rather than a redirect. The
+ // installation must not cache a login document under a static asset URL.
+ forceLoginForLicense=false;
+ forceHtmlOkForLicense=true;
+ const htmlContext=await context();
+ await htmlContext.addCookies([{name:'trace_lab_session',value:'allowed',url:origin,
+  httpOnly:true,secure:true,sameSite:'Lax'}]);
+ const htmlPage=await htmlContext.newPage();
+ const seenBefore=hits.filter(x=>x.path===license&&x.status===200).length;
+ await htmlPage.goto(entry,{waitUntil:'load'});
+ const htmlDeadline=Date.now()+25000;
+ while(hits.filter(x=>x.path===license&&x.status===200).length===seenBefore&&Date.now()<htmlDeadline)
+  await htmlPage.waitForTimeout(150);
+ assert.ok(hits.some(x=>x.path===license&&x.status===200),
+  'Simulated 200 HTML sign-in response reached the worker');
+ await htmlPage.waitForTimeout(1000);
+ const htmlRemnants=await htmlPage.evaluate(async()=>await caches.keys());
+ assert.equal(htmlRemnants.filter(x=>x.startsWith('trace-lab-537:')).length,0,
+  'HTTP 200 HTML login response must not produce a ready offline cache');
+ await htmlContext.close();
  const report={schema:'trace-537-protected-https-qa-v1',passed:true,
   expectedExportAssets:audit.count,cachedAssets:cacheCount,anonymousRedirected:true,authenticatedWorkerAssets:before.length,
   cookieOnWorker:before.some(x=>x.path==='/trace-international-preview-sw.js'),
   cookieOnCachedAssets:before.some(x=>x.path===license),
-  offlineReload:true,authRedirectRejected:true,partialCacheRemoved:true,
+  offlineReload:true,authRedirectRejected:true,authHtml200Rejected:true,partialCacheRemoved:true,
   certification:'Local HTTPS with fake session only; not real Vercel Authentication or Safari iOS'};
  const idx=process.argv.indexOf('--report');
  if(idx!==-1){const output=process.argv[idx+1];if(!output)throw Error('Missing --report path');

@@ -4,11 +4,25 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {spawnSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const code=fs.readFileSync(path.join(root,'trace-international-preview-sw.js'),'utf8');
-function worker(scope='https://fictional.invalid/app/trace-international-preview.html'){
+function worker(scope='https://fictional.invalid/app/trace-international-preview.html',options={}){
  const handlers={},deleted=[],added=[],matches=[],requestsSeen=[];
  let skipped=0,claimed=0;
- const cache={addAll:async requests=>{requestsSeen.push(...requests);added.push(...requests.map(r=>r.url));},
-  match:async key=>{matches.push(key);return {static:true}}};
+ const cache={addAll:async requests=>{
+   requestsSeen.push(...requests);added.push(...requests.map(r=>r.url));
+  },match:async key=>{
+   matches.push(key);
+   if(typeof key==='string')return {static:true};
+   const url=key.url;
+   const type=url.endsWith('/LICENSE')?'text/plain':
+    url.endsWith('.html')?'text/html':
+    url.endsWith('.css')?'text/css':
+    url.endsWith('.webmanifest')?'application/manifest+json':
+    url.endsWith('.json')?'application/json':
+    url.endsWith('.svg')?'image/svg+xml':
+    url.endsWith('.png')?'image/png':'application/javascript';
+   return {status:200,redirected:false,url:options.foreignResponse&&url.endsWith('/LICENSE')?'https://login.invalid/':url,
+    type:'basic',headers:{get:()=>options.htmlLogin&&url.endsWith('/LICENSE')?'text/html':type}};
+  }};
  const self={location:{href:'https://fictional.invalid/app/trace-international-preview-sw.js'},
   registration:{scope,active:null},addEventListener:(type,fn)=>handlers[type]=fn,
   skipWaiting:async()=>{skipped++},clients:{claim:async()=>{claimed++}}};
@@ -38,6 +52,16 @@ test('install caches only allowlisted static files, PDF.js and no statements or 
   assert.doesNotMatch(url,/(?:config\.js|cloud\.js|index\.html|\/sw\.js|\.pdf$|supabase|fixtures\/statements)/);
  }
  assert.equal(w.skipped(),1);
+});
+test('worker rejects a 200 HTML login or off-target response and deletes bad generation',async()=>{
+ for(const options of [{htmlLogin:true},{foreignResponse:true}]){
+  const w=worker(undefined,options);
+  let work;w.handlers.install({waitUntil:p=>work=p});
+  await assert.rejects(work,/Invalid response in fictional static cache/);
+  assert.equal(w.skipped(),0,'Worker must never activate an invalid cache');
+  assert.equal(w.deleted.length,1,'Must remove only the new failed cache generation');
+  assert.match(w.deleted[0],/^trace-lab-537:%2Fapp%2F:/);
+ }
 });
 test('activation cleans only previous caches of this lab and preserves production caches',async()=>{
  const w=worker();let work;w.handlers.activate({waitUntil:p=>work=p});await work;

@@ -163,3 +163,13 @@ TRACE_LAB_ROOT=/tmp/trace-537-auth-hardening TRACE_PLAYWRIGHT_MODULE=/chemin/iso
 ```
 
 **Portée stricte :** le certificat HTTPS et le cookie sont simulés ; ce test ne prouve ni l'accès authentifié réel sur Vercel, ni le fonctionnement de Safari sur iPhone. Aucune URL de partage public, migration, donnée réelle ou publication Vercel n'a été créée dans cette recette. Production : NO-GO.
+
+## Régression HTTPS supplémentaire — page de connexion HTTP 200 (28 octobre 2026)
+
+Après le correctif `71c89a514761ffb8ffd159475896494507d988e5`, le test isolé `scripts/trace-protected-preview-qa.cjs` a été étendu à une réponse **HTTP 200 text/html** qui imite une page de connexion à l'URL d'un fichier statique fictif (`vendor/pdfjs/LICENSE`). Cette situation ne comporte aucune redirection HTTP 302 et contournait donc le contrôle précédent : l'ancienne génération produisait un cache lab malgré le contenu non conforme (test initial rouge).
+
+Le générateur `scripts/build-trace-preview-pwa.mjs` continue d'utiliser `Cache.addAll` avec `credentials:'same-origin'` et `redirect:'error'`, puis relit chaque entrée `Cache.match` **avant de valider l'installation**, vérifie exactement son URL, le statut HTTP 200, l'absence de redirection et le Content-Type statique attendu par extension. En cas de contenu inattendu (par exemple HTML sous un nom de fichier script, CSS ou LICENSE), le cache de génération est supprimé et le service worker ne s'active pas. Aucune origine externe ou API financière n'est mise en cache.
+
+Preuves sur l'export fictif isolé : le scénario authentifié et le rechargement hors connexion réussissent avec 68 actifs, la redirection 302 et la page HTTP 200 HTML sont toutes deux refusées, et les caches invalides sont supprimés. Les tests unitaires du service worker incluent désormais le rejet d'une page HTML 200 et d'une URL de réponse extérieure. Chromium et WebKit Linux sur quatre résolutions et le test de mise à jour PWA restent PASS. Test exclusivement sur HTTPS local et cookie fictif : aucun test sur la session Vercel réelle ni sur iPhone Safari physique. La prévisualisation Vercel précédemment déployée utilise une version antérieure.
+
+**Ne pas prendre ce succès de laboratoire comme un GO production** ; les contrôles humains d'accès HTTPS hébergé, de Safari iOS, de sauvegarde/rollback et de finances restent à effectuer.

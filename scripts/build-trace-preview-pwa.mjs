@@ -45,13 +45,39 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
  // Protected HTTPS preview requires its same-origin Vercel session cookie
  // for static assets. Never attach cookies to any remote origin; URLS is
  // the generated same-origin allowlist, never finance data or runtime APIs.
- // Never follow a sign-in redirect: a login page is not a static asset.
- // Clear a partially populated generation after a failed install, while
- // keeping the previous active version intact for offline use.
+ // A gateway can serve a login page with HTTP 200 and no redirect.
+ // Validate all responses before any write: never cache HTML in place of
+ // scripts, CSS, icons or PDF.js. Only static, exact-URL, same-origin 200s.
+ const validType=(name,type)=>{
+  if(name.endsWith('.js')||name.endsWith('.mjs'))
+   return ['application/javascript','text/javascript','application/x-javascript'].includes(type);
+  if(name.endsWith('.css'))return type==='text/css';
+  if(name.endsWith('.html'))return type==='text/html';
+  if(name.endsWith('.webmanifest'))
+   return ['application/manifest+json','application/json'].includes(type);
+  if(name.endsWith('.json'))return type==='application/json';
+  if(name.endsWith('.svg'))return type==='image/svg+xml';
+  if(name.endsWith('.png'))return type==='image/png';
+  if(name.endsWith('/LICENSE'))
+   return ['text/plain','application/octet-stream'].includes(type);
+  return false;
+ };
+ const requests=URLS.map(url=>new Request(url,{
+  cache:'reload',credentials:'same-origin',redirect:'error'
+ }));
  try{
-  await cache.addAll(URLS.map(url=>new Request(url,{
-   cache:'reload',credentials:'same-origin',redirect:'error'
-  })));
+  // Browser-managed addAll avoids throttling concurrent worker fetches.
+  // Verify each stored response before accepting the new worker generation.
+  await cache.addAll(requests);
+  const checked=await Promise.allSettled(requests.map(async(request,i)=>{
+   const response=await cache.match(request);
+   const type=(response?.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+   if(!response||response.status!==200||response.redirected||
+      response.url!==request.url||response.type==='opaque'||!validType(ASSETS[i],type))
+    throw Error('Refusing non-static or unauthenticated laboratory response: '+ASSETS[i]);
+  }));
+  if(checked.some(result=>result.status!=='fulfilled'))
+   throw Error('Invalid response in fictional static cache');
  }catch(error){
   await caches.delete(CACHE);
   throw error;
