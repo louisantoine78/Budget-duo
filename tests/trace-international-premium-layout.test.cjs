@@ -48,6 +48,31 @@ test('premium CSS uses layout, subtle elevation, focus and reduced motion',()=>{
  for(const v of ['.trace-home-priority','.trace-wealth-grid','.trace-wealth-net-card',
   ':focus-visible','prefers-reduced-motion'])assert.ok(css.includes(v),v);
 });
+test('premium layout remains readable at 320–360px without changing five main tabs',()=>{
+ assert.match(css,/@media\(max-width:360px\)\{[\s\S]*?\.trace-activity-four-tabs\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/@media\(max-width:360px\)\{[\s\S]*?\.trace-home-next-actions\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/\.trace-home-next-action:last-child\{grid-column:1\/-1/);
+ assert.match(css,/\.trace-budget-snapshot\{grid-template-columns:60px minmax\(0,1fr\)/);
+ assert.match(css,/\.trace-home-next-action small\{font-size:11px/);
+});
+test('six-month charts scroll inside their region on narrow phones, never widen the page',()=>{
+ assert.match(css,/@media\(max-width:420px\)\{[\s\S]*?\.trace-trend-columns\{grid-template-columns:repeat\(6,minmax\(48px,1fr\)\)/);
+ assert.match(css,/\.trace-trend-columns\{[^}]*overflow-x:auto/);
+ assert.match(css,/\.trace-trend-col\{scroll-snap-align:start/);
+ assert.match(css,/\.trace-intl-row b\{[^}]*overflow-wrap:anywhere/);
+});
+test('financial form controls avoid iOS zoom and preserve minimum touch targets',()=>{
+ assert.match(css,/\.trace-intl-transaction :is\(input:not\(\[type="checkbox"\]\),select,textarea\)/);
+ assert.match(css,/\.trace-intl-import :is\(input:not\(\[type="checkbox"\]\),select,textarea\)\{[^}]*font-size:16px;min-height:44px/);
+ assert.match(css,/\.trace-intl-set-primary\{min-height:44px/);
+ assert.match(css,/\.trace-intl-details>summary\{[^}]*min-height:44px/);
+ assert.match(css,/:focus-visible/);
+});
+test('tablet and desktop use balanced financial lead cards without touching stable assets',()=>{
+ assert.match(css,/@media\(min-width:800px\)\{[\s\S]*?\.trace-home-priority\{grid-template-columns:minmax\(0,1\.25fr\) minmax\(0,\.9fr\)/);
+ assert.match(css,/\.trace-trend-bars \.is-spent\{background:linear-gradient/);
+ assert.doesNotMatch(stable,/trace-international-1\.0\.0\.css/);
+});
 test('Patrimoine bottom nav label stays whole on iPhone sized widths',()=>{
  assert.match(css,/\.navbtn>span:last-child\{[^}]*white-space:nowrap/);
  assert.match(shell,/data-nav="wealth" aria-label="Patrimoine"/);
