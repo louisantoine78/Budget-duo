@@ -84,6 +84,35 @@ test('small text contrasts with light premium surfaces',()=>{
  assert.match(css,/\.trace-home-next-action small\{[^}]*color:#486858/);
  assert.match(css,/\.trace-intl-account-conversion\{color:#4d695a!important/);
 });
+test('premium secondary financial labels reach WCAG AA contrast on light surfaces',()=>{
+ const luminance=color=>{
+  const channels=color.slice(1).match(/../g).map(v=>parseInt(v,16)/255);
+  const linear=channels.map(x=>x<=0.04045?x/12.92:((x+.055)/1.055)**2.4);
+  return .2126*linear[0]+.7152*linear[1]+.0722*linear[2];
+ };
+ const contrast=(fg,bg)=>{
+  const hi=Math.max(luminance(fg),luminance(bg));
+  const lo=Math.min(luminance(fg),luminance(bg));
+  return(hi+.05)/(lo+.05);
+ };
+ for(const foreground of ['#475f54','#4d695a']){
+  assert.ok(contrast(foreground,'#fffefa')>=4.5,'Ivory contrast: '+foreground);
+  assert.ok(contrast(foreground,'#f5faf6')>=4.5,'Mint contrast: '+foreground);
+ }
+ assert.match(css,/\.navbtn:not\(\.active\)\{color:#475f54\}/);
+ assert.match(css,/\.trace-share-history-row small,[\s\S]*?\.trace-trend-col>small\{color:#4d695a\}/);
+});
+test('compact navigation keeps a legible 10px minimum and four accessible destinations',()=>{
+ assert.match(css,/\.navbtn>span:last-child\{font-size:clamp\(10px,2\.65vw,11px\);line-height:1\.3\}/);
+ const nav=shell.slice(shell.indexOf('<nav class="nav"'),shell.indexOf('</nav>'));
+ for(const key of ['home','budget','activity','wealth'])
+  assert.match(nav,new RegExp('data-nav="'+key+'"'));
+});
+test('320px journal wraps dates without clipping and motion can be reduced',()=>{
+ assert.match(css,/@media\(max-width:360px\)\{[\s\S]*?\.trace-activity-day-heading\{flex-wrap:wrap/);
+ assert.match(css,/\.trace-activity-day-heading small\{white-space:normal;max-width:100%\}/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.trace-trend-columns\{scroll-behavior:auto;scroll-snap-type:none\}/);
+});
 test('tablet and desktop use balanced financial lead cards without touching stable assets',()=>{
  assert.match(css,/@media\(min-width:800px\)\{[\s\S]*?\.trace-home-priority\{grid-template-columns:minmax\(0,1\.25fr\) minmax\(0,\.9fr\)/);
  assert.match(css,/\.trace-trend-bars \.is-spent\{background:linear-gradient/);

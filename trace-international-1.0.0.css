@@ -399,3 +399,23 @@
   align-items:start;gap:20px}
  .trace-home-next-action small{font-size:12px}
 }
+
+/* TRACE 5.37 — accessibility polish for light premium surfaces, candidate only.
+ * A navigation label or financial explanation must remain readable at 320px.
+ */
+.navbtn:not(.active){color:#475f54}
+.navbtn>span:last-child{font-size:clamp(10px,2.65vw,11px);line-height:1.3}
+.trace-intl-foot,.trace-intl-row small,.trace-account-last-line small,
+.trace-share-opening,.trace-share-history-row small,.trace-share-advance-row small,
+.trace-share-friend>summary small,.trace-csv-review-entry small,
+.trace-trend-col>small{color:#4d695a}
+@media(max-width:360px){
+ .trace-activity-day-heading{flex-wrap:wrap;row-gap:4px}
+ .trace-activity-day-heading small{white-space:normal;max-width:100%}
+ .trace-csv-review-entry{min-width:0}
+ .trace-csv-review-entry>span{min-width:0;overflow-wrap:anywhere}
+}
+@media(prefers-reduced-motion:reduce){
+ .trace-trend-columns{scroll-behavior:auto;scroll-snap-type:none}
+ .trace-home-next-action,.trace-csv-review-entry{animation:none;transition:none}
+}
