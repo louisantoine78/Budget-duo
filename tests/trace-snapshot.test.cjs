@@ -62,6 +62,37 @@ test('independent collection counts reject omissions and swapped inventory categ
   {accounts:1,transactions:1,other:1},{accounts:1,transactions:'1'}])
   assert.throws(()=>verifySnapshot(full,{expectedCollections:invalid}),/Collections différentes/);
 });
+test('backup and source fingerprint reject unsafe integer amounts instead of signing rounded values',async()=>{
+ const {createSnapshot,sourceFingerprint,verifySnapshot}=await api;
+ const raw=payload();
+ raw.documents[0].data.amountMinor=Number.MAX_SAFE_INTEGER+1;
+ for(const fn of [createSnapshot,sourceFingerprint])
+  assert.throws(()=>fn(raw),/précision JSON exacte/);
+ raw.documents[0].data.amountMinor=-(Number.MAX_SAFE_INTEGER+1);
+ assert.throws(()=>createSnapshot(raw),/précision JSON exacte/);
+ raw.documents[0].data.amountMinor=12345;
+ raw.documents[0].data.fxRate=0.000000123456789;
+ const snapshot=createSnapshot(raw);
+ assert.equal(verifySnapshot(snapshot).integrityVerified,true,
+  'Valid cents and fractional FX rates remain supported');
+});
+test('CLI refuses a raw export whose financial integer was already rounded by JSON.parse',async()=>{
+ const {createSnapshot}=await api;
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'trace-unsafe-money-'));
+ try{
+  const raw=path.join(dir,'raw.json'),out=path.join(dir,'backup.json');
+  // JSON.parse converts 9007199254740993 to 9007199254740992.
+  const source=JSON.stringify(payload()).replace('\"bankAmount\":',
+   '\"amountMinor\":9007199254740993,\"bankAmount\":');
+  assert.notEqual(source,JSON.stringify(payload()));
+  await fs.writeFile(raw,source);
+  const run=(...args)=>spawnSync(process.execPath,
+   [path.resolve(__dirname,'../scripts/trace-snapshot.mjs'),...args],{encoding:'utf8'});
+  assert.notEqual(run('fingerprint',raw).status,0);
+  assert.notEqual(run('create',raw,out).status,0);
+  await assert.rejects(fs.stat(out),{code:'ENOENT'});
+ }finally{await fs.rm(dir,{recursive:true,force:true});}
+});
 test('independent SQL counts accept empty collections but still reject omitted or altered rows',async()=>{
  const {createSnapshot,verifySnapshot,sourceFingerprint,unpackSnapshot}=await api;
  const raw=payload(),snapshot=createSnapshot(raw,{sourceCommit:'a'.repeat(40)});

@@ -17,7 +17,13 @@ const FORMAT='trace-snapshot/1';
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 function canonical(value){
  if(value===null||typeof value==='string'||typeof value==='boolean')return JSON.stringify(value);
- if(typeof value==='number'&&Number.isFinite(value))return JSON.stringify(value);
+ if(typeof value==='number'&&Number.isFinite(value)){
+  // JSON.parse rounds integers beyond Number.MAX_SAFE_INTEGER before hashing.
+  // Refuse rather than sign a backup containing silently changed minor units.
+  if(Number.isInteger(value)&&!Number.isSafeInteger(value))
+   throw Error('Export non fiable : entier financier hors précision JSON exacte');
+  return JSON.stringify(value);
+ }
  if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
  if(value&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype)
   return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
