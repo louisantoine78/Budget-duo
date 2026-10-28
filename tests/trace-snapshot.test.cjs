@@ -96,6 +96,11 @@ test('unpack CLI refuses incomplete but cryptographically valid backup without w
   // A missing partner is NOT detected by the checksum; the independent count is mandatory.
   assert.notEqual(run('unpack',snapshot,out,'--expected-members','2').status,0);
   assert.notEqual(run('unpack',snapshot,out,'--expected-household-id',user).status,0);
+  assert.notEqual(run('unpack',snapshot,out,'--expected-member','2').status,0,
+   'A misspelled safety guard must never be silently ignored');
+  assert.notEqual(run('unpack',snapshot,out,'--expected-members').status,0,
+   'A missing expected count must reject before output');
+  assert.notEqual(run('unpack',snapshot,out,'--expected-members','1','stray-value').status,0);
   assert.notEqual(run('unpack',snapshot,out,'--expected-source-commit','b'.repeat(40)).status,0);
   await assert.rejects(fs.stat(out),{code:'ENOENT'});
   assert.equal(run('unpack',snapshot,out,...guards).status,0);

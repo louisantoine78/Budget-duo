@@ -101,6 +101,14 @@ async function main(args){
  const [action,input,output]=args;
  if(!['create','verify','unpack'].includes(action)||!input||action!=='verify'&&!output)
   throw Error('Usage : trace-snapshot.mjs create|verify|unpack entrée.json [sortie.json] [options]');
+ // Typos must never silently skip a restore safety guard or accept stray values.
+ const validOptions=action==='create'?['--source-commit']:[
+  '--expected-documents','--expected-members','--expected-collections',
+  '--expected-household-id','--expected-source-commit'];
+ for(let i=action==='verify'?2:3;i<args.length;i+=2){
+  if(!validOptions.includes(args[i])||i+1>=args.length||
+     args[i+1].startsWith('--'))throw Error('Option inconnue ou incomplète : '+args[i]);
+ }
  const json=JSON.parse(await readFile(resolve(input),'utf8'));
  const option=name=>{const i=args.indexOf(name);if(i<0)return undefined;
   if(args.indexOf(name,i+1)!==-1)throw Error('Option répétée : '+name);
