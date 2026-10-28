@@ -1524,7 +1524,12 @@ function openManualTransaction(preferredKind='expense'){
   openSheet('Ajouter une opération','<p class="empty-note">Configure d’abord un compte bancaire dans Profil → Mes comptes.</p>');return;
  }
  const opts=bankAccounts.map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
- const who='<option value="'+esc(me)+'">Moi</option><option value="'+esc(partner)+'">'+esc(shortMemberName(partner))+'</option><option value="couple">Nous deux</option><option value="custom">Avec des amis</option>';
+ const whoChoices=[[me,'Moi'],[partner,shortMemberName(partner)],['couple','Nous deux'],['custom','Avec des amis']];
+ const who=whoChoices.map(([id,label])=>'<option value="'+esc(id)+'">'+esc(label)+'</option>').join('');
+ const currencyChoices=window.TraceInternational.currencies();
+ const manualChips=(items)=>items.map(([id,label])=>
+  '<button type="button" class="trace-manual-choice-chip" data-trace-choice="'+esc(id)+'" aria-pressed="false">'+
+   esc(label)+'</button>').join('');
  openSheet('Ajouter une opération',
   '<div class="trace-manual-hero"><span class="trace-manual-symbol">'+uiIcon('bank')+'</span><div><span class="trace-kicker">NOUVELLE OPÉRATION</span><b>Que s’est-il passé ?</b><small>TRACE adapte les choix au mouvement et calcule son impact avant de l’enregistrer.</small></div></div>'+
   '<label class="label2" for="manualTxAccount">Compte bancaire concerné</label><select class="input" id="manualTxAccount">'+opts+'</select>'+
@@ -1535,7 +1540,11 @@ function openManualTransaction(preferredKind='expense'){
   '<div class="formrow manual-money-row"><div><label class="label2" for="manualTxAmount">Montant</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
   '<div><label class="label2" for="manualTxDate">Date</label><input class="input" id="manualTxDate" type="date" value="'+localDateISO()+'"></div></div>'+
   '<div class="trace-intl-transaction"><small id="manualBankCurrencyNote">Montant dans la devise du compte</small>'+
-  '<div class="formrow"><div><label class="label2" for="manualPurchaseCurrency">Devise d’achat</label><select class="input" id="manualPurchaseCurrency">'+window.TraceInternational.currencies().map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'</select></div>'+
+  '<div class="formrow"><div><label class="label2" for="manualPurchaseCurrency" id="manualPurchaseCurrencyLabel">Devise d’achat</label>'+
+  '<select class="input trace-manual-choice-native" id="manualPurchaseCurrency" tabindex="-1" aria-hidden="true">'+
+   currencyChoices.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select>'+
+  '<div class="trace-manual-choice-pills" id="manualPurchaseCurrencyChips" role="group" aria-labelledby="manualPurchaseCurrencyLabel">'+
+   manualChips(currencyChoices.map(c=>[c,c]))+'</div></div>'+
   '<div><label class="label2" for="manualPurchaseAmount">Prix d’achat d’origine (facultatif)</label><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
   '<label class="label2" id="manualFxRateLabel" for="manualFxRate">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
   '<p class="trace-intl-help">Le montant ci-dessus est celui réellement débité par la banque. En l’absence de taux de référence disponible, entre un taux vérifié.</p>'+
@@ -1543,7 +1552,9 @@ function openManualTransaction(preferredKind='expense'){
   '<div id="manualTransferFeeWrap" class="trace-intl-transaction" hidden><label class="label2" for="manualTransferFee">Frais déjà inclus dans le débit bancaire (facultatif)</label><input class="input" id="manualTransferFee" type="number" min="0" step=".01" inputmode="decimal" placeholder="Montant dans la devise du compte de départ"><small>Le montant du virement est le débit total de la banque, frais compris. Les frais documentés ici ne créent pas un deuxième débit ni une dépense supplémentaire.</small></div>'+
   '<div id="manualCategoryWrap"><label class="label2" for="manualTxCategory">Catégorie budgétaire</label><select class="input" id="manualTxCategory"></select><small id="manualCategorySuggestion"></small></div>'+
   ''+
-  '<div id="manualWhoWrap"><label class="label2" for="manualTxBeneficiary">Cette dépense concerne</label><select class="input" id="manualTxBeneficiary">'+who+'</select></div>'+
+  '<div id="manualWhoWrap"><label class="label2" for="manualTxBeneficiary" id="manualTxBeneficiaryLabel">Cette dépense concerne</label>'+
+  '<select class="input trace-manual-choice-native" id="manualTxBeneficiary" tabindex="-1" aria-hidden="true">'+who+'</select>'+
+  '<div class="trace-manual-choice-pills" id="manualTxBeneficiaryChips" role="group" aria-labelledby="manualTxBeneficiaryLabel">'+manualChips(whoChoices)+'</div></div>'+
   '<div id="manualFriendsGroup" class="trace-manual-friends hidden"><b>Répartition réelle de la dépense</b>'+
   '<div class="formrow"><div><label class="label2" for="manualFriendsAmount">Part avancée aux amis ($)</label><input class="input" id="manualFriendsAmount" type="number" min="0" step=".01" value="0"></div>'+
   '<div><label class="label2" for="manualPartnerAmount">Part de '+esc(shortMemberName(partner))+' ($)</label><input class="input" id="manualPartnerAmount" type="number" min="0" step=".01" value="0"></div></div>'+
@@ -1604,7 +1615,19 @@ function openManualTransaction(preferredKind='expense'){
   extraFriendLines.push({expenseId:'',amountCAD:''});linkOptions();
  };
  
+ function syncManualPills(){
+  for(const [selectId,groupId] of [['manualTxBeneficiary','manualTxBeneficiaryChips'],
+   ['manualPurchaseCurrency','manualPurchaseCurrencyChips']]){
+   const select=$m(selectId),group=$m(groupId);
+   group?.querySelectorAll?.('[data-trace-choice]')?.forEach(button=>{
+    const selected=button.dataset.traceChoice===select?.value;
+    button.setAttribute('aria-pressed',String(selected));
+    button.classList.toggle('is-active',selected);
+   });
+  }
+ }
  function sync(){
+  syncManualPills();
   const def=M.get(kind);if(!def)return;
   const from=bankAccounts.find(a=>a.id===$m('manualTxAccount').value),
    fromCurrency=window.TraceInternational.currency(from);
@@ -1693,6 +1716,22 @@ function openManualTransaction(preferredKind='expense'){
  });
  $m('manualKind').onchange=()=>choose($m('manualKind').value,true);
  $m('manualTxBeneficiary').onchange=sync;
+ $m('manualPurchaseCurrency').onchange=sync;
+ for(const [selectId,groupId] of [['manualTxBeneficiary','manualTxBeneficiaryChips'],
+  ['manualPurchaseCurrency','manualPurchaseCurrencyChips']]){
+  $m(groupId)?.querySelectorAll?.('[data-trace-choice]')?.forEach(button=>{
+   button.onclick=event=>{
+    event.stopPropagation();
+    const select=$m(selectId),choice=button.dataset.traceChoice;
+    if(![...select.options].some(o=>o.value===choice))return;
+    if(select.value!==choice){
+     select.value=choice;
+     select.onchange?.();
+    }else syncManualPills();
+    button.focus?.({preventScroll:true});
+   };
+  });
+ }
  $m('manualTxAccount').onchange=()=>{
   const a=bankAccounts.find(a=>a.id===$m('manualTxAccount').value);
   $m('manualPurchaseCurrency').value=window.TraceInternational.currency(a);

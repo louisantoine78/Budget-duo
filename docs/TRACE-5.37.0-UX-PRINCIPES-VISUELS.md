@@ -60,3 +60,19 @@ Pastilles à sélection immédiate, vert profond quand actives, 44 px minimum, s
 Code candidat : bouton de consultation des soldes, choix principal par pastilles et filtres premium d'Activité. Les contrôles Chromium et WebKit Linux sont des **simulations**, pas une validation Safari/iPhone physique. La prévisualisation Vercel privée hébergée, le plan de migration et restauration PostgreSQL, la validation financière finale et l'autorisation explicite restent obligatoires.
 
 **Production : NO-GO** jusqu'à validation. Préserver main, la version stable 5.36.5 et toutes les données réelles.
+
+## Formulaire « Ajouter une opération » — commandes premium (28 octobre 2026)
+
+Les choix de **devise d’achat (CAD / EUR / USD / GBP / CHF)** et de **bénéficiaire de la dépense (Moi / Élise / Nous deux / Avec des amis)** sont maintenant présentés par pastilles tactiles de 44 px, plutôt que par deux listes déroulantes visibles.
+
+    Devise d’achat
+    [CAD] [EUR] [USD] [GBP] [CHF]
+
+    Cette dépense concerne
+    [Moi] [Élise] [Nous deux] [Avec des amis]
+
+Le bouton actif est vert profond, lisible et annoncé via aria-pressed. La rangée défile horizontalement sans déborder à 320 px. Les sélecteurs natifs restent en source de vérité technique, masqués à l’écran et retirés de VoiceOver / du parcours clavier, pour préserver le calcul et les tests existants. Le passage vers un compte EUR réinitialise la devise du paiement à la devise native du compte ; choisir Amis affiche les champs de partage, revenir vers Moi les masque. Aucune écriture n’est créée en touchant une pastille. La sauvegarde reste explicite.
+
+Ce traitement est **ciblé aux choix courts et fréquents**. Les comptes bancaires, catégories ou rapprochements pouvant comporter beaucoup d’entrées seront examinés séparément avec une solution recherchable et accessible, plutôt que de multiplier des centaines de boutons. Les données réelles ne sont jamais utilisées pour la QA.
+
+Les scénarios de régression doivent tester ces sélections dans Chromium et WebKit Linux ; seule la recette sur véritable iPhone/Safari valide le ressenti et les gestes finaux.

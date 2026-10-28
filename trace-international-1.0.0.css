@@ -547,3 +547,38 @@
 @media(max-width:600px){.trace-activity-filters{grid-template-columns:minmax(0,1fr);gap:8px}
  .trace-activity-filter-field{padding:9px 10px 6px}}
 @media(prefers-reduced-motion:reduce){.trace-activity-filter-chip{transition:none}}
+
+
+/* 5.37 premium manual operation: limited beneficiary / FX currency choices
+ * are direct touch pills. The original selects remain hidden as a tested
+ * single source of truth; never alter the financial posting semantics. */
+#sheetBackdrop .trace-manual-choice-native{
+ position:absolute!important;width:1px!important;height:1px!important;
+ min-height:0!important;padding:0!important;border:0!important;opacity:0!important;
+ overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important
+}
+#sheetBackdrop .trace-manual-choice-pills{
+ display:flex;align-items:stretch;gap:7px;max-width:100%;min-width:0;
+ overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+ scrollbar-width:none;padding:4px 2px 7px
+}
+#sheetBackdrop .trace-manual-choice-pills::-webkit-scrollbar{display:none}
+#sheetBackdrop .trace-manual-choice-chip{
+ flex:0 0 auto;min-height:44px;max-width:185px;padding:10px 13px;
+ border:1px solid #d7e7db;border-radius:999px;background:#fffefc;
+ box-shadow:0 2px 8px rgba(30,79,56,.045);color:#315c48;
+ font-size:12px;font-weight:780;line-height:1.25;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis;touch-action:manipulation;
+ transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease
+}
+#sheetBackdrop .trace-manual-choice-chip[aria-pressed="true"],
+#sheetBackdrop .trace-manual-choice-chip.is-active{
+ background:#205742;border-color:#205742;color:#fff;
+ box-shadow:0 5px 12px rgba(24,75,52,.16)
+}
+#sheetBackdrop .trace-manual-choice-chip:focus-visible{
+ outline:3px solid #64ac8c;outline-offset:2px
+}
+@media(prefers-reduced-motion:reduce){
+ #sheetBackdrop .trace-manual-choice-chip{transition:none}
+}

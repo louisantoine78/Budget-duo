@@ -181,3 +181,11 @@ La QA mobile WebKit sur l'export fictif 5.37.0 a mis en évidence un bouton « G
 Preuves : export fictif 69 fichiers, manifeste/cache régénéré ; Chromium 4 résolutions PASS ; WebKit Linux 4 résolutions PASS au second lancement isolé (un premier test concurrent a expiré sur une interaction du menu à 320 px, sans anomalie reproductible lors de la relance) ; HTTPS à fausse session 302/200 HTML PASS ; mise à jour de worker et mode avion simulé PASS. Campagne financière approfondie `tests/trace-candidate.browser.cjs` : **34/34 parcours Chromium fictifs PASS**, y compris CAD/EUR/USD, carte de crédit, débit différé, Partage, CSV/PDF et double import, sans accès réseau externe.
 
 La taille de la cible est contrôlée par navigateur WebKit Linux ; elle doit toujours être vérifiée sur Safari/iPhone physique avant tout GO.
+
+## Pastilles premium du formulaire manuel — 28 octobre 2026
+
+Dans **Ajouter une opération**, les choix courts `Devise d’achat` (CAD/EUR/USD/GBP/CHF) et `Cette dépense concerne` (Moi/Élise/Nous deux/Avec des amis) sont des boutons arrondis à sélection immédiate : 44 px de hauteur, état vert profond avec `aria-pressed`, rangée horizontalement scrollable, sélecteurs natifs invisibles et retirés de VoiceOver.
+
+Le moteur financier lit **toujours les valeurs natives** d’origine. Sélectionner Amis ouvre les champs de répartition ; revenir à Moi les referme. Changer de compte peut réinitialiser la devise à celle du compte, les pastilles se synchronisent ; la saisie ne crée jamais de transaction sans `Enregistrer`. Tests sur export fictif et **aucune requête** aux données financières réelles.
+
+Recettes : Chromium 320/390/768/1440 PASS, WebKit Linux mêmes largeurs PASS en exécution isolée (une première exécution en concurrence a rencontré un délai tactile non reproduit), 34 parcours financiers du candidat PASS, HTTPS local avec cookie fictif PASS, upgrade PWA PASS. Les signatures ne constituent **pas** un test Safari iOS physique ou une authentification Vercel réelle. Production toujours NO-GO.

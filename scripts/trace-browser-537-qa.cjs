@@ -215,6 +215,33 @@ async function main(){
      assert.equal(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')),true);
      assert.equal(await page.locator('#manualTxAmount').evaluate(el=>getComputedStyle(el).fontSize),'16px',
       'iPhone inputs below 16px trigger Safari focus zoom');
+     // Compact manual-operation choices: no native dropdown interaction and
+     // no persistence until the real Save button is explicitly confirmed.
+     for(const id of ['manualPurchaseCurrency','manualTxBeneficiary']){
+      const style=await page.locator('#'+id).evaluate(el=>({
+       hidden:el.getAttribute('aria-hidden'),tab:el.tabIndex,
+       clip:getComputedStyle(el).clipPath,pointer:getComputedStyle(el).pointerEvents
+      }));
+      assert.equal(style.hidden,'true',id+' must not be read twice by VoiceOver');
+      assert.equal(style.tab,-1,id+' native selector must not trap focus');
+      assert.equal(style.clip,'inset(50%)',id+' native selector must be clipped');
+      assert.equal(style.pointer,'none',id+' native selector must not intercept touch');
+      const choices=page.locator('#'+id+'Chips [data-trace-choice]');
+      assert.ok(await choices.count()>=4,'Pill group missing: '+id);
+      assert.ok((await choices.evaluateAll(buttons=>
+       buttons.map(b=>b.getBoundingClientRect().height))).every(h=>h>=44),
+       'At least 44px touch height required for '+id);
+     }
+     await activate(page.locator('#manualPurchaseCurrencyChips [data-trace-choice="USD"]'));
+     assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'USD');
+     assert.equal(await page.locator('#manualPurchaseCurrencyChips [data-trace-choice="USD"]').getAttribute('aria-pressed'),'true');
+     await activate(page.locator('#manualPurchaseCurrencyChips [data-trace-choice="CAD"]'));
+     assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'CAD');
+     await activate(page.locator('#manualTxBeneficiaryChips [data-trace-choice="custom"]'));
+     assert.equal(await page.locator('#manualTxBeneficiary').inputValue(),'custom');
+     assert.equal(await page.locator('#manualFriendsGroup').evaluate(el=>el.classList.contains('hidden')),false);
+     await activate(page.locator('#manualTxBeneficiaryChips button').first());
+     assert.equal(await page.locator('#manualFriendsGroup').evaluate(el=>el.classList.contains('hidden')),true);
      await page.locator('#saveManualTx').click();
      assert.match(await page.locator('#manualMovementError').innerText(),/Vérifie le montant/);
      const options=await page.locator('#manualTxAccount option').evaluateAll(els=>els.map(el=>el.value));

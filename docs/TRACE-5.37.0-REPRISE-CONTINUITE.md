@@ -111,3 +111,7 @@ La direction visuelle antérieure reste obligatoire et n’a pas été redéfini
 ## Checkpoint UX : comptes Accueil sans déroulant visible (28 octobre 2026)
 
 Lire docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md. Consultation des comptes en pastilles directes, étoile du principal, devise native, aucun changement financier par simple consultation. Modification du principal : pastilles dans le panneau replié, avec confirmation toujours obligatoire. Recette physique iPhone/Safari non effectuée. Production NO-GO.
+
+## 28 octobre — finition de la saisie manuelle premium
+
+Choix directs en pastilles pour devise d’achat (5 devises) et bénéficiaire de dépense (Moi/Élise/Nous deux/Amis), sources d’état natives invisibles et logique financière inchangée. Voir docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md. Contrôle tactile, champs conditionnels amis et non-écriture à qualifier dans scripts/trace-browser-537-qa.cjs. Les longues listes de comptes et catégories restent à traiter séparément, sans les déguiser en centaines de pastilles. Aucune recette iPhone physique ni GO de production.
