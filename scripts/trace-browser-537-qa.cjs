@@ -217,7 +217,7 @@ async function main(){
       'iPhone inputs below 16px trigger Safari focus zoom');
      // Compact manual-operation choices: no native dropdown interaction and
      // no persistence until the real Save button is explicitly confirmed.
-     for(const id of ['manualPurchaseCurrency','manualTxBeneficiary']){
+     for(const id of ['manualTxAccount','manualPurchaseCurrency','manualTxBeneficiary']){
       const style=await page.locator('#'+id).evaluate(el=>({
        hidden:el.getAttribute('aria-hidden'),tab:el.tabIndex,
        clip:getComputedStyle(el).clipPath,pointer:getComputedStyle(el).pointerEvents
@@ -227,11 +227,23 @@ async function main(){
       assert.equal(style.clip,'inset(50%)',id+' native selector must be clipped');
       assert.equal(style.pointer,'none',id+' native selector must not intercept touch');
       const choices=page.locator('#'+id+'Chips [data-trace-choice]');
-      assert.ok(await choices.count()>=4,'Pill group missing: '+id);
+      assert.ok(await choices.count()>=(id==='manualTxAccount'?3:4),
+       'Pill group missing: '+id);
       assert.ok((await choices.evaluateAll(buttons=>
        buttons.map(b=>b.getBoundingClientRect().height))).every(h=>h>=44),
        'At least 44px touch height required for '+id);
      }
+     const initialBank=await page.locator('#manualTxAccount').inputValue();
+     await activate(page.locator('#manualTxAccountChips [data-trace-choice="demo-fr-current"]'));
+     assert.equal(await page.locator('#manualTxAccount').inputValue(),'demo-fr-current');
+     assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'EUR',
+      'Selecting a French account must reset the purchase currency to EUR');
+     assert.equal(await page.locator('#manualTxAccountChips [data-trace-choice="demo-fr-current"]').getAttribute('aria-pressed'),'true');
+     await activate(page.locator('#manualTxAccountChips [data-trace-choice="'+initialBank+'"]'));
+     assert.equal(await page.locator('#manualTxAccount').inputValue(),initialBank);
+     assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'CAD');
+     assert.equal(await page.locator('#manualTxAccountSearch').count(),0,
+      'Small account collections must not waste space on an unnecessary search');
      await activate(page.locator('#manualPurchaseCurrencyChips [data-trace-choice="USD"]'));
      assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'USD');
      assert.equal(await page.locator('#manualPurchaseCurrencyChips [data-trace-choice="USD"]').getAttribute('aria-pressed'),'true');
@@ -282,6 +294,42 @@ async function main(){
      report.offline={width:390,readyBefore:true,reloadedWithoutNetwork:true,
       cachedShellVerified:after.offlineReady,activityAvailable:activity.active==='activity'};
      await context.setOffline(false);
+     if(engine==='chromium'){
+      // Dedicated isolated fictitious fixture with 7 extra current accounts.
+      // Never mutate app globals, user records or a connected database.
+      const manyPage=await context.newPage();
+      await manyPage.addInitScript(()=>{
+       let fixture;
+       Object.defineProperty(window,'TraceInternationalPreviewFixtures',{
+        configurable:true,get:()=>fixture,set(source){
+         fixture=Object.freeze({...source,create(){
+          const data=source.create();
+          const account=data.accounts.find(a=>a.owner==='la'&&a.type==='checking');
+          for(let i=1;i<=7;i++)data.accounts.push({...account,
+           id:'qa-bank-'+i,name:'Compte fictif '+i,currency:'CAD'});
+          return data;
+         }});
+        }
+       });
+      });
+      await manyPage.route('**/*',route=>{
+       if(route.request().url().startsWith(origin))return route.continue();
+       outside.push(route.request().url());return route.abort();
+      });
+      await manyPage.goto(entry,{waitUntil:'load',timeout:25000});
+      await manyPage.locator('#quickAdd').click();
+      const search=manyPage.locator('#manualTxAccountSearch');
+      assert.equal(await search.count(),1,'Seven accounts must expose search');
+      await search.fill('Compte fictif 5');
+      assert.equal(await manyPage.locator('#manualTxAccountChips [data-trace-choice]:visible').count(),1);
+      await manyPage.locator('#manualTxAccountChips [data-trace-choice="qa-bank-5"]').click();
+      assert.equal(await manyPage.locator('#manualTxAccount').inputValue(),'qa-bank-5');
+      await search.fill('aucun compte ne correspond');
+      assert.equal(await manyPage.locator('#manualTxAccountChips [data-trace-choice]:visible').count(),0);
+      assert.equal(await manyPage.locator('#manualTxAccountNoResults').isVisible(),true);
+      await manyPage.locator('#cancelManualTx').click();
+      await manyPage.close();
+     }
     }
     if(engine==='webkit'&&width===390){
      // Responsive interruption lab: an iPhone-like touch viewport rotates

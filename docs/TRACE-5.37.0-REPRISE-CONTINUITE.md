@@ -115,3 +115,7 @@ Lire docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md. Consultation des comptes en past
 ## 28 octobre — finition de la saisie manuelle premium
 
 Choix directs en pastilles pour devise d’achat (5 devises) et bénéficiaire de dépense (Moi/Élise/Nous deux/Amis), sources d’état natives invisibles et logique financière inchangée. Voir docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md. Contrôle tactile, champs conditionnels amis et non-écriture à qualifier dans scripts/trace-browser-537-qa.cjs. Les longues listes de comptes et catégories restent à traiter séparément, sans les déguiser en centaines de pastilles. Aucune recette iPhone physique ni GO de production.
+
+## Filtrage des comptes lors de la saisie — 28 octobre 2026
+
+Le formulaire manuel remplace le menu natif visible de sélection de compte par des pastilles vert profond avec nom et devise. Pour **plus de six comptes**, la recherche intégrée filtre les pastilles et affiche un état sans résultat. Les changements passent toujours par `manualTxAccount.onchange`, ce qui préserve les recalculs, l'éligibilité des types de mouvement et le verrouillage du débit différé. Voir `docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md`. La branche stable et Supabase réel sont hors périmètre.

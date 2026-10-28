@@ -582,3 +582,22 @@
 @media(prefers-reduced-motion:reduce){
  #sheetBackdrop .trace-manual-choice-chip{transition:none}
 }
+
+
+/* A short account collection is one-tap. Large collections get on-device
+ * search without changing the original source of financial values. */
+#sheetBackdrop .trace-manual-account-pills{margin-top:3px;margin-bottom:9px;padding-bottom:7px}
+#sheetBackdrop .trace-manual-account-pills .trace-manual-choice-chip{max-width:220px}
+#sheetBackdrop .trace-manual-account-pills .trace-manual-choice-chip[hidden]{display:none!important}
+#sheetBackdrop .trace-manual-account-search{
+ width:100%;min-height:44px;font-size:16px!important;margin:3px 0 7px;
+ background:#fffefc;border:1px solid #d6e6da;border-radius:13px;
+ padding:10px 12px;appearance:none
+}
+#sheetBackdrop .trace-manual-account-search:focus-visible{
+ outline:3px solid #65ab8d;outline-offset:2px
+}
+#sheetBackdrop .trace-manual-account-empty{margin:0 0 10px;color:#587463;font-size:12px}
+@media(max-width:390px){
+ #sheetBackdrop .trace-manual-account-pills .trace-manual-choice-chip{max-width:168px}
+}

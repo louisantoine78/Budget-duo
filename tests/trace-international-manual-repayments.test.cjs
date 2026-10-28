@@ -11,11 +11,11 @@ const expenses=[{id:'restaurant',type:'expense',status:'confirmed',payerId:'la',
 {id:'courses',type:'expense',status:'confirmed',payerId:'la',date:'2026-10-11',name:'Courses',beneficiary:'custom',splitAmounts:{friends:35}}];
 const start=app.indexOf('function openManualTransaction('),end=app.indexOf('\nfunction openInvestmentAccountAdd(',start);
 assert.ok(start>=0&&end>start);
-function run(){
+function run(accounts=[ca]){
  const defaults={manualTxAccount:'ca',manualTxAmount:'60',manualTxName:'Remboursement Camille',manualTxDate:'2026-10-12',
  manualTxBeneficiary:'la',manualPurchaseCurrency:'CAD',manualFriendName:'Camille',manualRelatedExpense:'',
  manualRelatedAmount:'',manualFxRate:'',manualPurchaseAmount:'',manualFriendsAmount:'0',manualPartnerAmount:'0'};
- const nodes=new Map(),saved=[],state={accounts:[ca],transactions:expenses.slice(),investmentAccounts:[],
+ const nodes=new Map(),saved=[];let renderedHTML='';const state={accounts,transactions:expenses.slice(),investmentAccounts:[],
  household:{defaultSplit:{la:50,partner:50}}};
  const $=sel=>{
   const id=sel.replace(/^#/,'');
@@ -42,8 +42,8 @@ function run(){
  helperTo=app.indexOf('\nfunction traceCustomShares(',helperFrom);
  assert.ok(helperFrom>0&&helperTo>helperFrom);
  const friendDebtorFields=new Function('state','window','return ('+app.slice(helperFrom,helperTo)+');')(state,w);
- const deps={window:w,state,friendDebtorFields,me:'la',partner:'partner',$,esc:x=>String(x??''),uiIcon:()=>'',openSheet:()=>{},closeSheet:()=>{},
- visibleBankAccounts:()=>[ca],preferredBankAccount:()=>ca,accountType:a=>a?.type,shortAccountLabel:a=>a.name||'',
+ const deps={window:w,state,friendDebtorFields,me:'la',partner:'partner',$,esc:x=>String(x??''),uiIcon:()=>'',openSheet:(_title,html)=>{renderedHTML=html;},closeSheet:()=>{},
+ visibleBankAccounts:()=>accounts,preferredBankAccount:()=>ca,accountType:a=>a?.type,shortAccountLabel:a=>a.name||'',
  shortMemberName:()=> 'Élise',manualCategories:()=>[],localDateISO:()=> '2026-10-12',
  friendLinkOptions:(d,a)=>w.TraceMovement.linkable(state.transactions,state.transactions,'la',d,a),
  trackedSavingsAccounts:()=>[],isReadySavingsAccount:()=>false,
@@ -57,10 +57,24 @@ function run(){
  renderAll:()=>{},navigate:()=>{},showTab:()=>{}};
  const fn=new Function(...Object.keys(deps),'return ('+app.slice(start,end)+');')(...Object.values(deps));
  fn();$('#manualKind').value='friend_reimbursement';$('#manualKind').onchange();
- return{$,saved,state};
+ return{$,saved,state,getMarkup:()=>renderedHTML};
 }
 let n=0;async function test(name,f){await f();n++;console.log('PASS '+name);}
 async function main(){
+ await test('manual account pills offer native selection for few accounts, search for many',async()=>{
+  const few=run();
+  assert.match(few.getMarkup(),/id="manualTxAccountChips" role="group"/);
+  assert.match(few.getMarkup(),/data-trace-choice="ca" aria-pressed="false"/);
+  assert.doesNotMatch(few.getMarkup(),/id="manualTxAccountSearch"/);
+  const accounts=[ca,...Array.from({length:7},(_,i)=>({...ca,
+   id:'extra-'+(i+1),name:'Fictional bank '+(i+1)}))];
+  const many=run(accounts),html=many.getMarkup();
+  assert.match(html,/id="manualTxAccountSearch"/);
+  assert.match(html,/id="manualTxAccountNoResults"/);
+  for(const account of accounts)assert.ok(html.includes('data-trace-choice="'+account.id+'"'));
+  assert.equal(many.state.transactions.length,expenses.length,
+   'Looking at bank options cannot create financial transactions');
+ });
  await test('one bank 60 CAD receipt linked to two advances',async()=>{
   const u=run(),$=u.$;$('#manualRelatedExpense').value='restaurant';$('#manualRelatedAmount').value='25';
   $('#manualAddFriendLink').onclick();

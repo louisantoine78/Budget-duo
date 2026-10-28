@@ -47,3 +47,21 @@ Le bouton actif est vert profond, lisible et annoncé via aria-pressed. La rang�
 Ce traitement est **ciblé aux choix courts et fréquents**. Les comptes bancaires, catégories ou rapprochements pouvant comporter beaucoup d’entrées seront examinés séparément avec une solution recherchable et accessible, plutôt que de multiplier des centaines de boutons. Les données réelles ne sont jamais utilisées pour la QA.
 
 Les scénarios de régression doivent tester ces sélections dans Chromium et WebKit Linux ; seule la recette sur véritable iPhone/Safari valide le ressenti et les gestes finaux.
+
+## Choisir le compte d'une nouvelle opération — finition premium du 28 octobre 2026
+
+Le formulaire **Ajouter une opération** propose des boutons arrondis immédiatement disponibles pour chaque compte bancaire autorisé, avec le nom et la devise native. Le compte actif utilise le vert profond, l'état `aria-pressed` et une cible tactile de 44 px ; l'utilisateur ne doit jamais devoir ouvrir une liste déroulante pour ce geste courant.
+
+    Compte bancaire concerné
+    [Canada · courant CAD] [Mastercard CAD] [France EUR]
+
+Pour une collection **de plus de six comptes**, une recherche courte apparaît automatiquement au-dessus des boutons : taper une partie du nom filtre les choix, un résultat absent affiche « Aucun compte correspondant ». Aucun service externe, aucune valeur calculée et aucune transaction ne sont nécessaires pour la recherche.
+
+    Rechercher un compte : France
+    [France EUR]
+
+Les pastilles utilisent les mêmes valeurs d'un sélecteur natif de référence **masqué** (pour préserver les tests d'interopérabilité) et appellent le même gestionnaire d'événements : changer de compte réévalue la nature autorisée, la devise d'achat et l'aperçu financier, mais ne sauvegarde jamais implicitement une opération. Le choix d'une carte française à débit différé reste soumis aux blocages de sécurité actuels.
+
+**Vérification :** Chromium 320/390/768/1440 ; scénario additionnel en navigateur avec **sept comptes fictifs supplémentaires**, recherche du cinquième compte, sélection et recherche sans résultats. WebKit Linux et recette iPhone physique restent distincts. Ne jamais injecter ces comptes de test dans une base réelle.
+
+Ce schéma représente un **principe UX documenté**, et non une capture d'écran de la future application iPhone.

@@ -1524,6 +1524,9 @@ function openManualTransaction(preferredKind='expense'){
   openSheet('Ajouter une opération','<p class="empty-note">Configure d’abord un compte bancaire dans Profil → Mes comptes.</p>');return;
  }
  const opts=bankAccounts.map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
+ // Frequent accounts are one-tap; a search appears for long collections.
+ const accountChoices=bankAccounts.map(a=>[a.id,
+  shortAccountLabel(a)+' · '+window.TraceInternational.currency(a)]);
  const whoChoices=[[me,'Moi'],[partner,shortMemberName(partner)],['couple','Nous deux'],['custom','Avec des amis']];
  const who=whoChoices.map(([id,label])=>'<option value="'+esc(id)+'">'+esc(label)+'</option>').join('');
  const currencyChoices=window.TraceInternational.currencies();
@@ -1532,7 +1535,13 @@ function openManualTransaction(preferredKind='expense'){
    esc(label)+'</button>').join('');
  openSheet('Ajouter une opération',
   '<div class="trace-manual-hero"><span class="trace-manual-symbol">'+uiIcon('bank')+'</span><div><span class="trace-kicker">NOUVELLE OPÉRATION</span><b>Que s’est-il passé ?</b><small>TRACE adapte les choix au mouvement et calcule son impact avant de l’enregistrer.</small></div></div>'+
-  '<label class="label2" for="manualTxAccount">Compte bancaire concerné</label><select class="input" id="manualTxAccount">'+opts+'</select>'+
+  '<label class="label2" for="manualTxAccount" id="manualTxAccountLabel">Compte bancaire concerné</label>'+
+  '<select class="input trace-manual-choice-native" id="manualTxAccount" tabindex="-1" aria-hidden="true">'+opts+'</select>'+
+  (bankAccounts.length>6?'<input type="search" class="input trace-manual-account-search" id="manualTxAccountSearch" '+
+   'aria-label="Rechercher un compte bancaire" placeholder="Rechercher un compte" autocomplete="off">':'')+
+  '<div class="trace-manual-choice-pills trace-manual-account-pills" id="manualTxAccountChips" role="group" aria-labelledby="manualTxAccountLabel">'+
+   manualChips(accountChoices)+'</div>'+
+  (bankAccounts.length>6?'<p id="manualTxAccountNoResults" class="trace-manual-account-empty" role="status" hidden>Aucun compte correspondant</p>':'')+
   '<div class="trace-movement-families" id="manualFamilies">'+M.families.map(f=>'<button type="button" class="trace-movement-family" data-manual-family="'+f.id+'">'+esc(f.label)+'</button>').join('')+'</div>'+
   '<label class="label2" for="manualKind">Nature précise</label><select class="input" id="manualKind"></select>'+ 
   '<p class="trace-movement-help" id="manualKindHelp" aria-live="polite"></p>'+
@@ -1616,7 +1625,8 @@ function openManualTransaction(preferredKind='expense'){
  };
  
  function syncManualPills(){
-  for(const [selectId,groupId] of [['manualTxBeneficiary','manualTxBeneficiaryChips'],
+  for(const [selectId,groupId] of [['manualTxAccount','manualTxAccountChips'],
+   ['manualTxBeneficiary','manualTxBeneficiaryChips'],
    ['manualPurchaseCurrency','manualPurchaseCurrencyChips']]){
    const select=$m(selectId),group=$m(groupId);
    group?.querySelectorAll?.('[data-trace-choice]')?.forEach(button=>{
@@ -1717,7 +1727,18 @@ function openManualTransaction(preferredKind='expense'){
  $m('manualKind').onchange=()=>choose($m('manualKind').value,true);
  $m('manualTxBeneficiary').onchange=sync;
  $m('manualPurchaseCurrency').onchange=sync;
- for(const [selectId,groupId] of [['manualTxBeneficiary','manualTxBeneficiaryChips'],
+ const accountSearch=$m('manualTxAccountSearch');
+ if(accountSearch?.addEventListener)accountSearch.addEventListener('input',()=>{
+  const query=String(accountSearch.value||'').trim().toLocaleLowerCase('fr');
+  let count=0;
+  $m('manualTxAccountChips')?.querySelectorAll?.('[data-trace-choice]')?.forEach(button=>{
+   const visible=String(button.textContent||'').toLocaleLowerCase('fr').includes(query);
+   button.hidden=!visible;if(visible)count++;
+  });
+  const empty=$m('manualTxAccountNoResults');if(empty)empty.hidden=count!==0;
+ });
+ for(const [selectId,groupId] of [['manualTxAccount','manualTxAccountChips'],
+  ['manualTxBeneficiary','manualTxBeneficiaryChips'],
   ['manualPurchaseCurrency','manualPurchaseCurrencyChips']]){
   $m(groupId)?.querySelectorAll?.('[data-trace-choice]')?.forEach(button=>{
    button.onclick=event=>{
