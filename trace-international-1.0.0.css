@@ -473,3 +473,14 @@
 #sheetBackdrop .trace-edit-currency,
 #sheetBackdrop label[for="manualPurchaseCurrency"],
 #sheetBackdrop label[for="manualPurchaseAmount"]{color:#365a49!important}
+
+
+/* Explicit SW upgrade warning inside an open financial form.
+ * Never hide the active draft or put an inaccessible reload action in a modal.
+ */
+#sheetBackdrop.open .sheet-head:has(#tracePreviewSheetUpdateNotice){flex-wrap:wrap}
+#tracePreviewSheetUpdateNotice{
+ order:3;flex:0 0 100%;display:block;margin-top:7px;
+ color:#365a49;background:#eff5ef;border-radius:9px;
+ padding:8px 10px;font-size:12px;font-weight:650;line-height:1.4
+}

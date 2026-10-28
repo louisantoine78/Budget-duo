@@ -65,3 +65,10 @@ du nouveau test après correction.
 stratégie de migration/retour arrière vérifiée, qualification financière
 de fin de cycle explicite et **accord du propriétaire**. Le fait que
 Chromium ou WebKit Linux passe n'est **pas** une validation Safari iOS.
+
+10. **Mise à jour avec brouillon en cours** : lorsqu'une nouvelle version
+    de la prévisualisation est disponible, le formulaire reste utilisable,
+    son brouillon n'est pas rechargé de force et l'avertissement est lisible.
+    Après annulation volontaire puis confirmation de la mise à jour, vérifier
+    qu'un seul cache actuel subsiste et que la PWA fonctionne hors connexion.
+    L'essai doit utiliser uniquement des données fictives.

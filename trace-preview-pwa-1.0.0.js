@@ -58,6 +58,16 @@
   button.textContent='Recharger (réinitialise les données fictives)';
   button.onclick=()=>{reloadRequested=true;registration.waiting?.postMessage('TRACE_LAB_ACTIVATE');};
   node.appendChild(button);
+  // The update action lives on the main page, behind a modal while editing.
+  // Tell the user inside that modal; never force a reload or discard the draft.
+  const head=document.querySelector?.('#sheetBackdrop.open .sheet-head');
+  if(head&&!document.getElementById('tracePreviewSheetUpdateNotice')){
+   const tip=document.createElement('small');
+   tip.id='tracePreviewSheetUpdateNotice';
+   tip.setAttribute('role','status');
+   tip.textContent='Nouvelle version disponible : termine ou annule cette saisie, puis recharge le laboratoire. Le rechargement réinitialise les données fictives.';
+   head.appendChild(tip);
+  }
  };
  const verifyActiveLab=async registration=>{
   const current=++verificationVersion;

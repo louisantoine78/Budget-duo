@@ -116,3 +116,23 @@ test('new worker arriving after a successful offline check instantly revokes rea
  assert.equal(f.window.TracePreviewPWA.error,null);
  assert.match(f.label.textContent,/Nouvelle version du laboratoire/);
 });
+
+test('pending preview update warns inside any open modal without forcing a reload',()=>{
+ assert.match(app,/document\.querySelector\?\.\('#sheetBackdrop\.open \.sheet-head'\)/);
+ assert.match(app,/tracePreviewSheetUpdateNotice/);
+ assert.match(app,/Nouvelle version disponible : termine ou annule cette saisie/);
+ assert.match(app,/head\.appendChild\(tip\)/);
+ assert.match(app,/button\.onclick=\(\)=>\{reloadRequested=true;registration\.waiting\?\.postMessage/);
+});
+
+test('real SW upgrade QA preserves an opt-in reload and isolated preview',()=>{
+ const upgrade=fs.readFileSync(path.resolve(__dirname,'../scripts/trace-preview-upgrade-qa.cjs'),'utf8');
+ assert.match(upgrade,/const root=path\.resolve\(__dirname,'\.\.'\)/);
+ assert.match(upgrade,/server\.listen\(0,'127\.0\.0\.1'/);
+ assert.match(upgrade,/revision='b'/);
+ assert.match(upgrade,/Brouillon pendant mise à jour/);
+ assert.match(upgrade,/assert\.equal\(during\.ready,false\)/);
+ assert.match(upgrade,/tracePreviewSheetUpdateNotice/);
+ assert.match(upgrade,/assert\.equal\(after\.caches\.length,1\)/);
+ assert.match(upgrade,/assert\.deepEqual\(errors,\[\]\)/);
+});

@@ -72,3 +72,27 @@ teste le redimensionnement WebKit et l'activité entre onglets, **pas**
 la suspension réelle d'une PWA par iOS, la rotation physique du
 capteur ni le comportement du clavier logiciel. Ces vérifications
 restent manuelles sur appareil réel et n'autorisent pas la production.
+
+## Mise à jour contrôlée du cache avec formulaire ouvert
+
+Le laboratoire possède désormais un test Chromium qui sert deux versions
+consécutives du service worker sur une origine locale éphémère. Il confirme :
+
+- lorsqu'une nouvelle version arrive pendant un brouillon, aucun rechargement
+  automatique ne se produit et le texte saisi reste intact ;
+- un avertissement est lisible dans la fenêtre d'édition ouverte, même si
+  le bouton de mise à jour reste derrière cette fenêtre ;
+- le bouton devient accessible après fermeture volontaire du formulaire ;
+- l'utilisateur déclenche explicitement l'activation et le rechargement ;
+- un seul cache statique de la nouvelle génération subsiste après l'activation ;
+- le statut hors connexion est à nouveau vérifié, sans erreur JavaScript.
+
+Pour reproduire sans service externe ni données réelles :
+
+    TRACE_PLAYWRIGHT_MODULE=/tmp/trace-browser/node_modules/playwright-core \
+    TRACE_CHROMIUM_EXECUTABLE=/tmp/chromium \
+    node scripts/trace-preview-upgrade-qa.cjs --report /tmp/trace-upgrade.json
+
+Ce contrôle valide uniquement la **PWA fictive de laboratoire**.
+Il ne prouve pas la mise à jour de la PWA de production ni le comportement
+Safari lors de la suspension réelle par iOS. Production : NO-GO.
