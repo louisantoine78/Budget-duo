@@ -111,3 +111,14 @@ contenu. L'entrée PWA installable demeure
 /trace-international-preview.html, avec des données fictives et une
 portée de service worker limitée à cette page. Aucun déploiement
 ou changement de données de production n'est autorisé par ce protocole.
+
+
+## Cookie d'accès sur prévisualisation HTTPS protégée
+
+Pour le laboratoire hébergé derrière Vercel Authentication, les fichiers
+statiques figurant dans la liste blanche du worker sont désormais lus avec
+credentials: same-origin. Le navigateur peut ainsi présenter le cookie de
+session uniquement à son propre domaine HTTPS. Aucun accès aux API externes,
+à Supabase ou aux données financières n'est autorisé ; le cache demeure limité
+aux fichiers fictifs. Le comportement sur la véritable URL protégée doit
+être revérifié après chaque reconstruction du worker.

@@ -3,7 +3,7 @@
 const BASE=new URL('./',self.location.href);
 const ENTRY=new URL('trace-international-preview.html',BASE);
 const PREFIX='trace-lab-537:'+encodeURIComponent(BASE.pathname)+':';
-const CACHE=PREFIX+'d38dbf98b4597b938785de4e';
+const CACHE=PREFIX+'ae2097aca9bb736cd27ddf3d';
 const ASSETS=[
  "assets/trace-wallet-v1-180.png",
  "assets/trace-wallet-v1-192.png",
@@ -79,7 +79,10 @@ const ALLOWED=new Set(URLS);
 if(self.registration.scope!==ENTRY.href)throw Error('Refusing a scope outside the fictional laboratory');
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
- await cache.addAll(URLS.map(url=>new Request(url,{cache:'reload',credentials:'omit'})));
+ // Protected HTTPS preview requires its same-origin Vercel session cookie
+ // for static assets. Never attach cookies to any remote origin; URLS is
+ // the generated same-origin allowlist, never finance data or runtime APIs.
+ await cache.addAll(URLS.map(url=>new Request(url,{cache:'reload',credentials:'same-origin'})));
  if(!self.registration.active)await self.skipWaiting();
 })()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{

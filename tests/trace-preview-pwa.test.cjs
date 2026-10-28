@@ -5,9 +5,9 @@ const {spawnSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const code=fs.readFileSync(path.join(root,'trace-international-preview-sw.js'),'utf8');
 function worker(scope='https://fictional.invalid/app/trace-international-preview.html'){
- const handlers={},deleted=[],added=[],matches=[];
+ const handlers={},deleted=[],added=[],matches=[],requestsSeen=[];
  let skipped=0,claimed=0;
- const cache={addAll:async requests=>added.push(...requests.map(r=>r.url)),
+ const cache={addAll:async requests=>{requestsSeen.push(...requests);added.push(...requests.map(r=>r.url));},
   match:async key=>{matches.push(key);return {static:true}}};
  const self={location:{href:'https://fictional.invalid/app/trace-international-preview-sw.js'},
   registration:{scope,active:null},addEventListener:(type,fn)=>handlers[type]=fn,
@@ -16,7 +16,7 @@ function worker(scope='https://fictional.invalid/app/trace-international-preview
   'trace-prod-5365','unrelated','trace-lab-537:%2Fapp%2F:old'],
   delete:async key=>{deleted.push(key);return true}};
  vm.runInNewContext(code,{self,caches,URL,Request,fetch:()=>{throw Error('Unexpected network')}});
- return{handlers,deleted,added,matches,skipped:()=>skipped,claimed:()=>claimed};
+ return{handlers,deleted,added,matches,requestsSeen,skipped:()=>skipped,claimed:()=>claimed};
 }
 test('generated cache is current and the manifest is isolated from the stable PWA',()=>{
  const check=spawnSync(process.execPath,['scripts/build-trace-preview-pwa.mjs','--check'],{cwd:root,encoding:'utf8'});
@@ -66,4 +66,19 @@ test('activation messages require an exact same-origin laboratory client',()=>{
  assert.equal(w.skipped(),0);
  w.handlers.message({data:'TRACE_LAB_ACTIVATE',source:{url:'https://fictional.invalid/app/trace-international-preview.html?month=2026-10'}});
  assert.equal(w.skipped(),1);
+});
+
+test('isolated PWA caches only local static assets with same-origin auth when preview is protected',async()=>{
+ const w=worker();
+ let install;
+ w.handlers.install({waitUntil:p=>install=p});
+ await install;
+ assert.ok(w.requestsSeen.length>=65);
+ for(const request of w.requestsSeen){
+  assert.equal(request.credentials,'same-origin');
+  assert.equal(request.cache,'reload');
+  assert.equal(new URL(request.url).origin,'https://fictional.invalid');
+  assert.doesNotMatch(request.url,/config\.js|cloud\.js|index\.html|supabase|\/api\//);
+ }
+ assert.match(code,/Refusing a scope outside the fictional laboratory/);
 });

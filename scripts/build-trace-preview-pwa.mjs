@@ -42,7 +42,10 @@ const ALLOWED=new Set(URLS);
 if(self.registration.scope!==ENTRY.href)throw Error('Refusing a scope outside the fictional laboratory');
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
- await cache.addAll(URLS.map(url=>new Request(url,{cache:'reload',credentials:'omit'})));
+ // Protected HTTPS preview requires its same-origin Vercel session cookie
+ // for static assets. Never attach cookies to any remote origin; URLS is
+ // the generated same-origin allowlist, never finance data or runtime APIs.
+ await cache.addAll(URLS.map(url=>new Request(url,{cache:'reload',credentials:'same-origin'})));
  if(!self.registration.active)await self.skipWaiting();
 })()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
