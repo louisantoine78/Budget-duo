@@ -25,3 +25,9 @@
 - Sauvegarde / rollback, validation financière et autorisation explicite restent des conditions de mise en ligne réelle.
 
 **État d'avancement :** projet estimé environ 90 % au pilotage, sans convertir ce chiffre en certification d'achèvement visuel. **Production : NO-GO.**
+
+## Accueil — validation des sélecteurs (28 octobre 2026)
+
+Les boutons de consultation des comptes existaient déjà. Le panneau de modification du compte principal affichait encore une liste déroulante native : la candidate la remplace par des pastilles arrondies en conservant la confirmation obligatoire. L'étoile marque le compte officiel et la devise native accompagne les boutons. Ce changement est une amélioration de présentation, **sans changement de logique financière**.
+
+Référence des schémas visuels et comportements : docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md. Ne jamais présenter les schémas comme des captures d'un iPhone physique.

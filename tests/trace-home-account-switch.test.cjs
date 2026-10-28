@@ -34,11 +34,14 @@ function harness({accounts,estimates,mainId='ca'}={}){
  vm.runInNewContext(source,{window});
  const nodes={balance:{textContent:''},checking:{textContent:''},card:{textContent:''},
   warning:{textContent:'',hidden:true},badge:{textContent:'Rapproché'}};
- const host={innerHTML:'',onclick:null,buttons:{},select:null,
+ const host={innerHTML:'',onclick:null,buttons:{},primaryButtons:{},select:null,
   querySelector(q){return q==='#traceIntlPrimary'?this.select:null},
-  querySelectorAll(q){return q==='[data-trace-view-account]'?Object.values(this.buttons):[]},
+  querySelectorAll(q){return q==='[data-trace-view-account]'?Object.values(this.buttons):
+   q==='[data-trace-primary-account]'?Object.values(this.primaryButtons):[]},
   prepare(){
-   this.buttons={};
+   this.buttons={};this.primaryButtons={};
+   for(const m of this.innerHTML.matchAll(/data-trace-primary-account="([^"]+)"/g))
+    this.primaryButtons[m[1]]={dataset:{tracePrimaryAccount:m[1]},onclick:null};
    for(const m of this.innerHTML.matchAll(/data-trace-view-account="([^"]+)"/g))
     this.buttons[m[1]]={dataset:{traceViewAccount:m[1]},onclick:null};
    this.select={value:mainId,onchange:null};
@@ -74,6 +77,19 @@ test('primary selection delegates to existing explicit confirmation',()=>{
  h.render();h.host.select.value='fr';h.host.select.onchange();
  assert.deepEqual(h.events.primaryChanges,['fr']);
  assert.equal(h.nodes.balance.textContent,'400.00 CAD');
+});
+test('Home hides the native selector and primary pills require confirmation',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();
+ assert.match(h.host.innerHTML,/class="input trace-intl-primary-native"/);
+ assert.match(h.host.innerHTML,/id="traceIntlPrimary" tabindex="-1" aria-hidden="true"/);
+ assert.match(h.host.innerHTML,/data-trace-primary-account="ca" aria-pressed="true"/);
+ h.host.primaryButtons.ca.onclick({stopPropagation(){}});
+ assert.deepEqual(h.events.primaryChanges,[]);
+ h.host.primaryButtons.fr.onclick({stopPropagation(){}});
+ assert.deepEqual(h.events.primaryChanges,['fr']);
+ assert.equal(h.nodes.balance.textContent,'400.00 CAD');
+ assert.equal(h.events.writes,0);
 });
 test('missing native balance is never fabricated as zero',()=>{
  const h=harness({accounts,estimates:{ca:500,fr:null,card:-100}});

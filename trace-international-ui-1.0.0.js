@@ -35,14 +35,26 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
   '<div class="trace-intl-view-group"><span class="trace-intl-view-label">Consulter un solde</span>'+
   '<div class="trace-intl-switch" role="group" aria-label="Consulter les soldes par compte">'+
   checking.map(a=>'<button type="button" class="trace-intl-chip'+(a.id===selectedId?' is-active':'')+
-   '" data-trace-view-account="'+esc(a.id)+'" aria-pressed="'+(a.id===selectedId?'true':'false')+'">'+
-   esc(a.name||'Compte')+'</button>').join('')+'</div>'+
-  '<p class="trace-intl-view-note">Consultation uniquement · aucun changement de compte principal</p></div>':'')+
+   '" data-trace-view-account="'+esc(a.id)+'" aria-pressed="'+(a.id===selectedId?'true':'false')+'"'+
+   ' title="'+esc(a.name||'Compte')+' · '+esc(I.currency(a))+'">'+
+   (a.id===primaryId?'<span class="trace-intl-chip-star" aria-hidden="true">★</span> ':'')+
+   '<span class="trace-intl-chip-name">'+esc(a.name||'Compte')+'</span>'+
+   ' <small class="trace-intl-chip-currency">'+esc(I.currency(a))+'</small></button>').join('')+'</div>'+
+  '<p class="trace-intl-view-note">Toucher un compte pour consulter son solde · aucune modification du compte principal.</p></div>':'')+
  '<details class="trace-intl-primary-control"><summary><span>★ Compte principal</span><small>Modifier</small></summary>'+
- '<div class="trace-intl-top"><label for="traceIntlPrimary">Choisir avec confirmation</label>'+
- '<select class="input" id="traceIntlPrimary">'+checking.map(a=>
+ '<div class="trace-intl-top"><span class="trace-intl-primary-heading" id="traceIntlPrimaryLabel">Choisir avec confirmation</span>'+
+ '<select class="input trace-intl-primary-native" id="traceIntlPrimary" tabindex="-1" aria-hidden="true">'+checking.map(a=>
   '<option value="'+esc(a.id)+'"'+(a.id===primaryId?' selected':'')+'>'+
-  esc(a.name)+' · '+I.currency(a)+'</option>').join('')+'</select></div></details>'+
+  esc(a.name)+' · '+I.currency(a)+'</option>').join('')+'</select>'+
+ '<div class="trace-intl-primary-pills" role="group" aria-labelledby="traceIntlPrimaryLabel">'+checking.map(a=>
+  '<button type="button" class="trace-intl-primary-pill'+(a.id===primaryId?' is-primary':'')+
+  '" data-trace-primary-account="'+esc(a.id)+'" aria-pressed="'+(a.id===primaryId?'true':'false')+'"'+
+  ' aria-label="'+esc((a.id===primaryId?'Compte principal actuel : ':'Choisir comme compte principal avec confirmation : ')+
+    (a.name||'Compte')+' · '+I.currency(a))+'">'+
+  (a.id===primaryId?'★ ':'')+esc(a.name||'Compte')+
+  ' <small>'+esc(I.currency(a))+'</small></button>').join('')+'</div>'+
+ '<p class="trace-intl-primary-help">La sélection d’un nouveau compte principal demandera confirmation. Consulter un solde ci-dessus ne change rien.</p>'+
+ '</div></details>'+
  '<p class="trace-intl-primary-explain">'+(selectedId===primaryId?'Solde du compte principal':'Solde du compte consulté')+' et de ses cartes liées, en '+esc(cur)+'.</p>'+
  (multi?'<details class="trace-intl-details"><summary>Voir tous mes comptes et ma trésorerie globale</summary>'+
   '<div class="trace-intl-accounts">'+snap.balances.map(a=>{
@@ -95,6 +107,17 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
  if(sel)sel.onchange=()=>{
   if(typeof onSelect==='function'&&checking.some(a=>a.id===sel.value))onSelect(sel.value);
  };
+ host.querySelectorAll('[data-trace-primary-account]').forEach(button=>{
+  button.onclick=event=>{
+   event.stopPropagation();
+   const id=button.dataset.tracePrimaryAccount;
+   // Never change a primary account just by browsing or by tapping the
+   // already-current primary. Reuse the exact existing confirmation flow.
+   if(!sel||id===primaryId||!checking.some(a=>a.id===id))return;
+   sel.value=id;
+   sel.onchange?.();
+  };
+ });
  host.querySelectorAll('[data-trace-view-account]').forEach(button=>{
   button.onclick=event=>{
    event.stopPropagation();

@@ -132,6 +132,30 @@ async function main(){
      // Real financial UI interactions: scope summaries, journal tabs, validation.
      // All operations stay in fictional preview; no save or external request.
      const mineBalance=await page.locator('#homeBalance').innerText();
+     // Home account browsing uses direct touch choices, never a visible
+     // dropdown and never a silent primary-account change.
+     const accountPills=page.locator('#traceIntlHome [data-trace-view-account]');
+     assert.ok(await accountPills.count()>=2,'Home needs direct account choices');
+     for(const height of await accountPills.evaluateAll(nodes=>
+      nodes.map(n=>n.getBoundingClientRect().height)))
+      assert.ok(height>=44,'Home account buttons must be 44px tall');
+     await activate(page.locator('#traceIntlHome [data-trace-view-account="demo-fr-current"]'));
+     assert.match(await page.locator('#homeBalance').innerText(),/€|EUR/);
+     assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
+     await activate(page.locator('#traceIntlHome [data-trace-view-account="demo-ca-current"]'));
+     assert.equal(await page.locator('#homeBalance').innerText(),mineBalance);
+     await activate(page.locator('#traceIntlHome .trace-intl-primary-control>summary'));
+     const primaryNative=await page.locator('#traceIntlPrimary').evaluate(el=>({
+      hidden:el.getAttribute('aria-hidden'),clip:getComputedStyle(el).clipPath
+     }));
+     assert.equal(primaryNative.hidden,'true');
+     assert.equal(primaryNative.clip,'inset(50%)','No visible account dropdown on Home');
+     assert.ok(await page.locator('#traceIntlHome [data-trace-primary-account]').count()>=2);
+     await activate(page.locator('[data-trace-primary-account="demo-fr-current"]'));
+     assert.equal(await page.locator('#sheetTitle').innerText(),'Changer le compte principal');
+     assert.equal(await page.locator('#homeBalance').innerText(),mineBalance);
+     await activate(page.locator('#tracePrimaryCancel'));
+     assert.equal(await page.locator('#homeBalance').innerText(),mineBalance);
      await activate(page.locator('#homeScope [data-scope="couple"]'));
      const coupleBalance=await page.locator('#homeBalance').innerText();
      assert.notEqual(coupleBalance,mineBalance,'Couple must update the visible total');

@@ -107,3 +107,7 @@ Ne pas confondre la réussite de l'HTTPS local à cookie fictif avec une connexi
 ## Chantier premium / boutons en pastilles (28 octobre 2026)
 
 La direction visuelle antérieure reste obligatoire et n’a pas été redéfinie. Lire `docs/TRACE-5.37.0-UX-PREMIUM-AUDIT.md` avant tout changement de design. La nouvelle candidate remplace les cinq filtres visuels déroulants de l’historique Activité par des pastilles tactiles accessibles, en conservant les mêmes états et la logique financière. Ce travail ne certifie pas que tous les menus, formulaires, animations et états vides soient harmonisés : une recette iPhone physique et une revue qualitative restent nécessaires.
+
+## Checkpoint UX : comptes Accueil sans déroulant visible (28 octobre 2026)
+
+Lire docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md. Consultation des comptes en pastilles directes, étoile du principal, devise native, aucun changement financier par simple consultation. Modification du principal : pastilles dans le panneau replié, avec confirmation toujours obligatoire. Recette physique iPhone/Safari non effectuée. Production NO-GO.

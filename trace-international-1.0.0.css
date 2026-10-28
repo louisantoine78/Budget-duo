@@ -198,6 +198,34 @@
 @media(max-width:390px){.trace-intl-chip{max-width:148px;font-size:11px;padding:9px 11px}}
 @media(prefers-reduced-motion:reduce){.trace-intl-chip{transition:none}}
 
+/* Home — direct account chips; choosing a primary stays a separate,
+ * explicit-confirmation action rather than a native dropdown. */
+.trace-intl-chip{display:inline-flex;align-items:center;gap:5px;text-align:left}
+.trace-intl-chip-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.trace-intl-chip-star{font-size:13px;color:#bd9554;flex-shrink:0}
+.trace-intl-chip.is-active .trace-intl-chip-star{color:#f9df9d}
+.trace-intl-chip-currency{font-size:10px;font-weight:800;opacity:.8;flex-shrink:0}
+.trace-intl-primary-heading{font-size:12px;font-weight:760;color:#285947}
+.trace-intl-primary-pills{display:flex;gap:7px;min-width:0;max-width:100%;
+ overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+ scrollbar-width:none;padding:2px 1px 6px}
+.trace-intl-primary-pills::-webkit-scrollbar{display:none}
+.trace-intl-primary-pill{flex:0 0 auto;max-width:205px;min-height:44px;padding:9px 12px;
+ border-radius:999px;border:1px solid #d5e6da;background:#fff;color:#285d4b;
+ box-shadow:0 2px 8px rgba(31,76,53,.045);font-size:12px;font-weight:750;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;touch-action:manipulation}
+.trace-intl-primary-pill small{font-size:10px;opacity:.75}
+.trace-intl-primary-pill.is-primary{background:#e9f4eb;border-color:#b7d8c4;color:#1b5742}
+.trace-intl-primary-pill:focus-visible{outline:3px solid #69b08c;outline-offset:2px}
+.trace-intl-primary-help{font-size:11px;line-height:1.45;color:#536e60;margin:0}
+.trace-intl-primary-native{position:absolute!important;width:1px!important;height:1px!important;
+ min-height:0!important;opacity:0!important;clip-path:inset(50%)!important;
+ pointer-events:none!important;padding:0!important;overflow:hidden!important}
+@media(max-width:390px){
+ .trace-intl-chip{max-width:170px}
+ .trace-intl-primary-pill{max-width:170px}
+}
+
 /* Budget overview: the ring and each category use the same confirmed totals. */
 .trace-budget-snapshot{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;gap:15px;margin:15px 0;padding:15px 12px;background:#f3f8f3;border:1px solid #e0ebe1;border-radius:16px}
 .trace-budget-ring{width:76px;height:76px;position:relative;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#286d58 var(--trace-budget-pct),#dce8df 0)}
