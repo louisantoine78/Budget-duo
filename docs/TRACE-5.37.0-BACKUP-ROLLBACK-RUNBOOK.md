@@ -34,6 +34,12 @@ node scripts/trace-snapshot.mjs unpack backup.snapshot.json restored-export.json
 
 L'extraction impose ces contrôles. Si un seul échoue, aucun fichier de restauration ne doit être créé. Les commandes ci-dessus ne se connectent pas à une base et ne permettent pas de restaurer PostgreSQL.
 
+## Qualification PostgreSQL native du 28 octobre 2026
+
+Un exercice réel de `pg_dump`, `pg_restore`, incident volontaire et rollback a réussi sur PostgreSQL 18 **isolé et fictif**, avec deux membres, huit documents, migrations 05–12 et empreintes SHA-256 vérifiées. Voir [rapport détaillé](TRACE-5.37.0-NATIVE-POSTGRES-ROLLBACK-QA.md).
+
+**Cette qualification ne lève pas le NO-GO** : il reste à approuver et tester les sauvegardes/récupérations réelles dans un environnement sécurisé, la transition entre clients 5.36/5.37 et la recette Safari/iPhone.
+
 ## Exercice obligatoire de restauration / retour arrière
 
 1. Installer les migrations candidates 05–12 **uniquement** dans PostgreSQL ou PGlite fictif et isolé, avec deux membres et une troisième identité étrangère. Tester la sécurité RLS, CAS, les conflits, les comptes personnels, les droits d'écriture et la quarantaine différée.
