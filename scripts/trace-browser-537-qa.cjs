@@ -82,6 +82,11 @@ async function main(){
      window.__traceQaTouchStarts=0;
      document.addEventListener('touchstart',()=>{window.__traceQaTouchStarts++},{passive:true});
     });
+    if(width<=390){
+     const help=await page.locator('#helpBtn').boundingBox();
+     assert.ok(help&&help.width>=44&&help.height>=44,
+      'iPhone-sized viewport must expose a 44px help touch target');
+    }
     const home=await metrics(page);
     assert.equal(home.active,'home');
     assert.ok(home.heading.length>12,'Home must render actual text');

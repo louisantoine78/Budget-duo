@@ -173,3 +173,11 @@ Le générateur `scripts/build-trace-preview-pwa.mjs` continue d'utiliser `Cache
 Preuves sur l'export fictif isolé : le scénario authentifié et le rechargement hors connexion réussissent avec 68 actifs, la redirection 302 et la page HTTP 200 HTML sont toutes deux refusées, et les caches invalides sont supprimés. Les tests unitaires du service worker incluent désormais le rejet d'une page HTML 200 et d'une URL de réponse extérieure. Chromium et WebKit Linux sur quatre résolutions et le test de mise à jour PWA restent PASS. Test exclusivement sur HTTPS local et cookie fictif : aucun test sur la session Vercel réelle ni sur iPhone Safari physique. La prévisualisation Vercel précédemment déployée utilise une version antérieure.
 
 **Ne pas prendre ce succès de laboratoire comme un GO production** ; les contrôles humains d'accès HTTPS hébergé, de Safari iOS, de sauvegarde/rollback et de finances restent à effectuer.
+
+## Affordance tactile iPhone : contrôle d'aide (28 octobre 2026)
+
+La QA mobile WebKit sur l'export fictif 5.37.0 a mis en évidence un bouton « Guide TRACE » (`#helpBtn`) de 36 × 36 px à 390 px, hérité de la feuille de style 5.36.5. Il a été corrigé **uniquement** dans `trace-international-1.0.0.css` à 44 × 44 px sur les petits écrans (430 px et moins), sans modifier les styles communs/protégés, ni la navigation du bas. La recette `scripts/trace-browser-537-qa.cjs` exige désormais ce minimum aux largeurs 320 et 390 px.
+
+Preuves : export fictif 69 fichiers, manifeste/cache régénéré ; Chromium 4 résolutions PASS ; WebKit Linux 4 résolutions PASS au second lancement isolé (un premier test concurrent a expiré sur une interaction du menu à 320 px, sans anomalie reproductible lors de la relance) ; HTTPS à fausse session 302/200 HTML PASS ; mise à jour de worker et mode avion simulé PASS. Campagne financière approfondie `tests/trace-candidate.browser.cjs` : **34/34 parcours Chromium fictifs PASS**, y compris CAD/EUR/USD, carte de crédit, débit différé, Partage, CSV/PDF et double import, sans accès réseau externe.
+
+La taille de la cible est contrôlée par navigateur WebKit Linux ; elle doit toujours être vérifiée sur Safari/iPhone physique avant tout GO.

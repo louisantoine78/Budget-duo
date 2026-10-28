@@ -484,3 +484,10 @@
  color:#365a49;background:#eff5ef;border-radius:9px;
  padding:8px 10px;font-size:12px;font-weight:650;line-height:1.4
 }
+
+/* 5.37 laboratory mobile affordance: ensure the always-visible help control
+ * is at least 44px. The shared 5.36.5 stylesheet remains unchanged.
+ */
+@media(max-width:430px){
+ #helpBtn.help-btn{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:13px}
+}
