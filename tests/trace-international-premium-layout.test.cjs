@@ -68,6 +68,22 @@ test('financial form controls avoid iOS zoom and preserve minimum touch targets'
  assert.match(css,/\.trace-intl-details>summary\{[^}]*min-height:44px/);
  assert.match(css,/:focus-visible/);
 });
+test('small text contrasts with light premium surfaces',()=>{
+ const lightest='#ffffff',softest='#f5faf6';
+ const luminance=color=>{
+  const parts=color.slice(1).match(/../g).map(value=>parseInt(value,16)/255);
+  const linear=parts.map(value=>value<=0.04045?value/12.92:((value+.055)/1.055)**2.4);
+  return .2126*linear[0]+.7152*linear[1]+.0722*linear[2];
+ };
+ const contrast=(a,b)=>{const high=Math.max(luminance(a),luminance(b));
+  const low=Math.min(luminance(a),luminance(b));return(high+.05)/(low+.05);};
+ for(const ink of ['#486858','#4d695a']){
+  assert.ok(contrast(ink,lightest)>=4.5,'Insufficient contrast on white: '+ink);
+  assert.ok(contrast(ink,softest)>=4.5,'Insufficient contrast on soft card: '+ink);
+ }
+ assert.match(css,/\.trace-home-next-action small\{[^}]*color:#486858/);
+ assert.match(css,/\.trace-intl-account-conversion\{color:#4d695a!important/);
+});
 test('tablet and desktop use balanced financial lead cards without touching stable assets',()=>{
  assert.match(css,/@media\(min-width:800px\)\{[\s\S]*?\.trace-home-priority\{grid-template-columns:minmax\(0,1\.25fr\) minmax\(0,\.9fr\)/);
  assert.match(css,/\.trace-trend-bars \.is-spent\{background:linear-gradient/);

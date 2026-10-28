@@ -361,7 +361,9 @@
 }
 .trace-intl-set-primary{min-height:44px;touch-action:manipulation}
 .trace-intl-details>summary{display:flex;align-items:center;min-height:44px}
-.trace-home-next-action small{font-size:11px;line-height:1.4}
+.trace-home-next-action small{font-size:11px;line-height:1.4;color:#486858}
+.trace-intl-row small,.trace-wealth-note,.trace-activity-day-heading small{color:#4d695a}
+.trace-intl-account-conversion{color:#4d695a!important}
 .trace-trend-bars .is-planned{background:linear-gradient(180deg,#d5e7da,#b9d4c3)}
 .trace-trend-bars .is-spent{background:linear-gradient(180deg,#378f77,#21634f)}
 .trace-activity-four-tabs .tab:focus-visible,
