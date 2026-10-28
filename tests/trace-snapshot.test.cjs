@@ -62,6 +62,47 @@ test('independent collection counts reject omissions and swapped inventory categ
   {accounts:1,transactions:1,other:1},{accounts:1,transactions:'1'}])
   assert.throws(()=>verifySnapshot(full,{expectedCollections:invalid}),/Collections différentes/);
 });
+test('restore guard rejects a valid snapshot from another household or source commit',async()=>{
+ const {createSnapshot,verifySnapshot,unpackSnapshot}=await api;
+ const snapshot=createSnapshot(payload(),{sourceCommit:'a'.repeat(40)});
+ const guards={expectedHouseholdId:household,expectedSourceCommit:'a'.repeat(40),
+  expectedDocuments:2,expectedMembers:1,expectedCollections:{accounts:1,transactions:1}};
+ assert.deepEqual(unpackSnapshot(snapshot,guards),payload());
+ for(const wrong of [
+  {expectedHouseholdId:user},
+  {expectedHouseholdId:'not-a-uuid'},
+  {expectedSourceCommit:'b'.repeat(40)},
+  {expectedSourceCommit:'bad-sha'},
+  {expectedMembers:2},
+  {expectedCollections:{accounts:2}}
+ ]){
+  assert.throws(()=>verifySnapshot(snapshot,{...guards,...wrong}));
+  assert.throws(()=>unpackSnapshot(snapshot,{...guards,...wrong}));
+ }
+ assert.equal(verifySnapshot(snapshot,guards).completenessVerified,false);
+});
+test('unpack CLI refuses incomplete but cryptographically valid backup without writing output',async()=>{
+ const {createSnapshot}=await api;
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'trace-fictional-restore-'));
+ try{
+  const snapshot=path.join(dir,'snapshot.json'),out=path.join(dir,'restored.json');
+  const counts=path.join(dir,'source-counts.json');
+  await fs.writeFile(snapshot,JSON.stringify(createSnapshot(payload(),{sourceCommit:'a'.repeat(40)})));
+  await fs.writeFile(counts,JSON.stringify({accounts:1,transactions:1}));
+  const run=(...args)=>spawnSync(process.execPath,[path.resolve(__dirname,'../scripts/trace-snapshot.mjs'),...args],{encoding:'utf8'});
+  const guards=['--expected-household-id',household,'--expected-source-commit','a'.repeat(40),
+   '--expected-documents','2','--expected-members','1','--expected-collections',counts];
+  assert.notEqual(run('unpack',snapshot,out,...guards,'--expected-members','2').status,0);
+  // A missing partner is NOT detected by the checksum; the independent count is mandatory.
+  assert.notEqual(run('unpack',snapshot,out,'--expected-members','2').status,0);
+  assert.notEqual(run('unpack',snapshot,out,'--expected-household-id',user).status,0);
+  assert.notEqual(run('unpack',snapshot,out,'--expected-source-commit','b'.repeat(40)).status,0);
+  await assert.rejects(fs.stat(out),{code:'ENOENT'});
+  assert.equal(run('unpack',snapshot,out,...guards).status,0);
+  assert.deepEqual(JSON.parse(await fs.readFile(out,'utf8')),payload());
+  assert.notEqual(run('unpack',snapshot,out,...guards).status,0);
+ }finally{await fs.rm(dir,{recursive:true,force:true});}
+});
 test('CLI creates and unpacks exclusively local files, refusing any overwrite',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'trace-fictional-snapshot-'));
  try{

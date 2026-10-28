@@ -2,8 +2,9 @@
 /* Portable local JSON backup, not a database client or a production restore.
  * create raw-export.json snapshot.json [--source-commit SHA]
  * verify snapshot.json [--expected-documents N] [--expected-members N]
- *   [--expected-collections source-counts.json]
- * unpack snapshot.json restored-export.json
+ *   [--expected-collections source-counts.json] [--expected-household-id UUID]
+ *   [--expected-source-commit SHA]
+ * unpack snapshot.json restored-export.json [same --expected-* guards]
  * Inputs are supplied explicitly; no credentials, network, deletion or overwrite.
  */
 import {readFile,writeFile} from 'node:fs/promises';
@@ -58,7 +59,8 @@ export function createSnapshot(payload,{createdAt=new Date().toISOString(),sourc
   payload:JSON.parse(canonical(payload))};
  return{...content,sha256:checksum(content)};
 }
-export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expectedCollections}={}){
+export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expectedCollections,
+ expectedHouseholdId,expectedSourceCommit}={}){
  if(!snapshot||snapshot.format!==FORMAT||!/^[a-f0-9]{64}$/.test(snapshot.sha256||''))
   throw Error('Format ou empreinte de sauvegarde invalide');
  const {sha256,...content}=snapshot;
@@ -68,6 +70,12 @@ export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expec
  // This also checks dates, source reference and the honest completeness label.
  if(checksum(createSnapshot(snapshot.payload,{createdAt:snapshot.createdAt,sourceCommit:snapshot.sourceCommit}))!==checksum(snapshot))
   throw Error('Métadonnées de sauvegarde incohérentes');
+ if(expectedHouseholdId!==undefined&&(!UUID.test(expectedHouseholdId)||
+    actual.householdId!==expectedHouseholdId))
+  throw Error('Foyer différent de celui attendu pour la restauration');
+ if(expectedSourceCommit!==undefined&&(!/^[a-f0-9]{40}$/.test(expectedSourceCommit)||
+    snapshot.sourceCommit!==expectedSourceCommit))
+  throw Error('Commit source différent de celui attendu');
  if(expectedDocuments!==undefined&&(!Number.isSafeInteger(expectedDocuments)||expectedDocuments<0||actual.documents!==expectedDocuments))
   throw Error('Nombre de documents différent du comptage indépendant attendu');
  if(expectedMembers!==undefined&&(!Number.isSafeInteger(expectedMembers)||expectedMembers<1||
@@ -85,31 +93,45 @@ export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expec
  // Even matching counts cannot certify the provenance or completeness of the source query.
  return{...actual,sha256,integrityVerified:true,completenessVerified:false};
 }
-export function unpackSnapshot(snapshot){verifySnapshot(snapshot);return JSON.parse(canonical(snapshot.payload));}
+export function unpackSnapshot(snapshot,expectations={}){
+ verifySnapshot(snapshot,expectations);
+ return JSON.parse(canonical(snapshot.payload));
+}
 async function main(args){
  const [action,input,output]=args;
  if(!['create','verify','unpack'].includes(action)||!input||action!=='verify'&&!output)
   throw Error('Usage : trace-snapshot.mjs create|verify|unpack entrée.json [sortie.json] [options]');
  const json=JSON.parse(await readFile(resolve(input),'utf8'));
  const option=name=>{const i=args.indexOf(name);if(i<0)return undefined;
-  if(!args[i+1])throw Error('Valeur manquante : '+name);return args[i+1];};
- if(action==='verify'){
-  const expected=option('--expected-documents');
-  const members=option('--expected-members');
+  if(args.indexOf(name,i+1)!==-1)throw Error('Option répétée : '+name);
+  if(!args[i+1]||args[i+1].startsWith('--'))throw Error('Valeur manquante : '+name);
+  return args[i+1];};
+ if(action==='verify'||action==='unpack'){
+  // The unpack path MUST enforce the same independent source counts as verify.
+  // A valid checksum alone does not establish that a source export was complete.
+  const expected=option('--expected-documents'),members=option('--expected-members');
+  const householdId=option('--expected-household-id');
+  const sourceCommit=option('--expected-source-commit');
   const collectionsPath=option('--expected-collections');
   if(expected!==undefined&&!/^\d+$/.test(expected))throw Error('Comptage attendu invalide');
   if(members!==undefined&&!/^[12]$/.test(members))throw Error('Comptage des membres attendu invalide');
   const expectedCollections=collectionsPath===undefined?undefined:
    JSON.parse(await readFile(resolve(collectionsPath),'utf8'));
-  console.log(JSON.stringify(verifySnapshot(json,{
+  const expectations={
    expectedDocuments:expected===undefined?undefined:Number(expected),
-   expectedMembers:members===undefined?undefined:Number(members),expectedCollections
-  })));
+   expectedMembers:members===undefined?undefined:Number(members),
+   expectedCollections,expectedHouseholdId:householdId,expectedSourceCommit:sourceCommit
+  };
+  if(action==='verify')console.log(JSON.stringify(verifySnapshot(json,expectations)));
+  else{
+   const restored=unpackSnapshot(json,expectations);
+   await writeFile(resolve(output),JSON.stringify(restored,null,2)+'\n',{flag:'wx',mode:0o600});
+   console.log('Export local extrait et contrôlé. Aucune base modifiée.');
+  }
  }else{
-  const result=action==='create'?createSnapshot(json,{sourceCommit:option('--source-commit')||null}):unpackSnapshot(json);
+  const result=createSnapshot(json,{sourceCommit:option('--source-commit')||null});
   await writeFile(resolve(output),JSON.stringify(result,null,2)+'\n',{flag:'wx',mode:0o600});
-  console.log(action==='create'?'Sauvegarde locale créée. Exhaustivité de l’export source à vérifier séparément.':
-   'Export restaurable extrait. Aucune base modifiée.');
+  console.log('Sauvegarde locale créée. Exhaustivité de l’export source à vérifier séparément.');
  }
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main(process.argv.slice(2)).catch(error=>{
