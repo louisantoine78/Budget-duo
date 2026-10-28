@@ -233,3 +233,15 @@ test('foreign purchase fields keep readable premium contrast inside the sheet',(
 test('compact Budget copy action keeps an accessible name when its text is hidden',()=>{
  assert.match(shell,/id="budgetCopyPrevious" type="button" aria-label="Recopier le budget du mois précédent"/);
 });
+
+test('browser QA supports isolated WebKit touch tests without replacing Safari sign-off',()=>{
+ const runner=get('scripts/trace-browser-537-qa.cjs');
+ assert.match(runner,/TRACE_BROWSER_ENGINE must be chromium or webkit/);
+ assert.match(runner,/browser=await webkit\.launch\(\{headless:true\}\)/);
+ assert.match(runner,/isMobile:touch,hasTouch:touch/);
+ assert.match(runner,/touch\?locator\.tap\(options\):locator\.click\(options\)/);
+ assert.match(runner,/__traceQaTouchStarts>=4/);
+ assert.match(runner,/const executablePath=process\.env\.TRACE_CHROMIUM_EXECUTABLE/);
+ assert.match(runner,/No external URLs permitted/);
+ assert.match(runner,/outside\.push\(route\.request\(\)\.url\(\)\);return route\.abort\(\)/);
+});

@@ -3,17 +3,22 @@
 // Usage: TRACE_PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core \
 //        TRACE_CHROMIUM_EXECUTABLE=/absolute/path/to/chromium \
 //        node scripts/trace-browser-537-qa.cjs [--report /tmp/trace-browser.json]
+// Set TRACE_BROWSER_ENGINE=webkit with PLAYWRIGHT_BROWSERS_PATH for
+// Playwright-managed WebKit Linux. This is not Safari on physical iPhone.
 // Never load a production origin, financial data, credentials or external requests.
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
-const {chromium}=require(process.env.TRACE_PLAYWRIGHT_MODULE||'playwright-core');
+const {chromium,webkit}=require(process.env.TRACE_PLAYWRIGHT_MODULE||'playwright-core');
+const engine=process.env.TRACE_BROWSER_ENGINE||'chromium';
+if(!['chromium','webkit'].includes(engine))
+ throw Error('TRACE_BROWSER_ENGINE must be chromium or webkit');
 const root=path.resolve(__dirname,'..');
 const preview='trace-international-preview.html';
 const mime={'.html':'text/html','.js':'application/javascript','.mjs':'application/javascript',
  '.css':'text/css','.webmanifest':'application/manifest+json','.json':'application/json',
  '.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.woff2':'font/woff2'};
 const widths=[320,390,768,1440],tabs=['budget','activity','wealth','home'];
-const report={schema:'trace-537-browser-qa-v1',commit:null,widths:[],offline:null,
+const report={schema:'trace-537-browser-qa-v1',engine,commit:null,widths:[],offline:null,
  privacy:'No external URLs permitted. All content is fictional preview.',passed:false};
 const server=http.createServer((request,response)=>{
  try{
@@ -43,15 +48,23 @@ async function main(){
  const origin='http://127.0.0.1:'+server.address().port+'/';
  const entry=origin+preview;
  try{
-  const executablePath=process.env.TRACE_CHROMIUM_EXECUTABLE;
-  if(!executablePath)throw Error('TRACE_CHROMIUM_EXECUTABLE is required for isolated QA');
-  browser=await chromium.launch({headless:true,executablePath,
-   args:['--no-sandbox','--disable-dev-shm-usage']});
+  if(engine==='webkit'){
+   // WebKit Linux cannot replace a physical Safari/iPhone release check.
+   browser=await webkit.launch({headless:true});
+  }else{
+   const executablePath=process.env.TRACE_CHROMIUM_EXECUTABLE;
+   if(!executablePath)throw Error('TRACE_CHROMIUM_EXECUTABLE is required for isolated QA');
+   browser=await chromium.launch({headless:true,executablePath,
+    args:['--no-sandbox','--disable-dev-shm-usage']});
+  }
   for(const width of widths){
+   const touch=engine==='webkit'&&width<=390;
    const context=await browser.newContext({viewport:{width,height:850},
-    serviceWorkers:'allow',reducedMotion:'reduce',deviceScaleFactor:1});
+    serviceWorkers:'allow',reducedMotion:'reduce',
+    deviceScaleFactor:touch?3:1,isMobile:touch,hasTouch:touch});
    const page=await context.newPage(),errors=[],httpErrors=[],outside=[];
-   page.on('pageerror',error=>errors.push(error.message));
+   const activate=(locator,options={})=>touch?locator.tap(options):locator.click(options);
+   page.on('pageerror',error=>errors.push(error.message+' STACK '+(error.stack||'')));
    page.on('response',response=>{
     if(response.status()>=400)httpErrors.push(response.status()+' '+response.url());
    });
@@ -62,6 +75,10 @@ async function main(){
    });
    try{
     await page.goto(entry,{waitUntil:'load',timeout:25000});
+    if(touch)await page.evaluate(()=>{
+     window.__traceQaTouchStarts=0;
+     document.addEventListener('touchstart',()=>{window.__traceQaTouchStarts++},{passive:true});
+    });
     const home=await metrics(page);
     assert.equal(home.active,'home');
     assert.ok(home.heading.length>12,'Home must render actual text');
@@ -87,7 +104,7 @@ async function main(){
     }
     const checked=[];
     for(const tab of tabs){
-     await page.locator('.navbtn[data-nav="'+tab+'"]').click({timeout:6000});
+     await activate(page.locator('.navbtn[data-nav="'+tab+'"]'),{timeout:6000});
      const data=await metrics(page);
      assert.equal(data.active,tab,'Wrong page active for '+tab);
      assert.equal(data.selectedNav,tab,'Wrong selected tab for '+tab);
@@ -95,26 +112,32 @@ async function main(){
      assert.equal(data.scrollWidth,width,'Horizontal overflow after '+tab);
      checked.push({tab,heading:data.heading});
     }
+    if(touch){
+     assert.ok(await page.evaluate(()=>window.__traceQaTouchStarts>=4),
+      'WebKit mobile navigation must dispatch actual touchstart events');
+     assert.equal(await page.locator('.trace-trend-columns').first().getAttribute('tabindex'),'0',
+      'Finance trends must remain keyboard accessible in WebKit');
+    }
     report.widths.push({width,home:home.heading,nav:checked,touch:home.navTargets,
-     documentOverflow:false});
+     touchEmulated:touch,documentOverflow:false});
     if(width===390){
      // Real financial UI interactions: scope summaries, journal tabs, validation.
      // All operations stay in fictional preview; no save or external request.
      const mineBalance=await page.locator('#homeBalance').innerText();
-     await page.locator('#homeScope [data-scope="couple"]').click();
+     await activate(page.locator('#homeScope [data-scope="couple"]'));
      const coupleBalance=await page.locator('#homeBalance').innerText();
      assert.notEqual(coupleBalance,mineBalance,'Couple must update the visible total');
-     await page.locator('#homeScope [data-scope="mine"]').click();
+     await activate(page.locator('#homeScope [data-scope="mine"]'));
      assert.equal(await page.locator('#homeBalance').innerText(),mineBalance,
       'Returning to Moi must restore the original financial summary');
-     await page.locator('.navbtn[data-nav="budget"]').click();
+     await activate(page.locator('.navbtn[data-nav="budget"]'));
      const mineBudget=await page.locator('.budget-hero-card').innerText();
      await page.locator('#budgetScope [data-scope="couple"]').click();
      const coupleBudget=await page.locator('.budget-hero-card').innerText();
      assert.notEqual(coupleBudget,mineBudget,'Couple budget must reflect the shared view');
      await page.locator('#budgetScope [data-scope="mine"]').click();
      assert.equal(await page.locator('.budget-hero-card').innerText(),mineBudget);
-     await page.locator('.navbtn[data-nav="activity"]').click();
+     await activate(page.locator('.navbtn[data-nav="activity"]'));
      const journal=[];
      for(const [tab,panel] of [['transactions','activityTransactions'],
        ['review','activityReview'],['sharing','activitySharing'],['import','activityImport']]){
@@ -130,7 +153,7 @@ async function main(){
       assert.ok(status.text.length>8,'Empty activity panel: '+tab);
       journal.push(tab);
      }
-     await page.locator('#quickAdd').click();
+     await activate(page.locator('#quickAdd'));
      assert.equal(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')),true);
      assert.equal(await page.locator('#manualTxAmount').evaluate(el=>getComputedStyle(el).fontSize),'16px',
       'iPhone inputs below 16px trigger Safari focus zoom');
@@ -157,15 +180,18 @@ async function main(){
      const before=await metrics(page);
      assert.equal(before.offlineReady,true,'Offline shell not ready');
      assert.equal(before.offlineError,null);
-     // First online reload guarantees a controlling service worker.
+     // Wait until worker activation and offline shell cache checks finish.
+     // WebKit can stop a still-running worker during a sudden offline switch.
      await page.reload({waitUntil:'load',timeout:18000});
+     await page.waitForFunction(()=>window.TracePreviewPWA?.ready===true&&
+      !!navigator.serviceWorker.controller,{timeout:18000});
      await context.setOffline(true);
      await page.reload({waitUntil:'load',timeout:15000});
      await page.waitForFunction(()=>window.TracePreviewPWA?.ready===true,{timeout:15000});
      const after=await metrics(page);
      assert.equal(after.active,'home');
      assert.equal(after.scrollWidth,390);
-     await page.locator('.navbtn[data-nav="activity"]').click();
+     await activate(page.locator('.navbtn[data-nav="activity"]'));
      const activity=await metrics(page);
      assert.equal(activity.active,'activity');
      report.offline={width:390,readyBefore:true,reloadedWithoutNetwork:true,
@@ -191,7 +217,7 @@ async function main(){
    if(!dest||dest.startsWith('--'))throw Error('--report requires destination');
    fs.writeFileSync(path.resolve(dest),JSON.stringify(report,null,2)+'\n');
   }
-  console.log(JSON.stringify({passed:report.passed,financialUi:report.financialUi,
+  console.log(JSON.stringify({passed:report.passed,engine,financialUi:report.financialUi,
    screens:report.widths.map(v=>v.width),navigation:report.widths.reduce((n,v)=>n+v.nav.length,0),
    offline:report.offline,failures:report.failures}));
  }

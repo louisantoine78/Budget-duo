@@ -36,3 +36,24 @@ Le script démarre un serveur **uniquement sur 127.0.0.1**, bloque toute requêt
 
 **Production : NO-GO.** Aucun changement à la branche stable ni au déploiement n'est autorisé par ce document.
 
+
+
+## Qualification WebKit Linux et émulation tactile — 28 octobre 2026
+
+Le même script de qualification navigateur prend désormais en charge Chromium
+(par défaut) et WebKit sous Linux, sans charger de services externes.
+
+En mode WebKit, les vues 320 et 390 px simulent le tactile iPhone : navigation
+par tap, vrais événements touchstart, soldes fictifs, quatre onglets, contrôles
+des formulaires, du graphique et rechargement PWA hors connexion. Le test
+respecte le même blocage réseau que la version Chromium.
+
+Commande dans une microVM Linux isolée avec Playwright WebKit installé :
+
+    TRACE_BROWSER_ENGINE=webkit PLAYWRIGHT_BROWSERS_PATH=/tmp/trace-pw-browsers \
+    TRACE_PLAYWRIGHT_MODULE=/tmp/trace-webkit/node_modules/playwright-core \
+    node scripts/trace-browser-537-qa.cjs --report /tmp/trace-537-webkit-qa.json
+
+WebKit Linux ne remplace pas Safari sur iPhone réel. Clavier logiciel, VoiceOver,
+installation à l'écran d'accueil, reprise d'arrière-plan et réseau instable
+restent à qualifier sur un véritable appareil. Production : NO-GO.
