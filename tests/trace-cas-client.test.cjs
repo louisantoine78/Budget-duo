@@ -88,6 +88,35 @@ test('queued CAS saves the amount and nested metadata from each call, not later 
  assert.equal(saved.get(app.traceWriteKey('transactions',tx.id)).data.amountCAD,41);
  assert.equal(saved.get(app.traceWriteKey('transactions',tx.id)).revision,1);
 });
+test('non-finite and unsafe amounts never become null or rounded financial writes',async()=>{
+ const {app,calls,syncLog,saved}=createContext();
+ const bad=[NaN,Infinity,-Infinity,Number.MAX_SAFE_INTEGER+1,
+  -(Number.MAX_SAFE_INTEGER+1)];
+ for(const amount of bad){
+  await assert.rejects(app.saveDocument('transactions',{id:'unsafe',amountCAD:amount}),
+   /TRACE_INVALID_FINANCIAL_NUMBER/);
+  await assert.rejects(app.saveDocument('transactions',{
+   id:'unsafe-nested',amountCAD:10,bankEvidence:{rate:amount}}),
+   /TRACE_INVALID_FINANCIAL_NUMBER/);
+ }
+ assert.equal(calls.length,0,'No RPC must receive a rounded or null monetary amount');
+ assert.equal(syncLog.length,0,'Invalid serialization cannot claim saving');
+ assert.equal(saved.size,0);
+ await app.saveDocument('transactions',{id:'ordinary',amountCAD:0.3,quote:1.4612345});
+ assert.equal(calls.length,1,'Ordinary monetary decimals and FX rates remain supported');
+});
+test('invalid household settings are rejected before synchronization or RPC',async()=>{
+ const {app,state,syncLog,calls}=createContext();
+ app.setRevision(0);
+ state.household.accountOpeningBalances={cad:NaN};
+ await assert.rejects(app.saveHouseholdSettings(),/TRACE_INVALID_FINANCIAL_NUMBER/);
+ assert.equal(calls.length,0);
+ assert.equal(syncLog.length,0);
+ state.household.accountOpeningBalances={cad:350.45};
+ await app.saveHouseholdSettings();
+ assert.equal(calls.length,1);
+ assert.equal(syncLog.at(-1)?.status,'synced');
+});
 test('unserializable financial payload refuses RPC rather than sending a partial record',async()=>{
  const {app,calls}=createContext();
  await assert.rejects(app.saveDocument('transactions',{

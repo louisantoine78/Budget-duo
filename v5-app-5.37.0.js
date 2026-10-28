@@ -29,6 +29,17 @@ function traceSyncConfirmed(){
  else if(tracePendingWrites>1)sync('saving','Autres écritures en cours…');
  else sync('synced');
 }
+// JSON.stringify silently converts NaN/Infinity into null and can round unsafe
+// integer amounts. Reject these before sending financial data to PostgreSQL.
+// Ordinary undefined optional fields still follow standard JSON behavior.
+function traceStrictWriteSnapshot(value){
+ return JSON.parse(JSON.stringify(value,(_key,current)=>{
+  if(typeof current==='number'&&(!Number.isFinite(current)||
+     Number.isInteger(current)&&!Number.isSafeInteger(current)))
+   throw Error('TRACE_INVALID_FINANCIAL_NUMBER : montant ou paramètre numérique non fiable.');
+  return current;
+ }));
+}
 const traceWriteKey=(collection,id)=>JSON.stringify([String(collection),String(id)]);
 // Safety quarantine until deferred postings, allocations and server-side CAS/RLS
 // are qualified on fictitious PostgreSQL. This is defense-in-depth on the
@@ -5089,6 +5100,8 @@ async function saveHouseholdSettings(){
   const settings={...(household.settings||{}),...state.household,schemaVersion:5};
   if(internationalPreviewMode()){household.settings=settings;sync('synced','Démo locale');return;}
   if(traceWritesBlocked)throw Error('Conflit de données : recharge TRACE avant toute nouvelle écriture.');
+  // Validate before showing a saving status or scheduling a financial RPC.
+  traceStrictWriteSnapshot(settings);
   // A blocked workspace must retain its visible conflict instead of falsely saving.
   sync('saving');
   return traceSerialWrite('settings:'+household.id,async()=>{
@@ -5099,9 +5112,9 @@ async function saveHouseholdSettings(){
    // spread retains mutable maps; an edit made while the network is pending
    // could otherwise change the payload after submission, and the locally
    // confirmed snapshot would no longer represent the committed version.
-   const queuedSettings=JSON.parse(JSON.stringify({
+   const queuedSettings=traceStrictWriteSnapshot({
     ...(household.settings||{}),...state.household,schemaVersion:5
-   }));
+   });
    const {data,error}=await client.rpc('trace_cas_save_household_settings',{
     p_household_id:household.id,p_settings:queuedSettings,
     p_expected_revision:traceRevision(traceSettingsRevision)});
@@ -5133,7 +5146,7 @@ async function saveDocument(collection,item){
   // the same object while a previous CAS write is still queued; without a
   // snapshot, the queued RPC could unexpectedly post those later amounts.
   // A JSON roundtrip also matches what the database will serialize.
-  const requested=JSON.parse(JSON.stringify(item));
+  const requested=traceStrictWriteSnapshot(item);
   // Only indicate saving after local validation and serialization succeeded.
   sync('saving');
   return traceSerialWrite(key,async()=>{
