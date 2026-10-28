@@ -491,3 +491,31 @@
 @media(max-width:430px){
  #helpBtn.help-btn{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:13px}
 }
+
+
+/* TRACE 5.37 premium filtering: native dropdowns remain invisible test
+ * state, replaced visually with direct, compact iPhone-friendly pill choices.
+ * Styling is limited to the 5.37 candidate, not the stable 5.36.5 shell. */
+.trace-activity-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 14px}
+.trace-activity-filter-field{display:grid;gap:7px;min-width:0;padding:10px 10px 7px;
+ border:1px solid #e2ece3;background:linear-gradient(145deg,#fffefb,#f8fbf7);
+ border-radius:16px;box-shadow:0 3px 13px rgba(22,77,54,.035)}
+.trace-activity-filter-title{font-size:11px;font-weight:800;letter-spacing:.012em;color:#365b4c}
+.trace-activity-filters .trace-activity-native-select{
+ position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;
+ padding:0!important;opacity:0!important;pointer-events:none!important;clip-path:inset(50%)!important;
+ overflow:hidden!important}
+.trace-activity-filter-chips{display:flex;gap:7px;overflow-x:auto;overscroll-behavior-x:contain;
+ -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 1px 5px;min-width:0}
+.trace-activity-filter-chips::-webkit-scrollbar{display:none}
+.trace-activity-filter-chip{flex:0 0 auto;max-width:210px;min-height:44px;padding:9px 13px;
+ color:#365d4c;background:#fff;border:1px solid #dce9df;border-radius:999px;
+ box-shadow:0 2px 7px rgba(32,87,66,.045);font-size:12px;font-weight:730;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;touch-action:manipulation;
+ transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.trace-activity-filter-chip.is-active,.trace-activity-filter-chip[aria-pressed="true"]{
+ color:#fff;background:#205742;border-color:#205742;box-shadow:0 4px 11px rgba(25,74,53,.17)}
+.trace-activity-filter-chip:focus-visible{outline:3px solid #65b094;outline-offset:2px}
+@media(max-width:600px){.trace-activity-filters{grid-template-columns:minmax(0,1fr);gap:8px}
+ .trace-activity-filter-field{padding:9px 10px 6px}}
+@media(prefers-reduced-motion:reduce){.trace-activity-filter-chip{transition:none}}

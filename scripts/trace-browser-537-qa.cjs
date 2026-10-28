@@ -146,6 +146,32 @@ async function main(){
      await page.locator('#budgetScope [data-scope="mine"]').click();
      assert.equal(await page.locator('.budget-hero-card').innerText(),mineBudget);
      await activate(page.locator('.navbtn[data-nav="activity"]'));
+     // Premium 5.37: the five history filters must present compact buttons
+     // rather than visible native dropdowns, without changing filtering.
+     for(const id of ['activityAccountFilter','activityCategoryFilter',
+       'activityNatureFilter','activityCurrencyFilter','activityStatusFilter']){
+      assert.equal(await page.locator('#'+id+'Chips button').count()>0,true,
+       'Missing premium buttons for '+id);
+      const nativeStyle=await page.locator('#'+id).evaluate(el=>({
+       hidden:el.getAttribute('aria-hidden'),clip:getComputedStyle(el).clipPath,
+       pointer:getComputedStyle(el).pointerEvents
+      }));
+      assert.equal(nativeStyle.hidden,'true','Legacy dropdown must not be announced');
+      assert.equal(nativeStyle.clip,'inset(50%)','Legacy dropdown must be visually clipped');
+      assert.equal(nativeStyle.pointer,'none','Legacy dropdown must not intercept touch');
+      const targets=await page.locator('#'+id+'Chips button').evaluateAll(nodes=>
+       nodes.map(el=>el.getBoundingClientRect().height));
+      assert.ok(targets.every(h=>h>=44),'Filter buttons must be touch friendly: '+id);
+     }
+     await activate(page.locator('#activityStatusFilterChips [data-value="pending"]'));
+     assert.equal(await page.locator('#activityStatusFilter').inputValue(),'pending');
+     assert.equal(await page.locator('#activityStatusFilterChips [data-value="pending"]').getAttribute('aria-pressed'),'true');
+     await activate(page.locator('#activityStatusFilterChips [data-value="confirmed"]'));
+     assert.equal(await page.locator('#activityStatusFilter').inputValue(),'confirmed');
+     await activate(page.locator('#activityCurrencyFilterChips [data-value="EUR"]'));
+     assert.equal(await page.locator('#activityCurrencyFilter').inputValue(),'EUR');
+     await activate(page.locator('#activityCurrencyFilterChips [data-value="all"]'));
+     assert.equal(await page.locator('#activityCurrencyFilter').inputValue(),'all');
      const journal=[];
      for(const [tab,panel] of [['transactions','activityTransactions'],
        ['review','activityReview'],['sharing','activitySharing'],['import','activityImport']]){

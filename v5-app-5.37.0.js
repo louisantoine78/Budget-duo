@@ -4366,6 +4366,33 @@ function traceActivitySelect(id,items,value,onChange){
  node.innerHTML=items.map(([v,label])=>'<option value="'+esc(v)+'">'+esc(label)+'</option>').join('');
  node.value=value;
  node.onchange=()=>{onChange(node.value);renderActivity();};
+ // In the premium 5.37 layout, the native select remains an inert backing
+ // control for legacy filters/tests. People choose small, accessible pills.
+ // No new financial logic: every chip takes the same onchange path.
+ const chips=$('#'+id+'Chips');
+ if(!chips||typeof document==='undefined'||!document.createElement)return;
+ chips.replaceChildren(...items.map(([v,label])=>{
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='trace-activity-filter-chip'+(v===value?' is-active':'');
+  button.textContent=label;
+  button.title=label;
+  button.dataset.value=v;
+  button.setAttribute('aria-pressed',v===value?'true':'false');
+  button.onclick=()=>{
+   if(node.value===v)return;
+   node.value=v;
+   node.onchange();
+   // renderActivity rebuilds the pills; restore keyboard focus to the
+   // newly selected option without scrolling the entire page.
+   if(typeof requestAnimationFrame==='function')
+    requestAnimationFrame(()=>{const next=$('#'+id+'Chips');
+     const active=next&&[...next.querySelectorAll('button')].find(b=>b.dataset.value===v);
+     active?.focus({preventScroll:true});
+    });
+  };
+  return button;
+ }));
 }
 function traceActivityControls(){
  const accounts=state.accounts.filter(a=>['la','partner'].includes(a.owner)&&

@@ -245,11 +245,31 @@
       </div>
       <div id="activityTransactions" aria-labelledby="activityTabTransactions" role="tabpanel" aria-label="Historique des opérations">
         <div class="trace-activity-filters" aria-label="Filtres de l'historique">
-          <label for="activityAccountFilter">Compte<select class="input" id="activityAccountFilter"><option value="all">Tous les comptes</option></select></label>
-          <label for="activityCategoryFilter">Catégorie<select class="input" id="activityCategoryFilter"><option value="all">Toutes les catégories</option></select></label>
-          <label for="activityNatureFilter">Nature<select class="input" id="activityNatureFilter"><option value="all">Toutes les natures</option></select></label>
-          <label for="activityCurrencyFilter">Devise du compte<select class="input" id="activityCurrencyFilter"><option value="all">Toutes les devises</option></select></label>
-          <label for="activityStatusFilter">Statut<select class="input" id="activityStatusFilter"><option value="confirmed">Confirmées</option></select></label>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityAccountFilterTitle">Compte</span>
+            <select class="input trace-activity-native-select" id="activityAccountFilter" tabindex="-1" aria-hidden="true"><option value="all">Tous les comptes</option></select>
+            <div class="trace-activity-filter-chips" id="activityAccountFilterChips" role="group" aria-labelledby="activityAccountFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityCategoryFilterTitle">Catégorie</span>
+            <select class="input trace-activity-native-select" id="activityCategoryFilter" tabindex="-1" aria-hidden="true"><option value="all">Toutes les catégories</option></select>
+            <div class="trace-activity-filter-chips" id="activityCategoryFilterChips" role="group" aria-labelledby="activityCategoryFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityNatureFilterTitle">Nature</span>
+            <select class="input trace-activity-native-select" id="activityNatureFilter" tabindex="-1" aria-hidden="true"><option value="all">Toutes les natures</option></select>
+            <div class="trace-activity-filter-chips" id="activityNatureFilterChips" role="group" aria-labelledby="activityNatureFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityCurrencyFilterTitle">Devise du compte</span>
+            <select class="input trace-activity-native-select" id="activityCurrencyFilter" tabindex="-1" aria-hidden="true"><option value="all">Toutes les devises</option></select>
+            <div class="trace-activity-filter-chips" id="activityCurrencyFilterChips" role="group" aria-labelledby="activityCurrencyFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityStatusFilterTitle">Statut</span>
+            <select class="input trace-activity-native-select" id="activityStatusFilter" tabindex="-1" aria-hidden="true"><option value="confirmed">Confirmées</option></select>
+            <div class="trace-activity-filter-chips" id="activityStatusFilterChips" role="group" aria-labelledby="activityStatusFilterTitle"></div>
+          </div>
         </div>
         <div class="trace-activity-filter-actions">
           <button type="button" class="trace-activity-pending-action" id="activityShowPending">À valider</button>
