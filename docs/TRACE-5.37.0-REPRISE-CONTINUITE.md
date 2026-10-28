@@ -1,0 +1,77 @@
+# TRACE 5.37.0 International — point de reprise permanent
+
+**Date du point de reprise : 28 octobre 2026.**
+
+**Utilisation :** ce document permet de continuer le projet depuis une nouvelle conversation ChatGPT, sans dépendre de la longueur du chat ou de l'existence d'une sandbox éphémère. Toujours consulter le **HEAD réel** de GitHub avant d'agir. **Ne pas repartir de zéro** et ne pas supposer que les observations ci-dessous restent exactes après de nouveaux commits.
+
+## Dépôt, branches et état vérifié
+
+- Dépôt : `louisantoine78/Budget-duo`
+- **Branche de travail exclusive :** `trace-5.37.0-international-accounts-fx`
+- HEAD vérifié **avant création de ce document** : `bd930ce9929590a2b76b076f178063e86e1c9d84` — `fix(trace): cache protected HTTPS preview static assets with same-origin session [skip ci]`
+- La version stable **`main` doit rester inchangée** : `02c70f50e7e51da79b77a91dde96a03c6c719909` lors du dernier contrôle.
+- Lors de cette reprise, une machine de test éphémère a expiré. **Ne jamais compter sur son système de fichiers** : repartir de la branche distante réelle.
+- Ne pas modifier les données utilisateur, les projets Supabase réels, les migrations de production, les sauvegardes réelles ni la branche `main`. Commits exclusivement sur la branche 5.37 et **messages avec `[skip ci]`**.
+- Déplacer la référence de branche avec contrôle CAS (`expected_sha`, `force:false`) et vérifier l'arbre Git exact après publication.
+
+## Mission et logique validée
+
+TRACE est une PWA premium de gestion budgétaire individuelle et de couple, prioritairement iPhone/Safari, avec comptes FR/CA, cartes canadiennes à crédit, débit immédiat, débit différé français, CAD/EUR/USD/GBP/CHF, import CSV/PDF, rapprochement, partage Moi/Élise/Nous/amis, épargne/patrimoine, UX accessible, sécurité et prévention des doubles écritures.
+
+Les décisions d'architecture et d'UX ont déjà été validées. Ne pas réinventer la conception. Les règles financières à préserver :
+- Paiement d'une carte canadienne = sortie du compte courant et réduction **équivalente** de la dette de carte, **neutre** sur la dépense budgétaire.
+- Le changement ultérieur du compte de règlement d'une carte ne doit **pas** invalider rétroactivement ses remboursements correctement confirmés.
+- Débit différé français : les dépenses sont imputées selon leur date d'achat, le débit bancaire intervient à une échéance mensuelle paramétrée ; le posting n'est pas encore libéré.
+- Virements multidevises et conversions explicites, sans créer de fausse valeur en CAD si le taux manque.
+- Import CSV idempotent ; lignes illisibles retenues pour vérification et consentement explicite quand nécessaire ; pas de réimport fictif des mêmes lignes.
+- Ne jamais compromettre l'ownership/RLS, les contrôles CAS, les protections de restauration et la traçabilité.
+
+## Acquis techniques déjà committés
+
+1. Fondations banque/comptes/multidevises, garde-fous d'écriture et migrations jusqu'à `migrations/12-trace-cas-exclusive-write-cutover.sql`.
+2. Recettes Chromium complètes sur opérations fictives (34 parcours), remboursements cartes, EUR/USD, imports PDF/CSV, rapprochement, épargne et partage.
+3. Qualité UX : petits écrans, contraste, labels accessibles et interactions tactiles.
+4. Recette WebKit Linux et émulation tactile, navigation, rotation, conservation de brouillon et PWA hors connexion. Ce n'est **pas** Safari sur un iPhone physique.
+5. Test de mise à jour du service worker avec deux générations : pas de rechargement forcé si une saisie est en cours ; nouveau cache activé après choix explicite.
+6. **Export isolé installable du laboratoire fictif** : `scripts/export-trace-537-preview.mjs`. Il copie seulement les actifs de la liste blanche du worker vers un répertoire vide et exclut `config.js`, code cloud, point d'entrée de production, migrations et données réelles ; entrée `trace-international-preview.html`.
+7. Commit `bd930ce9929590a2b76b076f178063e86e1c9d84` : ajustement des téléchargements des actifs du service worker avec `credentials: same-origin` pour la prévisualisation HTTPS protégée. **Vérifier sur la vraie URL protégée** avant toute conclusion.
+
+Les derniers tests complets rapportés avant ce checkpoint : **108 suites Node / 1 741 scénarios recensés**, **34 parcours financiers Chromium**, recette de l'export statique fictif sur les formats 320/390/768/1440 avec rechargement hors connexion, et **17 garde-fous officiels** dont 4 suites PostgreSQL/PGlite, réussis sur l'arbre exact du commit d'export `d35276b4a524822292ba1cce6f9fc1ab279813c6`. Pour le commit ultérieur `bd930ce9929590a2b76b076f178063e86e1c9d84`, **ne pas extrapoler** : refaire sa qualification et vérifier la prévisualisation HTTPS.
+
+## Fichiers d'entrée essentiels
+
+- `trace-international-preview.html` et `trace-international-preview.webmanifest` — laboratoire PWA fictif, CSP `connect-src 'none'`.
+- `trace-international-preview-sw.js` — worker limité à l'entrée de laboratoire et aux actifs fictifs.
+- `scripts/build-trace-preview-pwa.mjs` — manifeste de cache déterministe et `--check`.
+- `scripts/export-trace-537-preview.mjs` et `tests/trace-preview-export.test.cjs` — paquet statique à liste blanche.
+- `scripts/trace-browser-537-qa.cjs` — Chromium/WebKit, touch et hors connexion ; variable `TRACE_LAB_ROOT` pour qualifier un export.
+- `tests/trace-candidate.browser.cjs` — 34 scénarios financiers Chromium.
+- `scripts/trace-preview-upgrade-qa.cjs` — activation volontaire du nouveau service worker.
+- `scripts/test-trace-native.mjs` — régression Node.
+- `scripts/check-trace-537-release-gates.cjs` — garde-fous de sortie (les conditions manuelles ne sont pas franchies).
+- `docs/TRACE-5.37.0-BROWSER-PWA-QA.md` — recettes navigateur, cache, export et HTTPS.
+- `docs/TRACE-5.37.0-IPHONE-SAFARI-SIGNOFF.md` — procédure iPhone physique toujours à exécuter.
+- `docs/TRACE-5.37.0-BACKUP-ROLLBACK-RUNBOOK.md` — restaurations, migration et limitations.
+
+## Où reprendre, dans l'ordre
+
+1. **Inspecter le HEAD réel de la branche**, la dernière série de commits, le statut des fichiers et le HEAD de `main`. Lire ce document et les guides iPhone / export / rollback. Ne pas se fier à une sandbox d'une ancienne conversation.
+2. Vérifier les modifications du commit `bd930ce9929590a2b76b076f178063e86e1c9d84` : accès authentifié aux actifs statiques sur une prévisualisation HTTPS Vercel protégée ; éviter toute exposition publique ou variable d'environnement réelle.
+3. Régénérer **dans un dossier temporaire vide** l'export de laboratoire : `node scripts/export-trace-537-preview.mjs --out /tmp/trace-537-lab`. Vérifier sa liste blanche, ses sommes SHA-256, son manifeste et l'absence de `config.js` / `cloud.js`.
+4. Rejouer la recette navigateur sur **le dossier exporté**, et celle de mise à jour PWA ; tester ensuite WebKit. Exécuter la régression Node complète et les garde-fous PostgreSQL/Git. Corriger tout vrai défaut avant publication.
+5. Préparer une **URL HTTPS de prévisualisation privée dédiée** contenant seulement l'export, sans modifier les domaines ni la production existants. Ne pas déployer la branche brute du dépôt (qui inclut aussi le code réel). Contrôler les accès Vercel.
+6. Faire la recette manuelle iPhone/Safari (clavier iOS, VoiceOver, ajout à l'écran d'accueil, rotation réelle, arrière-plan, mode avion, réinstallation, mise à jour protégée). Demander une exécution humaine, car une microVM ne peut pas simuler ces conditions fidèlement.
+7. Avant toute libération réelle : sauvegarde et restauration PostgreSQL, revue de migration/rollback, permissions et fonctions RPC, validation des parcours financiers avec les données autorisées, choix de déploiement et **accord explicite du propriétaire**.
+
+## Gardes non négociables
+
+- **Production : NO-GO** tant que toutes les validations manuelles/financières et l'accord explicite ne sont pas obtenus.
+- Ne pas toucher `main` et ne pas lancer automatiquement CI/CD de production : `[skip ci]` à chaque commit candidat.
+- Pas de connexion à des comptes ou données réelles dans les tests du laboratoire.
+- Les tests de WebKit Linux et Chromium **ne constituent pas** une recette sur Safari/iPhone réel.
+- Ne pas prétendre qu'une URL HTTPS est déployée sans vérifier son existence et son accès.
+- Si une sandbox disparaît, récupérer **GitHub HEAD**, ce document et les scripts ; ne pas réinventer ni promettre du travail asynchrone.
+
+## Prompt minimal de secours
+
+> Reprends TRACE 5.37.0 International dans `louisantoine78/Budget-duo`, sur la seule branche `trace-5.37.0-international-accounts-fx`. Lis `docs/TRACE-5.37.0-REPRISE-CONTINUITE.md`, inspecte le HEAD réel et `main`, puis poursuis la préparation de la prévisualisation HTTPS privée et la qualification iPhone/financière sans toucher à la production. Ne recommence pas la conception ; teste puis commit uniquement des changements vérifiés avec `[skip ci]`. Explique ce que tu as réellement réalisé et les blockers.
