@@ -96,3 +96,18 @@ Pour reproduire sans service externe ni données réelles :
 Ce contrôle valide uniquement la **PWA fictive de laboratoire**.
 Il ne prouve pas la mise à jour de la PWA de production ni le comportement
 Safari lors de la suspension réelle par iOS. Production : NO-GO.
+
+## Export installable à fichiers limités
+
+Le script scripts/export-trace-537-preview.mjs vérifie le cache statique
+de la branche candidate, l'isolation CSP et le manifeste, puis n'exporte
+que la liste blanche explicite du service worker, sans copier le dépôt.
+Il produit un inventaire SHA-256 de tous les fichiers et refuse une
+destination non vide ou un chemin arbitraire dans le dépôt.
+
+Pour préparer une prévisualisation HTTPS, générer dans un répertoire
+isolé (par exemple /tmp/trace-537-lab), puis publier uniquement son
+contenu. L'entrée PWA installable demeure
+/trace-international-preview.html, avec des données fictives et une
+portée de service worker limitée à cette page. Aucun déploiement
+ou changement de données de production n'est autorisé par ce protocole.

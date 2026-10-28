@@ -72,3 +72,23 @@ Chromium ou WebKit Linux passe n'est **pas** une validation Safari iOS.
     Après annulation volontaire puis confirmation de la mise à jour, vérifier
     qu'un seul cache actuel subsiste et que la PWA fonctionne hors connexion.
     L'essai doit utiliser uniquement des données fictives.
+
+## Candidate statique installable, sans budget réel
+
+L'export ci-dessous reprend seulement les 69 fichiers autorisés par le
+service worker du laboratoire, et crée une page d'entrée exclusivement
+fictive. Il ne contient ni configuration Supabase, ni données personnelles,
+ni migrations, ni le point d'entrée de la version stable.
+
+    node scripts/export-trace-537-preview.mjs --out /tmp/trace-537-lab
+
+L'installation PWA exige une origine HTTPS fiable : ouvrir dans Safari
+l'URL complète se terminant par /trace-international-preview.html,
+puis Partager et Ajouter à l'écran d'accueil. Une archive ZIP ouverte
+directement depuis Fichiers ne permet pas de tester le service worker.
+
+Si le site de prévisualisation demande une connexion Vercel, se connecter
+à son compte autorisé ; le laboratoire est protégé pour éviter d'exposer
+la prévisualisation publiquement. Les montants et comptes sont fictifs.
+Toute saisie est perdue au rechargement. Cela ne valide pas encore la
+résilience des données cloud de l'application finale.

@@ -12,7 +12,10 @@ const {chromium,webkit}=require(process.env.TRACE_PLAYWRIGHT_MODULE||'playwright
 const engine=process.env.TRACE_BROWSER_ENGINE||'chromium';
 if(!['chromium','webkit'].includes(engine))
  throw Error('TRACE_BROWSER_ENGINE must be chromium or webkit');
-const root=path.resolve(__dirname,'..');
+const root=process.env.TRACE_LAB_ROOT?path.resolve(process.env.TRACE_LAB_ROOT):
+ path.resolve(__dirname,'..');
+if(process.env.TRACE_LAB_ROOT&&!fs.existsSync(path.join(root,'trace-lab-export-audit.json')))
+ throw Error('TRACE_LAB_ROOT must point to a fictional-only PWA export');
 const preview='trace-international-preview.html';
 const mime={'.html':'text/html','.js':'application/javascript','.mjs':'application/javascript',
  '.css':'text/css','.webmanifest':'application/manifest+json','.json':'application/json',
