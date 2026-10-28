@@ -419,3 +419,16 @@
  .trace-trend-columns{scroll-behavior:auto;scroll-snap-type:none}
  .trace-home-next-action,.trace-csv-review-entry{animation:none;transition:none}
 }
+
+/* International 5.37 — readable month data on small screens.
+ * The six-column trend stays horizontally scrollable rather than shrinking
+ * amounts to a 10px ellipsis on an iPhone SE-sized viewport.
+ */
+@media(max-width:420px){
+ .trace-trend-col>small{font-size:11px;line-height:1.4;font-weight:650}
+ .trace-trend-col>b{font-size:11px;line-height:1.35;font-weight:700;
+   white-space:normal;overflow:visible;overflow-wrap:anywhere}
+ .trace-trend-columns{gap:10px;padding-bottom:12px}
+ .trace-trend-bars{height:88px}
+ .trace-trend-bars>i{width:12px}
+}

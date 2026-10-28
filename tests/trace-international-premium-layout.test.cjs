@@ -184,3 +184,10 @@ test('empty saving/investment grids remain helpful and add action exists',()=>{
  assert.match(el('#wealthTotal').textContent,/950/);
 });
 console.log(count+' approved premium home/wealth scenarios passed');
+
+test('small iPhone finance trend shows legible month labels and wraps long values',()=>{
+ assert.match(css,/@media\(max-width:420px\)\{[\s\S]*?\.trace-trend-col>small\{font-size:11px/);
+ assert.match(css,/\.trace-trend-col>b\{font-size:11px;line-height:1\.35;font-weight:700;/);
+ assert.match(css,/white-space:normal;overflow:visible;overflow-wrap:anywhere/);
+ assert.match(css,/\.trace-trend-columns\{gap:10px;padding-bottom:12px/);
+});

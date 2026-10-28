@@ -70,6 +70,21 @@ async function main(){
     for(const target of home.navTargets){
      assert.ok(target.width>=44&&target.height>=44,'Touch target under 44px: '+target.label);
     }
+    // Six monthly financial chart columns are accessible, not 10px ellipses.
+    const trends=page.locator('[data-page="home"] .trace-trend-bars[role="img"]');
+    assert.equal(await trends.count(),6,'Six accessible finance chart months');
+    for(const label of await trends.evaluateAll(els=>els.map(el=>el.getAttribute('aria-label'))))
+     assert.ok(label&&label.length>10,'Month chart must expose accessible values');
+    if(width<=420){
+     const small=await page.locator('[data-page="home"] .trace-trend-col>small').first()
+       .evaluate(el=>parseFloat(getComputedStyle(el).fontSize));
+     assert.ok(small>=11,'Compact month labels must be readable at 11px or above');
+     const amountStyle=await page.locator('[data-page="home"] .trace-trend-col>b').first()
+       .evaluate(el=>({size:parseFloat(getComputedStyle(el).fontSize),
+        wrapping:getComputedStyle(el).whiteSpace}));
+     assert.ok(amountStyle.size>=11&&amountStyle.wrapping==='normal',
+      'Chart amounts must wrap instead of using tiny ellipses');
+    }
     const checked=[];
     for(const tab of tabs){
      await page.locator('.navbtn[data-nav="'+tab+'"]').click({timeout:6000});
@@ -83,6 +98,61 @@ async function main(){
     report.widths.push({width,home:home.heading,nav:checked,touch:home.navTargets,
      documentOverflow:false});
     if(width===390){
+     // Real financial UI interactions: scope summaries, journal tabs, validation.
+     // All operations stay in fictional preview; no save or external request.
+     const mineBalance=await page.locator('#homeBalance').innerText();
+     await page.locator('#homeScope [data-scope="couple"]').click();
+     const coupleBalance=await page.locator('#homeBalance').innerText();
+     assert.notEqual(coupleBalance,mineBalance,'Couple must update the visible total');
+     await page.locator('#homeScope [data-scope="mine"]').click();
+     assert.equal(await page.locator('#homeBalance').innerText(),mineBalance,
+      'Returning to Moi must restore the original financial summary');
+     await page.locator('.navbtn[data-nav="budget"]').click();
+     const mineBudget=await page.locator('.budget-hero-card').innerText();
+     await page.locator('#budgetScope [data-scope="couple"]').click();
+     const coupleBudget=await page.locator('.budget-hero-card').innerText();
+     assert.notEqual(coupleBudget,mineBudget,'Couple budget must reflect the shared view');
+     await page.locator('#budgetScope [data-scope="mine"]').click();
+     assert.equal(await page.locator('.budget-hero-card').innerText(),mineBudget);
+     await page.locator('.navbtn[data-nav="activity"]').click();
+     const journal=[];
+     for(const [tab,panel] of [['transactions','activityTransactions'],
+       ['review','activityReview'],['sharing','activitySharing'],['import','activityImport']]){
+      await page.locator('#activityTabs [data-tab="'+tab+'"]').click();
+      const status=await page.evaluate(id=>{
+       const el=document.getElementById(id);
+       return{visible:!!el&&getComputedStyle(el).display!=='none',
+        selected:document.querySelector('#activityTabs [aria-selected="true"]')?.dataset.tab||null,
+        text:(el?.innerText||'').trim().slice(0,80)}
+      },panel);
+      assert.equal(status.selected,tab,'Wrong activity selected tab');
+      assert.equal(status.visible,true,'Activity panel not visible: '+tab);
+      assert.ok(status.text.length>8,'Empty activity panel: '+tab);
+      journal.push(tab);
+     }
+     await page.locator('#quickAdd').click();
+     assert.equal(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')),true);
+     assert.equal(await page.locator('#manualTxAmount').evaluate(el=>getComputedStyle(el).fontSize),'16px',
+      'iPhone inputs below 16px trigger Safari focus zoom');
+     await page.locator('#saveManualTx').click();
+     assert.match(await page.locator('#manualMovementError').innerText(),/Vérifie le montant/);
+     const options=await page.locator('#manualTxAccount option').evaluateAll(els=>els.map(el=>el.value));
+     assert.ok(options.includes('demo-fr-deferred-card'),'French deferred card should be visible for read-only context');
+     await page.locator('#manualTxAccount').selectOption('demo-fr-deferred-card');
+     await page.locator('#manualTxAmount').fill('24.50');
+     const category=page.locator('#manualTxCategory');
+     if(await category.locator('option').count()>1)await category.selectOption({index:1});
+     await page.locator('#saveManualTx').click();
+     const deferredError=await page.locator('#manualMovementError').innerText();
+     assert.match(deferredError,/débit différé|écritures non activées/i,
+      'Deferred card writes must remain blocked before save');
+     assert.equal(await page.locator('#homeBalance').innerText(),mineBalance,
+      'Rejected writes must leave the financial summary unchanged');
+     await page.locator('#cancelManualTx').click();
+     assert.equal(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')),false);
+     report.financialUi={mineBalance,coupleBalance,mineBudget:mineBudget.slice(0,100),
+      coupleBudget:coupleBudget.slice(0,100),journal,emptyFormRejected:true,
+      deferredWriteRejected:true,noServerWrites:true};
      await page.waitForFunction(()=>window.TracePreviewPWA?.ready===true,{timeout:18000});
      const before=await metrics(page);
      assert.equal(before.offlineReady,true,'Offline shell not ready');
@@ -121,7 +191,7 @@ async function main(){
    if(!dest||dest.startsWith('--'))throw Error('--report requires destination');
    fs.writeFileSync(path.resolve(dest),JSON.stringify(report,null,2)+'\n');
   }
-  console.log(JSON.stringify({passed:report.passed,
+  console.log(JSON.stringify({passed:report.passed,financialUi:report.financialUi,
    screens:report.widths.map(v=>v.width),navigation:report.widths.reduce((n,v)=>n+v.nav.length,0),
    offline:report.offline,failures:report.failures}));
  }
