@@ -44,6 +44,8 @@ async function run(){
    assert.equal((await db.query(
     "select has_table_privilege('authenticated','public.documents','INSERT') as allowed")).rows[0].allowed,true);
    await assert.rejects(migration(12),/TRACE_CAS_CUTOVER_BLOCKED/);
+   // Rejected BEGIN leaves PostgreSQL in an aborted transaction until rollback.
+   await db.exec('rollback');
    assert.equal((await db.query(
     "select has_table_privilege('authenticated','public.documents','INSERT') as allowed")).rows[0].allowed,true);
   });
@@ -53,6 +55,8 @@ async function run(){
    assert.equal((await asUser(1,tx=>tx.query(
     'select public.trace_csv_evidence_guard_ready() as ok'))).rows[0].ok,false);
    await assert.rejects(migration(12),/TRACE_CAS_CUTOVER_BLOCKED/);
+   // Rejected BEGIN leaves PostgreSQL in an aborted transaction until rollback.
+   await db.exec('rollback');
    assert.equal((await db.query(
     "select has_table_privilege('authenticated','public.documents','INSERT') as allowed")).rows[0].allowed,true);
    await migration(11);

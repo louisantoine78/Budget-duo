@@ -71,6 +71,7 @@ declare
  actor_slot text;
  before_evidence boolean := false;
  after_evidence boolean := false;
+ source_index_valid boolean := false;
  affected_household uuid;
 begin
  if tg_op <> 'INSERT' then
@@ -109,6 +110,9 @@ begin
   raise exception 'TRACE_CSV_EVIDENCE_FORBIDDEN: retain bank evidence'
    using errcode='42501';
  end if;
+ if coalesce(new.data->>'sourceIndex','') ~ '^[0-9]{1,6}$' then
+  source_index_valid := (new.data->>'sourceIndex')::integer between 2 and 1001;
+ end if;
  if not after_evidence or new.data->>'owner' is distinct from actor_slot
   or nullif(new.data->>'accountId','') is null
   or char_length(new.data->>'accountId') > 240
@@ -117,11 +121,7 @@ begin
   or char_length(coalesce(new.data->>'rawText','')) > 650
   or nullif(new.data->>'sourceFileName','') is null
   or char_length(new.data->>'sourceFileName') > 110
-  or case
-     when coalesce(new.data->>'sourceIndex','') ~ '^[0-9]{1,6}$'
-     then (new.data->>'sourceIndex')::integer not between 2 and 1001
-     else true
-     end
+  or not source_index_valid
   or new.data->>'source' is distinct from 'csv'
   or not exists (
    select 1 from public.documents acct

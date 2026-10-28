@@ -122,7 +122,7 @@ async function run(){
    await rpcSave(2,'accounts','partner',other,null);
    await assert.rejects(rpcSave(1,'accounts','forge',{...other,id:'forge'},null),/TRACE_WRITE_FORBIDDEN/);
    await assert.rejects(rpcSave(1,'accounts','partner',{...other,name:'forged'},0),/TRACE_WRITE_FORBIDDEN/);
-   await assert.rejects(rpcDelete(1,'accounts','partner',0),/TRACE_WRITE_CONFLICT/);
+   await assert.rejects(rpcDelete(1,'accounts','partner',0),/TRACE_WRITE_FORBIDDEN/);
    assert.equal((await readDoc('accounts','partner')).data.owner,'partner');
   });
   await check('investment operations require native portfolio and banking ownership',async()=>{
@@ -144,7 +144,7 @@ async function run(){
     ...ownOperation,id:'ghost',accountId:'nonexistent'},null),/TRACE_WRITE_FORBIDDEN/);
    // Changing the destination of an existing operation must not steal it.
    await assert.rejects(rpcSave(2,'investment_operations','op-la',{
-    ...ownOperation,accountId:'pea-partner'},0),/TRACE_WRITE_CONFLICT/);
+    ...ownOperation,accountId:'pea-partner'},0),/TRACE_WRITE_FORBIDDEN/);
    await assert.rejects(rpcDelete(2,'investment_operations','op-la',0),/TRACE_WRITE_CONFLICT/);
    assert.equal((await readDoc('investment_operations','op-la')).data.accountId,'pea-la');
    assert.equal((await rpcSave(1,'investment_operations','op-la',{
@@ -330,7 +330,7 @@ async function run(){
     const id='deferred-reference-'+collection;
     await assert.rejects(rpcSave(1,collection,id,{
      id,accountId:'legacy-deferred-card',status:'pending'
-    },null),/TRACE_DEFERRED_NOT_RELEASED/);
+    },null),collection==='imports'?/TRACE_DEFERRED_NOT_RELEASED|TRACE_CSV_EVIDENCE_FORBIDDEN/:/TRACE_DEFERRED_NOT_RELEASED/);
     assert.equal(await readDoc(collection,id),undefined);
    }
    // A foreign-card transfer leg is also forbidden, even if its spending

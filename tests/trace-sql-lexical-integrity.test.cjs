@@ -64,9 +64,10 @@ test('all SQL candidate migrations 07-11 have closed strings, comments and dolla
 test('CSV source row regex is anchored and casts only after checking numeric syntax',()=>{
  const dollar=String.fromCharCode(36);
  assert.ok(sql.includes("[0-9]{1,6}"+dollar+"'"),'SQL row-index regex must close on its own line');
- assert.match(sql,/or case\s+when coalesce\(new\.data->>'sourceIndex',''\)/);
- assert.match(sql,/then \(new\.data->>'sourceIndex'\)::integer not between 2 and 1001/);
- assert.match(sql,/else true\s+end/);
+ assert.match(sql,/source_index_valid boolean := false/);
+ assert.match(sql,/if coalesce\(new\.data->>'sourceIndex',''\) ~/);
+ assert.match(sql,/source_index_valid := \(new\.data->>'sourceIndex'\)::integer between 2 and 1001/);
+ assert.match(sql,/or not source_index_valid/);
 });
 test('lexical checker rejects regression where regex closing quote is eaten by JS replace',()=>{
  const proper="'^[0-9]{1,6}"+String.fromCharCode(36)+"'";

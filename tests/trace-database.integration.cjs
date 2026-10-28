@@ -93,17 +93,9 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
   const end=app.indexOf('\nfunction '+next+'(',start);
   assert.ok(start>0&&end>start);if(app.slice(start-6,start)==='async ')start-=6;
   return app.slice(start,end)};
- // Run the app's actual saveDocument helper. Only its HTTP transport is replaced
- // by parameterized PostgreSQL: persistence, PKs, triggers and RLS are real SQL.
- const saveSource=source('saveDocument','settingsBack');
- const save=new Function('client','session','household','sync','internationalPreviewMode',saveSource+';return saveDocument;')({
-  from(table){assert.equal(table,'documents');return{upsert:async doc=>{
-   try{await asUser(uid(1),tx=>tx.query(`insert into public.documents(household_id,collection,item_id,data,updated_by)
-    values($1,$2,$3,$4,$5) on conflict(household_id,collection,item_id)
-    do update set data=excluded.data,updated_by=excluded.updated_by`,
-    [doc.household_id,doc.collection,doc.item_id,JSON.stringify(doc.data),doc.updated_by]));return{error:null};
-   }catch(error){return{error};}
-  }}}},{user:{id:uid(1)}},{id:householdA.household_id},()=>{},()=>false);
+ // Historical 5.36 baseline upserts must be reproducible before CAS cutover.
+ // Current 5.37 client and 09–12 CAS RPCs are qualified separately below.
+ const save=(collection,item)=>asUser(uid(1),tx=>put(tx,collection,item,uid(1)));
  const common={status:'confirmed',payerId:'la',beneficiary:'la',split:{la:100,partner:0}};
  const q={currency:'EUR',cadPerUnit:1.6,date:'2026-10-08',source:'FICTITIOUS PERSISTENCE FIXTURE'};
  const transactions=[
@@ -112,7 +104,7 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
   {...common,id:'eur40',date:'2026-10-08',accountId:'fr',type:'expense',...I.resolveBooking({account:accounts[2],bankAmount:40,date:'2026-10-08',quote:q})},
   {...common,id:'usd50',date:'2026-10-09',accountId:'fr',type:'expense',...I.resolveBooking({account:accounts[2],bankAmount:46.2,originalCurrency:'USD',originalAmount:50,date:'2026-10-09',quote:q})},
   {...common,id:'fx',date:'2026-10-11',accountId:'ca',toAccountId:'fr',type:'transfer',bankCurrency:'CAD',amountCAD:150,bankAmount:150,toBankAmount:95,toBankCurrency:'EUR',transferFeeAmount:2,transferFeeCurrency:'CAD',transferFeeIncludedInDebit:true}];
- await test('actual app save helper persists credit, EUR/USD and FX legs without duplicate IDs',async()=>{
+ await test('historical baseline persists credit, EUR/USD and FX legs without duplicate IDs',async()=>{
   for(const item of transactions)await save('transactions',item);
   await save('transactions',transactions[1]); // Idempotent retry of the same doc.
   const saved=(await rows()).filter(x=>x.collection==='transactions');
@@ -124,9 +116,13 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
   assert.equal(digest(await rows()),before);
   const docs=await rows(),state={accounts,transactions:docs.filter(x=>x.collection==='transactions').map(x=>x.data),
    reconciliations:[],investmentOperations:[],household:{accountOpeningBalances:{ca:1000,card:0,fr:500,partner:300}}};
+  const type=a=>a.type;
+  const mismatch=new Function('state','window','accountType',
+   'return ('+source('traceCardRepaymentMismatch','accountEstimate')+');')(state,{TraceInternational:I},type);
   const estimate=new Function('state','window','accountType','openingBoundary','afterBoundary',
-   'return ('+source('accountEstimate','bank')+');')(state,{TraceInternational:I},a=>a.type,
-   ()=>({date:'2026-10-01',mode:'start'}),(date,boundary)=>date>=boundary.date);
+   'traceCardRepaymentMismatch','traceLinkedBankTransactionCovers',
+   'return ('+source('accountEstimate','bank')+');')(state,{TraceInternational:I},type,
+   ()=>({date:'2026-10-01',mode:'start'}),(date,boundary)=>date>=boundary.date,mismatch,()=>false);
   const estimates=Object.fromEntries(accounts.map(a=>[a.id,estimate(a)]));
   assert.equal(estimates.ca,750);assert.equal(estimates.card,0);assert.ok(Math.abs(estimates.fr-508.8)<1e-7);
   const beforeBudgetCents=state.transactions.filter(t=>t.date>='2026-10-01'&&t.type==='expense')
@@ -276,12 +272,37 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
    assert.equal(saved.name,b.name);assert.equal(saved.country,'US');
    await tx.exec('rollback to savepoint stale_probe');
   });
-  findings.push({id:'RLS-PERSONAL-SETTINGS',severity:'release-blocker',
+  findings.push({id:'RLS-PERSONAL-SETTINGS',severity:'pre-migration-gap',
    evidence:'Even after migration 07, baseline household settings let one member alter the other member opening balance.',
    scope:'Fictional PostgreSQL only; hosted policies unknown.',required:'Protect personal settings server-side without preventing validated shared settings updates.'});
-  findings.push({id:'STALE-WRITE',severity:'release-blocker',
+  findings.push({id:'STALE-WRITE',severity:'pre-migration-gap',
    evidence:'Two interleaved stale app document upserts lose the first client edit; the repository has no server compare-and-swap guard.',
    scope:'Deterministic local SQL interleaving, not an actual concurrent hosted-browser test.',required:'Implement atomic version checks and retry/conflict UI before multi-client qualification.'});
+ });
+ await test('08–12 candidate migration sequence preserves native financial rows and blocks historical gaps',async()=>{
+  const before=digest(await rows());
+  for(const name of ['08-trace-personal-settings-owner-guard.sql',
+    '09-trace-cas-versioned-writes.sql','10-trace-deferred-write-quarantine.sql',
+    '11-trace-csv-unparsed-owner-privacy.sql','12-trace-cas-exclusive-write-cutover.sql'])
+   await db.exec(await fs.readFile(path.join(root,'migrations',name),'utf8'));
+  assert.equal(digest(await rows()),before,'Migrations must not mutate monetary rows');
+  await assert.rejects(asUser(uid(1),tx=>tx.query(
+   "update public.documents set data='{}'::jsonb where household_id=$1 and collection='accounts' and item_id='ca'",
+   [householdA.household_id])),/permission denied/);
+  const acct=(await db.query("select data,revision from public.documents where household_id=$1 and collection='accounts' and item_id='ca'",
+   [householdA.household_id])).rows[0];
+  const r=Number(acct.revision);
+  const saveCas=(revision)=>asUser(uid(1),tx=>tx.query(
+   'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+   [householdA.household_id,'accounts','ca',JSON.stringify({...acct.data,name:'CAS confirmed'}),revision]));
+  await saveCas(r);
+  await assert.rejects(saveCas(r),/TRACE_WRITE_CONFLICT/);
+  const h=(await db.query('select settings,settings_revision from public.households where id=$1',
+   [householdA.household_id])).rows[0];
+  await assert.rejects(asUser(uid(1),tx=>tx.query(
+   'select public.trace_cas_save_household_settings($1,$2,$3)',
+   [householdA.household_id,JSON.stringify({...h.settings,accountOpeningBalances:{...h.settings.accountOpeningBalances,partner:9999}}),Number(h.settings_revision)])),
+   /TRACE_SETTINGS_FORBIDDEN/);
  });
  console.log(checks.length+' PostgreSQL integration checks passed; '+findings.filter(f=>f.severity==='release-blocker').length+' remaining release-blocking findings');
 })().catch(error=>{checks.push({name:'first failing SQL boundary',passed:false,error:error.message});console.error(error.message);process.exitCode=1;
