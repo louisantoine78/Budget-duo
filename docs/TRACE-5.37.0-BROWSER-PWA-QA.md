@@ -57,3 +57,18 @@ Commande dans une microVM Linux isolée avec Playwright WebKit installé :
 WebKit Linux ne remplace pas Safari sur iPhone réel. Clavier logiciel, VoiceOver,
 installation à l'écran d'accueil, reprise d'arrière-plan et réseau instable
 restent à qualifier sur un véritable appareil. Production : NO-GO.
+
+
+## Rotation et changement d'onglet (WebKit Linux uniquement)
+
+La recette WebKit couvre désormais un scénario complémentaire à **390 px
+en portrait / 844 × 390 px en paysage** : ouvrir une opération fictive,
+saisir un brouillon sans l'enregistrer, pivoter, vérifier qu'il reste
+éditable et que le formulaire défile verticalement, revenir en portrait,
+annuler sans écriture puis vérifier le retour après changement d'onglet.
+
+Le second onglet est lui aussi isolé du réseau externe. Le scénario
+teste le redimensionnement WebKit et l'activité entre onglets, **pas**
+la suspension réelle d'une PWA par iOS, la rotation physique du
+capteur ni le comportement du clavier logiciel. Ces vérifications
+restent manuelles sur appareil réel et n'autorisent pas la production.

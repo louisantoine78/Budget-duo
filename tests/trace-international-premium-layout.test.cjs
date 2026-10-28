@@ -245,3 +245,13 @@ test('browser QA supports isolated WebKit touch tests without replacing Safari s
  assert.match(runner,/No external URLs permitted/);
  assert.match(runner,/outside\.push\(route\.request\(\)\.url\(\)\);return route\.abort\(\)/);
 });
+
+test('WebKit mobile qualification preserves an unsaved form across rotation',()=>{
+ const runner=get('scripts/trace-browser-537-qa.cjs');
+ assert.match(runner,/if\(engine==='webkit'&&width===390\)/);
+ assert.match(runner,/setViewportSize\(\{width:844,height:390\}\)/);
+ assert.match(runner,/el\.scrollHeight>el\.clientHeight/);
+ assert.match(runner,/Rotation must preserve unsaved form text/);
+ assert.match(runner,/tabResumePreserved:true/);
+ assert.match(runner,/Canceled without saving|Cancel must close the form without saving/);
+});

@@ -198,6 +198,56 @@ async function main(){
       cachedShellVerified:after.offlineReady,activityAvailable:activity.active==='activity'};
      await context.setOffline(false);
     }
+    if(engine==='webkit'&&width===390){
+     // Responsive interruption lab: an iPhone-like touch viewport rotates
+     // while a long, unsaved financial form is open. This does not emulate
+     // the real iOS software keyboard, home-screen PWA or OS suspension.
+     await activate(page.locator('.navbtn[data-nav="home"]'));
+     await activate(page.locator('#quickAdd'));
+     const name=page.locator('#manualTxName');
+     await name.fill('Brouillon fictif non enregistré');
+     const form=page.locator('.sheet-backdrop.open .sheet');
+     await page.setViewportSize({width:844,height:390});
+     await page.waitForFunction(()=>{
+      const r=document.querySelector('.sheet-backdrop.open .sheet')?.getBoundingClientRect();
+      return r&&r.height>0&&r.height<=390&&r.bottom<=390&&
+       document.documentElement.scrollWidth<=innerWidth;
+     },{timeout:8000});
+     const landscape=await form.evaluate(el=>{
+      const r=el.getBoundingClientRect();
+      return{height:Math.round(r.height),viewport:innerHeight,
+       scrollable:el.scrollHeight>el.clientHeight};
+     });
+     assert.equal(landscape.scrollable,true,'Landscape finance form must scroll vertically');
+     await page.locator('#cancelManualTx').scrollIntoViewIfNeeded();
+     assert.equal(await name.inputValue(),'Brouillon fictif non enregistré',
+      'Rotation must preserve unsaved form text');
+     await page.setViewportSize({width:390,height:850});
+     await page.waitForFunction(()=>{
+      const r=document.querySelector('.sheet-backdrop.open .sheet')?.getBoundingClientRect();
+      return r&&r.height>0&&r.height<=850&&r.bottom<=850&&
+       document.documentElement.scrollWidth<=innerWidth;
+     },{timeout:8000});
+     await activate(page.locator('#cancelManualTx'));
+     assert.equal(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')),false,
+      'Cancel must close the form without saving');
+     assert.equal((await metrics(page)).active,'home',
+      'Rotation must not lose the current page');
+     const otherPage=await context.newPage();
+     await otherPage.route('**/*',route=>{
+      if(route.request().url().startsWith(origin))return route.continue();
+      outside.push(route.request().url());return route.abort();
+     });
+     await otherPage.goto(entry,{waitUntil:'load'});
+     await otherPage.bringToFront();
+     await page.bringToFront();
+     assert.equal((await metrics(page)).active,'home',
+      'Returning to the original tab must preserve navigation state');
+     await otherPage.close();
+     report.mobileInterruption={engine,portrait:390,landscape:844,
+      formScrollable:true,unsavedTextPreserved:true,
+      canceledWithoutSaving:true,tabResumePreserved:true};
+    }
     assert.deepEqual(errors,[],'Page JavaScript errors '+width);
     assert.deepEqual(httpErrors,[],'Missing HTTP assets '+width);
     assert.deepEqual(outside,[],'External network attempted');
