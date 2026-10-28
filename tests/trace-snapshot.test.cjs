@@ -110,6 +110,32 @@ test('unpack CLI refuses incomplete but cryptographically valid backup without w
   assert.notEqual(run('unpack',snapshot,out,...guards).status,0);
  }finally{await fs.rm(dir,{recursive:true,force:true});}
 });
+test('source fingerprints ignore SQL row-order changes but preserve amounts, owners and nested arrays',async()=>{
+ const {createSnapshot,verifySnapshot,sourceFingerprint,unpackSnapshot}=await api;
+ const original=payload();
+ original.household_members.push({household_id:household,
+  user_id:'00000000-0000-4000-8000-000000000003',slot:'partner',display_name:'Partner'});
+ original.documents[0].data.allocations=[{member:'la',share:70},{member:'partner',share:30}];
+ const changedOrder=JSON.parse(JSON.stringify(original));
+ changedOrder.household_members.reverse();changedOrder.documents.reverse();
+ const digest=sourceFingerprint(original).payloadSha256;
+ assert.equal(sourceFingerprint(changedOrder).payloadSha256,digest,
+  'A read-only SQL export may return row arrays in any order');
+ const snapshot=createSnapshot(changedOrder,{sourceCommit:'a'.repeat(40)});
+ const expected={expectedHouseholdId:household,expectedSourceCommit:'a'.repeat(40),
+  expectedDocuments:2,expectedMembers:2,expectedCollections:{accounts:1,transactions:1},
+  expectedPayloadSha256:digest};
+ assert.equal(verifySnapshot(snapshot,expected).integrityVerified,true);
+ assert.deepEqual(unpackSnapshot(snapshot,expected),changedOrder);
+ const altered=JSON.parse(JSON.stringify(changedOrder));
+ altered.documents.find(d=>d.collection==='transactions').data.allocations.reverse();
+ assert.notEqual(sourceFingerprint(altered).payloadSha256,digest,
+  'Order inside a financial allocation is data, not SQL row ordering');
+ altered.documents.find(d=>d.collection==='transactions').data.allocations.reverse();
+ altered.documents.find(d=>d.collection==='accounts').data.owner='partner';
+ assert.notEqual(sourceFingerprint(altered).payloadSha256,digest,
+  'Changing personal account ownership must change the fingerprint');
+});
 test('independent source fingerprint rejects same-count monetary tampering with a valid snapshot checksum',async()=>{
  const {createSnapshot,verifySnapshot,unpackSnapshot,sourceFingerprint}=await api;
  const source=payload(),evidence=sourceFingerprint(source);

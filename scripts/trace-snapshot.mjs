@@ -54,8 +54,18 @@ function inventory(payload){
 // Derive this from a separately obtained, read-only export of the source tables,
 // NEVER from the snapshot currently being tested. A matching digest alone does
 // not attest that the upstream database export was exhaustive.
+// SQL SELECT without ORDER BY can legitimately return the exact same rows in
+// another order. Normalize only top-level table rows, not arrays inside data:
+// their order may itself carry financial meaning (allocations, statements).
+function sourceDigest(payload){
+ const cmp=(a,b)=>a<b?-1:a>b?1:0;
+ return checksum({household:payload.household,
+  household_members:[...payload.household_members].sort((a,b)=>cmp(a.user_id,b.user_id)),
+  documents:[...payload.documents].sort((a,b)=>
+   cmp(a.collection,b.collection)||cmp(a.item_id,b.item_id))});
+}
 export function sourceFingerprint(payload){
- return{...inventory(payload),payloadSha256:checksum(payload),completenessVerified:false};
+ return{...inventory(payload),payloadSha256:sourceDigest(payload),completenessVerified:false};
 }
 export function createSnapshot(payload,{createdAt=new Date().toISOString(),sourceCommit=null}={}){
  const counts=inventory(payload);
@@ -86,7 +96,7 @@ export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expec
     snapshot.sourceCommit!==expectedSourceCommit))
   throw Error('Commit source différent de celui attendu');
  if(expectedPayloadSha256!==undefined&&(!SHA256.test(expectedPayloadSha256)||
-    checksum(snapshot.payload)!==expectedPayloadSha256))
+    sourceDigest(snapshot.payload)!==expectedPayloadSha256))
   throw Error('Empreinte du contenu différente du relevé source indépendant');
  if(expectedDocuments!==undefined&&(!Number.isSafeInteger(expectedDocuments)||expectedDocuments<0||actual.documents!==expectedDocuments))
   throw Error('Nombre de documents différent du comptage indépendant attendu');
