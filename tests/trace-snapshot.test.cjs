@@ -62,6 +62,45 @@ test('independent collection counts reject omissions and swapped inventory categ
   {accounts:1,transactions:1,other:1},{accounts:1,transactions:'1'}])
   assert.throws(()=>verifySnapshot(full,{expectedCollections:invalid}),/Collections différentes/);
 });
+test('independent SQL counts accept empty collections but still reject omitted or altered rows',async()=>{
+ const {createSnapshot,verifySnapshot,sourceFingerprint,unpackSnapshot}=await api;
+ const raw=payload(),snapshot=createSnapshot(raw,{sourceCommit:'a'.repeat(40)});
+ const source=sourceFingerprint(raw);
+ const withZero={accounts:1,transactions:1,budgets:0,categories:0,import_days:0};
+ const guards={expectedHouseholdId:household,expectedSourceCommit:'a'.repeat(40),
+  expectedDocuments:2,expectedMembers:1,expectedCollections:withZero,
+  expectedPayloadSha256:source.payloadSha256};
+ assert.deepEqual(unpackSnapshot(snapshot,guards),raw,
+  'Zero-count source collections must not block a correctly verified backup');
+ assert.deepEqual(verifySnapshot(snapshot,guards).collections,{accounts:1,transactions:1});
+ for(const invalid of [
+  {accounts:1,transactions:0,budgets:0},
+  {accounts:1,transactions:2,budgets:0},
+  {accounts:1,transactions:1,budgets:1},
+  {accounts:1,transactions:1,budgets:-1},
+  {accounts:1,transactions:1,budgets:1.5},
+  {accounts:1,transactions:1,budgets:'0'}
+ ])assert.throws(()=>verifySnapshot(snapshot,{...guards,expectedCollections:invalid}),
+  /Collections différentes/);
+});
+test('unpack CLI accepts independently counted zero-document collections',async()=>{
+ const {createSnapshot,sourceFingerprint}=await api;
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'trace-zero-collections-'));
+ try{
+  const snapshot=path.join(dir,'backup.json'),out=path.join(dir,'restored.json');
+  const counts=path.join(dir,'counts.json');
+  await fs.writeFile(snapshot,JSON.stringify(createSnapshot(payload(),{sourceCommit:'a'.repeat(40)})));
+  await fs.writeFile(counts,JSON.stringify({accounts:1,transactions:1,budgets:0,categories:0}));
+  const run=(...args)=>spawnSync(process.execPath,
+   [path.resolve(__dirname,'../scripts/trace-snapshot.mjs'),...args],{encoding:'utf8'});
+  const args=['--expected-household-id',household,'--expected-source-commit','a'.repeat(40),
+   '--expected-documents','2','--expected-members','1','--expected-collections',counts,
+   '--expected-payload-sha256',sourceFingerprint(payload()).payloadSha256];
+  const result=run('unpack',snapshot,out,...args);
+  assert.equal(result.status,0,result.stderr);
+  assert.deepEqual(JSON.parse(await fs.readFile(out,'utf8')),payload());
+ }finally{await fs.rm(dir,{recursive:true,force:true});}
+});
 test('restore guard rejects a valid snapshot from another household or source commit',async()=>{
  const {createSnapshot,verifySnapshot,unpackSnapshot}=await api;
  const snapshot=createSnapshot(payload(),{sourceCommit:'a'.repeat(40)});

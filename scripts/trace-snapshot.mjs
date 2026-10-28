@@ -104,11 +104,17 @@ export function verifySnapshot(snapshot,{expectedDocuments,expectedMembers,expec
     expectedMembers>2||actual.members!==expectedMembers))
   throw Error('Nombre de membres différent du comptage indépendant attendu');
  if(expectedCollections!==undefined){
+  // Independent SQL count queries frequently include zero-count collections.
+  // The export inventory lists only collections with at least one document;
+  // normalize zeros before comparison without ever ignoring a positive count.
   if(!expectedCollections||typeof expectedCollections!=='object'||
      Array.isArray(expectedCollections)||Object.getPrototypeOf(expectedCollections)!==Object.prototype||
      !Object.entries(expectedCollections).every(([name,count])=>name.length>0&&
-      Number.isSafeInteger(count)&&count>0)||
-     canonical(expectedCollections)!==canonical(actual.collections))
+      Number.isSafeInteger(count)&&count>=0))
+   throw Error('Collections différentes des comptages indépendants attendus');
+  const populated=Object.fromEntries(Object.entries(expectedCollections)
+   .filter(([,count])=>count>0));
+  if(canonical(populated)!==canonical(actual.collections))
    throw Error('Collections différentes des comptages indépendants attendus');
  }
  // Expected counts must originate from independently queried source tables.
