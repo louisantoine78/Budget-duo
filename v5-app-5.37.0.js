@@ -1559,7 +1559,13 @@ function openManualTransaction(preferredKind='expense'){
   '<p class="trace-intl-help">Le montant ci-dessus est celui réellement débité par la banque. En l’absence de taux de référence disponible, entre un taux vérifié.</p>'+
   '<div id="manualDestAmountWrap" hidden><label class="label2" id="manualDestAmountLabel" for="manualDestAmount">Montant réellement reçu sur le compte destinataire</label><input class="input" id="manualDestAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
   '<div id="manualTransferFeeWrap" class="trace-intl-transaction" hidden><label class="label2" for="manualTransferFee">Frais déjà inclus dans le débit bancaire (facultatif)</label><input class="input" id="manualTransferFee" type="number" min="0" step=".01" inputmode="decimal" placeholder="Montant dans la devise du compte de départ"><small>Le montant du virement est le débit total de la banque, frais compris. Les frais documentés ici ne créent pas un deuxième débit ni une dépense supplémentaire.</small></div>'+
-  '<div id="manualCategoryWrap"><label class="label2" for="manualTxCategory">Catégorie budgétaire</label><select class="input" id="manualTxCategory"></select><small id="manualCategorySuggestion"></small></div>'+
+  '<div id="manualCategoryWrap"><label class="label2" id="manualTxCategoryLabel" for="manualTxCategory">Catégorie budgétaire</label>'+
+  '<select class="input trace-manual-choice-native" id="manualTxCategory" tabindex="-1" aria-hidden="true"></select>'+
+  '<input type="search" class="input trace-manual-category-search" id="manualTxCategorySearch" '+
+   'aria-label="Rechercher une catégorie budgétaire" placeholder="Rechercher une catégorie" autocomplete="off" hidden>'+
+  '<div class="trace-manual-choice-pills trace-manual-category-pills" id="manualTxCategoryChips" role="group" aria-labelledby="manualTxCategoryLabel"></div>'+
+  '<p class="trace-manual-category-empty" id="manualTxCategoryNoResults" role="status" hidden>Aucune catégorie correspondante</p>'+
+  '<small id="manualCategorySuggestion"></small></div>'+
   ''+
   '<div id="manualWhoWrap"><label class="label2" for="manualTxBeneficiary" id="manualTxBeneficiaryLabel">Cette dépense concerne</label>'+
   '<select class="input trace-manual-choice-native" id="manualTxBeneficiary" tabindex="-1" aria-hidden="true">'+who+'</select>'+
@@ -1625,7 +1631,8 @@ function openManualTransaction(preferredKind='expense'){
  };
  
  function syncManualPills(){
-  for(const [selectId,groupId] of [['manualTxAccount','manualTxAccountChips'],
+  for(const [selectId,groupId] of [['manualTxCategory','manualTxCategoryChips'],
+   ['manualTxAccount','manualTxAccountChips'],
    ['manualTxBeneficiary','manualTxBeneficiaryChips'],
    ['manualPurchaseCurrency','manualPurchaseCurrencyChips']]){
    const select=$m(selectId),group=$m(groupId);
@@ -1716,7 +1723,27 @@ function openManualTransaction(preferredKind='expense'){
   $m('manualKindHelp').textContent=M.get(kind)?.help||'';
   const def=M.get(kind),type=def.budget==='income'?'income':'expense',budget=def.budget!=='none';
   const categories=budget?manualCategories(type):[];
-  $m('manualTxCategory').innerHTML='<option value="">Choisir une catégorie</option>'+categories.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  $m('manualTxCategory').innerHTML='<option value="">Choisir une catégorie</option>'+
+   categories.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  // Exactly the eligible non-archived categories; never guess financial IDs.
+  const categoryChips=$m('manualTxCategoryChips');
+  categoryChips.innerHTML=manualChips(categories.map(c=>[c.id,c.name]));
+  categoryChips.querySelectorAll?.('[data-trace-choice]')?.forEach(button=>{
+   button.onclick=event=>{
+    event.stopPropagation();
+    const select=$m('manualTxCategory'),choice=button.dataset.traceChoice;
+    if(![...select.options].some(o=>o.value===choice))return;
+    select.value=choice;
+    select.onchange?.(); // Manual choice is authoritative over suggestions.
+    button.focus?.({preventScroll:true});
+   };
+  });
+  const categorySearch=$m('manualTxCategorySearch');
+  categorySearch.hidden=categories.length<=6;
+  categorySearch.value='';
+  $m('manualTxCategoryNoResults').hidden=categories.length!==0;
+  $m('manualTxCategoryNoResults').textContent=categories.length?
+   'Aucune catégorie correspondante':'Aucune catégorie disponible pour ce mouvement.';
   categoryTouched=false;
   sync();
  }
@@ -1727,6 +1754,20 @@ function openManualTransaction(preferredKind='expense'){
  $m('manualKind').onchange=()=>choose($m('manualKind').value,true);
  $m('manualTxBeneficiary').onchange=sync;
  $m('manualPurchaseCurrency').onchange=sync;
+ const categorySearch=$m('manualTxCategorySearch');
+ if(categorySearch?.addEventListener)categorySearch.addEventListener('input',()=>{
+  // Accent-insensitive search; "epicerie" finds "Épicerie".
+  const normalize=value=>String(value||'').normalize('NFD')
+   .replace(/[̀-ͯ]/g,'').toLocaleLowerCase('fr');
+  const query=normalize(categorySearch.value.trim());
+  let count=0;
+  $m('manualTxCategoryChips')?.querySelectorAll?.('[data-trace-choice]')?.forEach(button=>{
+   const visible=normalize(button.textContent).includes(query);
+   button.hidden=!visible;
+   if(visible)count++;
+  });
+  $m('manualTxCategoryNoResults').hidden=count!==0;
+ });
  const accountSearch=$m('manualTxAccountSearch');
  if(accountSearch?.addEventListener)accountSearch.addEventListener('input',()=>{
   const query=String(accountSearch.value||'').trim().toLocaleLowerCase('fr');
@@ -1766,11 +1807,16 @@ function openManualTransaction(preferredKind='expense'){
  $m('manualDestAmount').oninput=sync;
  $m('manualFriendsAmount').oninput=sync;
  $m('manualPartnerAmount').oninput=sync;
- $m('manualTxCategory').onchange=()=>{categoryTouched=true;};
+ $m('manualTxCategory').onchange=()=>{
+  categoryTouched=true;syncManualPills();
+ };
  $m('manualTxName').oninput=()=>{
   if(!categoryTouched&&M.get(kind)?.budget!=='none'){
    const def=M.get(kind),catGuess=suggestImportCategory({name:$m('manualTxName').value,type:def.budget==='income'?'income':'expense',amountCAD:Number($m('manualTxAmount').value||0)});
-   if([...$m('manualTxCategory').options].some(o=>o.value===catGuess.categoryId))$m('manualTxCategory').value=catGuess.categoryId;
+   if([...$m('manualTxCategory').options].some(o=>o.value===catGuess.categoryId)){
+    $m('manualTxCategory').value=catGuess.categoryId;
+    syncManualPills();
+   }
   }
  };
  $m('cancelManualTx').onclick=closeSheet;

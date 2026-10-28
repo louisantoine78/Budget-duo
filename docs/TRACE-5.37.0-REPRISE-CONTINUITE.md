@@ -119,3 +119,7 @@ Choix directs en pastilles pour devise d’achat (5 devises) et bénéficiaire d
 ## Filtrage des comptes lors de la saisie — 28 octobre 2026
 
 Le formulaire manuel remplace le menu natif visible de sélection de compte par des pastilles vert profond avec nom et devise. Pour **plus de six comptes**, la recherche intégrée filtre les pastilles et affiche un état sans résultat. Les changements passent toujours par `manualTxAccount.onchange`, ce qui préserve les recalculs, l'éligibilité des types de mouvement et le verrouillage du débit différé. Voir `docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md`. La branche stable et Supabase réel sont hors périmètre.
+
+## Checkpoint UX catégorie du formulaire manuel (28 octobre 2026)
+
+Dans « Ajouter une opération », les catégories se choisissent par boutons arrondis, avec recherche locale après six choix. Le moteur continue de lire `manualTxCategory` ; suggestion automatique synchronisée, choix manuel prioritaire, catégorie archivée exclue. Le test lab contient des catégories fictives supplémentaires et vérifie la recherche « epicerie » sans accents. Voir `docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md`. Ne pas toucher main ni aux données réelles.

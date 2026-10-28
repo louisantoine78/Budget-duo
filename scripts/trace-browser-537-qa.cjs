@@ -254,6 +254,25 @@ async function main(){
      assert.equal(await page.locator('#manualFriendsGroup').evaluate(el=>el.classList.contains('hidden')),false);
      await activate(page.locator('#manualTxBeneficiaryChips button').first());
      assert.equal(await page.locator('#manualFriendsGroup').evaluate(el=>el.classList.contains('hidden')),true);
+     // Only eligible, active expense categories. Selection is user-owned.
+     const nativeCategory=await page.locator('#manualTxCategory').evaluate(el=>({
+      hidden:el.getAttribute('aria-hidden'),tab:el.tabIndex,
+      clip:getComputedStyle(el).clipPath,pointer:getComputedStyle(el).pointerEvents
+     }));
+     assert.equal(nativeCategory.hidden,'true');
+     assert.equal(nativeCategory.tab,-1);
+     assert.equal(nativeCategory.clip,'inset(50%)');
+     assert.equal(nativeCategory.pointer,'none');
+     assert.equal(await page.locator('#manualTxCategoryChips button').count(),3);
+     assert.equal(await page.locator('#manualTxCategorySearch').isVisible(),false);
+     assert.ok((await page.locator('#manualTxCategoryChips button').evaluateAll(nodes=>
+      nodes.map(n=>n.getBoundingClientRect().height))).every(h=>h>=44));
+     await activate(page.locator('#manualTxCategoryChips [data-trace-choice="groceries"]'));
+     assert.equal(await page.locator('#manualTxCategory').inputValue(),'groceries');
+     assert.equal(await page.locator('#manualTxCategoryChips [data-trace-choice="groceries"]').getAttribute('aria-pressed'),'true');
+     await page.locator('#manualTxName').fill('Voyage à Paris');
+     assert.equal(await page.locator('#manualTxCategory').inputValue(),'groceries',
+      'Merchant/category suggestion must not replace an explicit category');
      await page.locator('#saveManualTx').click();
      assert.match(await page.locator('#manualMovementError').innerText(),/Vérifie le montant/);
      const options=await page.locator('#manualTxAccount option').evaluateAll(els=>els.map(el=>el.value));
@@ -307,6 +326,11 @@ async function main(){
           const account=data.accounts.find(a=>a.owner==='la'&&a.type==='checking');
           for(let i=1;i<=7;i++)data.accounts.push({...account,
            id:'qa-bank-'+i,name:'Compte fictif '+i,currency:'CAD'});
+          for(let i=1;i<=7;i++)data.categories.push({
+           id:'qa-category-'+i,name:'Catégorie fictive '+i,type:'expense',
+           budgetKind:'variable',icon:'•'});
+          data.categories.push({id:'qa-archived',name:'Catégorie archivée',
+           type:'expense',archived:true,icon:'•'});
           return data;
          }});
         }
@@ -327,6 +351,19 @@ async function main(){
       await search.fill('aucun compte ne correspond');
       assert.equal(await manyPage.locator('#manualTxAccountChips [data-trace-choice]:visible').count(),0);
       assert.equal(await manyPage.locator('#manualTxAccountNoResults').isVisible(),true);
+      const categorySearch=manyPage.locator('#manualTxCategorySearch');
+      assert.equal(await categorySearch.isVisible(),true,'Long list requires category search');
+      assert.equal(await manyPage.locator('#manualTxCategoryChips [data-trace-choice="qa-archived"]').count(),0,
+       'Archived categories must not be offered');
+      await categorySearch.fill('epicerie');
+      assert.equal(await manyPage.locator('#manualTxCategoryChips [data-trace-choice]:visible').count(),1);
+      await manyPage.locator('#manualTxCategoryChips [data-trace-choice="groceries"]').click();
+      assert.equal(await manyPage.locator('#manualTxCategory').inputValue(),'groceries');
+      await manyPage.locator('#manualTxName').fill('Voyages fictifs');
+      assert.equal(await manyPage.locator('#manualTxCategory').inputValue(),'groceries');
+      await categorySearch.fill('aucune catégorie');
+      assert.equal(await manyPage.locator('#manualTxCategoryChips [data-trace-choice]:visible').count(),0);
+      assert.equal(await manyPage.locator('#manualTxCategoryNoResults').isVisible(),true);
       await manyPage.locator('#cancelManualTx').click();
       await manyPage.close();
      }

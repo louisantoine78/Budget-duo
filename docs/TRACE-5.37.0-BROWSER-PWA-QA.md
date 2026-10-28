@@ -193,3 +193,7 @@ Recettes : Chromium 320/390/768/1440 PASS, WebKit Linux mêmes largeurs PASS en 
 ## QA des sélecteurs de compte dans le formulaire manuel (28 octobre 2026)
 
 Le test `scripts/trace-browser-537-qa.cjs` vérifie sur mobile que la banque est choisie avec des pastilles accessibles, que choisir le compte fictif EUR actualise immédiatement la devise d'achat, et que revenir au compte CAD restaure la valeur CAD. En Chromium, un **second onglet de laboratoire isolé** remplace uniquement la fabrique de données fictives pour créer sept comptes supplémentaires ; il vérifie l'apparition de la recherche, la sélection du compte 5 et l'état sans résultat. Aucune donnée du premier onglet, de Supabase ou de la production n'est modifiée. WebKit Linux qualifie les pastilles de base, non Safari iPhone physique.
+
+## Scénarios catégories budgétaires premium (28 octobre 2026)
+
+Le navigateur contrôle les zones tactiles de 44 px, la visibilité des pastilles, `aria-pressed`, le sélecteur natif masqué, le nombre de catégories réellement éligibles et la priorité du choix humain sur les suggestions par description. Une deuxième page de laboratoire, avec sept catégories fictives ajoutées et une archivée, teste la recherche « epicerie », l'exclusion des archives et l'état sans résultat. Les tests financiers existants utilisent toujours le même champ natif masqué. Aucun accès aux données de production. Ces tests ne certifient ni un iPhone physique ni l'authentification Vercel réelle.

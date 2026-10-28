@@ -65,3 +65,7 @@ Les pastilles utilisent les mêmes valeurs d'un sélecteur natif de référence 
 **Vérification :** Chromium 320/390/768/1440 ; scénario additionnel en navigateur avec **sept comptes fictifs supplémentaires**, recherche du cinquième compte, sélection et recherche sans résultats. WebKit Linux et recette iPhone physique restent distincts. Ne jamais injecter ces comptes de test dans une base réelle.
 
 Ce schéma représente un **principe UX documenté**, et non une capture d'écran de la future application iPhone.
+
+## Pastilles de catégories — finition du 28 octobre 2026
+
+Le champ de catégorie du formulaire d'ajout affiche les catégories éligibles sous forme de pastilles, recherchables à partir de sept choix, avec état actif vert profond et accessibilité. La recherche tolère les accents et présente un état vide. Les suggestions automatiques sont respectées **avant**, mais jamais **après**, le choix manuel de catégorie. Les catégories archivées ne sont pas proposées. L'original `manualTxCategory` reste l'état source du moteur, invisible à l'utilisateur. Voir la maquette `docs/TRACE-5.37.0-UX-PRINCIPES-VISUELS.md`.

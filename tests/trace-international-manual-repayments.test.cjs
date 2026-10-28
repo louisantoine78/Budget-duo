@@ -11,11 +11,11 @@ const expenses=[{id:'restaurant',type:'expense',status:'confirmed',payerId:'la',
 {id:'courses',type:'expense',status:'confirmed',payerId:'la',date:'2026-10-11',name:'Courses',beneficiary:'custom',splitAmounts:{friends:35}}];
 const start=app.indexOf('function openManualTransaction('),end=app.indexOf('\nfunction openInvestmentAccountAdd(',start);
 assert.ok(start>=0&&end>start);
-function run(accounts=[ca]){
+function run(accounts=[ca],categories=[],selectedKind='friend_reimbursement'){
  const defaults={manualTxAccount:'ca',manualTxAmount:'60',manualTxName:'Remboursement Camille',manualTxDate:'2026-10-12',
  manualTxBeneficiary:'la',manualPurchaseCurrency:'CAD',manualFriendName:'Camille',manualRelatedExpense:'',
  manualRelatedAmount:'',manualFxRate:'',manualPurchaseAmount:'',manualFriendsAmount:'0',manualPartnerAmount:'0'};
- const nodes=new Map(),saved=[];let renderedHTML='';const state={accounts,transactions:expenses.slice(),investmentAccounts:[],
+ const nodes=new Map(),saved=[];let renderedHTML='';const state={accounts,categories,transactions:expenses.slice(),investmentAccounts:[],
  household:{defaultSplit:{la:50,partner:50}}};
  const $=sel=>{
   const id=sel.replace(/^#/,'');
@@ -44,7 +44,7 @@ function run(accounts=[ca]){
  const friendDebtorFields=new Function('state','window','return ('+app.slice(helperFrom,helperTo)+');')(state,w);
  const deps={window:w,state,friendDebtorFields,me:'la',partner:'partner',$,esc:x=>String(x??''),uiIcon:()=>'',openSheet:(_title,html)=>{renderedHTML=html;},closeSheet:()=>{},
  visibleBankAccounts:()=>accounts,preferredBankAccount:()=>ca,accountType:a=>a?.type,shortAccountLabel:a=>a.name||'',
- shortMemberName:()=> 'Élise',manualCategories:()=>[],localDateISO:()=> '2026-10-12',
+ shortMemberName:()=> 'Élise',manualCategories:type=>categories.filter(c=>c.type===type&&!c.archived),localDateISO:()=> '2026-10-12',
  friendLinkOptions:(d,a)=>w.TraceMovement.linkable(state.transactions,state.transactions,'la',d,a),
  trackedSavingsAccounts:()=>[],isReadySavingsAccount:()=>false,
  movementImpactText:()=>'',money:a=>String(a)+' CAD',suggestImportCategory:()=>({categoryId:''}),
@@ -56,7 +56,8 @@ function run(accounts=[ca]){
  txDocId:()=> 'bank-60',saveDocument:async(collection,item)=>saved.push({collection,item:JSON.parse(JSON.stringify(item))}),
  renderAll:()=>{},navigate:()=>{},showTab:()=>{}};
  const fn=new Function(...Object.keys(deps),'return ('+app.slice(start,end)+');')(...Object.values(deps));
- fn();$('#manualKind').value='friend_reimbursement';$('#manualKind').onchange();
+ fn();
+ if(selectedKind){$('#manualKind').value=selectedKind;$('#manualKind').onchange();}
  return{$,saved,state,getMarkup:()=>renderedHTML};
 }
 let n=0;async function test(name,f){await f();n++;console.log('PASS '+name);}
@@ -74,6 +75,21 @@ async function main(){
   for(const account of accounts)assert.ok(html.includes('data-trace-choice="'+account.id+'"'));
   assert.equal(many.state.transactions.length,expenses.length,
    'Looking at bank options cannot create financial transactions');
+ });
+ await test('many budget categories show search while archived and income categories stay excluded',async()=>{
+  const categories=[
+   {id:'groceries',name:'Épicerie',type:'expense'},
+   ...Array.from({length:8},(_,i)=>({id:'cat-'+i,name:'Catégorie '+i,type:'expense'})),
+   {id:'hidden',name:'Archivée',type:'expense',archived:true},
+   {id:'salary',name:'Salaire',type:'income'}];
+  const u=run([ca],categories,null);
+  assert.equal(u.$('manualTxCategorySearch').hidden,false);
+  const html=u.$('manualTxCategoryChips').innerHTML;
+  assert.match(html,/data-trace-choice="groceries"/);
+  assert.match(html,/data-trace-choice="cat-7"/);
+  assert.doesNotMatch(html,/data-trace-choice="hidden"/);
+  assert.doesNotMatch(html,/data-trace-choice="salary"/);
+  assert.equal(u.saved.length,0);
  });
  await test('one bank 60 CAD receipt linked to two advances',async()=>{
   const u=run(),$=u.$;$('#manualRelatedExpense').value='restaurant';$('#manualRelatedAmount').value='25';

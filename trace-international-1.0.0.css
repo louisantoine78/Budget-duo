@@ -601,3 +601,21 @@
 @media(max-width:390px){
  #sheetBackdrop .trace-manual-account-pills .trace-manual-choice-chip{max-width:168px}
 }
+
+
+/* Category pickers in candidate-only manual operations. The value stays
+ * in the original financial select; there is no additional posting path. */
+#sheetBackdrop .trace-manual-category-pills{margin:4px 0 8px;padding-bottom:8px}
+#sheetBackdrop .trace-manual-category-pills .trace-manual-choice-chip{max-width:200px}
+#sheetBackdrop .trace-manual-category-pills .trace-manual-choice-chip[hidden]{display:none!important}
+#sheetBackdrop .trace-manual-category-search{
+ width:100%;min-height:44px;font-size:16px!important;margin:4px 0 8px;
+ background:#fffefc;border:1px solid #d6e6da;border-radius:13px;
+ padding:10px 12px;appearance:none
+}
+#sheetBackdrop .trace-manual-category-search[hidden]{display:none!important}
+#sheetBackdrop .trace-manual-category-search:focus-visible{outline:3px solid #65ab8d;outline-offset:2px}
+#sheetBackdrop .trace-manual-category-empty{font-size:12px;line-height:1.45;color:#526f60;margin:0 0 8px}
+@media(max-width:390px){
+ #sheetBackdrop .trace-manual-category-pills .trace-manual-choice-chip{max-width:164px}
+}

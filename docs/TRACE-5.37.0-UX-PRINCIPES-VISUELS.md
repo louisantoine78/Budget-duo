@@ -94,3 +94,19 @@ Les pastilles utilisent les mêmes valeurs d'un sélecteur natif de référence 
 **Vérification :** Chromium 320/390/768/1440 ; scénario additionnel en navigateur avec **sept comptes fictifs supplémentaires**, recherche du cinquième compte, sélection et recherche sans résultats. WebKit Linux et recette iPhone physique restent distincts. Ne jamais injecter ces comptes de test dans une base réelle.
 
 Ce schéma représente un **principe UX documenté**, et non une capture d'écran de la future application iPhone.
+
+## Catégories budgétaires — boutons et recherche (28 octobre 2026)
+
+Le formulaire « Ajouter une opération » propose des pastilles arrondies de 44 px pour les catégories **actives et éligibles** à la nature du mouvement. Pas de liste déroulante visible et pas de recherche inutile avec six catégories ou moins.
+
+    Catégorie budgétaire
+    [Épicerie] [Logement] [Voyages]
+
+Au-delà de six catégories, le champ de recherche apparaît. La recherche est insensible aux accents, par exemple « epicerie » trouve « Épicerie », et annonce « Aucune catégorie correspondante » lorsque rien ne correspond.
+
+    Rechercher une catégorie : epicerie
+    [Épicerie]
+
+Le champ natif `manualTxCategory` reste une source de valeur masquée et inaccessible au clavier, sans changement de logique financière. Une suggestion automatique est reflétée dans les pastilles. Dès qu'un choix manuel est effectué, une nouvelle suggestion ne doit jamais remplacer la catégorie sélectionnée. Un changement de nature recharge uniquement les catégories du type pertinent ; les catégories archivées sont exclues.
+
+**Schémas de principe, pas captures de Safari iPhone.** Production toujours NO-GO.
