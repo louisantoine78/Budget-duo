@@ -20,6 +20,8 @@ node scripts/trace-snapshot.mjs create raw-export.json backup.snapshot.json --so
 
 Avant extraction, obtenir la valeur payloadSha256 depuis independent-fingerprint.json et les comptages indépendants dans independent-collections.json. Ces fichiers doivent provenir de la même coupe cohérente des données.
 
+Un inventaire SQL peut inclure des catégories à **zéro document**, par exemple `{"accounts":2,"transactions":12,"budgets":0}`. TRACE accepte ces zéros dans le fichier de comptages indépendants, tout en exigeant une correspondance exacte de chaque catégorie **non vide**. Un total positif manquant, différent, négatif ou fractionnaire bloque la restauration. Les comptages et l'empreinte doivent être calculés sur la même coupe cohérente des données source.
+
 ~~~bash
 node scripts/trace-snapshot.mjs unpack backup.snapshot.json restored-export.json \
   --expected-household-id 00000000-0000-4000-8000-000000000001 \
