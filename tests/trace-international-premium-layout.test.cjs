@@ -21,7 +21,8 @@ test('concise Home preserves core priority order without a duplicate category li
  'id="pendingCountBadge"','id="homeTrend"','id="shareCard"']));
 test('Home lead card is estimated balance, not budget availability',()=>{
  assert.ok(home.indexOf('id="balanceCard"')<home.indexOf('id="homeBudgetAvailable"'));
- assert.match(home,/Disponible sur mon budget/);
+ assert.match(home,/Budget du mois/);
+ assert.match(home,/Reste à dépenser/);
  assert.match(home,/<h2>Ce mois-ci<\/h2>/);
 });
 test('Home existing live IDs survive and are unique',()=>{
@@ -52,7 +53,8 @@ test('premium layout remains readable at 320–360px without changing five main 
  assert.match(css,/\.trace-activity-main-tabs\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
  assert.match(css,/\.trace-home-balance-breakdown summary\{[^}]*min-height:44px/);
  assert.match(css,/\.trace-activity-filter-drawer>summary\{[^}]*min-height:48px/);
- assert.doesNotMatch(home,/id="homeBudgetCategories"|id="homeAccountsBtn"/);
+ assert.doesNotMatch(home,/id="homeBudgetCategories"/);
+ assert.match(home,/id="homeAccountsBtn"/);
 });
 test('six-month charts scroll inside their region on narrow phones, never widen the page',()=>{
  assert.match(css,/@media\(max-width:420px\)\{[\s\S]*?\.trace-trend-columns\{grid-template-columns:repeat\(6,minmax\(48px,1fr\)\)/);
@@ -253,4 +255,17 @@ test('WebKit mobile qualification preserves an unsaved form across rotation',()=
  assert.match(runner,/Rotation must preserve unsaved form text/);
  assert.match(runner,/tabResumePreserved:true/);
  assert.match(runner,/Canceled without saving|Cancel must close the form without saving/);
+});
+
+test('Home shares one panel, keeps two separate metrics and both expected detail actions',()=>{
+ assert.match(home,/class="trace-home-priority trace-home-unified" role="group"/);
+ assert.match(home,/id="balanceCard"/);
+ assert.match(home,/id="homeAccountsBtn"/);
+ assert.match(home,/id="homeBudgetShortcut"/);
+ assert.match(home,/id="homeBudgetTrack" role="progressbar"[^>]*aria-valuemax="100"/);
+ assert.match(css,/\.trace-home-priority\.trace-home-unified\{gap:0;/);
+ assert.doesNotMatch(home,/id="homeBudgetCategories"/);
+ assert.match(app,/\$\('#homeAccountsBtn'\)\.onclick=openAccountsOverview/);
+ assert.match(app,/\$\('#homeBudgetShortcut'\)\.onclick=\(\)=>navigate\('budget'\)/);
+ assert.match(app,/\$\('#homeBudgetTrack'\)\.setAttribute\('aria-valuenow'/);
 });

@@ -99,10 +99,28 @@ let base;
    const budget=await page.locator('.trace-home-available').evaluate(el=>({
     background:getComputedStyle(el).backgroundImage,color:getComputedStyle(el).color,
     amount:el.querySelector('#homeBudgetAvailable').textContent}));
-   assert.match(budget.background,/17, 63, 56/);assert.match(budget.color,/255, 255, 255/);
+   assert.match(budget.background,/(?:16, 62, 55|17, 63, 56)/);assert.match(budget.color,/255, 255, 255/);
    assert.match(budget.amount,/422/);
   }
   await page.setViewportSize({width:390,height:844});
+ });
+ await test('unified Home reveals the Budget and the view-only accounts shortcut',async()=>{
+  await go('home');
+  const both=page.locator('.trace-home-unified');
+  assert.equal(await both.count(),1);
+  assert.match(await both.locator('#homeBalance').innerText(),/3\s*670,00/);
+  assert.match(await both.locator('#homeBudgetAvailable').innerText(),/422/);
+  assert.equal(await both.locator('#homeBudgetTrack').getAttribute('role'),'progressbar');
+  const before=await text('homeBalance');
+  await page.locator('#homeAccountsBtn').click();
+  assert.equal(await text('sheetTitle'),'Comptes et trésorerie');
+  assert.ok(await page.locator('[data-trace-account-open]').count()>=2);
+  await page.locator('#traceAccountsClose').click();
+  assert.equal(await text('homeBalance'),before);
+  await page.locator('#homeBudgetShortcut').click();
+  assert.equal(await page.locator('.page[data-page="budget"]').isVisible(),true);
+  assert.equal(await page.locator('#budgetSections h2').count(),3);
+  await go('home');
  });
  await test('the plus routes manual, daily screenshots and monthly CSV/PDF to one import workspace',async()=>{
   await page.locator('#quickAdd').click();

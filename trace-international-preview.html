@@ -130,8 +130,8 @@
         <div><div class="eyebrow" id="homeMonthLabel">Novembre 2026</div><h1 class="title" id="homeGreeting">Bonjour</h1></div>
         <div class="segment" id="homeScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
       </div>
-      <div class="trace-home-priority" aria-label="Synthèse financière"><article class="card liquid clickable" id="balanceCard">
-          <div class="eyebrow">Solde estimé</div>
+      <div class="trace-home-priority trace-home-unified" role="group" aria-label="Solde estimé et budget du mois"><article class="card liquid" id="balanceCard">
+          <div class="trace-home-panel-head"><div class="eyebrow">Solde estimé</div><button type="button" class="trace-home-panel-link" id="homeAccountsBtn" aria-label="Voir les comptes bancaires et leur trésorerie">Voir les comptes <span aria-hidden="true">›</span></button></div>
           <div class="money" id="homeBalance" aria-live="polite" aria-atomic="true">—</div>
           <span class="badge" id="reconcileBadge">À rapprocher</span>
           <p id="homeCardWarning" class="trace-card-balance-warning" role="status" hidden></p>
@@ -142,11 +142,12 @@
             <div class="mini-account"><span>Dette de carte</span><span id="homeCard">—</span></div>
             <p class="scope-label">Solde courant moins dette des cartes associées, hors épargne.</p>
           </details>
-        </article><article class="card hero-card trace-home-available">
-          <div class="label">Disponible sur mon budget</div>
+        </article><article class="card hero-card trace-home-available" aria-label="Budget du mois">
+          <div class="trace-home-panel-head"><div class="label">Budget</div><button type="button" class="trace-home-panel-link trace-home-budget-link" id="homeBudgetShortcut" aria-label="Ouvrir le budget détaillé">Voir le budget <span aria-hidden="true">›</span></button></div>
+          <div class="trace-home-budget-label">Reste à dépenser</div>
           <div class="big" id="homeBudgetAvailable">—</div>
           <div class="sub" id="homeBudgetSub">Chargement…</div>
-          <div class="progress"><i id="homeBudgetProgress" style="width:0%"></i></div>
+          <div class="progress" id="homeBudgetTrack" role="progressbar" aria-label="Budget consommé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="homeBudgetProgress" style="width:0%"></i></div>
           <div class="progress-row"><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
         </article></div>
       <div class="section-head trace-home-month-head"><h2>Ce mois-ci</h2><small>Revenus · dépenses · marge</small></div>

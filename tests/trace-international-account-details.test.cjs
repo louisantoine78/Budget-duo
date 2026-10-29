@@ -145,7 +145,7 @@ async function main(){
  await test('both primary selectors use explicit confirmation and UI exposes filter',()=>{
   assert.match(app,/confirmTracePrimaryAccount\(button\.dataset\.primaryBank,openAccountSettings\)/);
   assert.match(app,/onSelect:id=>\{[\s\S]*?confirmTracePrimaryAccount\(id,/);
-  assert.doesNotMatch(html,/id="homeAccountsBtn"/);assert.match(html,/id="activityAccountFilter"/);
+  assert.match(html,/id="homeAccountsBtn"/);assert.match(html,/id="activityAccountFilter"/);
  });
  await test('foreign account details identify unresolved bank currency since last reconciliation',()=>{
   const f=fixture({strictEvidence:true});f.openTraceAccountDetail('fr');

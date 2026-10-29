@@ -690,3 +690,40 @@
 #activityImport .trace-import-test-tools:not([open])>article{display:none}
 .trace-activity-filter-drawer:not([open]) .trace-activity-filters{display:none}
 @media(max-width:360px){.trace-filter-hint{font-size:10px}.trace-add-choice{padding:12px}}
+
+/* TRACE 5.37 — unified Home counter, without summing cash and monthly allowance. */
+.trace-home-priority.trace-home-unified{gap:0;overflow:hidden;border:1px solid rgba(34,93,69,.18);
+ border-radius:22px;background:#fffdf9;box-shadow:0 12px 28px rgba(20,69,53,.09),0 2px 6px rgba(20,69,53,.025)}
+.trace-home-priority.trace-home-unified #balanceCard{min-height:0;box-shadow:none;border:0;border-radius:0;
+ background:linear-gradient(145deg,#fffefb 5%,#edf7ef 100%);padding:17px 17px 13px}
+.trace-home-priority.trace-home-unified .trace-home-available{min-height:0;box-shadow:none;border:0;border-radius:0;
+ padding:16px 17px 17px;background:linear-gradient(137deg,#103e37 0%,#205e4c 100%)}
+.trace-home-unified .trace-home-panel-head{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:40px;margin-bottom:2px}
+.trace-home-unified #balanceCard .eyebrow{color:#527663;font-size:12px;line-height:1.3}
+.trace-home-unified .trace-home-panel-link{display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ min-height:44px;border:0;background:transparent;color:#225c49;font-size:12px;line-height:1.2;font-weight:750;
+ white-space:nowrap;border-radius:10px;padding:6px 5px;cursor:pointer}
+.trace-home-unified .trace-home-panel-link span{font-size:17px}
+.trace-home-unified .trace-home-panel-link:focus-visible{outline:3px solid #77c39f;outline-offset:2px}
+.trace-home-unified .trace-home-budget-link{color:#f0fbf0}
+.trace-home-unified .trace-home-budget-label{font-size:12px;color:#e4f3ea;font-weight:650;margin:0 0 1px}
+.trace-home-unified .trace-home-available .label{font-size:12px;font-weight:850}
+.trace-home-unified .trace-home-available .big{font-size:clamp(27px,6.8vw,40px);line-height:1.12;overflow-wrap:anywhere}
+.trace-home-unified .trace-home-available .sub{font-size:12px;line-height:1.4;margin-top:4px}
+.trace-home-unified .trace-home-available .progress{margin-top:13px}
+.trace-home-unified .trace-home-available .progress-row{font-size:11px}
+.trace-home-unified #balanceCard .money{font-size:clamp(29px,7.2vw,42px)}
+.trace-home-unified .trace-home-balance-breakdown{margin-top:6px}
+@media (min-width:800px){
+ .trace-home-priority.trace-home-unified{grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);align-items:stretch;gap:0}
+ .trace-home-priority.trace-home-unified #balanceCard{padding:21px 22px}
+ .trace-home-priority.trace-home-unified .trace-home-available{padding:19px 23px;display:flex;flex-direction:column;justify-content:center}
+}
+@media (max-width:360px){
+ .trace-home-unified .trace-home-panel-link{font-size:11px}
+ .trace-home-priority.trace-home-unified #balanceCard{padding:15px 13px 11px}
+ .trace-home-priority.trace-home-unified .trace-home-available{padding:14px 13px 16px}
+}
+
+/* Decorative hero halo must never intercept the new Budget shortcut. */
+.trace-home-unified .trace-home-available::before{pointer-events:none}
