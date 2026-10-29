@@ -1,6 +1,6 @@
 # TRACE 5.37.0 — recette finale sur véritable iPhone
 
-**Statut : À exécuter. Aucune validation matérielle n'est revendiquée.**
+**Statut : cinq parcours exploratoires déclarés PASS par le propriétaire sur iPhone Safari le 28 octobre 2026 ; recette détaillée et GO production toujours incomplets.**
 
 Ce protocole reste **NO-GO** tant qu'un responsable n'a pas exécuté chaque
 contrôle sur un iPhone physique et documenté les résultats.
@@ -100,3 +100,25 @@ Sur l'URL HTTPS **privée et authentifiée**, vérifier que l'ajout à l'écran 
 Vérifier aussi lors de la recette sous accès réel Vercel qu'une réponse de connexion HTTP **200 HTML** ne puisse être mise en cache sous l'URL d'un actif JavaScript/CSS ou PDF.js, même si la redirection 302 a déjà été testée. Ne jamais considérer un badge « prêt hors ligne » comme valide sans contrôler les ressources effectivement chargées.
 
 Complément à la recette ergonomique : vérifier sur le vrai iPhone en portrait (dont largeur logique 320 px si disponible) que le bouton Aide/Guide en haut dispose d'une cible tactile d'au moins 44 × 44 px, sans écraser le solde, le titre ni les actions du bandeau ; confirmer qu'il fonctionne au toucher et avec VoiceOver. La validation sur WebKit Linux n'est pas équivalente à ce test matériel.
+
+## Retour de recette physique communiqué par le propriétaire — 28 octobre 2026
+
+**Nature de la preuve :** auto-déclaration reçue dans la conversation de suivi, pas une exécution instrumentée ni un enregistrement de captures / journaux Safari. Le modèle d'iPhone, la version iOS/Safari, les mesures de performance et les étapes détaillées n'ont pas été communiqués. **Niveau : PASS déclaré, sans certification indépendante.**
+
+**Cible déclarée :** aperçu privé fictif Vercel `trace-537-iphone-qnsagjsyl-lambotla-1719.vercel.app/trace-international-preview.html`, associé au commit applicatif `c368e5dcfcf3b8153554cb5358d1353fbba14e5f` (projet distinct `trace-537-iphone-lab`, déploiement `dpl_2WEHrj81M9gRzwwZWdC7DLtEYFnP`). Aucun environnement de production.
+
+### Cinq parcours utilisateur déclarés validés (5/5)
+
+1. **PASS déclaré** — ouverture du lien dans Safari et authentification Vercel.
+2. **PASS déclaré** — exploration Accueil, Budget, Activité, Patrimoine ; lisibilité, fluidité et esthétique premium.
+3. **PASS déclaré** — sélection comptes, devises, bénéficiaires, catégories et recherche.
+4. **PASS déclaré** — formulaires et états vides Budget, sans données personnelles.
+5. **PASS déclaré** — installation sur l'écran d'accueil, mode avion, réouverture, rotation et VoiceOver.
+
+Le propriétaire n'a signalé aucun défaut dans ce retour. Les cinq groupes ne fournissent pas, à eux seuls, la preuve de toutes les sous-étapes du protocole détaillé ci-dessus. En particulier, **restent non documentés** : iPhone/iOS/Safari exacts ; clavier logiciel avec valeurs invalides et taille de texte augmentée ; reprise avec brouillon après interruption ; erreurs réseau/serveur ; renouvellement/expiration de session protégée et réponses d'authentification inattendues ; mise à jour du service worker pendant un brouillon ; scénarios financiers complexes comparés aux fixtures sur appareil réel. Ne pas marquer ces sous-étapes comme exécutées.
+
+### Qualification technique distincte déjà obtenue
+
+Sur le checkout applicatif `c368e5d`, des contrôles précédents ont établi : Git HEAD/tree vérifiés, export statique fictif de 69 fichiers autorisés et service worker à 68 actifs, prévisualisation HTTPS Vercel READY protégée par SSO, réponse anonyme HTTP 302, page/manifest/worker et modules principaux identiques au contenu GitHub, fichiers de production ciblés retournant 404 ; Chromium et WebKit Linux (320/390/768/1440) PASS, mode hors ligne PASS, **51/51 tests ciblés de l'export**, **34/34 scénarios financiers fictifs Chromium**, et simulation HTTPS avec session fictive PASS. Les simulations ne prouvent pas les conditions réelles d'expiration de session iOS ni les écritures de production.
+
+**Décision :** la prévisualisation fictive est apte à la poursuite de la recette utilisateur ; aucune mise en production, migration, bascule du débit différé, manipulation de Supabase réel ou fusion dans `main` n'est autorisée. Il reste à documenter les cas détaillés ci-dessus, à qualifier la persistance/Auth/RLS/CAS et les migrations sous base isolée, à valider backup/rollback et les finances, puis à obtenir un accord explicite et distinct pour la production.
