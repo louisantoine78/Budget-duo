@@ -119,5 +119,5 @@ test('Accueil badge remains zero for no visible pending operations',()=>{
  fn({transactions:[]},'la',id=>accounts.filter(a=>a.owner===id&&!a.archived),
   ()=>[],id=>info[id]||null,{})();
  assert.equal(info['#pendingCountBadge'].textContent,'0');
- assert.match(info['#pendingText'].textContent,/Tout est à jour/);
+ assert.match(info['#pendingText'].textContent,/Aucune opération en attente/);
 });

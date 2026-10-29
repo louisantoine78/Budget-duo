@@ -741,7 +741,7 @@ function renderHomeReview(){
    active.has(t.accountId)&&active.has(t.toAccountId)).length,
   total=rows.reduce((n,r)=>n+r.total,0)-twoLegged,
   ocrToReview=rows.reduce((n,r)=>n+r.unresolved,0);
- renderHomeImportCoverage();
+ if(typeof renderHomeImportCoverage==='function')renderHomeImportCoverage();
  const badge=$('#pendingCountBadge'),summary=$('#pendingText'),root=$('#homeReviewAccounts');
  if(badge)badge.textContent=String(total);
  if(summary)summary.textContent=(total?total+' élément'+(total>1?'s':'')+
