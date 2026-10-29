@@ -75,3 +75,12 @@ Navigation à conserver : **Accueil | Budget | + | Activité | Patrimoine**.
 - Les tests de contrat UX et de navigateur doivent être mis à jour selon ces décisions ; la validation physique iPhone de **l'ancien** rendu ne certifie pas automatiquement cette nouvelle disposition.
 
 **Ne pas confondre validation fonctionnelle des cinq parcours iPhone antérieurs et nouvelle validation esthétique.** La mise en production réelle demeure interdite jusqu'à ses propres portes de qualification et l'autorisation explicite du propriétaire.
+
+## Ajustements Home / Année / Activité validés le 29 octobre 2026
+
+- Les différents comptes se consultent toujours sur l'Accueil, mais avec des pastilles plus petites **sans sacrifier la surface tactile de 44 px**. Leur sélection reste en lecture seule ; changer le compte principal demeure une action distincte et confirmée dans les paramètres.
+- Le Budget d'Accueil affiche **uniquement « Reste à dépenser » et son montant** avec le lien « Voir le budget ». Les montants prévus, dépensés et le taux de progression restent calculés par le moteur existant mais ne surchargent plus le tableau de bord. Sans budget renseigné, afficher « À définir » et non un zéro mensonger.
+- L'Accueil propose, sous « À faire », un **calendrier des imports** qui affiche les journées vérifiées / journées éligibles du mois (agrégé par compte, dates postérieures aux ouvertures, jours écoulés uniquement). Le nombre est calculé d'après les journées explicitement checked ou empty sans brouillon/enjeu non résolu ; un compte non vérifié n'est **jamais** qualifié de synchronisé. Un clic ouvre le calendrier existant via le parcours d'import quotidien.
+- « Mon année en clair » devient un aperçu compact de douze mois, comparant par barres le prévu et l'enregistré, avec une fiche du mois sélectionné (prévu, enregistré, restant). L'absence de transactions ou d'import complet ne vaut pas zéro dépensé.
+- Dans Activité, les cinq filtres existants restent dans leur tiroir ; seuls les filtres non défaut apparaissent aussi en pastilles effaçables sans déployer tous les contrôles. Le statut « Confirmées » est le défaut et n'est pas présenté comme filtre additionnel.
+- Aucune écriture financière, migration SQL, configuration d'API bancaire ou modification de la production n'est nécessaire à ces améliorations.

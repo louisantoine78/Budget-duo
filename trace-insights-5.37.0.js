@@ -85,22 +85,46 @@ function renderTrend(target,{months=[],selected='',headline=true,compact=false}=
 }
 function renderAnnual(target,{months=[],year=''}={}){
  if(!target)return;
- const past=(months||[]).filter(m=>m.elapsed&&(m.hasBudget||m.hasTransactions)),shown=(months||[]).filter(m=>m.hasBudget||m.hasTransactions);
- const spent=round(past.reduce((n,m)=>n+(m.expense||0),0)),planned=round(past.reduce((n,m)=>n+(m.budget||0),0));
- let html='<div class="trace-insights-head"><div><strong>Mon année '+esc(year)+'</strong><small>Mois documentés · comparaison au budget prévu</small></div></div>';
- html+='<div class="trace-insight-statpair"><div><small>Achats et factures enregistrés</small><b>'+fmt(spent)+'</b></div><div><small>Budget sur les mois concernés</small><b>'+fmt(planned)+'</b></div></div>';
- html+='<p class="trace-insights-explain">Sélectionne un mois pour ajuster ses catégories. « Non renseigné » ne signifie pas que tu n’as rien dépensé.</p>';
- html+='<div class="trace-insight-yearrows">'+(months||[]).map(m=>{
-  const absent=!m.hasBudget&&!m.hasTransactions,future=!m.elapsed,over=m.hasBudget&&m.expense>m.budget+.005,
-   balance=round((m.budget||0)-(m.expense||0));
-  return '<button type="button" class="trace-insight-yearrow'+(m.selected?' is-selected':'')+'" data-insight-month="'+esc(m.month)+'">'+
-   '<span class="trace-insight-yearname">'+esc(monthName(m.month))+'<small>'+(absent?'Non renseigné':future?'Budget futur':!m.hasBudget?'Sans budget prévu':over?'Dépassement de '+fmt(-balance):'Reste '+fmt(balance))+'</small></span>'+
-   '<span class="trace-insight-yearfig"><b>'+(absent?'—':fmt(m.expense))+'</b><small>'+(m.hasBudget?'/ '+fmt(m.budget)+' prévu':'Budget non défini')+'</small></span></button>';
+ const documented=(months||[]).filter(m=>m.elapsed&&(m.hasBudget||m.hasTransactions));
+ const spent=round(documented.reduce((n,m)=>n+(m.expense||0),0));
+ const planned=round(documented.reduce((n,m)=>n+(m.budget||0),0));
+ const difference=round(planned-spent),chosen=(months||[]).find(m=>m.selected)||
+  (months||[]).find(m=>m.current)||(months||[])[0];
+ const maxValue=Math.max(1,...(months||[]).map(m=>Math.max(Number(m.budget)||0,Number(m.expense)||0)));
+ const widths=m=>({budget:Math.min(100,Math.max(0,Number(m.budget||0)/maxValue*100)),
+  spent:Math.min(100,Math.max(0,Number(m.expense||0)/maxValue*100))});
+ let html='<div class="trace-year-header"><div><strong>Vue annuelle · '+esc(year)+'</strong><small>Choisis un mois pour voir son détail</small></div></div>';
+ html+='<div class="trace-year-totals" aria-label="Totaux des mois écoulés et renseignés">'+
+  '<div><small>Prévu</small><strong>'+fmt(planned)+'</strong></div>'+
+  '<div><small>Enregistré</small><strong>'+fmt(spent)+'</strong></div>'+
+  '<div class="'+(difference<0?'trace-year-negative':'')+'"><small>Écart</small><strong>'+fmt(difference)+'</strong></div></div>';
+ html+='<div class="trace-year-legend"><span><i class="trace-year-key budget"></i>Prévu</span><span><i class="trace-year-key real"></i>Enregistré</span></div>';
+ html+='<div class="trace-year-grid" role="group" aria-label="Choisir un mois du budget">'+(months||[]).map(m=>{
+  const absent=!m.hasBudget&&!m.hasTransactions,b=widths(m),over=m.hasBudget&&m.expense>m.budget+.005,
+   month=monthName(m.month),caption=absent?'Non renseigné':over?'Dépassement':m.hasBudget?'Documenté':'Sans budget',
+   displayMonth=month.slice(0,3),selected=m.month===chosen?.month;
+  return '<button type="button" class="trace-year-month'+(selected?' is-selected':'')+(absent?' is-empty':'')+
+   (over?' is-over':'')+'" data-insight-month="'+esc(m.month)+'" aria-pressed="'+selected+
+   '" aria-label="'+esc(month+' : '+(absent?'non renseigné':'budget '+fmt(m.budget)+' ; enregistré '+fmt(m.expense)))+'">'+
+   '<strong>'+esc(displayMonth)+'</strong>'+
+   '<span class="trace-year-bars" aria-hidden="true"><i class="trace-year-bar budget" style="width:'+b.budget.toFixed(1)+'%"></i>'+
+   '<i class="trace-year-bar real" style="width:'+b.spent.toFixed(1)+'%"></i></span>'+
+   '<small>'+caption+'</small></button>';
  }).join('')+'</div>';
- if(!shown.length)html+='<div class="trace-insights-empty">Aucun mois renseigné pour cette année. Commence par ton budget mensuel.</div>';
- html+='<p class="trace-insights-foot">Totaux calculés uniquement sur les mois écoulés et renseignés. Les périodes sans imports complets peuvent encore évoluer.</p>';
+ if(chosen){
+  const hasPlan=Boolean(chosen.hasBudget),hasActivity=Boolean(chosen.hasTransactions),
+   remaining=round((chosen.budget||0)-(chosen.expense||0));
+  html+='<div class="trace-year-selected" aria-label="Détail du mois sélectionné">'+
+   '<strong>'+esc(monthName(chosen.month))+'</strong>'+
+   '<div><span>Prévu <b>'+(hasPlan?fmt(chosen.budget):'Non défini')+'</b></span>'+
+   '<span>Enregistré <b>'+(hasActivity?fmt(chosen.expense):'Aucun mouvement')+'</b></span>'+
+   '<span>'+(hasPlan?'Restant':'Solde')+' <b>'+
+   (hasPlan?fmt(remaining):'—')+'</b></span></div></div>';
+ }
+ html+='<p class="trace-insights-foot">Mois non renseigné ≠ aucune dépense. Données et imports à vérifier avant de conclure.</p>';
  target.innerHTML=html;
 }
+
 function renderWealth(target,{checking=null,cardDebt=null,investments=[],flows=[],hasIncomplete=false}={}){
  if(!target)return;
  const knownMoney=n=>typeof n==='number'&&Number.isFinite(n),

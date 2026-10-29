@@ -727,3 +727,61 @@
 
 /* Decorative hero halo must never intercept the new Budget shortcut. */
 .trace-home-unified .trace-home-available::before{pointer-events:none}
+
+/* 5.37 final Home density — clear financial values and smaller bank-account pills. */
+.trace-home-unified .trace-intl-view-group{margin:9px 0 4px;gap:3px}
+.trace-home-unified .trace-intl-view-label{font-size:10px;font-weight:700;color:#668174;letter-spacing:0}
+.trace-home-unified .trace-intl-switch{gap:5px;padding:1px 0 4px}
+.trace-home-unified .trace-intl-chip{min-height:44px;max-width:139px;padding:5px 9px;font-size:11px;font-weight:700;box-shadow:none}
+.trace-home-unified .trace-intl-chip-star{font-size:11px}
+.trace-home-unified .trace-intl-chip-currency{font-size:9px}
+.trace-home-unified .trace-home-available{justify-content:center}
+.trace-home-unified #homeBudgetSub,.trace-home-unified #homeBudgetTrack,.trace-home-unified .progress-row{display:none}
+.trace-home-import-coverage{width:100%;display:flex;align-items:center;gap:10px;min-height:57px;margin-top:11px;padding:9px 12px;border:1px solid #d9e6dc;border-radius:15px;background:#fafdFA;color:#285e49;text-align:left;cursor:pointer}
+.trace-home-import-coverage:focus-visible{outline:3px solid #77c39f;outline-offset:2px}
+.trace-home-import-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#edf5ec;font-size:19px}
+.trace-home-import-copy{display:grid;gap:2px;flex:1;min-width:0}
+.trace-home-import-copy strong{font-size:12px;line-height:1.2}
+.trace-home-import-copy small{font-size:11px;line-height:1.3;color:#5a7564}
+.trace-home-import-coverage>span:last-child{font-size:20px}
+
+/* Annual budget — overview of twelve months + one focused detail, not a long list. */
+.trace-budget-annual-card{padding:16px 14px}
+.trace-year-header{display:flex;align-items:center;justify-content:space-between}
+.trace-year-header strong{font-size:14px;color:#225641}
+.trace-year-header small{display:block;font-size:11px;color:#667d6c;margin-top:3px}
+.trace-year-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:14px 0 10px}
+.trace-year-totals>div{min-width:0;background:#f4f9f5;border-radius:12px;padding:10px 7px}
+.trace-year-totals small{display:block;color:#627968;font-size:10px}
+.trace-year-totals strong{display:block;color:#194d3a;font-size:clamp(12px,3.3vw,17px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;margin-top:4px}
+.trace-year-totals .trace-year-negative strong{color:#a04d37}
+.trace-year-legend{display:flex;gap:12px;justify-content:flex-end;margin:3px 0 9px;color:#617967;font-size:10px}
+.trace-year-legend span{display:inline-flex;gap:5px;align-items:center}
+.trace-year-key{display:inline-block;width:12px;height:5px;border-radius:2px}
+.trace-year-key.budget{background:#b8d7c3}.trace-year-key.real{background:#1c7759}
+.trace-year-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.trace-year-month{min-width:0;min-height:76px;text-align:left;border:1px solid #dce9df;border-radius:12px;padding:9px;background:#fffdf9;color:#245942;display:grid;gap:6px;align-content:start;cursor:pointer}
+.trace-year-month strong{font-size:12px;text-transform:capitalize}
+.trace-year-month small{font-size:10px;color:#6b8273;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trace-year-month.is-selected{border-color:#1e6a50;background:#f0f8f1;box-shadow:inset 0 0 0 1px #1e6a50}
+.trace-year-month.is-empty{background:#fcfcfb;color:#8d9a8f}
+.trace-year-month.is-over small{color:#aa5a42}
+.trace-year-month:focus-visible{outline:3px solid #73bf93;outline-offset:2px}
+.trace-year-bars{display:grid;gap:4px;width:100%}
+.trace-year-bar{display:block;height:5px;min-width:0;border-radius:2px}
+.trace-year-bar.budget{background:#b8d7c3}.trace-year-bar.real{background:#1c7759}
+.trace-year-selected{margin-top:14px;padding:12px;border:1px solid #d7e8dc;border-radius:14px;background:#f9fcf8}
+.trace-year-selected>strong{font-size:13px;color:#205841;text-transform:capitalize}
+.trace-year-selected>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:9px}
+.trace-year-selected span{font-size:10px;color:#6b7f70}
+.trace-year-selected b{display:block;color:#1b503b;font-size:12px;margin-top:5px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.trace-budget-annual-card .trace-insights-foot{font-size:10px;margin-top:12px;line-height:1.45;color:#6c8071}
+@media(min-width:600px){.trace-year-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+/* Only applied Activity filters appear outside the drawer, removable in one tap. */
+.trace-activity-applied-filters{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:9px 0 12px}
+.trace-activity-applied-filters[hidden]{display:none}
+.trace-activity-applied-chip{display:inline-flex;align-items:center;gap:7px;min-height:44px;max-width:100%;border-radius:999px;border:1px solid #bcd8c7;background:#f2f8f3;color:#245b45;font-size:11px;padding:7px 11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.trace-activity-applied-chip span{font-size:16px;flex-shrink:0}
+.trace-activity-applied-clear{min-height:44px;padding:7px 9px;border:0;background:transparent;color:#476c57;font-size:11px;font-weight:750;cursor:pointer}
+.trace-activity-applied-chip:focus-visible,.trace-activity-applied-clear:focus-visible{outline:3px solid #73bf93;outline-offset:2px}

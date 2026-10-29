@@ -269,3 +269,20 @@ test('Home shares one panel, keeps two separate metrics and both expected detail
  assert.match(app,/\$\('#homeBudgetShortcut'\)\.onclick=\(\)=>navigate\('budget'\)/);
  assert.match(app,/\$\('#homeBudgetTrack'\)\.setAttribute\('aria-valuenow'/);
 });
+
+test('Import calendar stays a compact Home shortcut and detailed Budget stays in Budget',()=>{
+ assert.match(home,/id="homeImportCalendar"/);
+ assert.match(home,/id="homeImportCoverage"/);
+ assert.match(app,/function renderHomeImportCoverage\(\)/);
+ assert.match(app,/\$\('#homeImportCalendar'\)\.onclick=\(\)=>openTraceImportWorkspace\('daily'\)/);
+ assert.match(app,/Aucune opération en attente/);
+ assert.match(home,/id="homeBudgetSub" hidden/);
+ assert.match(home,/id="homeBudgetTrack"[^>]* hidden/);
+ assert.match(css,/\.trace-home-unified \.trace-intl-chip\{min-height:44px;max-width:139px/);
+});
+test('Annual Budget has selectable months and Activity shows removable applied filters',()=>{
+ assert.match(shell,/id="annualBudgetChart"/);
+ assert.match(shell,/id="activityAppliedFilters"/);
+ assert.match(app,/data-clear-activity-filter/);
+ assert.match(css,/\.trace-year-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+});

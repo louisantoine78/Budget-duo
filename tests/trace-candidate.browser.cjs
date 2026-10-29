@@ -122,6 +122,41 @@ let base;
   assert.equal(await page.locator('#budgetSections h2').count(),3);
   await go('home');
  });
+ await test('Home import coverage opens the actual calendar without asserting bank synchronization',async()=>{
+  await go('home');
+  const coverage=await text('homeImportCoverage');
+  assert.match(coverage,/\d+ \/ \d+ journées vérifiées/);
+  assert.doesNotMatch(coverage,/synchronisé|automatique|banque à jour/i);
+  await page.locator('#homeImportCalendar').click();
+  assert.equal(await page.locator('#activityImport').isVisible(),true);
+  assert.equal(await page.locator('#importCalendar').isVisible(),true);
+  await page.locator('#activityImportBack').click();
+  await go('home');
+ });
+ await test('Annual Budget is now a twelve-month selectable overview with clear actuals',async()=>{
+  await go('budget');
+  assert.equal(await page.locator('#annualBudgetChart .trace-year-month').count(),12);
+  assert.equal(await page.locator('#annualBudgetChart .trace-year-totals>div').count(),3);
+  assert.equal(await page.locator('#annualBudgetChart .trace-year-selected').count(),1);
+  const target=page.locator('#annualBudgetChart [data-insight-month]').first();
+  const selectedMonth=await target.getAttribute('data-insight-month');
+  await target.click();
+  assert.equal(await page.locator('#budgetMonthPicker').inputValue(),selectedMonth);
+  await page.locator('#budgetCurrentMonth').click();
+  await go('home');
+ });
+ await test('Activity applied filters are shown outside the drawer and cleared individually',async()=>{
+  await go('activity');
+  await page.locator('#activityAdvancedFilters>summary').click();
+  await page.locator('#activityAccountFilterChips [data-value="demo-fr-current"]').click();
+  assert.equal(await page.locator('#activityAppliedFilters').isVisible(),true);
+  assert.match(await page.locator('#activityFilterHint').innerText(),/1 filtre actif/);
+  await page.locator('#activityAppliedFilters [data-clear-activity-filter="account"]').click();
+  assert.equal(await page.locator('#activityAccountFilter').inputValue(),'all');
+  assert.equal(await page.locator('#activityAppliedFilters').isVisible(),false);
+  await page.locator('#activityAdvancedFilters>summary').click();
+  await go('home');
+ });
  await test('the plus routes manual, daily screenshots and monthly CSV/PDF to one import workspace',async()=>{
   await page.locator('#quickAdd').click();
   assert.equal(await page.locator('#traceAddManual').count(),1);

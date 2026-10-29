@@ -146,9 +146,9 @@
           <div class="trace-home-panel-head"><div class="label">Budget</div><button type="button" class="trace-home-panel-link trace-home-budget-link" id="homeBudgetShortcut" aria-label="Ouvrir le budget détaillé">Voir le budget <span aria-hidden="true">›</span></button></div>
           <div class="trace-home-budget-label">Reste à dépenser</div>
           <div class="big" id="homeBudgetAvailable">—</div>
-          <div class="sub" id="homeBudgetSub">Chargement…</div>
-          <div class="progress" id="homeBudgetTrack" role="progressbar" aria-label="Budget consommé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="homeBudgetProgress" style="width:0%"></i></div>
-          <div class="progress-row"><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
+          <div class="sub" id="homeBudgetSub" hidden>Chargement…</div>
+          <div class="progress" id="homeBudgetTrack" role="progressbar" aria-label="Budget consommé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><i id="homeBudgetProgress" style="width:0%"></i></div>
+          <div class="progress-row" hidden><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
         </article></div>
       <div class="section-head trace-home-month-head"><h2>Ce mois-ci</h2><small>Revenus · dépenses · marge</small></div>
       <div class="grid grid-3" style="margin-top:14px">
@@ -163,6 +163,7 @@
         <span class="alert-text"><strong>Opérations à vérifier</strong><div id="pendingText">Chargement…</div></span><span class="chev">›</span>
       </button>
       <div id="homeReviewAccounts" class="trace-home-review-accounts" aria-label="Opérations à vérifier par compte bancaire"></div>
+      <button type="button" class="trace-home-import-coverage" id="homeImportCalendar" aria-label="Ouvrir le calendrier de vérification des imports"><span class="trace-home-import-mark" aria-hidden="true">▦</span><span class="trace-home-import-copy"><strong>Calendrier des imports</strong><small id="homeImportCoverage">Suivi de vérification à consulter</small></span><span aria-hidden="true">›</span></button>
 
       <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="analysisBtn">Analyses</button></div>
       <article class="card clickable" id="homeTrendCard">
@@ -215,7 +216,7 @@
       <div class="section-head"><h2>Mes dépenses réelles</h2><small>Voir où passe le budget</small></div>
       <article class="card" id="budgetCategoryImpact"></article>
       <div class="section-head"><h2>Mon année en clair</h2><button class="linkbtn" id="annualBudgetDetails">Détails</button></div>
-      <article class="card clickable" id="annualBudgetCard"><div class="chart" id="annualBudgetChart"></div><div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div></article>
+      <article class="card trace-budget-annual-card" id="annualBudgetCard"><div class="chart" id="annualBudgetChart"></div></article>
     </section>
 
     <section class="page" data-page="activity">
@@ -275,6 +276,7 @@
           <button type="button" class="linkbtn" id="activityResetFilters">Réinitialiser</button>
         </div>
         </details>
+        <div id="activityAppliedFilters" class="trace-activity-applied-filters" role="group" aria-label="Filtres actifs" hidden></div>
         <div class="activity-stats">
           <div class="statbox"><span>Dépenses</span><b id="activityExpenses">—</b></div>
           <div class="statbox"><span>Revenus</span><b id="activityIncome">—</b></div>
