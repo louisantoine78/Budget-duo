@@ -72,21 +72,18 @@ async function main(){
  await test('account summary calculates CAD credit-card debt only once',()=>{
   assert.match(element('#homeBalance').textContent,/3[\s\u00a0\u202f]?670/);
   assert.match(element('#homeCard').textContent,/430/);
-  assert.match(element('#traceIntlHome').innerHTML,/Compte principal/);
+  assert.match(element('#traceIntlHome').innerHTML,/trace-intl-chip-star/);
   assert.match(element('#traceIntlHome').innerHTML,/France/);
   assert.ok(element('#transactionList').innerHTML.includes('demo-fr-purchase'));
   assert.ok(element('#assetGrid').innerHTML.length>30);
  });
- await test('switch primary account to French EUR changes only fictional view',async()=>{
-  const select=element('#traceIntlPrimary');assert.equal(typeof select.onchange,'function');
+ await test('Home account choices are read-only; principal selection remains in Profile',async()=>{
   const before=element('#homeBalance').textContent;
-  select.value='demo-fr-current';await select.onchange();
-  assert.equal(element('#homeBalance').textContent,before,'Selection awaits explicit confirmation');
-  assert.equal(element('#sheetTitle').textContent,'Changer le compte principal');
-  assert.equal(typeof element('#tracePrimaryConfirm').onclick,'function');
-  await element('#tracePrimaryConfirm').onclick();
-  assert.match(element('#homeBalance').textContent,/1[\s\u00a0\u202f]?208/);
-  assert.match(element('#homeBalance').textContent,/€/);
+  assert.match(element('#traceIntlHome').innerHTML,/data-trace-view-account/);
+  assert.doesNotMatch(element('#traceIntlHome').innerHTML,/id="traceIntlPrimary"/);
+  assert.doesNotMatch(element('#traceIntlHome').innerHTML,/data-trace-primary-account/);
+  assert.match(read('v5-app-5.37.0.js'),/data-primary-bank/);
+  assert.equal(element('#homeBalance').textContent,before);
   assert.equal(externalRequests,0);
  });
  await test('Couple scope computes combined CAD liquidity and separate account list',()=>{

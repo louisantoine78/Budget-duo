@@ -43,7 +43,7 @@ test('lab imports neither credentials, real Supabase SDK nor the production serv
 });
 test('lab contains the actual international balance mount and all essential page nodes',()=>{
  for(const id of ['app','cloudGate','sheetBackdrop','tracePreviewStatus','traceIntlHome',
-  'homeBalance','homeChecking','homeCard','homeCardWarning','homeBudgetCategories',
+  'homeBalance','homeChecking','homeCard','homeCardWarning','activityAdvancedFilters','activityImport','traceImportAccountSelection',
   'homeTrend','transactionList','activityTabs','homeScope','wealthTotal','syncLabel','brandSubtitle']){
   assert.match(html,new RegExp('id="'+id+'"'),'Missing HTML id '+id);
  }

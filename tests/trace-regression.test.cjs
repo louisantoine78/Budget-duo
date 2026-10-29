@@ -92,7 +92,7 @@ test('un avoir estimé n’est pas ajouté au disponible',()=>assert.match(appSo
 test('ancien solde positif de carte interprété comme dette',()=>assert.match(appSource,/accountType\(a\)==='card'&&r\?\.cardBalanceKind!=='credit'\?-Math\.abs\(rawBase\)/));
 test('carte saisie comme dette positive et stockée avec signe',()=>assert.match(appSource,/accountType\(account\)==='card'\?-Math\.abs\(amount\):amount/));
 test('alerte pour crédit non rapproché',()=>assert.match(appSource,/cardWarning\.hidden=!b\.needsCardReview/));
-test('CELI uniquement en information sur accueil',()=>assert.match(appSource,/\$\('#homeCELITransfers'\)\.textContent=money\(savedToCeli\)/));
+test('les versements CELI ne surchargent plus Accueil',()=>{assert.doesNotMatch(fs.readFileSync(path.join(__dirname,'..','v5-app-5.37.0.js'),'utf8'),/homeCELITransfers/);assert.match(fs.readFileSync(path.join(__dirname,'..','trace-international-preview.html'),'utf8'),/wealthSavingsGrid/);});
 
 const inboxSource=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.4.2.js'),'utf8');
 [
