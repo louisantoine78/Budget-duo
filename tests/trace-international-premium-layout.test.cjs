@@ -16,9 +16,9 @@ const ordered=(source,terms)=>{
  assert.ok(indices.every((value,index)=>value>=0&&(index===0||value>indices[index-1])),
  'Expected visual source order: '+terms.join(' → '));
 };
-test('all seven approved Home sections occur in source order',()=>ordered(home,[
+test('concise Home preserves core priority order without a duplicate category list',()=>ordered(home,[
  'id="homeBalance"','id="homeBudgetAvailable"','id="homeIncome"',
- 'id="pendingCountBadge"','id="homeBudgetCategories"','id="homeTrend"','id="shareCard"']));
+ 'id="pendingCountBadge"','id="homeTrend"','id="shareCard"']));
 test('Home lead card is estimated balance, not budget availability',()=>{
  assert.ok(home.indexOf('id="balanceCard"')<home.indexOf('id="homeBudgetAvailable"'));
  assert.match(home,/Disponible sur mon budget/);
@@ -26,7 +26,7 @@ test('Home lead card is estimated balance, not budget availability',()=>{
 });
 test('Home existing live IDs survive and are unique',()=>{
  for(const id of ['homeBalance','homeBudgetAvailable','homeChecking','homeCard',
-  'traceIntlHome','reconcileBadge','homeBudgetProgress','homeBudgetCategories',
+  'traceIntlHome','reconcileBadge','homeBudgetProgress',
   'homeReviewAccounts','homeTrendCard','shareCard'])
   assert.equal((home.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
 });
@@ -49,11 +49,10 @@ test('premium CSS uses layout, subtle elevation, focus and reduced motion',()=>{
   ':focus-visible','prefers-reduced-motion'])assert.ok(css.includes(v),v);
 });
 test('premium layout remains readable at 320–360px without changing five main tabs',()=>{
- assert.match(css,/@media\(max-width:360px\)\{[\s\S]*?\.trace-activity-four-tabs\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
- assert.match(css,/@media\(max-width:360px\)\{[\s\S]*?\.trace-home-next-actions\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
- assert.match(css,/\.trace-home-next-action:last-child\{grid-column:1\/-1/);
- assert.match(css,/\.trace-budget-snapshot\{grid-template-columns:60px minmax\(0,1fr\)/);
- assert.match(css,/\.trace-home-next-action small\{font-size:11px/);
+ assert.match(css,/\.trace-activity-main-tabs\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+ assert.match(css,/\.trace-home-balance-breakdown summary\{[^}]*min-height:44px/);
+ assert.match(css,/\.trace-activity-filter-drawer>summary\{[^}]*min-height:48px/);
+ assert.doesNotMatch(home,/id="homeBudgetCategories"|id="homeAccountsBtn"/);
 });
 test('six-month charts scroll inside their region on narrow phones, never widen the page',()=>{
  assert.match(css,/@media\(max-width:420px\)\{[\s\S]*?\.trace-trend-columns\{grid-template-columns:repeat\(6,minmax\(48px,1fr\)\)/);

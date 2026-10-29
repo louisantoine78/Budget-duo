@@ -13,11 +13,23 @@ let browser,server,page,context;
 let euroSavingsId;
 let backupBankId;
 const test=async(name,fn)=>{await fn();results.push({name,passed:true});console.log('PASS '+name)};
-const text=id=>page.locator('#'+id).innerText();
+const text=async id=>{
+ if(id==='homeChecking'||id==='homeCard')
+  await page.locator('.trace-home-balance-breakdown').evaluate(el=>{el.open=true});
+ return page.locator('#'+id).innerText();
+};
 const selectPrimary=async id=>{
- const control=page.locator('.trace-intl-primary-control');
- if(!await control.evaluate(el=>el.open))await control.locator('summary').click();
- await page.locator('#traceIntlPrimary').selectOption(id);
+ if(!await page.locator('[data-primary-bank="'+id+'"]').isVisible()){
+  if(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')))
+   await page.locator('#closeSheet').click();
+  await accountSettings();
+ }
+ await page.locator('[data-primary-bank="'+id+'"]').click();
+};
+const openImports=async(mode='monthly')=>{
+ await page.locator('#quickAdd').click();
+ await page.locator('#traceAddImport').click();
+ await page.locator(mode==='daily'?'#traceAddDaily':'#traceAddMonthly').click();
 };
 const accountSettings=async()=>{
  await page.locator('#profileBtn').click();await page.locator('#settingsAccounts').click();
@@ -92,12 +104,34 @@ let base;
   }
   await page.setViewportSize({width:390,height:844});
  });
+ await test('the plus routes manual, daily screenshots and monthly CSV/PDF to one import workspace',async()=>{
+  await page.locator('#quickAdd').click();
+  assert.equal(await page.locator('#traceAddManual').count(),1);
+  await page.locator('#traceAddImport').click();
+  assert.equal(await page.locator('#traceAddDaily').count(),1);
+  assert.equal(await page.locator('#traceAddMonthly').count(),1);
+  await page.locator('#traceAddDaily').click();
+  assert.equal(await page.locator('#activityImport').isVisible(),true);
+  assert.equal(await page.locator('#importCalendar').isVisible(),true);
+  assert.equal(await page.locator('#activityTabs [data-tab="import"]').count(),0);
+  assert.equal(await page.locator('#activityPageTitle').innerText(),'Importer');
+  await page.locator('#traceImportMonthly').click();
+  assert.equal(await page.locator('#traceImportAccountSelection').isVisible(),true);
+  assert.equal(await page.locator('#importCalendar').isVisible(),false);
+  assert.equal(await page.locator('#importDrop').isVisible(),true);
+  assert.equal(await page.locator('#traceStatementDrawer').isVisible(),true);
+  await page.locator('#activityImportBack').click();
+  assert.equal(await page.locator('#activityTransactions').isVisible(),true);
+  assert.equal(await page.locator('#activityTabs [role="tab"]').count(),3);
+  assert.equal(await page.locator('#activityAdvancedFilters').evaluate(el=>el.open),false);
+  await go('home');
+ });
  await test('account chips show native EUR without changing the official principal or budget',async()=>{
   const budget=await text('homeBudgetAvailable');
   await page.locator('[data-trace-view-account="demo-fr-current"]').click();
   assert.equal(await page.evaluate(()=>document.activeElement?.dataset.traceViewAccount),'demo-fr-current');
   assert.match(await text('homeBalance'),/1\s*208,80/);assert.match(await text('homeBalance'),/€/);
-  assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
+  assert.equal(await page.locator('#traceIntlPrimary').count(),0);
   assert.equal(await text('homeBudgetAvailable'),budget);
   await page.locator('[data-trace-view-account="demo-ca-current"]').click();
   assert.match(await text('homeBalance'),/3\s*670,00/);
@@ -107,12 +141,14 @@ let base;
   assert.equal(await text('sheetTitle'),'Changer le compte principal');
   assert.match(await text('homeBalance'),/3\s*670,00/);
   await page.locator('#tracePrimaryCancel').click();
-  assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
+  await page.locator('#closeSheet').click();
+  assert.equal(await page.locator('#traceIntlPrimary').count(),0);
  });
  await test('confirmed EUR principal keeps CAD historical budget and independent Couple totals',async()=>{
   const budget=await text('homeBudgetAvailable');
   await selectPrimary('demo-fr-current');
   await page.locator('#tracePrimaryConfirm').click();
+  await page.locator('#closeSheet').click();
   assert.match(await text('homeBalance'),/1\s*208,80/);
   assert.equal(await text('homeBudgetAvailable'),budget);
   await page.locator('#homeScope [data-scope="couple"]').click();
@@ -121,8 +157,8 @@ let base;
   await page.locator('#homeScope [data-scope="mine"]').click();
  });
  await test('account detail shows two recent operations and opens filtered Activity',async()=>{
-  await page.locator('#homeAccountsBtn').click();
-  await page.locator('[data-trace-account-open="demo-fr-current"]').click();
+  await accountSettings();
+  await page.locator('[data-details-bank="demo-fr-current"]').click();
   assert.equal(await page.locator('.trace-account-last-line').count(),2);
   assert.match(await text('sheetBody'),/À vérifier/);
   await page.locator('#traceAccountAllTx').click();
@@ -139,6 +175,7 @@ let base;
   assert.equal(await page.locator('#activityCategoryFilter').inputValue(),'groceries');
  });
  await test('pending EUR activity remains separate from confirmed spending',async()=>{
+  await page.locator('#activityAdvancedFilters>summary').click();
   await page.locator('#activityCategoryFilter').selectOption('all');
   await page.locator('#activityAccountFilter').selectOption('demo-fr-current');
   await page.locator('#activityStatusFilter').selectOption('pending');
@@ -154,7 +191,7 @@ let base;
   assert.equal(await page.locator('.nav>.navbtn').count(),5);
  });
  await test('real local PDF worker rejects a mismatched account currency',async()=>{
-  await page.locator('#activityTabs [data-tab="import"]').click();
+  await openImports('monthly');
   await page.locator('#traceStatementDrawer>summary').click();
   await page.locator('#traceStatementAccount').selectOption('demo-ca-current');
   await page.locator('#traceStatementFile').setInputFiles(path.join(__dirname,'fixtures/statements/fr-eur-multipage.pdf'));
@@ -184,7 +221,7 @@ let base;
   await go('home');assert.match(await text('homeBalance'),/1\s*208,80/);
  });
  await test('a raster statement without text falls back to manual control without proposals',async()=>{
-  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  await openImports('monthly');
   await page.locator('#traceStatementFile').setInputFiles(path.join(__dirname,'fixtures/statements/image-only.pdf'));
   await page.locator('#traceStatementExtract').click();
   await page.locator('.trace-statement-extraction-warning').filter({hasText:'Extraction non disponible'}).waitFor();
@@ -192,7 +229,7 @@ let base;
   assert.ok(await page.locator('[data-statement-row]').count()>0);
  });
  await test('manual fractional-cent EUR input is blocked instead of silently rounding',async()=>{
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualTxName').fill('Fictional precision test');
   await page.locator('#manualTxAmount').fill('40.005');
@@ -202,7 +239,7 @@ let base;
   await page.locator('#cancelManualTx').click();
  });
  await test('EUR settlement excludes the CAD Mastercard while retaining the French deferred card',async()=>{
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualKind').selectOption('card_payment');
   const destinations=await page.locator('#manualTarget option').evaluateAll(
@@ -240,7 +277,7 @@ let base;
   await go('home');
   const budget=await text('homeBudgetAvailable'),spending=await text('homeSpending');
   const remoteBefore=external.length;
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-deferred-card');
   await page.locator('#manualTxName').fill('Must reject deferred purchase');
   await page.locator('#manualTxAmount').fill('25');
@@ -249,7 +286,7 @@ let base;
   await page.locator('#saveManualTx').click();
   assert.match(await text('manualMovementError'),/écritures non activées/i);
   await page.locator('#cancelManualTx').click();
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualKind').selectOption('card_payment');
   await page.locator('#manualTarget').selectOption('demo-fr-deferred-card');
@@ -265,7 +302,7 @@ let base;
  await test('100 CAD credit purchase and 100 CAD repayment create one expense and one neutral transfer',async()=>{
   await go('home');
   await page.locator('[data-trace-view-account="demo-ca-current"]').click();
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-ca-card');
   await page.locator('#manualTxName').fill('Fictional 100 CAD card purchase');
   await page.locator('#manualTxAmount').fill('100');
@@ -277,7 +314,7 @@ let base;
   assert.match(await text('homeCard'),/530/);
   assert.match(await text('homeBalance'),/3\s*570/);
   const budget=await text('homeBudgetAvailable'),spending=await text('homeSpending');
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-ca-current');
   await page.locator('#manualKind').selectOption('card_payment');
   await page.locator('#manualTxAccount').selectOption('demo-ca-current');
@@ -296,7 +333,7 @@ let base;
  await test('40 EUR immediate-debit purchase reduces native cash once and records frozen 64 CAD budget impact',async()=>{
   await page.locator('[data-trace-view-account="demo-fr-current"]').click();
   const before=Number((await text('homeSpending')).replace(/[^0-9]/g,''));
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualTxName').fill('Fictional 40 EUR immediate purchase');
   await page.locator('#manualTxAmount').fill('40');
@@ -310,7 +347,7 @@ let base;
   assert.equal(after-before,64);
  });
  await test('50 USD purchase paid as 46.20 EUR keeps native debit and historical CAD valuation',async()=>{
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualTxName').fill('Fictional 50 USD paid from EUR');
   await page.locator('#manualTxAmount').fill('46.20');
@@ -325,7 +362,7 @@ let base;
  });
  await test('CAD to EUR transfer preserves actual debit, receipt and included fees with no budget expense',async()=>{
   const budget=await text('homeBudgetAvailable'),spending=await text('homeSpending');
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-ca-current');
   await page.locator('#manualKind').selectOption('transfer');
   await page.locator('#manualTarget').selectOption('demo-fr-current');
@@ -366,7 +403,7 @@ let base;
  await test('40 EUR savings deposit moves native cash and savings once with unchanged budget and total wealth',async()=>{
   const wealth=await text('wealthTotal');await go('home');
   const budget=await text('homeBudgetAvailable');
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualKind').selectOption('savings_transfer');
   await page.locator('#manualSavings').selectOption(euroSavingsId);
@@ -381,7 +418,7 @@ let base;
  });
  await test('150 CAD to EUR savings requires the actual 95 EUR receipt without assuming a 1:1 rate',async()=>{
   await go('home');const budget=await text('homeBudgetAvailable');
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-ca-current');
   await page.locator('#manualKind').selectOption('savings_transfer');
   await page.locator('#manualSavings').selectOption(euroSavingsId);
@@ -399,7 +436,7 @@ let base;
  });
  await test('a 15 EUR savings withdrawal is a cash transfer without new budget income',async()=>{
   await go('home');const income=await text('homeIncome'),budget=await text('homeBudgetAvailable');
-  await page.locator('#quickAdd').click();
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualKind').selectOption('savings_withdrawal');
   await page.locator('#manualSavings').selectOption(euroSavingsId);
@@ -514,11 +551,11 @@ let base;
   await page.reload();
   await page.waitForFunction(()=>window.__TRACE_PREVIEW_STATUS__?.boot==='ok');
   await page.waitForFunction(()=>window.TracePDFJSLocalEngine?.version==='6.4.299');
-  assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
+  assert.equal(await page.locator('#traceIntlPrimary').count(),0);
   assert.match(await text('homeBalance'),/3\s*670,00/);
  });
  await test('offline PDF extraction loads the actual cached local engine and worker',async()=>{
-  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  await openImports('monthly');
   await page.locator('#traceStatementDrawer>summary').click();
   await page.locator('#traceStatementAccount').selectOption('demo-fr-current');
   await page.locator('#traceStatementFile').setInputFiles(path.join(__dirname,'fixtures/statements/fr-eur-multipage.pdf'));
@@ -527,13 +564,13 @@ let base;
   assert.equal(await page.locator('.trace-statement-proposal-list>div').count(),4);
   assert.match(await text('traceStatementExtraction'),/Page 2, ligne 5/);
   await context.setOffline(false);await boot();
-  assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
+  assert.equal(await page.locator('#traceIntlPrimary').count(),0);
  });
  await test('actual CSV upload shows all rows and bank matches, imports pending only and stays idempotent',async()=>{
   const budget=await text('homeBudgetAvailable'),cash=await text('homeBalance');
   await go('activity');await page.locator('#activityTabs [data-tab="review"]').click();
   const pendingBefore=await page.locator('[data-import-pending]').count();
-  await page.locator('#activityTabs [data-tab="import"]').click();
+  await openImports('monthly');
   const file={name:'fictional-canadian.csv',mimeType:'text/csv',buffer:Buffer.from(
    'Date;Libellé;Débit;Crédit\n12/10/2026;Paiement CSV;50,00;\n'+
    '15/10/2026;Ticket train;25,00;\n15/10/2026;Ticket train;25,00;\n'+
@@ -563,7 +600,7 @@ let base;
    'Every valid CSV row must be pending exactly once');
   assert.equal(await page.locator('[data-import-pending]').filter({hasText:'Ticket train'}).count(),2);
   await go('home');assert.equal(await text('homeBudgetAvailable'),budget);assert.equal(await text('homeBalance'),cash);
-  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  await openImports('monthly');
   await load();assert.match(await text('csvPreviewResult'),/0 lignes à vérifier/);
   assert.match(await text('csvPreviewResult'),/7 doublon\(s\) déjà présents non réimportés/);
   assert.equal(await page.locator('#csvCommit').count(),0);
@@ -571,7 +608,7 @@ let base;
  await test('foreign CSV retains its actual EUR amount while budget and native bank balance remain unchanged pending review',async()=>{
   await go('home');await page.locator('[data-trace-view-account="demo-fr-current"]').click();
   const cash=await text('homeBalance'),budget=await text('homeBudgetAvailable');
-  await go('activity');await page.locator('#activityTabs [data-tab="import"]').click();
+  await openImports('monthly');
   await page.locator('#importFile').setInputFiles({name:'fictional-french.csv',mimeType:'text/csv',
    buffer:Buffer.from('Date;Libellé;Débit;Crédit\n20/10/2026;Achat EUR fictif;18,40;\n')});
   await page.locator('#csvAccount').selectOption('demo-fr-current');await page.locator('#csvPreview').click();

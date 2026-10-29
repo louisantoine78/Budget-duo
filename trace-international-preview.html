@@ -134,13 +134,14 @@
           <div class="eyebrow">Solde estimé</div>
           <div class="money" id="homeBalance" aria-live="polite" aria-atomic="true">—</div>
           <span class="badge" id="reconcileBadge">À rapprocher</span>
-          <div class="mini-account"><span>Compte courant</span><span id="homeChecking">—</span></div>
-          <div class="mini-account"><span>Dette de carte</span><span id="homeCard">—</span></div>
           <p id="homeCardWarning" class="trace-card-balance-warning" role="status" hidden></p>
-          <div id="traceIntlHome" class="trace-intl-home" aria-label="Sélection du compte et situation internationale"></div>
-          <button type="button" class="trace-account-home-button" id="homeAccountsBtn">Comptes et trésorerie <span aria-hidden="true">›</span></button>
-          <div class="mini-account trace-celi-monthly"><span>Versé aux CELI ce mois</span><span id="homeCELITransfers">—</span></div>
-          <div class="scope-label">Solde courant − dette carte · les CELI sont dans Patrimoine</div>
+          <div id="traceIntlHome" class="trace-intl-home" aria-label="Consulter le solde de mes comptes"></div>
+          <details class="trace-home-balance-breakdown">
+            <summary>Détail du solde</summary>
+            <div class="mini-account"><span>Compte courant</span><span id="homeChecking">—</span></div>
+            <div class="mini-account"><span>Dette de carte</span><span id="homeCard">—</span></div>
+            <p class="scope-label">Solde courant moins dette des cartes associées, hors épargne.</p>
+          </details>
         </article><article class="card hero-card trace-home-available">
           <div class="label">Disponible sur mon budget</div>
           <div class="big" id="homeBudgetAvailable">—</div>
@@ -161,9 +162,6 @@
         <span class="alert-text"><strong>Opérations à vérifier</strong><div id="pendingText">Chargement…</div></span><span class="chev">›</span>
       </button>
       <div id="homeReviewAccounts" class="trace-home-review-accounts" aria-label="Opérations à vérifier par compte bancaire"></div>
-
-      <div class="section-head"><h2>Budget en direct</h2><button class="linkbtn" data-go="budget">Voir le budget</button></div>
-      <article class="card" id="homeBudgetCategories"></article>
 
       <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="analysisBtn">Analyses</button></div>
       <article class="card clickable" id="homeTrendCard">
@@ -220,7 +218,7 @@
     </section>
 
     <section class="page" data-page="activity">
-      <div class="hero-row"><div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title">Activité</h1></div></div>
+      <div class="hero-row"><div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title" id="activityPageTitle">Activité</h1></div></div>
       <div class="budget-context-row trace-activity-period" id="activityPeriodControl">
         <div class="budget-month-nav">
           <button type="button" id="activityPrevMonth" aria-label="Mois précédent" class="period-arrow">
@@ -237,14 +235,15 @@
         </div>
         <button type="button" id="activityCurrentMonth" class="budget-current-link hidden">Ce mois</button>
       </div>
-      <div class="tabs trace-activity-four-tabs" id="activityTabs" role="tablist" aria-label="Rubriques de l’activité">
-        <button class="tab active" id="activityTabTransactions" data-tab="transactions" role="tab" aria-controls="activityTransactions" aria-selected="true" tabindex="0">Historique</button>
+      <div class="tabs trace-activity-main-tabs" id="activityTabs" role="tablist" aria-label="Rubriques de l’activité">
+        <button class="tab active" id="activityTabTransactions" data-tab="transactions" role="tab" aria-controls="activityTransactions" aria-selected="true" tabindex="0">Transactions</button>
         <button class="tab" id="activityTabReview" data-tab="review" role="tab" aria-controls="activityReview" aria-selected="false" tabindex="-1">À valider</button>
         <button class="tab" id="activityTabSharing" data-tab="sharing" role="tab" aria-controls="activitySharing" aria-selected="false" tabindex="-1">Partage</button>
-        <button class="tab" id="activityTabImport" data-tab="import" role="tab" aria-controls="activityImport" aria-selected="false" tabindex="-1">Imports</button>
       </div>
       <div id="activityTransactions" aria-labelledby="activityTabTransactions" role="tabpanel" aria-label="Historique des opérations">
-        <div class="trace-activity-filters" aria-label="Filtres de l'historique">
+        <details class="trace-activity-filter-drawer" id="activityAdvancedFilters">
+          <summary>Filtres <span class="trace-filter-hint" id="activityFilterHint">Compte, catégorie, nature, devise, statut</span></summary>
+        <div class="trace-activity-filters" aria-label="Filtres des transactions">
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityAccountFilterTitle">Compte</span>
             <select class="input trace-activity-native-select" id="activityAccountFilter" tabindex="-1" aria-hidden="true"><option value="all">Tous les comptes</option></select>
@@ -274,6 +273,7 @@
         <div class="trace-activity-filter-actions">
           <button type="button" class="linkbtn" id="activityResetFilters">Réinitialiser</button>
         </div>
+        </details>
         <div class="activity-stats">
           <div class="statbox"><span>Dépenses</span><b id="activityExpenses">—</b></div>
           <div class="statbox"><span>Revenus</span><b id="activityIncome">—</b></div>
@@ -289,7 +289,13 @@
         <label class="trace-review-account-label" for="activityReviewAccountFilter">Compte bancaire<select id="activityReviewAccountFilter" class="input" aria-label="Filtrer les opérations à valider par compte"><option value="all">Tous mes comptes</option></select></label>
         <div id="importPendingTransactions" aria-label="Transactions enregistrées à compléter"></div>
       </div>
-      <div id="activityImport" aria-labelledby="activityTabImport" class="hidden" role="tabpanel" aria-label="Imports et contrôles documentaires">
+      <div id="activityImport" class="hidden" role="region" aria-label="Importer des opérations" data-import-mode="daily">
+        <div class="trace-import-workspace-header"><button type="button" id="activityImportBack" class="linkbtn">‹ Retour aux transactions</button></div>
+        <div class="trace-import-workspace-modes" role="group" aria-label="Type d'import">
+          <button type="button" id="traceImportDaily" class="is-active" aria-pressed="true">Opérations quotidiennes</button>
+          <button type="button" id="traceImportMonthly" aria-pressed="false">Relevé mensuel</button>
+        </div>
+        <div id="traceImportAccountSelection" class="trace-import-account-selection" hidden></div>
         <input type="file" id="importFile" accept=".csv,.pdf,image/*,text/csv,application/pdf" multiple hidden>
         <div id="importCalendar" aria-label="Suivi des journées et imports"></div>
         <details class="trace-import-secondary" id="importDrop">
@@ -307,6 +313,7 @@
           </div>
         </details>
         <div id="importResult" style="margin-top:14px"></div>
+        <details class="trace-import-test-tools"><summary>Outils de démonstration (laboratoire uniquement)</summary>
         <article class="card" id="traceDeferredSandbox" aria-label="Test fictif du débit différé" style="margin-top:16px" data-simulated="false">
           <div class="eyebrow">Débit différé · démonstration isolée</div>
           <h2 style="margin:5px 0 7px">Tester une échéance de 40 €</h2>
@@ -333,6 +340,7 @@
           </div>
           <p id="traceDeferredMessage" role="status" aria-live="polite" class="sub" style="margin-top:12px">Simulation fictive uniquement.</p>
         </article>
+        </details>
       </div>
       <div id="activitySharing" aria-labelledby="activityTabSharing" class="hidden" role="tabpanel" aria-label="Partage du couple et des proches"></div>
     </section>

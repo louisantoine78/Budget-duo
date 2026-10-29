@@ -141,21 +141,17 @@ async function main(){
       assert.ok(height>=44,'Home account buttons must be 44px tall');
      await activate(page.locator('#traceIntlHome [data-trace-view-account="demo-fr-current"]'));
      assert.match(await page.locator('#homeBalance').innerText(),/€|EUR/);
-     assert.equal(await page.locator('#traceIntlPrimary').inputValue(),'demo-ca-current');
+     assert.equal(await page.locator('#traceIntlPrimary').count(),0);
      await activate(page.locator('#traceIntlHome [data-trace-view-account="demo-ca-current"]'));
      assert.equal(await page.locator('#homeBalance').innerText(),mineBalance);
-     await activate(page.locator('#traceIntlHome .trace-intl-primary-control>summary'));
-     const primaryNative=await page.locator('#traceIntlPrimary').evaluate(el=>({
-      hidden:el.getAttribute('aria-hidden'),clip:getComputedStyle(el).clipPath
-     }));
-     assert.equal(primaryNative.hidden,'true');
-     assert.equal(primaryNative.clip,'inset(50%)','No visible account dropdown on Home');
-     assert.ok(await page.locator('#traceIntlHome [data-trace-primary-account]').count()>=2);
-     await activate(page.locator('[data-trace-primary-account="demo-fr-current"]'));
+     // The primary-account editor is intentionally in Profile > Mes comptes.
+     await activate(page.locator('#profileBtn'));
+     await activate(page.locator('#settingsAccounts'));
+     await activate(page.locator('[data-primary-bank="demo-fr-current"]'));
      assert.equal(await page.locator('#sheetTitle').innerText(),'Changer le compte principal');
      assert.equal(await page.locator('#homeBalance').innerText(),mineBalance);
      await activate(page.locator('#tracePrimaryCancel'));
-     assert.equal(await page.locator('#homeBalance').innerText(),mineBalance);
+     await activate(page.locator('#closeSheet'));
      await activate(page.locator('#homeScope [data-scope="couple"]'));
      const coupleBalance=await page.locator('#homeBalance').innerText();
      assert.notEqual(coupleBalance,mineBalance,'Couple must update the visible total');
@@ -187,6 +183,7 @@ async function main(){
      await page.locator('#budgetScope [data-scope="mine"]').click();
      assert.equal(await page.locator('.budget-hero-card').innerText(),mineBudget);
      await activate(page.locator('.navbtn[data-nav="activity"]'));
+     await activate(page.locator('#activityAdvancedFilters>summary'));
      // Premium 5.37: the five history filters must present compact buttons
      // rather than visible native dropdowns, without changing filtering.
      for(const id of ['activityAccountFilter','activityCategoryFilter',
@@ -215,7 +212,7 @@ async function main(){
      assert.equal(await page.locator('#activityCurrencyFilter').inputValue(),'all');
      const journal=[];
      for(const [tab,panel] of [['transactions','activityTransactions'],
-       ['review','activityReview'],['sharing','activitySharing'],['import','activityImport']]){
+       ['review','activityReview'],['sharing','activitySharing']]){
       await page.locator('#activityTabs [data-tab="'+tab+'"]').click();
       const status=await page.evaluate(id=>{
        const el=document.getElementById(id);
@@ -229,6 +226,7 @@ async function main(){
       journal.push(tab);
      }
      await activate(page.locator('#quickAdd'));
+     await activate(page.locator('#traceAddManual'));
      assert.equal(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')),true);
      assert.equal(await page.locator('#manualTxAmount').evaluate(el=>getComputedStyle(el).fontSize),'16px',
       'iPhone inputs below 16px trigger Safari focus zoom');
@@ -359,6 +357,7 @@ async function main(){
       });
       await manyPage.goto(entry,{waitUntil:'load',timeout:25000});
       await manyPage.locator('#quickAdd').click();
+      await manyPage.locator('#traceAddManual').click();
       const search=manyPage.locator('#manualTxAccountSearch');
       assert.equal(await search.count(),1,'Seven accounts must expose search');
       await search.fill('Compte fictif 5');
@@ -422,6 +421,7 @@ async function main(){
      // the real iOS software keyboard, home-screen PWA or OS suspension.
      await activate(page.locator('.navbtn[data-nav="home"]'));
      await activate(page.locator('#quickAdd'));
+     await activate(page.locator('#traceAddManual'));
      const name=page.locator('#manualTxName');
      await name.fill('Brouillon fictif non enregistré');
      const form=page.locator('.sheet-backdrop.open .sheet');

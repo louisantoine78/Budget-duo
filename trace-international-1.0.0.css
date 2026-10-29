@@ -657,3 +657,36 @@
  .trace-budget-empty{gap:10px;padding:12px}
  .trace-budget-empty-action{width:100%}
 }
+
+/* 5.37 — progressive disclosure: compact Home and three-action Activity. */
+.trace-home-balance-breakdown{margin-top:9px;border-top:1px solid #dbe8df;padding-top:5px}
+.trace-home-balance-breakdown summary{min-height:44px;display:flex;align-items:center;font-weight:750;color:#426c58;font-size:12px;cursor:pointer}
+.trace-home-balance-breakdown .mini-account{padding:5px 0}
+.trace-intl-view-note{display:none}
+.trace-activity-main-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.trace-activity-main-tabs .tab{min-width:0;min-height:44px;white-space:nowrap;font-size:clamp(12px,3vw,14px);padding:11px 5px}
+.trace-activity-filter-drawer{border:1px solid #dce8df;border-radius:15px;background:#fffdf9;margin:12px 0}
+.trace-activity-filter-drawer>summary{min-height:48px;padding:12px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer;font-weight:750;color:#205841;list-style:none}
+.trace-activity-filter-drawer>summary::-webkit-details-marker{display:none}
+.trace-activity-filter-drawer>summary:after{content:'⌄';font-size:18px}
+.trace-activity-filter-drawer[open]>summary:after{content:'⌃'}
+.trace-filter-hint{font-size:11px;color:#71877a;font-weight:500;text-align:right}
+.trace-activity-filter-drawer .trace-activity-filters{margin:0 12px}
+.trace-activity-filter-drawer .trace-activity-filter-actions{margin:3px 12px 10px}
+.trace-add-choice-list{display:grid;gap:11px;margin:10px 0}
+.trace-add-choice{min-height:77px;width:100%;display:grid;grid-template-columns:1fr auto;gap:5px 13px;text-align:left;align-items:center;padding:15px 16px;border:1px solid #cfe3d6;border-radius:17px;background:#fafff9;color:#174634}
+.trace-add-choice strong{font-size:15px;grid-column:1}
+.trace-add-choice small{font-size:12px;color:#5d7768;grid-column:1;line-height:1.4}
+.trace-add-choice span{grid-column:2;grid-row:1 / span 2;font-size:20px}
+.trace-add-choice:focus-visible,.trace-import-workspace-modes button:focus-visible{outline:3px solid #66af8c;outline-offset:2px}
+.trace-import-workspace-header{padding:8px 0 4px}
+.trace-import-workspace-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:7px 0 16px}
+.trace-import-workspace-modes button{min-height:48px;border:1px solid #d4e4d7;border-radius:13px;background:#f9fcf8;color:#285a43;padding:9px 7px;font-weight:750;font-size:12px}
+.trace-import-workspace-modes button.is-active{background:#174f3f;color:white;border-color:#174f3f}
+.trace-import-account-selection{margin:0 0 15px}
+#activityImport[data-import-mode="daily"] #importDrop,#activityImport[data-import-mode="daily"] #traceStatementDrawer,#activityImport[data-import-mode="monthly"] #importCalendar{display:none}
+.trace-import-test-tools{margin:20px 0 10px}
+.trace-import-test-tools>summary{font-size:12px;color:#70877a;min-height:44px;padding:12px 0;cursor:pointer}
+#activityImport .trace-import-test-tools:not([open])>article{display:none}
+.trace-activity-filter-drawer:not([open]) .trace-activity-filters{display:none}
+@media(max-width:360px){.trace-filter-hint{font-size:10px}.trace-add-choice{padding:12px}}

@@ -4,7 +4,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 // Read-only display selection. Never stored in household settings.
 let viewState=null;
 function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode,checkingNode,cardNode,
- warningNode,badgeNode,onSelect,requestRate}={}){
+ warningNode,badgeNode,onSelect,requestRate,compact=false}={}){
  if(!host||!root.TraceInternational)return;
  // The summary is inside a clickable balance card; changing the account must not open settings.
  host.onclick=event=>event.stopPropagation();
@@ -41,7 +41,7 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
    '<span class="trace-intl-chip-name">'+esc(a.name||'Compte')+'</span>'+
    ' <small class="trace-intl-chip-currency">'+esc(I.currency(a))+'</small></button>').join('')+'</div>'+
   '<p class="trace-intl-view-note">Toucher un compte pour consulter son solde · aucune modification du compte principal.</p></div>':'')+
- '<details class="trace-intl-primary-control"><summary><span>★ Compte principal</span><small>Modifier</small></summary>'+
+ (compact?'':'<details class="trace-intl-primary-control"><summary><span>★ Compte principal</span><small>Modifier</small></summary>'+
  '<div class="trace-intl-top"><span class="trace-intl-primary-heading" id="traceIntlPrimaryLabel">Choisir avec confirmation</span>'+
  '<select class="input trace-intl-primary-native" id="traceIntlPrimary" tabindex="-1" aria-hidden="true">'+checking.map(a=>
   '<option value="'+esc(a.id)+'"'+(a.id===primaryId?' selected':'')+'>'+
@@ -54,9 +54,9 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
   (a.id===primaryId?'★ ':'')+esc(a.name||'Compte')+
   ' <small>'+esc(I.currency(a))+'</small></button>').join('')+'</div>'+
  '<p class="trace-intl-primary-help">La sélection d’un nouveau compte principal demandera confirmation. Consulter un solde ci-dessus ne change rien.</p>'+
- '</div></details>'+
- '<p class="trace-intl-primary-explain">'+(selectedId===primaryId?'Solde du compte principal':'Solde du compte consulté')+' et de ses cartes liées, en '+esc(cur)+'.</p>'+
- (multi?'<details class="trace-intl-details"><summary>Voir tous mes comptes et ma trésorerie globale</summary>'+
+ '</div></details>')+
+ (compact?'':'<p class="trace-intl-primary-explain">'+(selectedId===primaryId?'Solde du compte principal':'Solde du compte consulté')+' et de ses cartes liées, en '+esc(cur)+'.</p>')+
+ (!compact&&multi?'<details class="trace-intl-details"><summary>Voir tous mes comptes et ma trésorerie globale</summary>'+
   '<div class="trace-intl-accounts">'+snap.balances.map(a=>{
    const quote=rates[a.nativeCurrency];
    const conversion=a.nativeCurrency==='CAD'?'':a.cad===null?
@@ -125,7 +125,7 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
    if(!checking.some(a=>a.id===id)||id===viewState?.accountId)return;
    viewState={...viewState,owner,primaryId,accountId:id};
    render({host,accounts,owner,mainId,estimates,rates,balanceNode,checkingNode,cardNode,
-    warningNode,badgeNode,onSelect,requestRate});
+    warningNode,badgeNode,onSelect,requestRate,compact});
    const selected=[...host.querySelectorAll('[data-trace-view-account]')].find(x=>x.dataset.traceViewAccount===id);
    selected?.focus?.({preventScroll:true});
    selected?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'auto'});

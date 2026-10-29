@@ -49,3 +49,29 @@ Navigation à conserver : **Accueil | Budget | + | Activité | Patrimoine**.
 - Sécurité de production : Auth/RLS/CAS multi-session isolé, sauvegarde/restauration, rollback, validation financière, recette iPhone détaillée et autorisation distincte.
 
 **Production : NO-GO. Aucun choix UX proposé dans ce document n'est automatiquement approuvé.**
+
+## Décisions explicitement validées par le propriétaire — reprise UX du 28 octobre
+
+**Accueil :** conserver le solde estimé avec consultation du solde d'un compte, le disponible budgétaire, les indicateurs du mois, la file d'actions, un seul graphique d'évolution et le raccourci Partage. Éviter les doublons de progression et la liste de catégories détaillées ; celle-ci appartient au Budget. Retirer d'Accueil les raccourcis Importer / Rapprocher / Rappels. Le détail « compte courant / dette de carte » peut rester accessible à la demande. La modification du compte principal ainsi que les comptes complets et leur trésorerie relèvent de Profil → Mes comptes. L'épargne CELI reste dans Patrimoine.
+
+**Budget :** garder entièrement les trois familles, le bilan par catégorie et « Mon année en clair » (prévu, utilisé et restant). Aucune simplification destructive de cet onglet.
+
+**Ajouter (+) :** point d'entrée unique des ajouts, menu en deux étapes :
+1. Ajouter manuellement une opération avec le formulaire déjà validé ;
+2. Importer un document, avec choix entre opérations quotidiennes/captures et relevé mensuel CSV/PDF. Les flux existants ne doivent pas perdre les avertissements CSV/PDF, la preuve d'origine, la revue humaine ni l'idempotence. Le PDF n'est pas présenté comme une extraction universelle automatique.
+
+**Activité :** trois rubriques visibles « Transactions / À valider / Partage ». Le panneau d'import reste techniquement conservé comme espace interne ouvert depuis « + », mais ne figure plus comme quatrième rubrique de navigation. Les cinq filtres de l'Historique demeurent disponibles derrière « Filtres », replié au repos. Les opérations validées restent consultables en détail et modifiables dans les conditions habituelles.
+
+**Patrimoine :** prévoir plus tard un tableau de bord synthétique des actifs. Les changements structurels importants n'ont pas été décidés lors de cet échange.
+
+**Design :** moins de textes pédagogiques permanents, hiérarchie claire entre synthèse et détail, utilisation d'accordéons et de choix tactiles accessibles, conservation de l'identité vert profond/ivoire. Les réglages des écrans secondaires et les finitions de chaque carte restent à examiner avec le propriétaire.
+
+## Implémentation candidate correspondante
+
+- Accueil : disparition de la liste graphique « Budget en direct », des raccourcis Importer/Rapprocher/Rappels et des versements CELI dans la carte de solde ; détail bancaire masqué au repos. Le sélecteur de compte visible reste **consultatif**, alors que le compte principal reste configurable depuis Profil → Mes comptes.
+- « + » : menu explicite manuel/import puis quotidien/mensuel ; réutilisation des flux existants. Aucune nouvelle autorisation de données ni traitement de fichier silencieux.
+- Activité : trois sous-onglets visibles, filtres avancés repliables, import comme vue interne sans quatrième onglet ; outils fictifs de débit différé rangés dans un tiroir réservé au laboratoire.
+- Budget et Patrimoine : valeurs, données, écritures et sections conservées.
+- Les tests de contrat UX et de navigateur doivent être mis à jour selon ces décisions ; la validation physique iPhone de **l'ancien** rendu ne certifie pas automatiquement cette nouvelle disposition.
+
+**Ne pas confondre validation fonctionnelle des cinq parcours iPhone antérieurs et nouvelle validation esthétique.** La mise en production réelle demeure interdite jusqu'à ses propres portes de qualification et l'autorisation explicite du propriétaire.

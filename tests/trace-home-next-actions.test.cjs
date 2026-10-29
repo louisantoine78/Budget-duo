@@ -15,7 +15,7 @@ function createContext({accounts=[{id:'cad-checking',name:'Courant',type:'checki
  const nodes={'#pendingCountBadge':{textContent:''},'#pendingText':{textContent:''}};
  const actions={};
  const root={innerHTML:'',querySelectorAll(query){
-  if(query==='[data-home-review-account]')return accounts.map(a=>({
+  if(query==='[data-home-review-account]')return accounts.filter(a=>this.innerHTML.includes('data-home-review-account="'+a.id+'"')).map(a=>({
    dataset:{homeReviewAccount:a.id},set onclick(fn){actions['account:'+a.id]=fn;}
   }));
   if(query==='[data-home-next-action]'){
@@ -39,14 +39,10 @@ function createContext({accounts=[{id:'cad-checking',name:'Courant',type:'checki
   ()=>events.push(['sheet']),()=>'',()=>[],()=>{});
  return{...app,root,nodes,actions,events,state};
 }
-test('three visible action shortcuts link to existing navigation without writing',()=>{
- const ctx=createContext();
- ctx.renderHomeReview();
- assert.match(ctx.root.innerHTML,/data-home-next-action="imports"/);
- assert.match(ctx.root.innerHTML,/data-home-next-action="reconcile"/);
- assert.match(ctx.root.innerHTML,/data-home-next-action="reminders"/);
- ctx.actions.imports();ctx.actions.reconcile();ctx.actions.reminders();
- assert.deepEqual(ctx.events,[['navigate','activity'],['tab','import'],['reconcile'],['reminders']]);
+test('Home does not duplicate Import, Reconcile and Reminder actions',()=>{
+ const ctx=createContext();ctx.renderHomeReview();
+ assert.doesNotMatch(ctx.root.innerHTML,/data-home-next-action/);
+ assert.match(source,/function openTraceAddMenu\(\)/);
 });
 test('Home keeps imported draft and pending bank transaction counts distinct',()=>{
  const ctx=createContext({transactions:[{id:'t_abc',status:'pending',accountId:'cad-checking'},
@@ -65,12 +61,11 @@ test('no accounts keeps add-bank guidance and hides unusable shortcuts',()=>{
  assert.doesNotMatch(ctx.root.innerHTML,/data-home-next-action/);
  assert.equal(ctx.nodes['#pendingCountBadge'].textContent,'0');
 });
-test('repeated refresh only rebuilds shortcuts once and keeps accessible group',()=>{
- const ctx=createContext();ctx.renderHomeReview();ctx.renderHomeReview();
- assert.equal((ctx.root.innerHTML.match(/data-home-next-action="/g)||[]).length,3);
- assert.match(ctx.root.innerHTML,/aria-label="Actions pour tenir les comptes à jour"/);
+test('Home refresh remains minimal and stable',()=>{
+ const ctx=createContext();ctx.renderHomeReview();const first=ctx.root.innerHTML;
+ ctx.renderHomeReview();assert.equal(ctx.root.innerHTML,first);
+ assert.doesNotMatch(first,/trace-home-next-actions/);
 });
-
 test('unresolved OCR-only days never display a false all-clear message',()=>{
  const ctx=createContext({importDays:[{accountId:'cad-checking',unresolvedCount:3}]});
  ctx.renderHomeReview();
@@ -99,5 +94,5 @@ test('Home does not list bank accounts with nothing to verify',()=>{
  ctx.renderHomeReview();
  assert.match(ctx.root.innerHTML,/data-home-review-account="cad"/);
  assert.doesNotMatch(ctx.root.innerHTML,/data-home-review-account="eur"/);
- assert.match(ctx.root.innerHTML,/data-home-next-action="imports"/);
+ assert.doesNotMatch(ctx.root.innerHTML,/data-home-next-action/);
 });

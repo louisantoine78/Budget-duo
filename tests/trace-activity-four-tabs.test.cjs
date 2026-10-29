@@ -4,24 +4,25 @@ const fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const app=read('v5-app-5.37.0.js'),html=read('trace-international-preview.html'),
  css=read('trace-international-1.0.0.css');
-test('four approved sections are in order and import panel remains distinct',()=>{
- const ids=['data-tab="transactions"','data-tab="review"','data-tab="sharing"','data-tab="import"'];
- const at=ids.map(s=>html.indexOf(s));
+test('three Activity tabs are visible and Import is reserved for plus',()=>{
+ const ids=['data-tab="transactions"','data-tab="review"','data-tab="sharing"'];
+ const at=ids.map(x=>html.indexOf(x));
  assert.ok(at.every((x,i)=>x>=0&&(i===0||x>at[i-1])));
- assert.match(html,/data-tab="transactions"[^>]*>Historique<\/button>/);
+ assert.match(html,/data-tab="transactions"[^>]*>Transactions<\/button>/);
  assert.match(html,/data-tab="review"[^>]*>À valider<\/button>/);
+ assert.doesNotMatch(html,/data-tab="import"/);
  assert.equal((html.match(/id="importPendingTransactions"/g)||[]).length,1);
  assert.ok(html.indexOf('id="importPendingTransactions"')<html.indexOf('id="activityImport"'));
- assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+ assert.match(css,/\.trace-activity-main-tabs\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
  assert.match(html,/role="tablist"/);
 });
 function mountTabs(){
  const i=app.indexOf('function showTab(t){'),j=app.indexOf('\n}\n',i)+2;
  assert.ok(i>0&&j>i);
  const nodes=Object.fromEntries(['activityTransactions','activityReview','activityImport',
- 'activitySharing','activityPeriodControl','activityMonthLabel'].map(x=>['#'+x,{
+ 'activitySharing','activityPeriodControl','activityMonthLabel','activityTabs','activityPageTitle'].map(x=>['#'+x,{
  textContent:'',classList:{hidden:false,toggle(n,v){this.hidden=v}}}]));
- const buttons=['transactions','review','sharing','import'].map(x=>({dataset:{tab:x},
+ const buttons=['transactions','review','sharing'].map(x=>({dataset:{tab:x},
  classList:{active:false,toggle(n,v){this.active=v}},
  setAttribute(n,v){if(n==='aria-selected')this.selected=v}}));
  let sharing=0;
@@ -40,7 +41,7 @@ test('À valider shows only review view, across all dates, with accessible state
  assert.equal(m.buttons.find(b=>b.dataset.tab==='review').selected,'true');
  assert.equal(m.sharing(),0);
 });
-test('Historique, Partage and Imports retain their individual navigation',()=>{
+test('Transactions, Partage and internal import remain individually accessible',()=>{
  const m=mountTabs();m.showTab('import');
  assert.equal(m.nodes['#activityImport'].classList.hidden,false);
  m.showTab('sharing');
