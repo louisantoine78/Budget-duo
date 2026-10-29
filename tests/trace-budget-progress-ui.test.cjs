@@ -66,3 +66,8 @@ test('wealth insights retain known overdrafts and explicit zero card debt',()=>{
  assert.match(target.innerHTML,/Comptes et placements suivis<\/small><b>150/);
  assert.match(target.innerHTML,/Dettes de carte connues<\/small><b>0/);
 });
+
+test('Home shows category detail without repeating the budget consumption ring',()=>{
+ const app=require('node:fs').readFileSync(require('node:path').join(__dirname,'..','v5-app-5.37.0.js'),'utf8');
+ assert.match(app,/budgetTotal:s\.eb,month:CM,limit:8,showSummary:false,onCategory/);
+});

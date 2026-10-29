@@ -724,7 +724,7 @@ function renderHomeReview(){
  if(!rows.length){
   root.innerHTML='<p class="empty-note">Ajoute un compte courant ou une carte depuis Profil → Mes comptes.</p>';return;
  }
- root.innerHTML=rows.map(a=>{
+ root.innerHTML=rows.filter(a=>a.total||a.unresolved).map(a=>{
   const title=a.type==='checking'?'Compte courant':a.type==='card'?'Carte de crédit':a.name;
   const sub=a.total?[a.drafts?a.drafts+' import(s) à confirmer':'',
    a.existing?a.existing+' transaction(s) à compléter':'',
@@ -1441,7 +1441,7 @@ function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.e
  .reduce((sum,t)=>sum+Number(t.amountCAD||0),0);
  $('#homeCELITransfers').textContent=money(savedToCeli);renderHomeReview();
  window.TraceInsights.renderCategories($('#homeBudgetCategories'),{rows:breakdown(CM,sId),totalExpense:s.expense,
-  budgetTotal:s.eb,month:CM,limit:8,showSummary:true,onCategory:id=>insightCategoryDrilldown(CM,sId,id)});
+  budgetTotal:s.eb,month:CM,limit:8,showSummary:false,onCategory:id=>insightCategoryDrilldown(CM,sId,id)});
  window.TraceInsights.renderTrend($('#homeTrend'),{months:insightMonths(sId),selected:CM,compact:true});const cb=coupleBalance(),pa=member(partner),la=member('la');$('#partnerAvatar').textContent=pa.initials||initials(pa.name);$('#shareLabel').textContent=`Solde avec ${pa.name}`;$('#shareBalance').textContent=Math.abs(cb)<.01?'Vous êtes à l’équilibre':cb>0?`${shortMemberName('partner')} doit ${money(cb)} à ${shortMemberName('la')}`:`${shortMemberName('la')} doit ${money(Math.abs(cb))} à ${shortMemberName('partner')}`;if((state.household.workspaceMembers||[]).length<2){
  $('#partnerAvatar').textContent='+';
  $('#shareLabel').textContent='Inviter ton partenaire';
@@ -4553,14 +4553,6 @@ function traceActivityControls(){
   activityAccountFilter='all';activityFilters={category:'all',nature:'all',currency:'all',status:'confirmed'};
   renderActivity();
  };
- const pendingBtn=$('#activityShowPending');
- if(pendingBtn){
-  const active=new Set(visibleBankAccounts(me).map(a=>a.id));
-  const total=state.transactions.filter(t=>t.status!=='confirmed'&&
-   (active.has(t.accountId)||(t.type==='transfer'&&active.has(t.toAccountId)))).length;
-  pendingBtn.textContent='À valider · '+total;
-  pendingBtn.onclick=()=>showTab('review');
- }
 }
 function openActivityCategory(month,categoryId){
  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month||'')))return;

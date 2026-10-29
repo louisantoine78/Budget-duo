@@ -214,32 +214,12 @@ test('real International engine validates native recipient transfer proof',()=>{
  t.toBankCurrency='EUR';t.toBankAmount=null;assert.equal(value(EUR,'destination'),null);
  t.toBankAmount=46.205;assert.equal(value(EUR,'destination'),null);
 });
-test('review shortcut counts pending transfer once regardless of number of owned legs',()=>{
- const i=app.indexOf('function traceActivityControls(){'),j=app.indexOf('\nfunction openActivityCategory(',i);
- assert.ok(i>0&&j>i);
- const accounts=[
-  {id:'cad',owner:'la',currency:'CAD',type:'checking',name:'Canada'},
-  {id:'eur',owner:'la',currency:'EUR',type:'checking',name:'France'},
-  {id:'other',owner:'partner',currency:'GBP',type:'checking',name:'Partner'}
- ];
- const state={accounts,categories:[],transactions:[
-  {id:'fx',accountId:'cad',toAccountId:'eur',type:'transfer',status:'pending'},
-  {id:'in',accountId:'other',toAccountId:'eur',type:'transfer',status:'pending'},
-  {id:'other-only',accountId:'other',type:'expense',status:'pending'},
-  {id:'confirmed',accountId:'cad',type:'expense',status:'confirmed'}
- ]};
- const pending={textContent:'',onclick:null};
- const f=new Function('state','me','activityAccountFilter','activityFilters',
-  'accountType','traceActivityNatureLabel','traceActivitySelect','shortAccountLabel','window',
-  'visibleBankAccounts','$','renderActivity','showTab',
-  app.slice(i,j)+';return traceActivityControls;');
- let opened='';
- f(state,'la','all',{category:'all',nature:'all',currency:'all',status:'confirmed'},
-  a=>a.type,x=>x,()=>{},a=>a.name,{TraceInternational:{currency:a=>a.currency}},
-  owner=>accounts.filter(a=>a.owner===owner),
-  sel=>sel==='#activityShowPending'?pending:null,()=>{},tab=>opened=tab)();
- assert.equal(pending.textContent,'À valider · 2');
- pending.onclick();assert.equal(opened,'review');
+test('review lives in the dedicated Activity tab, without a redundant History shortcut',()=>{
+ assert.match(html,/id="activityTabReview"[^>]*data-tab="review"/);
+ assert.doesNotMatch(html,/id="activityShowPending"/);
+ assert.match(html,/id="activityStatusFilter"/);
+ assert.doesNotMatch(app,/activityShowPending/);
+ assert.match(app,/traceActivitySelect\('activityStatusFilter'/);
 });
 
 test('actual international renderer displays destination EUR cents, not CAD cents',()=>{

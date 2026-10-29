@@ -90,3 +90,14 @@ test('CSV unreadable evidence appears in Home counter without pretending it is a
  assert.match(ctx.nodes['#pendingText'].textContent,/élément à vérifier/);
  assert.equal(ctx.state.transactions.length,0);
 });
+
+test('Home does not list bank accounts with nothing to verify',()=>{
+ const ctx=createContext({accounts:[
+  {id:'cad',name:'Canada',type:'checking',owner:'la'},
+  {id:'eur',name:'France',type:'checking',owner:'la'}
+ ],transactions:[{id:'pending-1',status:'pending',accountId:'cad'}]});
+ ctx.renderHomeReview();
+ assert.match(ctx.root.innerHTML,/data-home-review-account="cad"/);
+ assert.doesNotMatch(ctx.root.innerHTML,/data-home-review-account="eur"/);
+ assert.match(ctx.root.innerHTML,/data-home-next-action="imports"/);
+});

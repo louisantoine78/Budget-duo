@@ -55,7 +55,8 @@ test('Historique, Partage and Imports retain their individual navigation',()=>{
 test('old validation shortcuts open dedicated review and never upload',()=>{
  assert.match(app,/if\(b\.dataset\.go==='review'\)\{navigate\('activity'\);showTab\('review'\)/);
  assert.match(app,/showTab\(tx\.status==='confirmed'\?'transactions':'review'\)/);
- assert.match(app,/pendingBtn\.onclick=\(\)=>showTab\('review'\)/);
+ assert.match(html,/id="activityTabReview"/);
+ assert.doesNotMatch(html,/id="activityShowPending"/);
 });
 function queue(extra=0,cap=40){
  const i=app.indexOf(' const reviewAccounts=visibleBankAccounts(me);',
