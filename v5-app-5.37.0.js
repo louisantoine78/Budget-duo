@@ -4626,7 +4626,7 @@ function traceActivityControls(){
   activeBar.innerHTML=applied.map(x=>'<button type="button" class="trace-activity-applied-chip" data-clear-activity-filter="'+
    esc(x.key)+'" aria-label="Enlever le filtre '+esc(x.label)+'">'+esc(x.label)+' <span aria-hidden="true">×</span></button>').join('')+
    (applied.length>1?'<button type="button" class="trace-activity-applied-clear" id="activityClearApplied">Tout effacer</button>':'');
-  activeBar.querySelectorAll('[data-clear-activity-filter]').forEach(btn=>btn.onclick=()=>{
+  activeBar.querySelectorAll?.('[data-clear-activity-filter]')?.forEach(btn=>btn.onclick=()=>{
    const key=btn.dataset.clearActivityFilter;
    if(key==='account')activityAccountFilter='all';
    else if(key==='status')activityFilters.status='confirmed';
