@@ -3337,26 +3337,37 @@ async function copyPreviousBudget(){
     '<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(monthLabel(prev))+' → '+esc(monthLabel(target))+'</b><small>'+(budgetScope==='mine'?'Budget personnel':'Budget Couple')+' · '+source.length+' postes</small></div></div>'+
     '<div class="setting-summary"><span>Montant prévu à recopier</span><b>'+money(sumSource)+'</b></div>'+
     (existing.length?'<div class="empty-note" style="margin-top:12px">Les catégories déjà présentes sur le mois sélectionné seront mises à jour avec les montants du mois précédent. Les autres postes déjà créés seront conservés.</div>':'<div class="empty-note" style="margin-top:12px">Le budget du mois précédent sera recopié sur le mois sélectionné. Les transactions réelles ne sont jamais modifiées.</div>')+
+    '<p id="traceBudgetCopyError" role="status" class="trace-budget-share-error" aria-live="polite"></p>'+
     '<button class="primary full" id="confirmBudgetCopy" type="button" style="margin-top:16px">Copier le budget</button>'+
     '<button class="secondary full" id="cancelBudgetCopy" type="button" style="margin-top:8px">Annuler</button>'
   );
   $('#cancelBudgetCopy').onclick=closeSheet;
   $('#confirmBudgetCopy').onclick=async()=>{
     const btn=$('#confirmBudgetCopy');btn.disabled=true;btn.textContent='Copie en cours…';
+    const error=$('#traceBudgetCopyError');if(error)error.textContent='';
+    let count=0;
     try{
-      let count=0;
       for(const src of source){
         const current=state.budgets.find(b=>b.month===target&&b.scope===owner&&b.categoryId===src.categoryId);
         const item={...src,id:current?.id||budgetDocId(),month:target,scope:owner};
-        if(current)Object.assign(current,item);else state.budgets.push(item);
+        // Never show an unconfirmed budget. If RPC number N fails, the
+        // previous N-1 confirmed rows stay visible and the failed row does
+        // not mutate local state. Retrying then reuses their document IDs.
         await saveDocument('budgets',item);
+        if(current)Object.assign(current,item);else state.budgets.push(item);
         count++;
       }
       closeSheet();renderBudget();
       openSheet('Budget copié','<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(monthLabel(target))+' est prêt</b><small>'+count+' postes copiés depuis '+esc(monthLabel(prev))+'</small></div></div><div class="empty-note">Tu peux ensuite ajuster les montants qui changent d’un mois à l’autre.</div><button class="primary full" id="budgetCopyDone" type="button" style="margin-top:14px">Voir le budget</button>');
       $('#budgetCopyDone').onclick=closeSheet;
     }catch(err){
-      console.error(err);btn.disabled=false;btn.textContent='Réessayer';
+      console.error(err);
+      renderBudget();renderHome(); // Only confirmed writes may be reflected.
+      if(error)error.textContent=traceWritesBlocked?
+       'Conflit de données. Recharge TRACE avant de recopier le budget.':
+       count+' sur '+source.length+' poste(s) enregistrés. La copie est partielle : vérifie les montants, puis réessaie.';
+      btn.disabled=traceWritesBlocked;
+      btn.textContent=traceWritesBlocked?'Rechargement nécessaire':'Réessayer';
     }
   };
 }
