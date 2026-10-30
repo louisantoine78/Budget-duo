@@ -119,6 +119,14 @@ function rehearsal(){
  assert.deepEqual(financial.consoleErrors,[]);
  report.tests.financial={passed:true,scenarios:financial.results.length,
   fictional:true,externalRequests:0};
+ // Test the real auth UI bootstrap with purely local Supabase mocks.
+ run(process.execPath,['tests/trace-537-auth-cutover.browser.cjs'],
+  {name:'Isolated 5.37 auth bootstrap cutover',timeout:90000,
+   env:{TRACE_PLAYWRIGHT_MODULE:process.env.TRACE_PLAYWRIGHT_MODULE,
+    TRACE_CHROMIUM_EXECUTABLE:process.env.TRACE_CHROMIUM_EXECUTABLE}});
+ report.tests.authBootstrap={passed:true,configured:true,
+  missingConfig:true,session:'unsigned fictional stub',
+  productionCredentialsUsed:false,networkWrites:0};
  report.tests.chromium=browserSmoke(site,'chromium',output);
  report.tests.webkit=browserSmoke(site,'webkit',output);
  assert.equal(run('git',['rev-parse','HEAD']).trim(),report.head,'HEAD moved during QA');

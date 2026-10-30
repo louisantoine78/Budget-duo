@@ -21,6 +21,7 @@ test('current-HEAD rehearsal requires clean worktree and exact candidate branch'
 test('all browser, finance and offline tests are mandatory and the export is verified',()=>{
  for(const token of ['scripts/check-trace-537-release-gates.cjs',
   'scripts/export-trace-537-preview.mjs','tests/trace-candidate.browser.cjs',
+  'tests/trace-537-auth-cutover.browser.cjs',
   'trace-browser-537-qa.cjs','TRACE_LAB_ROOT:site',
   'trace-lab-export-audit.json','sha256Verified:true',
   "browserSmoke(site,'webkit'","browserSmoke(site,'chromium'"]){
