@@ -149,6 +149,50 @@ async function run(){
    await assert.rejects(del(1,'transactions',tx.id,0),/TRACE_WRITE_CONFLICT/);
    assert.equal((await del(1,'transactions',tx.id,1)).rows[0].ok,true);
   });
+  await check('two authenticated household members share only their RLS-authorized documents',async()=>{
+   for(const actor of [1,2]){
+    const houses=(await asUser(actor,tx=>tx.query(
+     'select id from public.households order by id'))).rows;
+    assert.deepEqual(houses.map(r=>r.id),[hid]);
+    const members=(await asUser(actor,tx=>tx.query(
+     'select user_id from public.household_members order by user_id'))).rows;
+    assert.deepEqual(members.map(r=>r.user_id),[uid(1),uid(2)]);
+    const docs=(await asUser(actor,tx=>tx.query(
+     "select item_id from public.documents where household_id=$1 and collection='accounts' order by item_id",
+     [hid]))).rows;
+    assert.deepEqual(docs.map(r=>r.item_id),['checking-la','checking-partner']);
+   }
+  });
+  await check('foreign authenticated household stays invisible and cannot write across boundary',async()=>{
+   const second=(await asUser(3,tx=>tx.query(
+    "select * from public.create_household('Séparé fictif','Autre')"))).rows[0];
+   const foreignId=second.household_id;
+   assert.notEqual(foreignId,hid);
+   const other={id:'private-category',type:'expense',name:'Foreign secret'};
+   await asUser(3,tx=>tx.query(
+    'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+    [foreignId,'categories',other.id,JSON.stringify(other),null]));
+   for(const actor of [1,2]){
+    const hidden=(await asUser(actor,tx=>tx.query(
+     'select * from public.documents where household_id=$1',[foreignId]))).rows;
+    assert.equal(hidden.length,0);
+    const foreignHouse=(await asUser(actor,tx=>tx.query(
+     'select id from public.households where id=$1',[foreignId]))).rows;
+    assert.equal(foreignHouse.length,0);
+    await assert.rejects(asUser(actor,tx=>tx.query(
+     'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+     [foreignId,'categories','forged',{id:'forged'},null])),/TRACE_WRITE_FORBIDDEN/);
+   }
+   assert.equal((await asUser(3,tx=>tx.query(
+    'select * from public.documents where household_id=$1',[hid]))).rows.length,0);
+   assert.equal((await asUser(3,tx=>tx.query(
+    'select * from public.household_members where household_id=$1',[hid]))).rows.length,0);
+   assert.equal((await asUser(3,tx=>tx.query(
+    'select * from public.documents where household_id=$1',[foreignId]))).rows.length,1);
+   await assert.rejects(asUser(3,tx=>tx.query(
+    'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+    [hid,'categories','outsider',{id:'outsider'},null])),/TRACE_WRITE_FORBIDDEN/);
+  });
   await check('member CAS still updates authorized settings and denies personal forgery',async()=>{
    const before=(await db.query('select settings,settings_revision from public.households where id=$1',
     [hid])).rows[0];
