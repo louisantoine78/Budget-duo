@@ -31,18 +31,17 @@ test('Home existing live IDs survive and are unique',()=>{
   'homeReviewAccounts','homeTrendCard','shareCard'])
   assert.equal((home.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
 });
-test('Savings then Investments then net patrimonio then liquidity appear in order',()=>ordered(wealth,[
- 'id="wealthSavingsGrid"','id="wealthInvestmentsGrid"',
- 'id="wealthTotal"','id="assetGrid"']));
+test('Patrimoine net first, followed by Savings, Investments and bank detail',()=>ordered(wealth,[
+ 'id="wealthTotal"','id="wealthSavingsGrid"','id="wealthInvestmentsGrid"','id="assetGrid"']));
 test('Savings and investments have distinct card hosts, without lost actions',()=>{
  for(const id of ['wealthSavingsGrid','wealthInvestmentsGrid','assetGrid',
   'wealthTotal','wealthSub','wealthTrend','addAsset'])
   assert.equal((wealth.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
  assert.match(wealth,/<h2>Épargne<\/h2>/);assert.match(wealth,/<h2>Placements<\/h2>/);
- assert.match(wealth,/<h2>Patrimoine net accessible<\/h2>/);
+ assert.match(wealth,/class="trace-wealth-overview" aria-label="Patrimoine net estimé"/);
 });
 test('heritage link remains visible and non-claims cash immediately accessible',()=>{
- assert.match(wealth,/n'est pas nécessairement disponible immédiatement/);
+ assert.match(wealth,/certains placements ne sont pas immédiatement disponibles/);
  assert.match(wealth,/taux manquant reste à vérifier/);
 });
 test('premium CSS uses layout, subtle elevation, focus and reduced motion',()=>{
@@ -180,7 +179,7 @@ test('unknown foreign conversion keeps net visibly incomplete',()=>{
 });
 test('empty saving/investment grids remain helpful and add action exists',()=>{
  const {el}=makeWealth({noPortfolio:true});
- assert.match(el('#wealthSavingsGrid').innerHTML,/Ajoute un livret/);
+ assert.match(el('#wealthSavingsGrid').innerHTML,/Ajoute un livret ou un CELI/);
  assert.match(el('#wealthInvestmentsGrid').innerHTML,/wealthAddCard/);
  assert.match(el('#wealthTotal').textContent,/950/);
 });
@@ -332,4 +331,14 @@ test('the refined Activity drawer keeps five accessible 44px native selectors an
  assert.match(css,/\.trace-activity-filter-actions\{/);
  assert.match(app,/\['all','Toutes'\]/);
  assert.match(app,/homeAccountShortLabel\?\.\(a,accounts\)/);
+});
+
+test('Wealth keeps one upfront net valuation, visible banks, savings and investments',()=>{
+ assert.equal((wealth.match(/id="wealthTotal"/g)||[]).length,1);
+ assert.match(css,/\.page\[data-page="wealth"\] \.trace-wealth-net-card>/);
+ assert.match(css,/\.page\[data-page="wealth"\] \.trace-wealth-grid\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(css,/\.page\[data-page="wealth"\] \.trace-wealth-grid \.asset-card>b\{/);
+ assert.match(app,/esc\('Consulter '\+\(a.name\|\|a.type\|\|'Investissement'\)\)/);
+ assert.match(wealth,/Trésorerie et comptes/);
+ assert.match(wealth,/Comprendre mon patrimoine/);
 });

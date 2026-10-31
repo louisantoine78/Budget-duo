@@ -256,6 +256,34 @@ let base;
   }
   await go('home');
  });
+ await test('Wealth starts with net valuation and keeps all assets readable as premium rows',async()=>{
+  await go('wealth');
+  const structure=await page.locator('.page[data-page="wealth"]').evaluate(root=>{
+   const ids=['wealthTotal','wealthSavingsGrid','wealthInvestmentsGrid','assetGrid'];
+   return ids.map(id=>root.querySelector('#'+id)?.getBoundingClientRect().top??-1);
+  });
+  assert.ok(structure.every((p,i)=>p>=0&&(i===0||p>structure[i-1])),structure.join(','));
+  assert.equal(await page.locator('#wealthTotal').count(),1);
+  assert.ok(await page.locator('.trace-wealth-net-card .trace-wealth-note').isVisible());
+  assert.equal(await page.locator('#wealthInvestmentsGrid #wealthAddCard').count(),1);
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   for(const id of ['wealthSavingsGrid','wealthInvestmentsGrid','assetGrid']){
+    const layout=await page.locator('#'+id).evaluate(root=>{
+     const r=root.getBoundingClientRect(),tiles=[...root.querySelectorAll('.asset-card')];
+     return{columns:getComputedStyle(root).gridTemplateColumns.split(' ').length,width:r.width,
+      tileWidths:tiles.map(x=>x.getBoundingClientRect().width),
+      focusTargets:tiles.every(x=>x.tagName==='BUTTON')};
+    });
+    assert.equal(layout.columns,1,id+' should be a clean one-column list');
+    assert.ok(layout.tileWidths.every(w=>w<=layout.width+1),id+' overflows');
+    assert.ok(layout.focusTargets);
+   }
+  }
+  await page.setViewportSize({width:390,height:844});
+  await go('home');
+ });
  await test('premium patrimoine and bank setup share the same responsive sheet standard',async()=>{
   await go('wealth');
   await page.locator('#addAsset').click();

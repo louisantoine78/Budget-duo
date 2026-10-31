@@ -1241,3 +1241,162 @@
 @media(prefers-reduced-motion:reduce){
  .page[data-page="activity"] #activityAdvancedFilters>summary::after{transition:none}
 }
+
+
+/* TRACE 5.37.0 — Wealth editorial hierarchy.
+ * Summary first, then fully visible savings, investments and bank accounts.
+ * All financial amounts are supplied by the unchanged ledger/rendering model. */
+.page[data-page="wealth"] .hero-row{
+ margin-bottom:10px;align-items:center;gap:12px;
+}
+.page[data-page="wealth"] .hero-row .eyebrow{
+ font-size:10px;font-weight:650;color:#788a7d;letter-spacing:.06em;
+}
+.page[data-page="wealth"] .hero-row h1{
+ font-size:25px;line-height:1.15;font-weight:730;letter-spacing:-.04em;
+ color:#1d3f30;margin-top:3px;
+}
+.page[data-page="wealth"] .hero-row #wealthScope{
+ border:1px solid #e0e9df;background:#f4f7f2;box-shadow:none;
+ border-radius:12px;padding:3px;
+}
+.page[data-page="wealth"] .hero-row #wealthScope .seg{
+ font-size:12px;min-height:40px;padding:7px 12px;border-radius:9px;
+ font-weight:630;
+}
+.page[data-page="wealth"] .trace-wealth-overview{
+ margin:9px 0 21px;
+}
+.page[data-page="wealth"] .trace-wealth-net-card{
+ padding:21px 19px 18px;
+ border:1px solid #dfe8df;border-radius:19px;
+ background:#f8faf6;box-shadow:none;
+}
+.page[data-page="wealth"] .trace-wealth-net-card>.label{
+ font-size:11px;color:#6b806f;font-weight:650;
+ letter-spacing:.035em;
+}
+.page[data-page="wealth"] .trace-wealth-net-card>.big{
+ display:block;margin:9px 0 9px;
+ color:#193f2f;font-size:clamp(29px,7.5vw,39px);
+ font-weight:640;letter-spacing:-.05em;line-height:1.18;
+ font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-net-card>.sub{
+ color:#4e6b5a;font-size:12px;font-weight:550;line-height:1.45;
+}
+.page[data-page="wealth"] .trace-wealth-net-card>.trace-wealth-note{
+ margin:11px 0 0;padding-top:11px;border-top:1px solid #e3ece3;
+ color:#708577;font-size:10px;line-height:1.45;
+}
+.page[data-page="wealth"] .trace-wealth-section,
+.page[data-page="wealth"] .trace-wealth-net-section{
+ margin:17px 0 0;padding:0;
+}
+.page[data-page="wealth"] .trace-wealth-section-head{
+ margin:0 0 9px;min-height:38px;gap:12px;
+}
+.page[data-page="wealth"] .trace-wealth-section-head h2{
+ color:#294936;font-weight:720;font-size:16px;
+ letter-spacing:-.025em;
+}
+.page[data-page="wealth"] .trace-wealth-section-head .linkbtn{
+ min-height:44px;padding:8px 5px;
+ font-size:11px;font-weight:630;
+}
+.page[data-page="wealth"] .trace-wealth-grid{
+ display:grid;grid-template-columns:minmax(0,1fr);
+ gap:0;overflow:hidden;
+ border:1px solid #e5ece4;border-radius:15px;
+ background:#fffdfa;box-shadow:none;margin:0;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card{
+ display:grid;
+ grid-template-columns:32px minmax(0,1fr) minmax(72px,max-content);
+ grid-template-rows:auto auto;
+ align-items:center;
+ column-gap:11px;row-gap:3px;
+ min-height:69px;
+ width:100%;
+ padding:12px 13px;
+ margin:0;
+ border:0;
+ border-bottom:1px solid #edf1eb;
+ border-radius:0;
+ background:transparent;
+ box-shadow:none;
+ transition:background-color .14s ease;
+ color:#263f32;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card:last-child{
+ border-bottom:0;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card:is(:hover,:focus-visible){
+ background:#f5f8f3;box-shadow:none;transform:none;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>.a-icon{
+ grid-column:1;grid-row:1 / span 2;
+ display:grid;place-items:center;
+ width:32px;height:32px;margin:0;
+ color:#476e57;font-size:13px;font-weight:500;
+ background:#edf4ed;border-radius:9px;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>span:not(.a-icon){
+ grid-column:2;grid-row:1;
+ min-width:0;
+ color:#2d4d3d;font-size:12px;font-weight:650;line-height:1.35;
+ overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>b{
+ grid-column:3;grid-row:1;
+ min-width:0;max-width:132px;
+ margin:0;
+ color:#1b4230;text-align:right;
+ font-size:15px;font-weight:690;line-height:1.32;
+ letter-spacing:-.025em;font-variant-numeric:tabular-nums;
+ overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>small{
+ grid-column:2 / 4;grid-row:2;
+ margin:0;
+ color:#738576;font-size:10px;font-weight:480;line-height:1.35;
+ overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card-add{
+ border:0;background:#fafcf8;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card-add>b{
+ color:#46775b;font-size:11px;font-weight:620;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card-add>.a-icon{
+ background:#f0f5ef;color:#2d6b4d;
+}
+.page[data-page="wealth"] .trace-wealth-grid .trace-wealth-empty{
+ border:0;border-radius:0;
+ background:transparent;box-shadow:none;
+ margin:0;padding:15px;
+ color:#738779;font-size:11px;line-height:1.45;
+}
+.page[data-page="wealth"] #traceWealthDetail{
+ border-color:#e8ede7;box-shadow:none;
+}
+@media(max-width:359px){
+ .page[data-page="wealth"] .trace-wealth-grid .asset-card{
+  grid-template-columns:29px minmax(0,1fr) minmax(58px,max-content);
+  column-gap:8px;padding:11px 10px;
+ }
+ .page[data-page="wealth"] .trace-wealth-grid .asset-card>b{
+  font-size:13px;max-width:106px;
+ }
+ .page[data-page="wealth"] .trace-wealth-net-card{padding:19px 15px}
+}
+@media(min-width:761px){
+ .page[data-page="wealth"] .trace-wealth-grid{
+  grid-template-columns:minmax(0,1fr);
+  max-width:720px;
+ }
+ .page[data-page="wealth"] .trace-wealth-overview{max-width:720px}
+}
+@media(prefers-reduced-motion:reduce){
+ .page[data-page="wealth"] .trace-wealth-grid .asset-card{transition:none}
+}

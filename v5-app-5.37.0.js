@@ -5351,17 +5351,18 @@ function renderWealth(){
  const savings=ports.filter(({a})=>a.savingsTracking==='linked'||
   ['CELI','Épargne','Livret','Savings'].includes(a.type));
  const placements=ports.filter(({a})=>!savings.some(({a:shown})=>shown.id===a.id));
- const tile=({a,p})=>'<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'"><span class="a-icon">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
+ const tile=({a,p})=>'<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
+  esc('Consulter '+(a.name||a.type||'Investissement'))+'"><span class="a-icon" aria-hidden="true">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
   (p.reviewRequired?'Mouvement à vérifier':a.savingsTracking==='linked'&&!p.configured?'À configurer':nativeMoney(p.value,a.currency))+'</b><small>'+
-  (p.hasFx?(a.savingsTracking==='linked'?'Solde estimé · ':'')+money(p.cad)+' CAD'+(p.fxDate?' · '+esc(p.fxDate):''):
-    'Conversion CAD indisponible')+' · Détails ›</small></button>';
+  (p.hasFx?(a.savingsTracking==='linked'?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+(p.fxDate?' · taux du '+esc(p.fxDate):''):
+    'Conversion CAD indisponible')+'</small></button>';
  const savingsNode=$('#wealthSavingsGrid'),placementsNode=$('#wealthInvestmentsGrid');
  if(savingsNode)savingsNode.innerHTML=savings.length?savings.map(tile).join(''):
-  '<div class="trace-wealth-empty">Ajoute un livret, un CELI ou un autre compte d’épargne pour le suivre ici.</div>';
+  '<div class="trace-wealth-empty">Aucun compte d’épargne suivi. Ajoute un livret ou un CELI pour commencer.</div>';
  if(placementsNode)placementsNode.innerHTML=[
   ...(placements.length?placements.map(tile):
-   ['<div class="trace-wealth-empty">Tes placements suivis apparaîtront ici, sans modifier tes données existantes.</div>']),
-  '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon">＋</span><span>Ajouter un compte</span><b>Nouveau</b><small>PEA, CELI, REER…</small></button>'
+   ['<div class="trace-wealth-empty">Aucun placement suivi pour le moment.</div>']),
+  '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon" aria-hidden="true">＋</span><span>Ajouter un placement</span><b>Ajouter</b><small>PEA, CELI, REER…</small></button>'
  ].join('');
  $('#assetGrid').innerHTML=[
  '<button class="asset-card" type="button" id="wealthLiquidityCard"><span class="a-icon">$</span><span>Comptes bancaires</span><b>'+
