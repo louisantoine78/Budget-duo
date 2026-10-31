@@ -729,12 +729,47 @@
 .trace-home-unified .trace-home-available::before{pointer-events:none}
 
 /* 5.37 final Home density — clear financial values and smaller bank-account pills. */
-.trace-home-unified .trace-intl-view-group{margin:9px 0 4px;gap:3px}
-.trace-home-unified .trace-intl-view-label{font-size:10px;font-weight:700;color:#668174;letter-spacing:0}
-.trace-home-unified .trace-intl-switch{gap:5px;padding:1px 0 4px}
-.trace-home-unified .trace-intl-chip{min-height:44px;max-width:139px;padding:5px 9px;font-size:11px;font-weight:700;box-shadow:none}
-.trace-home-unified .trace-intl-chip-star{font-size:11px}
-.trace-home-unified .trace-intl-chip-currency{font-size:9px}
+/* Home account shortcuts: visual chips ~30px tall inside 44px tap targets.
+ * Keep the values visually secondary to Solde estimé and Reste à dépenser.
+ * This is only Home: full bank-account views retain their normal density. */
+.trace-home-unified .trace-intl-view-group{margin:3px 0 0;gap:1px}
+.trace-home-unified .trace-intl-view-label{
+ font-size:9px;font-weight:650;color:#72887a;letter-spacing:.01em;
+}
+.trace-home-unified .trace-intl-switch{
+ gap:3px;padding:0;scrollbar-width:none;
+}
+.trace-home-unified .trace-intl-switch::-webkit-scrollbar{display:none}
+.trace-home-unified .trace-intl-chip{
+ position:relative;isolation:isolate;display:inline-flex;
+ align-items:center;justify-content:center;gap:3px;
+ min-height:44px;max-width:122px;padding:0 9px;
+ border:0;background:transparent;box-shadow:none;
+ color:#536e5c;font-size:10px;font-weight:660;line-height:1.1;
+ text-overflow:clip;white-space:nowrap;
+}
+.trace-home-unified .trace-intl-chip::before{
+ content:"";position:absolute;inset:7px 0;z-index:-1;
+ border:1px solid #e0e9e1;border-radius:999px;background:#f7faf6;
+}
+.trace-home-unified .trace-intl-chip:is(.is-active,[aria-pressed="true"]){
+ background:transparent;border-color:transparent;box-shadow:none;color:#195b42;
+}
+.trace-home-unified .trace-intl-chip:is(.is-active,[aria-pressed="true"])::before{
+ border-color:#adcfb8;background:#e9f4ec;
+}
+.trace-home-unified .trace-intl-chip-name{
+ min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.trace-home-unified .trace-intl-chip-star{font-size:9px;flex-shrink:0}
+.trace-home-unified .trace-intl-chip-currency{font-size:8px;flex-shrink:0}
+.trace-home-unified .trace-intl-view-note{
+ position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+ overflow:hidden;clip-path:inset(50%);white-space:nowrap;
+}
+@media(max-width:360px){
+ .trace-home-unified .trace-intl-chip{max-width:115px;padding-inline:8px}
+}
 .trace-home-unified .trace-home-available{justify-content:center}
 .trace-home-unified #homeBudgetSub,.trace-home-unified #homeBudgetTrack,.trace-home-unified .progress-row{display:none}
 .trace-home-import-coverage{width:100%;display:flex;align-items:center;gap:10px;min-height:57px;margin-top:11px;padding:9px 12px;border:1px solid #d9e6dc;border-radius:15px;background:#fafdFA;color:#285e49;text-align:left;cursor:pointer}
