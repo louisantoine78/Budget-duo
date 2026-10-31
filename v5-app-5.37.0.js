@@ -1514,30 +1514,44 @@ function renderBudget(){
     '<button type="button" class="trace-budget-empty-action" data-budget-add="'+kind+'">'+item.cta+'</button>'+
     '</div>';
   };
-  // Editorial layout only: same budget rows, totals and edit controls.
-  // Keep the disclosure state across redraws, but reset for a new month or scope.
-  const budgetList=$('#budgetSections');
-  const disclosureContext=month+'|'+budgetScope;
-  const expandedBudgetKinds=new Set(budgetList.dataset.traceBudgetContext===disclosureContext?
-   $('#budgetSections details[data-budget-extra][open]').map(node=>node.dataset.budgetExtra):[]);
-  budgetList.dataset.traceBudgetContext=disclosureContext;
-  const budgetRow=b=>'<button class="budget-card budget-edit-row" type="button" data-budget-edit="'+esc(b.id)+'"><span class="bicon">'+esc(cat(b.categoryId).icon||'•')+'</span><span class="bmain"><strong>'+esc(cat(b.categoryId).name)+'</strong><small>'+(b.scope==='couple'?(sId==='couple'?'Commun · réparti entre vous deux':'Ma part sur '+money(b.amount)+' au total'):'Personnel')+'</small></span><span class="bvalue"><strong>'+money(budgetAmt(b,sId))+'</strong></span></button>';
-  budgetList.innerHTML=sectionDefs.map(([title,kind,filter])=>{
-   const items=rows.filter(filter),visible=items.slice(0,2),more=items.slice(2);
-   const total=items.reduce((sum,item)=>sum+budgetAmt(item,sId),0);
-   const countLabel=items.length+' poste'+(items.length>1?'s':'');
-   const moreLabel=more.length+' autre'+(more.length>1?'s':'')+' poste'+(more.length>1?'s':'');
-   const extra=more.length?'<details class="trace-budget-more" data-budget-extra="'+kind+'"'+(expandedBudgetKinds.has(kind)?' open':'')+'><summary><span class="trace-budget-more-label">Voir '+moreLabel+'</span><span class="trace-budget-chevron" aria-hidden="true">⌄</span></summary><div class="trace-budget-more-rows">'+more.map(budgetRow).join('')+'</div></details>':'';
-   return '<div class="section-head trace-budget-family-head"><div class="trace-budget-family-title"><h2>'+title+'</h2><small>'+countLabel+'</small></div><strong class="trace-budget-family-total">'+money(total)+'</strong><button class="linkbtn budget-add-link" type="button" data-budget-add="'+kind+'" aria-label="Ajouter un poste de '+title.toLowerCase()+'">+ Ajouter</button></div>'+
-    '<article class="card budget-section trace-budget-family" data-budget-family="'+kind+'">'+(items.length?visible.map(budgetRow).join('')+extra:emptyBudget(kind))+'</article>';
-  }).join('')+'<div class="trace-budget-toolbar"><button class="linkbtn" type="button" id="manageBudgetCategories">Gérer les catégories</button></div>';
-  budgetList.querySelectorAll('details[data-budget-extra]').forEach(details=>{
-   const label=details.querySelector('.trace-budget-more-label');
-   const count=details.querySelectorAll('[data-budget-edit]').length;
-   const refresh=()=>{label.textContent=(details.open?'Masquer':'Voir')+' '+count+' autre'+(count>1?'s':'')+' poste'+(count>1?'s':'');};
-   details.addEventListener('toggle',refresh);
-   refresh();
+  // Keep the proven financial rendering, then progressively disclose only surplus rows.
+  const list=$('#budgetSections');
+  const budgetContext=month+'|'+budgetScope;
+  const previouslyOpen=list.dataset.traceBudgetContext===budgetContext?
+   new Set($$('#budgetSections details[data-budget-extra][open]').map(node=>node.dataset.budgetExtra)):new Set();
+  $('#budgetSections').innerHTML='<div class="trace-budget-toolbar"><button class="linkbtn" type="button" id="manageBudgetCategories">Gérer les catégories</button></div>'+sectionDefs.map(([t,kind,f])=>'<div class="section-head"><h2>'+t+'</h2><button class="linkbtn budget-add-link" type="button" data-budget-add="'+kind+'">+ Ajouter</button></div><article class="card budget-section">'+(rows.filter(f).length?rows.filter(f).map(b=>'<button class="budget-card budget-edit-row" type="button" data-budget-edit="'+esc(b.id)+'"><span class="bicon">'+esc(cat(b.categoryId).icon||'•')+'</span><span class="bmain"><strong>'+esc(cat(b.categoryId).name)+'</strong><small>'+(b.scope==='couple'?(sId==='couple'?'Commun · réparti entre vous deux':'Ma part sur '+money(b.amount)+' au total'):'Personnel')+'</small></span><span class="bvalue"><strong>'+money(budgetAmt(b,sId))+'</strong></span></button>').join(''):emptyBudget(kind))+'</article>').join('');
+  list.dataset.traceBudgetContext=budgetContext;
+  const families=['income','fixed','variable'];
+  $$('#budgetSections .budget-section').forEach((card,index)=>{
+    const kind=families[index];
+    const heading=card.previousElementSibling;
+    if(!heading||!heading.classList.contains('section-head'))return;
+    heading.classList.add('trace-budget-family-head');
+    const title=heading.querySelector('h2');
+    const count=card.querySelectorAll('[data-budget-edit]').length;
+    const total=rows.filter(b=>sectionDefs[index][2](b)).reduce((sum,b)=>sum+budgetAmt(b,sId),0);
+    const caption=document.createElement('div');caption.className='trace-budget-family-title';
+    title.replaceWith(caption);caption.append(title);
+    const small=document.createElement('small');small.textContent=count+' poste'+(count>1?'s':'');caption.append(small);
+    const value=document.createElement('strong');value.className='trace-budget-family-total';value.textContent=money(total);
+    heading.insertBefore(value,heading.querySelector('.budget-add-link'));
+    card.classList.add('trace-budget-family');card.dataset.budgetFamily=kind;
+    const entries=[...card.querySelectorAll(':scope > .budget-card')];
+    if(entries.length>2){
+      const details=document.createElement('details');details.className='trace-budget-more';details.dataset.budgetExtra=kind;
+      const summary=document.createElement('summary');
+      const label=document.createElement('span');label.className='trace-budget-more-label';
+      const chev=document.createElement('span');chev.className='trace-budget-chevron';chev.setAttribute('aria-hidden','true');chev.textContent='⌄';
+      summary.append(label,chev);details.append(summary);
+      const rest=document.createElement('div');rest.className='trace-budget-more-rows';
+      entries.slice(2).forEach(node=>rest.append(node));details.append(rest);card.append(details);
+      details.open=previouslyOpen.has(kind);
+      const number=entries.length-2;
+      const refresh=()=>label.textContent=(details.open?'Masquer':'Voir')+' '+number+' autre'+(number>1?'s':'')+' poste'+(number>1?'s':'');
+      details.addEventListener('toggle',refresh);refresh();
+    }
   });
+  const toolbar=list.querySelector('.trace-budget-toolbar');if(toolbar)list.append(toolbar);
   $('#manageBudgetCategories').onclick=manageCategories;
   document.querySelectorAll('[data-budget-add]').forEach(btn=>btn.onclick=()=>openBudgetAdd(btn.dataset.budgetAdd));
   document.querySelectorAll('[data-budget-edit]').forEach(btn=>btn.onclick=()=>openBudgetEdit(btn.dataset.budgetEdit));
