@@ -146,16 +146,37 @@ let base;
    await add.click();
    const panel=await backdrop.getAttribute('data-trace-panel');
    assert.equal(panel,'budget-add','Missing '+kind+' premium form');
-   assert.ok(await page.locator('.trace-panel-caption').isVisible());
+   assert.equal(await page.locator('.trace-panel-caption').isVisible(),false);
    assert.ok(await page.locator('#budgetAddAmount').isVisible());
+   assert.equal(await page.locator('#sheetBody .trace-budget-amount-stage').count(),1);
+   assert.ok(await page.locator('#budgetAddAmount').evaluate(el=>
+    !!(el.compareDocumentPosition(document.querySelector('#budgetAddCategory'))&Node.DOCUMENT_POSITION_FOLLOWING)));
    const budgetAmount=await page.locator('#budgetAddAmount').evaluate(el=>({size:parseFloat(getComputedStyle(el).fontSize),
     weight:Number(getComputedStyle(el).fontWeight)}));
-   assert.ok(budgetAmount.size>=20&&budgetAmount.size<=22&&budgetAmount.weight<650);
+   assert.ok(budgetAmount.size>=27&&budgetAmount.size<=30&&budgetAmount.weight<650);
    assert.equal(await page.locator('#sheetBody>.settings-hero .pico').evaluate(el=>getComputedStyle(el).display),'none');
    assert.equal(await page.locator('#sheetBody>.settings-hero').evaluate(el=>getComputedStyle(el).backgroundImage),'none');
    assert.ok(await page.locator('#saveBudgetAdd').evaluate(el=>el.getBoundingClientRect().height)>=48);
+   assert.ok(await page.locator('#closeSheet').evaluate(el=>el.getBoundingClientRect().height)>=44);
+   assert.equal(await page.locator('.trace-budget-sheet-context small').innerText(),
+    kind==='income'?'Revenu':kind==='fixed'?'Dépense fixe':'Dépense variable');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   await page.locator('#budgetAddAmount').fill('120');
+   await page.locator('#budgetAllocationScope').selectOption('couple');
+   assert.equal(await page.locator('#budgetShareFields').isVisible(),true);
+   assert.equal(Number(await page.locator('#budgetMineAmount').inputValue())+
+    Number(await page.locator('#budgetPartnerAmount').inputValue()),120);
    await page.locator('#cancelBudgetAdd').click();
+  }
+  if(await page.locator('[data-budget-edit]').count()){
+   await page.locator('[data-budget-edit]').first().click();
+   assert.equal(await backdrop.getAttribute('data-trace-panel'),'budget-edit');
+   assert.ok(await page.locator('#budgetEditAmount').isVisible());
+   assert.ok(await page.locator('#saveBudgetEdit').isVisible());
+   assert.ok(await page.locator('#deleteBudgetEdit').isVisible());
+   assert.ok(await page.locator('#cancelBudgetEdit').isVisible());
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   await page.locator('#cancelBudgetEdit').click();
   }
   await page.locator('#budgetCopyPrevious').click();
   if(await page.locator('#confirmBudgetCopy').count()){

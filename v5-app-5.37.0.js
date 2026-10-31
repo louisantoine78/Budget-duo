@@ -3268,15 +3268,15 @@ function budgetCategoriesFor(kind){
 }
 function budgetKindLabel(kind){return kind==='income'?'Revenu':kind==='fixed'?'Dépense fixe':'Dépense variable';}
 function budgetScopeChoices(value){
- return '<label class="label2" style="margin-top:12px">Ce budget concerne</label>'+
+ return '<div class="trace-budget-scope-block"><label class="label2" for="budgetAllocationScope">Répartition</label>'+
   '<select class="input" id="budgetAllocationScope">'+
   '<option value="'+esc(me)+'"'+(value===me?' selected':'')+'>Moi uniquement (100 %)</option>'+
-  '<option value="couple"'+(value==='couple'?' selected':'')+'>Nous deux · répartir le total</option></select>';
+  '<option value="couple"'+(value==='couple'?' selected':'')+'>Nous deux · répartir le total</option></select></div>';
 }
 function budgetAmountField(id,amount){
- return '<label class="label2" style="margin-top:12px">Montant total prévu</label>'+
+ return '<div class="trace-budget-amount-stage"><label class="label2" for="'+id+'">Montant prévu</label>'+
   '<div class="budget-amount-field"><input class="input" id="'+id+'" type="number" inputmode="decimal" min="0" step=".01" value="'+
-  (Number.isFinite(Number(amount))?Number(amount):0)+'" placeholder="0,00"><span>$</span></div>';
+  (Number.isFinite(Number(amount))?Number(amount):0)+'" placeholder="0,00"><span aria-hidden="true">CAD</span></div></div>';
 }
 function openBudgetAdd(kind='variable'){
  const cats=budgetCategoriesFor(kind);
@@ -3296,13 +3296,15 @@ function openBudgetAdd(kind='variable'){
  }
  const options=cats.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
  openSheet('Ajouter au budget',
-  '<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(monthLabel(budgetMonth))+
-  '</b><small>'+esc(budgetKindLabel(kind))+' · montant unique réparti si besoin</small></div></div>'+
-  '<label class="label2">Catégorie</label><select class="input" id="budgetAddCategory">'+options+'</select>'+
-  budgetScopeChoices(initialScope)+budgetAmountField('budgetAddAmount',0)+budgetShareFields(null,initialScope,0)+
+  '<div class="settings-hero trace-budget-sheet-context"><span class="pico large">'+uiIcon('calendar')+'</span>'+
+  '<div><b>'+esc(monthLabel(budgetMonth))+'</b><small>'+esc(budgetKindLabel(kind))+'</small></div></div>'+
+  budgetAmountField('budgetAddAmount',0)+
+  '<div class="trace-budget-fieldset"><div class="trace-budget-category-block">'+
+  '<label class="label2" for="budgetAddCategory">Catégorie</label><select class="input" id="budgetAddCategory">'+options+'</select></div>'+
+  budgetScopeChoices(initialScope)+'</div>'+budgetShareFields(null,initialScope,0)+
   '<div id="traceBudgetShareError" role="status" class="trace-budget-share-error"></div>'+
-  '<button class="primary full" id="saveBudgetAdd" type="button" style="margin-top:18px">Ajouter au budget</button>'+
-  '<button class="secondary full" id="cancelBudgetAdd" type="button" style="margin-top:8px">Annuler</button>'
+  '<div class="trace-budget-sheet-actions"><button class="primary full" id="saveBudgetAdd" type="button">Ajouter au budget</button>'+
+  '<button class="secondary full" id="cancelBudgetAdd" type="button">Annuler</button></div>'
  );
  $('#cancelBudgetAdd').onclick=closeSheet;
  const allocation=bindBudgetShareFields('#budgetAllocationScope','#budgetAddAmount');
@@ -3333,14 +3335,15 @@ function openBudgetEdit(id){
  if(!item)return;
  const category=cat(item.categoryId);
  openSheet('Modifier le budget',
-  '<div class="settings-hero"><span class="pico large">'+uiIcon('calendar')+'</span><div><b>'+esc(category.name)+
-  '</b><small>'+esc(monthLabel(item.month))+' · '+(item.scope==='couple'?'Budget commun':'Budget personnel')+'</small></div></div>'+
-  budgetScopeChoices(item.scope)+budgetAmountField('budgetEditAmount',item.amount)+
+  '<div class="settings-hero trace-budget-sheet-context"><span class="pico large">'+uiIcon('calendar')+'</span>'+
+  '<div><b>'+esc(monthLabel(item.month))+'</b><small>'+esc(category.name)+'</small></div></div>'+
+  budgetAmountField('budgetEditAmount',item.amount)+
+  '<div class="trace-budget-fieldset">'+budgetScopeChoices(item.scope)+'</div>'+
   budgetShareFields(item,item.scope,Number(item.amount||0))+
   '<div id="traceBudgetShareError" role="status" class="trace-budget-share-error"></div>'+
-  '<button class="primary full" id="saveBudgetEdit" type="button" style="margin-top:18px">Enregistrer</button>'+
-  '<button class="secondary full trace-danger" id="deleteBudgetEdit" type="button" style="margin-top:8px">Supprimer ce poste du mois</button>'+
-  '<button class="secondary full" id="cancelBudgetEdit" type="button" style="margin-top:8px">Annuler</button>'
+  '<div class="trace-budget-sheet-actions"><button class="primary full" id="saveBudgetEdit" type="button">Enregistrer</button>'+
+  '<button class="secondary full" id="cancelBudgetEdit" type="button">Annuler</button>'+
+  '<button class="secondary full trace-danger" id="deleteBudgetEdit" type="button">Supprimer ce poste du mois</button></div>'
  );
  $('#cancelBudgetEdit').onclick=closeSheet;
  const allocation=bindBudgetShareFields('#budgetAllocationScope','#budgetEditAmount');
