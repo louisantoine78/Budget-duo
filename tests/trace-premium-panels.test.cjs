@@ -21,10 +21,11 @@ test('premium panel covers manual entries, budget, bank and wealth with standard
  const types=window.TraceSheetPremium.types;
  assert.equal(new Set(types.map(t=>t.key)).size,types.length);
  for(const key of ['quick-add','manual','transaction','budget-add','budget-edit',
+  'bank-movement','international-transfer','foreign-expense','settlement',
   'budget-copy','account','investment','reconciliation']){
   assert.ok(types.some(t=>t.key===key),key);
  }
- assert.match(js,/key:'standard',eyebrow:'TRACE · ESPACE DE GESTION'/);
+ assert.match(js,/key:'standard',eyebrow:'INFORMATIONS'/);
  assert.match(js,/head\.querySelectorAll\('\.trace-panel-eyebrow,\.trace-panel-caption'\)/);
  assert.match(js,/head\.insertBefore\(eyebrow,heading\)/);
  assert.match(js,/setAttribute\('aria-labelledby','sheetTitle'\)/);
@@ -52,4 +53,16 @@ test('editorial financial sheets remove decorative nesting but retain all contro
  assert.match(js,/Saisie manuelle\./);
  assert.match(js,/Poste du budget mensuel\./);
  assert.match(js,/Contrôle avant validation\./);
+});
+
+test('one Budget spending analysis, with unified international and movement dialogs',()=>{
+ assert.doesNotMatch(html,/<h2>Mes dépenses réelles<\/h2>/);
+ assert.match(html,/<article class="card" id="budgetCategoryImpact" aria-label="Où va mon argent \?"><\/article>/);
+ for(const selector of ['#smartMovementSave','#fxSave','#traceForeignMetaSave','#saveSettlement']){
+  assert.ok(js.includes("selector:'"+selector+"'"),selector);
+ }
+ for(const name of ['bank-movement','international-transfer','foreign-expense','settlement']){
+  assert.ok(css.includes('data-trace-panel="'+name+'"'),name);
+ }
+ assert.match(css,/\.trace-edit-card-index/);
 });

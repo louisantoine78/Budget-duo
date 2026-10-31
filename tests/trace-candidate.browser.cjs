@@ -204,6 +204,34 @@ let base;
   await page.locator('#closeSheet').click();
   await go('home');
  });
+ await test('Budget displays one real-spending heading and each legacy transaction editor is editorial',async()=>{
+  await go('budget');
+  assert.equal(await page.locator('.page[data-page="budget"] h2').filter({hasText:/Mes dépenses réelles/}).count(),0);
+  assert.equal(await page.locator('#budgetCategoryImpact .trace-insights-head strong').count(),1);
+  assert.equal(await page.locator('#budgetCategoryImpact .trace-insights-head strong').innerText(),'Où va mon argent ?');
+  for(const [id,kind,input] of [
+   ['demo-ca-eur-transfer','international-transfer','#fxSent'],
+   ['demo-card-payment','bank-movement','#smartMovementSave'],
+   ['demo-fr-usd','foreign-expense','#traceForeignMetaName']
+  ]){
+   await page.evaluate(id=>window.TraceBankBridge.openTransaction(id),id);
+   const backdrop=page.locator('#sheetBackdrop');
+   assert.equal(await backdrop.getAttribute('data-trace-panel'),kind);
+   assert.equal(await page.locator('.trace-panel-eyebrow').count(),1);
+   assert.equal(await backdrop.locator('.trace-panel-eyebrow').evaluate(el=>getComputedStyle(el,'::before').display),'none');
+   assert.equal(await page.locator('#sheetTitle').isVisible(),true);
+   assert.equal(await page.locator(input).isVisible(),true);
+   if(kind==='international-transfer'){
+    assert.equal(await backdrop.locator('.trace-edit-card .trace-edit-fields>b').evaluate(el=>getComputedStyle(el).display),'block');
+    assert.equal(await backdrop.locator('.trace-edit-card .trace-edit-fields>small').evaluate(el=>getComputedStyle(el).display),'block');
+   }
+   if(await backdrop.locator('.trace-edit-card-index').count())
+    assert.equal(await backdrop.locator('.trace-edit-card-index').first().evaluate(el=>getComputedStyle(el).display),'none');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   await page.locator('#closeSheet').click();
+  }
+  await go('home');
+ });
  await test('premium patrimoine and bank setup share the same responsive sheet standard',async()=>{
   await go('wealth');
   await page.locator('#addAsset').click();

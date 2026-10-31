@@ -12,6 +12,14 @@
    description:'Prépare tes catégories avant la première planification.'},
   {key:'manual',selector:'#saveManualTx',eyebrow:'MOUVEMENT FINANCIER',
    description:'Saisie manuelle.'},
+  {key:'bank-movement',selector:'#smartMovementSave',eyebrow:'OPÉRATION BANCAIRE',
+   description:'Qualifier un mouvement sans le compter deux fois.'},
+  {key:'international-transfer',selector:'#fxSave',eyebrow:'VIREMENT INTERNATIONAL',
+   description:'Montants et devises des deux comptes.'},
+  {key:'foreign-expense',selector:'#traceForeignMetaSave',eyebrow:'DÉPENSE INTERNATIONALE',
+   description:'Informations modifiables uniquement.'},
+  {key:'settlement',selector:'#saveSettlement',eyebrow:'RÈGLEMENT ENTRE PARTENAIRES',
+   description:'Transfert entre vos comptes.'},
   {key:'transaction-validate',selector:'#txValidate',eyebrow:'VÉRIFICATION BANCAIRE',
    description:'Contrôle avant validation.'},
   {key:'transaction',selector:'#txSave',eyebrow:'VÉRIFICATION BANCAIRE',
@@ -44,7 +52,7 @@
   body.classList.remove('trace-intl-premium-body');
   body.removeAttribute('data-trace-panel');
   const spec=TYPES.find(type=>body.querySelector(type.selector))||
-   {key:'standard',eyebrow:'TRACE · ESPACE DE GESTION',description:''};
+   {key:'standard',eyebrow:'INFORMATIONS',description:''};
   backdrop.classList.add('trace-intl-premium-dialog');
   backdrop.dataset.tracePanel=spec.key;
   body.dataset.tracePanel=spec.key;
