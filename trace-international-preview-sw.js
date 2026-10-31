@@ -3,7 +3,7 @@
 const BASE=new URL('./',self.location.href);
 const ENTRY=new URL('trace-international-preview.html',BASE);
 const PREFIX='trace-lab-537:'+encodeURIComponent(BASE.pathname)+':';
-const CACHE=PREFIX+'d6cde6507275bbe48c7535c9';
+const CACHE=PREFIX+'b22b4465e42eadc6e657883a';
 const ASSETS=[
  "assets/trace-wallet-v1-180.png",
  "assets/trace-wallet-v1-192.png",
@@ -55,6 +55,8 @@ const ASSETS=[
  "trace-movement-guidance-1.0.0.css",
  "trace-operation-ui-5.37.0.js",
  "trace-pdfjs-local-loader-1.0.0.mjs",
+ "trace-premium-panels-5.37.0.css",
+ "trace-premium-panels-5.37.0.js",
  "trace-preview-pwa-1.0.0.js",
  "trace-reminders-1.0.0.js",
  "trace-separation-1.1.0.js",

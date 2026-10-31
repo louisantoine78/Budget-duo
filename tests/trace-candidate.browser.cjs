@@ -86,6 +86,63 @@ let base;
   assert.match(await text('homeBalance'),/3\s*670,00/);
   assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
  });
+ await test('premium panels share a financial form language across transaction and budget',async()=>{
+  const backdrop=page.locator('#sheetBackdrop');
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   await page.locator('#quickAdd').click();
+   await page.locator('#traceAddManual').click();
+   assert.equal(await backdrop.getAttribute('data-trace-panel'),'manual');
+   assert.match(await page.locator('.trace-panel-eyebrow').innerText(),/MOUVEMENT FINANCIER/);
+   assert.equal(await backdrop.locator('.trace-panel-caption').count(),1);
+   assert.equal(await page.locator('#closeSheet').getAttribute('aria-label'),'Fermer Ajouter une opération');
+   assert.ok(await page.locator('#closeSheet').evaluate(el=>el.getBoundingClientRect().height)>=44);
+   assert.ok(await page.locator('#saveManualTx').evaluate(el=>el.getBoundingClientRect().height)>=48);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   await page.locator('#cancelManualTx').click();
+   assert.equal(await backdrop.evaluate(el=>el.classList.contains('open')),false);
+  }
+  await page.setViewportSize({width:390,height:844});
+  await go('budget');
+  for(const kind of ['income','variable','fixed']){
+   const add=page.locator('[data-budget-add="'+kind+'"]').first();
+   assert.ok(await add.count(),kind+' budget addition must exist');
+   await add.click();
+   const panel=await backdrop.getAttribute('data-trace-panel');
+   assert.equal(panel,'budget-add','Missing '+kind+' premium form');
+   assert.ok(await page.locator('.trace-panel-caption').isVisible());
+   assert.ok(await page.locator('#budgetAddAmount').isVisible());
+   assert.ok(await page.locator('#saveBudgetAdd').evaluate(el=>el.getBoundingClientRect().height)>=48);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   await page.locator('#cancelBudgetAdd').click();
+  }
+  await page.locator('#budgetCopyPrevious').click();
+  if(await page.locator('#confirmBudgetCopy').count()){
+   assert.equal(await backdrop.getAttribute('data-trace-panel'),'budget-copy');
+   assert.ok(await page.locator('#confirmBudgetCopy').evaluate(el=>el.getBoundingClientRect().height)>=48);
+  }
+  await page.locator('#closeSheet').click();
+  assert.equal(await backdrop.getAttribute('data-trace-panel')==='budget-add',false,
+   'Opening a different sheet may not retain prior premium labels');
+  await go('home');
+ });
+ await test('premium patrimoine and bank setup share the same responsive sheet standard',async()=>{
+  await go('wealth');
+  await page.locator('#addAsset').click();
+  assert.equal(await page.locator('#sheetBackdrop').getAttribute('data-trace-panel'),'investment');
+  assert.equal(await page.locator('.trace-panel-eyebrow').innerText(),'PATRIMOINE');
+  assert.ok(await page.locator('#investmentAccountName').evaluate(el=>el.getBoundingClientRect().height)>=44);
+  assert.equal(await page.locator('#saveInvestmentAccount').isVisible(),true);
+  await page.locator('#cancelInvestmentAccount').click();
+  await accountSettings();
+  await page.locator('#traceAddBankAccount').click();
+  assert.equal(await page.locator('#sheetBackdrop').getAttribute('data-trace-panel'),'account');
+  assert.match(await page.locator('.trace-panel-eyebrow').innerText(),/GESTION DES COMPTES/);
+  assert.ok(await page.locator('#traceSaveNewBank').evaluate(el=>el.getBoundingClientRect().height)>=48);
+  await page.locator('#traceCancelNewBank').click();
+  await page.locator('#closeSheet').click();
+  await go('home');
+ });
  await test('320, 390 and 430 px layouts keep five tabs, visible budget and unbroken Patrimoine',async()=>{
   for(const width of [320,390,430]){
    await page.setViewportSize({width,height:844});
