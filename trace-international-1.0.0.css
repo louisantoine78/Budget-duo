@@ -1400,3 +1400,150 @@
 @media(prefers-reduced-motion:reduce){
  .page[data-page="wealth"] .trace-wealth-grid .asset-card{transition:none}
 }
+
+
+/* TRACE 5.37 — premium finish for Home and Activity. Visible essentials
+   remain accessible without hiding a feature or changing financial arithmetic. */
+.page[data-page="home"] .trace-home-unified #homeBudgetSub:not([hidden]){
+ display:block!important;font-size:11px;color:#cde3d4;line-height:1.4;
+ font-weight:480;margin:5px 0 0;
+}
+.page[data-page="home"] .trace-home-unified #homeBudgetTrack:not([hidden]){
+ display:block!important;
+ height:4px;border-radius:99px;overflow:hidden;
+ background:rgba(236,249,239,.22);
+ margin-top:12px;border:0;
+}
+.page[data-page="home"] .trace-home-unified #homeBudgetTrack:not([hidden])>i{
+ display:block;height:100%;border-radius:99px;
+ background:#b0ddbd;
+}
+.page[data-page="home"] .trace-home-unified #homeBudgetProgressDetails:not([hidden]){
+ display:flex!important;align-items:center;justify-content:space-between;
+ gap:10px;font-size:10px;font-weight:510;line-height:1.4;
+ color:#d4e6d9;margin-top:7px;
+}
+.page[data-page="home"] #homeBudgetProgressDetails>span:last-child{
+ text-align:right;
+}
+.page[data-page="home"] .trace-home-more{
+ padding-top:9px;margin-top:17px;border-top:1px solid #e5eae4;
+}
+.page[data-page="home"] .trace-home-more .trace-home-tools-head{
+ margin:0 0 10px;
+}
+.page[data-page="home"] .trace-home-more .trace-home-tools-head h2{
+ font-size:15px;font-weight:700;letter-spacing:-.025em;
+ color:#294b38;
+}
+.page[data-page="home"] .trace-home-more .trace-home-import-coverage{
+ display:flex;gap:11px;align-items:center;
+ padding:11px 12px;min-height:55px;margin:0;
+ border:1px solid #e6ece4;border-radius:13px;
+ background:#fcfdf9;box-shadow:none;
+}
+.page[data-page="home"] .trace-home-import-coverage .trace-home-import-mark{
+ width:31px;height:31px;border-radius:9px;
+ background:#eef4ee;color:#315f47;font-size:15px;
+}
+.page[data-page="home"] .trace-home-import-coverage .trace-home-import-copy strong{
+ font-size:12px;font-weight:670;color:#294b39;
+}
+.page[data-page="home"] .trace-home-import-coverage .trace-home-import-copy small{
+ color:#718575;font-size:10px;line-height:1.35;
+}
+.page[data-page="home"] .trace-home-more .trace-home-sharing-head{
+ min-height:34px;margin:10px 0 6px;
+}
+.page[data-page="home"] .trace-home-sharing-head h3{
+ font-size:11px;font-weight:650;color:#6c826f;
+ letter-spacing:0;margin:0;
+}
+.page[data-page="home"] .trace-home-sharing-head .linkbtn{
+ min-height:44px;font-size:11px;font-weight:610;
+ color:#42755c;padding-inline:4px;
+}
+.page[data-page="home"] .trace-home-more #shareCard{
+ min-height:69px;padding:12px;
+ border:1px solid #e5ebe4!important;
+ border-radius:13px;box-shadow:none;background:#fffdfa;
+ gap:10px;
+}
+.page[data-page="home"] #shareCard .share-avatar{
+ width:34px;height:34px;border-radius:10px;
+ font-size:14px;font-weight:690;background:#edf5ee;
+ color:#436f55;flex-shrink:0;
+}
+.page[data-page="home"] #shareCard .share-main{
+ min-width:0;display:grid;gap:3px;
+}
+.page[data-page="home"] #shareCard .share-main b{
+ font-size:11px;color:#5c7665;font-weight:630;line-height:1.25;
+}
+.page[data-page="home"] #shareCard .share-main strong{
+ font-size:17px;font-weight:680;letter-spacing:-.025em;line-height:1.2;
+ color:#234837;margin:0;font-variant-numeric:tabular-nums;
+ overflow-wrap:anywhere;
+}
+.page[data-page="home"] #shareCard .share-main small{
+ color:#87988a;font-size:10px;
+}
+.page[data-page="home"] #shareCard>.chev{
+ color:#7b9885;font-size:18px;
+}
+.page[data-page="activity"] .trace-activity-main-tabs{
+ gap:0;min-height:48px;
+ border-bottom:1px solid #e1eae1;
+ background:transparent;
+ margin:9px 0 10px;
+}
+.page[data-page="activity"] .trace-activity-main-tabs .tab{
+ position:relative;min-width:0;min-height:47px;
+ padding:10px 5px 11px;
+ border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ color:#728676;font-weight:580;
+ font-size:clamp(12px,3.3vw,14px);
+ letter-spacing:-.012em;
+}
+.page[data-page="activity"] .trace-activity-main-tabs .tab:is(.active,[aria-selected="true"]){
+ color:#20533c;font-weight:700;
+}
+.page[data-page="activity"] .trace-activity-main-tabs .tab:is(.active,[aria-selected="true"])::after{
+ content:"";position:absolute;bottom:-1px;
+ left:16%;width:68%;height:2px;border-radius:99px;
+ background:#276c50;
+}
+.page[data-page="activity"] .trace-activity-main-tabs .tab:focus-visible{
+ outline:2px solid #6aac86;outline-offset:-3px;border-radius:6px!important;
+}
+.page[data-page="activity"] .activity-stats{
+ gap:0;padding:0;margin:10px 0 14px;
+ border:1px solid #e9eee9;border-radius:12px;background:#fbfcf9;
+ overflow:hidden;
+}
+.page[data-page="activity"] .activity-stats .statbox{
+ min-height:65px;padding:11px 10px 10px;
+ border:0;background:transparent;border-radius:0;
+}
+.page[data-page="activity"] .activity-stats .statbox:not(:last-child){
+ border-right:1px solid #e9eee9;
+}
+.page[data-page="activity"] .activity-stats .statbox span{
+ display:block;color:#748878;
+ font-size:10px;font-weight:590;line-height:1.25;
+}
+.page[data-page="activity"] .activity-stats .statbox b{
+ display:block;margin-top:7px;
+ color:#214432;font-size:clamp(13px,3.7vw,18px);
+ font-weight:670;line-height:1.2;letter-spacing:-.025em;
+ font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+@media(max-width:359px){
+ .page[data-page="activity"] .activity-stats .statbox{
+  padding-inline:6px;
+ }
+ .page[data-page="activity"] .activity-stats .statbox b{
+  font-size:13px;
+ }
+}

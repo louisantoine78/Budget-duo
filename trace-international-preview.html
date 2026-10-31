@@ -148,7 +148,7 @@
           <div class="big" id="homeBudgetAvailable">—</div>
           <div class="sub" id="homeBudgetSub" hidden>Chargement…</div>
           <div class="progress" id="homeBudgetTrack" role="progressbar" aria-label="Budget consommé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><i id="homeBudgetProgress" style="width:0%"></i></div>
-          <div class="progress-row" hidden><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
+          <div class="progress-row" id="homeBudgetProgressDetails" hidden><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
         </article></div>
       <div class="section-head trace-home-month-head"><h2>Ce mois-ci</h2></div>
       <div class="grid grid-3 trace-home-month-kpis" style="margin-top:14px">
@@ -172,9 +172,9 @@
       </article>
 
       <div class="trace-home-more" id="homeMoreDetails" aria-label="Outils et partage">
-        <div class="section-head trace-home-tools-head"><h2>Outils</h2></div>
+        <div class="section-head trace-home-tools-head"><h2>Outils et partage</h2></div>
       <button type="button" class="trace-home-import-coverage" id="homeImportCalendar" aria-label="Ouvrir le calendrier de vérification des imports"><span class="trace-home-import-mark" aria-hidden="true">▦</span><span class="trace-home-import-copy"><strong>Calendrier des imports</strong><small id="homeImportCoverage">Suivi de vérification à consulter</small></span><span aria-hidden="true">›</span></button>
-      <div class="section-head"><h2>Partage</h2><button class="linkbtn" id="shareOpen">Ouvrir</button></div>
+      <div class="section-head trace-home-sharing-head"><h3>Partage</h3><button class="linkbtn" id="shareOpen" aria-label="Ouvrir le détail du partage">Détails</button></div>
       <button class="card share-card" id="shareCard" style="width:100%;text-align:left;border:1px solid rgba(18,63,56,.06)">
         <span class="share-avatar" id="partnerAvatar">É</span>
         <span class="share-main"><b id="shareLabel">Solde avec votre partenaire</b><strong id="shareBalance">—</strong><small id="shareSmall">Solde continu</small></span>

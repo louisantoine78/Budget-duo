@@ -447,6 +447,43 @@ let base;
   await drawer.locator('summary').click();
   await go('home');
  });
+ await test('Home budget shows real progress without hiding tools or double-counting cash',async()=>{
+  await go('home');
+  assert.equal(await page.locator('#homeBudgetSub').isVisible(),true);
+  assert.equal(await page.locator('#homeBudgetTrack').isVisible(),true);
+  assert.equal(await page.locator('#homeBudgetProgressDetails').isVisible(),true);
+  const budget=await page.locator('#homeBudgetAvailable').innerText();
+  assert.match(await page.locator('#homeBudgetSub').innerText(),/prévus ce mois/);
+  assert.match(await page.locator('#homeBudgetPercent').innerText(),/% consommé/);
+  assert.match(await page.locator('#homeBudgetSpent').innerText(),/dépensés/);
+  assert.equal(await page.locator('#shareCard').isVisible(),true);
+  assert.equal(await page.locator('#homeImportCalendar').isVisible(),true);
+  assert.equal(await page.locator('#shareOpen').isVisible(),true);
+  const row=await page.locator('#homeBudgetProgressDetails').evaluate(el=>{
+   const s=getComputedStyle(el),r=el.getBoundingClientRect();
+   return{display:s.display,height:r.height};
+  });
+  assert.equal(row.display,'flex');
+  assert.ok(row.height<=30,'Progress row should not crowd the Home hero');
+  assert.equal(await page.locator('#homeBudgetAvailable').innerText(),budget);
+ });
+ await test('Activity tabs are subtle underlines, and the three financial totals remain visible',async()=>{
+  await go('activity');
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   const tab=await page.locator('#activityTabTransactions').evaluate(el=>{
+    const s=getComputedStyle(el),after=getComputedStyle(el,'::after');
+    return{bg:s.backgroundColor,radius:s.borderRadius,bar:after.height,color:s.color};
+   });
+   assert.equal(tab.bg,'rgba(0, 0, 0, 0)');
+   assert.equal(tab.bar,'2px');
+   assert.equal(await page.locator('.activity-stats .statbox:visible').count(),3);
+   assert.ok(await page.locator('.activity-stats').evaluate(el=>el.getBoundingClientRect().height)<95);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+  }
+  await page.setViewportSize({width:390,height:844});
+  await go('home');
+ });
  await test('small Home account pills preserve 44px touch targets',async()=>{
   await go('home');
   for(const width of [320,390,768]){

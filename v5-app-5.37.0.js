@@ -1459,7 +1459,11 @@ function homeReconciliationBadge(){
  }
  return latest?'Rapproché au '+latest.date.slice(8,10)+'/'+latest.date.slice(5,7):'À rapprocher';
 }
-function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.expense/s.eb*100:0,b=bank(sId);$('#homeMonthLabel').textContent=monthLabel(CM);$('#homeGreeting').textContent=homeScope==='mine'?`Bonjour ${member(me).name}`:'Votre situation';$('#homeBudgetAvailable').textContent=s.eb?money(s.eb-s.expense):'À définir';$('#homeBudgetSub').textContent=s.eb?`sur ${money(s.eb)} prévus ce mois`:'Budget du mois à compléter';$('#homeBudgetProgress').style.width=`${Math.min(100,Math.max(0,cons))}%`;$('#homeBudgetTrack').setAttribute('aria-valuenow',String(Math.round(Math.min(100,Math.max(0,cons)))));$('#homeBudgetPercent').textContent=`${cons.toFixed(0)} % consommé`;$('#homeBudgetSpent').textContent=`${money(s.expense)} dépensés`;$('#homeBalance').textContent=b.net===null?'À configurer':b.needsCardReview?'À vérifier':money(b.net);
+function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.expense/s.eb*100:0,b=bank(sId);$('#homeMonthLabel').textContent=monthLabel(CM);$('#homeGreeting').textContent=homeScope==='mine'?`Bonjour ${member(me).name}`:'Votre situation';$('#homeBudgetAvailable').textContent=s.eb?money(s.eb-s.expense):'À définir';$('#homeBudgetSub').textContent=s.eb?`sur ${money(s.eb)} prévus ce mois`:'Budget du mois à compléter';$('#homeBudgetProgress').style.width=`${Math.min(100,Math.max(0,cons))}%`;$('#homeBudgetTrack').setAttribute('aria-valuenow',String(Math.round(Math.min(100,Math.max(0,cons)))));$('#homeBudgetPercent').textContent=`${cons.toFixed(0)} % consommé`;$('#homeBudgetSpent').textContent=`${money(s.expense)} dépensés`;const hasPlannedBudget=s.eb>0;
+ $('#homeBudgetSub').hidden=!hasPlannedBudget;
+ $('#homeBudgetTrack').hidden=!hasPlannedBudget;
+ $('#homeBudgetProgressDetails').hidden=!hasPlannedBudget;
+ $('#homeBalance').textContent=b.net===null?'À configurer':b.needsCardReview?'À vérifier':money(b.net);
  $('#homeChecking').textContent=b.checking===null?'—':money(b.checking);
  $('#homeCard').textContent=b.card===null?'—':b.needsCardReview?
   'Avoir estimé '+money(b.cardCredit):money(b.cardDebt)+' de dette';

@@ -342,3 +342,20 @@ test('Wealth keeps one upfront net valuation, visible banks, savings and investm
  assert.match(wealth,/Trésorerie et comptes/);
  assert.match(wealth,/Comprendre mon patrimoine/);
 });
+
+test('Home progress uses actual current-month budget and stays visible when defined',()=>{
+ assert.match(app,/const hasPlannedBudget=s\.eb>0/);
+ assert.match(app,/\$\('#homeBudgetSub'\)\.hidden=!hasPlannedBudget/);
+ assert.match(app,/\$\('#homeBudgetProgressDetails'\)\.hidden=!hasPlannedBudget/);
+ assert.match(home,/id="homeBudgetProgressDetails" hidden/);
+ assert.match(css,/#homeBudgetTrack:not\(\[hidden\]\)/);
+ assert.match(home,/<h2>Outils et partage<\/h2>/);
+ assert.match(home,/id="shareOpen" aria-label="Ouvrir le détail du partage"/);
+});
+test('Activity uses low-noise underlined tabs and no hidden financial KPIs',()=>{
+ assert.match(css,/\.trace-activity-main-tabs \.tab:is\(\.active,\[aria-selected="true"\]\)::after/);
+ assert.match(css,/\.activity-stats \.statbox b\{/);
+ assert.match(shell,/id="activityExpenses"/);
+ assert.match(shell,/id="activityIncome"/);
+ assert.match(shell,/id="activityNet"/);
+});
