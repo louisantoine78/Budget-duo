@@ -576,7 +576,7 @@ function openSettlement(original){
  const amount=original?.amountCAD??(Math.abs(balance)>.005?Math.abs(balance):0);
  openSheet(original?'Modifier le règlement':'Règlement entre partenaires',
   '<div class="trace-edit-layout trace-settlement-edit-layout">'+
-   '<p class="trace-edit-lead">Un règlement entre vous deux déplace de l’argent, mais n’ajoute aucune dépense ou revenu dans votre budget.</p>'+
+   '<p class="trace-edit-lead">Transfert entre vos comptes, sans dépense ni revenu supplémentaire.</p>'+
    '<section class="trace-edit-card" aria-labelledby="traceSettlePeople">'+
      '<div class="trace-edit-card-head"><span class="trace-edit-card-index" aria-hidden="true">01</span><div><h3 id="traceSettlePeople">Qui rembourse ?</h3><p>Le règlement entre partenaires</p></div></div>'+
      '<label class="label2" for="settlePayer">Compte de la personne qui rembourse</label>'+
@@ -2243,10 +2243,11 @@ function editInternationalTransfer(t){
   original=I.valid(t.currency)?t.currency:source;
  openSheet('Modifier un virement international',
   '<div class="trace-edit-layout trace-bank-edit-layout">'+
-  '<p class="trace-edit-lead">Un seul mouvement relie ces deux comptes. Modifie uniquement les montants indiqués sur les relevés.</p>'+
+  '<p class="trace-edit-lead">Saisis les montants réels figurant sur les deux relevés.</p>'+
   '<section class="trace-edit-card"><div class="trace-edit-fields">'+
   '<b>'+esc(shortAccountLabel(from))+' · '+source+' → '+esc(shortAccountLabel(to))+' · '+destination+'</b>'+
-  '<small>Transaction du '+esc(t.date)+' · comptes et date conservés pour protéger les rapprochements.</small>'+
+  '<small>'+esc(t.date)+' · Comptes et date conservés</small>'+
+  '<details class="trace-edit-explanation"><summary>Pourquoi ces informations sont-elles conservées ?</summary><p>Les deux comptes partagent un seul virement. Leurs comptes de rattachement et la date restent fixes pour préserver les rapprochements. Vérifie les montants et frais sur tes relevés.</p></details>'+
   '<label class="label2" for="fxName">Libellé</label><input id="fxName" class="input" maxlength="85" value="'+esc(t.name||'Virement')+'">'+
   '<label class="label2" for="fxSent">Montant réellement débité ('+source+')</label>'+
   '<input id="fxSent" class="input" type="number" inputmode="decimal" min=".01" step=".01" value="'+esc(outgoing??'')+'">'+
@@ -2506,9 +2507,9 @@ function editForeignExpenseMetadata(t){
   $('#traceForeignMetaCancel').onclick=closeSheet;return;
  }
  openSheet('Modifier une dépense internationale',
-  '<p class="trace-edit-lead">Modifie seulement la description et la catégorie. Montant, compte, date, devise et taux historique restent strictement inchangés.</p>'+
-  '<div class="empty-note">'+esc(shortAccountLabel(account))+' · '+esc(t.date)+
-   ' · '+esc(I.money(native,currency))+' · CAD historique conservé</div>'+
+  '<p class="trace-edit-lead">Seuls la description et la catégorie peuvent être modifiées.</p>'+
+  '<div class="trace-edit-record-meta"><strong>'+esc(I.money(native,currency))+'</strong><span>'+
+   esc(shortAccountLabel(account))+' · '+esc(t.date)+'</span><small>Montant et taux historique conservés</small></div>'+
   '<label class="label2" for="traceForeignMetaName">Description</label>'+
   '<input id="traceForeignMetaName" class="input" maxlength="85" value="'+esc(t.name||'')+'">'+
   '<label class="label2" for="traceForeignMetaCategory">Catégorie</label>'+
@@ -2516,7 +2517,8 @@ function editForeignExpenseMetadata(t){
    '<option value="">Choisir une catégorie</option>'+
    categories.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===t.categoryId?' selected':'')+'>'+esc(c.name)+'</option>').join('')+
   '</select>'+
-  '<p class="trace-intl-help">La répartition Moi/Couple/Proches et la valorisation CAD enregistrées ne sont pas modifiées.</p>'+
+  '<details class="trace-edit-explanation"><summary>Informations protégées</summary>'+
+   '<p>Le montant bancaire, le compte, la date, la devise, le taux historique, la répartition Moi/Couple/Proches et la valorisation CAD restent inchangés.</p></details>'+
   '<p id="traceForeignMetaError" class="trace-bank-setup-error" role="alert"></p>'+
   '<button type="button" class="primary full" id="traceForeignMetaSave">Enregistrer les informations</button>'+
   '<button type="button" class="secondary full" id="traceForeignMetaCancel">Annuler</button>');
@@ -2583,7 +2585,7 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
    types=U.kindsFor(accountType(bank),direction);
  openSheet('Modifier le mouvement',
   '<div class="trace-edit-layout trace-bank-edit-layout">'+
-   '<p class="trace-edit-lead" id="smartMovementIntro">Précise à quoi correspond ce mouvement. TRACE conserve sa ligne bancaire et adapte uniquement sa qualification.</p>'+
+   '<p class="trace-edit-lead" id="smartMovementIntro">Choisis la nature du mouvement. La ligne bancaire reste liée au relevé.</p>'+
    '<section class="trace-edit-card" aria-labelledby="traceBankNatureTitle">'+
     '<div class="trace-edit-card-head"><span class="trace-edit-card-index" aria-hidden="true">01</span><div><h3 id="traceBankNatureTitle">Nature du mouvement</h3><p>Ce que représente l’opération</p></div></div>'+
     '<div class="trace-edit-fields">'+

@@ -66,3 +66,18 @@ test('one Budget spending analysis, with unified international and movement dial
  }
  assert.match(css,/\.trace-edit-card-index/);
 });
+
+test('technical banking facts are progressively disclosed without hiding editable amounts',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ assert.match(app,/trace-edit-record-meta/);
+ assert.match(app,/trace-edit-explanation/);
+ assert.match(app,/Informations protégées/);
+ assert.match(app,/Montant et taux historique conservés/);
+ assert.match(app,/Vérifie les montants et frais sur tes relevés/);
+ for(const selector of ['#fxSent','#fxReceived','#fxFee','#fxRate','#traceForeignMetaName','#traceForeignMetaCategory']){
+  assert.ok(app.includes(selector.slice(1)),selector);
+ }
+ assert.match(css,/trace-edit-record-meta/);
+ assert.match(css,/trace-edit-explanation summary:focus-visible/);
+ assert.match(js,/key:'foreign-expense'/);
+});

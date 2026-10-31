@@ -224,6 +224,29 @@ let base;
    if(kind==='international-transfer'){
     assert.equal(await backdrop.locator('.trace-edit-card .trace-edit-fields>b').evaluate(el=>getComputedStyle(el).display),'block');
     assert.equal(await backdrop.locator('.trace-edit-card .trace-edit-fields>small').evaluate(el=>getComputedStyle(el).display),'block');
+    const extra=backdrop.locator('.trace-edit-explanation');
+    assert.equal(await extra.count(),1);
+    assert.equal(await extra.evaluate(el=>el.open),false);
+    assert.ok(await page.locator('#fxReceived').isVisible());
+    assert.ok(await page.locator('#fxFee').isVisible());
+    assert.ok(await page.locator('#fxRate').isVisible());
+    await extra.locator('summary').click();
+    assert.equal(await extra.evaluate(el=>el.open),true);
+    assert.match(await extra.locator('p').innerText(),/rapprochements/);
+    await extra.locator('summary').click();
+   }
+   if(kind==='foreign-expense'){
+    assert.equal(await page.locator('.trace-edit-record-meta strong').count(),1);
+    assert.match(await page.locator('.trace-edit-record-meta strong').innerText(),/46,20/);
+    assert.match(await page.locator('.trace-edit-record-meta small').innerText(),/taux historique conservés/);
+    const extra=backdrop.locator('.trace-edit-explanation');
+    assert.equal(await extra.count(),1);
+    assert.equal(await extra.evaluate(el=>el.open),false);
+    assert.ok(await page.locator('#traceForeignMetaCategory').isVisible());
+    await extra.locator('summary').click();
+    assert.equal(await extra.evaluate(el=>el.open),true);
+    assert.match(await extra.locator('p').innerText(),/valorisation CAD/);
+    await extra.locator('summary').click();
    }
    if(await backdrop.locator('.trace-edit-card-index').count())
     assert.equal(await backdrop.locator('.trace-edit-card-index').first().evaluate(el=>getComputedStyle(el).display),'none');
