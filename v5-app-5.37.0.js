@@ -4622,12 +4622,12 @@ function traceActivityGroupHTML(rows){
 }
 function traceActivitySelect(id,items,value,onChange){
  const node=$('#'+id);if(!node)return;
- node.innerHTML=items.map(([v,label])=>'<option value="'+esc(v)+'">'+esc(label)+'</option>').join('');
+ node.innerHTML=items.map(([v,label])=>'<option value="'+esc(v)+'" title="'+esc(label)+'">'+esc(label)+'</option>').join('');
  node.value=value;
  node.onchange=()=>{onChange(node.value);renderActivity();};
- // In the premium 5.37 layout, the native select remains an inert backing
- // control for legacy filters/tests. People choose small, accessible pills.
- // No new financial logic: every chip takes the same onchange path.
+ // Native selects are the visible accessible controls. The legacy chip DOM
+ // is retained hidden for compatibility; both paths share the same onchange.
+ // No new financial logic or financial persistence.
  const chips=$('#'+id+'Chips');
  if(!chips||typeof document==='undefined'||!document.createElement)return;
  chips.replaceChildren(...items.map(([v,label])=>{
@@ -4658,25 +4658,27 @@ function traceActivityControls(){
   ['checking','card'].includes(accountType(a)));
  if(activityAccountFilter!=='all'&&!accounts.some(a=>a.id===activityAccountFilter))
   activityAccountFilter='all';
- traceActivitySelect('activityAccountFilter',[['all','Tous les comptes'],
-  ...accounts.map(a=>[a.id,shortAccountLabel(a)+' · '+window.TraceInternational.currency(a)+(a.archived?' · Archivé':'')])],
+ traceActivitySelect('activityAccountFilter',[['all','Tous'],
+  ...accounts.map(a=>[a.id,
+   (window.TraceInternationalUI?.homeAccountShortLabel?.(a,accounts)||shortAccountLabel(a))+
+   (a.archived?' · Archivé':'')])],
   activityAccountFilter,v=>{activityAccountFilter=v;});
  const categories=state.categories.filter(c=>!c.archived||
   state.transactions.some(t=>t.categoryId===c.id)).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
- traceActivitySelect('activityCategoryFilter',[['all','Toutes les catégories'],
+ traceActivitySelect('activityCategoryFilter',[['all','Toutes'],
   ...categories.map(c=>[c.id,c.name])],
   activityFilters.category,v=>{activityFilters.category=v;});
  const natures=[...new Set(state.transactions.map(t=>t.type).filter(Boolean))].sort((a,b)=>
   traceActivityNatureLabel(a).localeCompare(traceActivityNatureLabel(b),'fr'));
- traceActivitySelect('activityNatureFilter',[['all','Toutes les natures'],
+ traceActivitySelect('activityNatureFilter',[['all','Toutes'],
   ...natures.map(k=>[k,traceActivityNatureLabel(k)])],
   activityFilters.nature,v=>{activityFilters.nature=v;});
  const currencies=[...new Set(accounts.map(a=>window.TraceInternational.currency(a)))].sort();
- traceActivitySelect('activityCurrencyFilter',[['all','Toutes les devises'],
+ traceActivitySelect('activityCurrencyFilter',[['all','Toutes'],
   ...currencies.map(c=>[c,c])],
   activityFilters.currency,v=>{activityFilters.currency=v;});
  traceActivitySelect('activityStatusFilter',[['confirmed','Confirmées'],
-  ['pending','À valider'],['all','Tous les statuts']],
+  ['pending','À valider'],['all','Tous']],
   activityFilters.status,v=>{activityFilters.status=v;});
  // A small, removable summary makes non-default filters visible even
  // when the full filter drawer is closed. The default confirmed status
@@ -4690,7 +4692,7 @@ function traceActivityControls(){
   activityFilters.status==='confirmed'?null:{key:'status',label:'Statut · '+(activityFilters.status==='all'?'Tous':'À valider')}
  ].filter(Boolean);
  const hint=$('#activityFilterHint');
- if(hint)hint.textContent=applied.length?applied.length+' filtre'+(applied.length>1?'s':'')+' actif'+(applied.length>1?'s':''):'Affiner les transactions';
+ if(hint)hint.textContent=applied.length?applied.length+' filtre'+(applied.length>1?'s':'')+' actif'+(applied.length>1?'s':''):'Affiner';
  const activeBar=$('#activityAppliedFilters');
  if(activeBar){
   activeBar.hidden=!applied.length;

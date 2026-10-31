@@ -322,3 +322,14 @@ test('all Home tools are visible by default, mobile filters use native selects a
  assert.match(css,/\.trace-activity-filter-chips\{\s*display:none!important/);
  assert.match(app,/showAllCategories:true/);
 });
+
+test('the refined Activity drawer keeps five accessible 44px native selectors and aligned reset',()=>{
+ assert.match(shell,/id="activityAccountFilter" aria-labelledby="activityAccountFilterTitle"/);
+ assert.match(shell,/id="activityStatusFilter" aria-labelledby="activityStatusFilterTitle"/);
+ assert.match(shell,/class="trace-activity-filter-actions">[\s\S]*?id="activityResetFilters"/);
+ assert.match(css,/#activityAdvancedFilters \.trace-activity-filters \.trace-activity-native-select\{/);
+ assert.match(css,/background-image:url\("data:image\/svg\+xml/);
+ assert.match(css,/\.trace-activity-filter-actions\{/);
+ assert.match(app,/\['all','Toutes'\]/);
+ assert.match(app,/homeAccountShortLabel\?\.\(a,accounts\)/);
+});

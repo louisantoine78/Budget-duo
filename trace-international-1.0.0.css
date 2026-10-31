@@ -1107,3 +1107,137 @@
   grid-template-columns:minmax(0,1fr);
  }
 }
+
+
+/* TRACE 5.37 — Activity filters, tailored from physical iPhone feedback.
+ * A single quiet editorial panel; all native selectors remain keyboard- and
+ * VoiceOver-accessible, and existing filtering behaviour is untouched. */
+.page[data-page="activity"] #activityAdvancedFilters{
+ background:#fbfcf9;
+ border:1px solid #e9eee9;
+ border-radius:13px;
+ box-shadow:0 1px 2px rgba(25,57,37,.015);
+ margin:8px 0 9px;
+ overflow:clip;
+}
+.page[data-page="activity"] #activityAdvancedFilters>summary{
+ display:flex;align-items:center;
+ padding:9px 14px;
+ min-height:44px;
+ gap:9px;
+ background:transparent;
+ color:#2a4e3e;
+ font-size:12px;font-weight:680;letter-spacing:-.01em;
+}
+.page[data-page="activity"] #activityAdvancedFilters>summary .trace-filter-hint{
+ margin-left:auto;
+ color:#87978b;
+ font-weight:450;
+ font-size:10px;
+ letter-spacing:0;
+}
+.page[data-page="activity"] #activityAdvancedFilters>summary::after{
+ content:"";
+ display:block;
+ flex:0 0 15px;
+ width:15px;height:15px;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6.5 4 4 4-4' stroke='%235c7766' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+ background-position:center;background-size:15px;background-repeat:no-repeat;
+ transform:rotate(0deg);transition:transform .16s ease;
+}
+.page[data-page="activity"] #activityAdvancedFilters[open]>summary::after{
+ transform:rotate(180deg);
+}
+.page[data-page="activity"] #activityAdvancedFilters[open]>summary{
+ border-bottom:1px solid #ebf0e9;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:10px 12px;
+ margin:0;
+ padding:12px 13px 13px;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filter-field{
+ display:grid;
+ min-width:0;align-content:start;
+ gap:5px;
+ padding:0!important;
+ border:0!important;background:transparent!important;box-shadow:none!important;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filter-title{
+ color:#6f8373;
+ font-size:10px;
+ font-weight:575;
+ line-height:1.35;
+ letter-spacing:0;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters .trace-activity-native-select{
+ display:block!important;
+ width:100%!important;
+ min-width:0!important;
+ min-height:44px!important;
+ height:44px!important;
+ padding:8px 28px 8px 11px!important;
+ border:1px solid #e3eae2!important;
+ border-radius:10px!important;
+ background-color:#fff!important;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6.5 4 4 4-4' stroke='%23667c6e' stroke-width='1.45' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+ background-position:right 9px center!important;
+ background-size:15px!important;
+ background-repeat:no-repeat!important;
+ color:#244435!important;
+ font-size:16px!important;
+ font-weight:500!important;
+ letter-spacing:-.02em;
+ box-shadow:none!important;
+ -webkit-appearance:none!important;
+ appearance:none!important;
+ text-overflow:ellipsis;
+ touch-action:manipulation;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters .trace-activity-native-select:focus-visible{
+ outline:2px solid rgba(39,115,79,.4);
+ outline-offset:2px;
+ border-color:#6ba084!important;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filter-actions{
+ display:flex;align-items:end;justify-content:flex-end;
+ min-width:0;
+ margin:0!important;padding:0;
+ gap:0;
+ background:transparent;
+}
+.page[data-page="activity"] #activityAdvancedFilters #activityResetFilters{
+ display:inline-flex;align-items:center;justify-content:center;
+ width:auto;max-width:100%;
+ min-height:44px;
+ margin:0 0 0 auto;
+ padding:0 8px;
+ border:0;
+ border-radius:9px;
+ background:transparent;
+ color:#567764;
+ font-size:11px;
+ font-weight:620;
+ text-decoration:none;
+ box-shadow:none;
+ letter-spacing:0;
+}
+.page[data-page="activity"] #activityAdvancedFilters #activityResetFilters:is(:hover,:focus-visible){
+ color:#195b3f;background:#eff4ee;
+}
+@media(max-width:350px){
+ .page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  column-gap:8px;padding-inline:10px;
+ }
+ .page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters .trace-activity-native-select{
+  padding-left:9px!important;
+  padding-right:23px!important;
+  background-position:right 6px center!important;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .page[data-page="activity"] #activityAdvancedFilters>summary::after{transition:none}
+}

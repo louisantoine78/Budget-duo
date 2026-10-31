@@ -350,6 +350,23 @@ let base;
   assert.equal(await page.locator('#activityAccountFilter').isVisible(),true);
   assert.equal(await page.locator('#activityAccountFilterChips').isVisible(),false);
   assert.equal(await page.locator('.trace-activity-filters').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+  const metrics=await page.locator('#activityAdvancedFilters').evaluate(panel=>{
+   const rect=panel.getBoundingClientRect();
+   const filters=[...panel.querySelectorAll('.trace-activity-native-select')];
+   const reset=panel.querySelector('#activityResetFilters').getBoundingClientRect();
+   const last=filters[4].getBoundingClientRect();
+   return{height:rect.height,columns:getComputedStyle(panel.querySelector('.trace-activity-filters')).gridTemplateColumns.split(' ').length,
+    controls:filters.map(f=>({height:f.getBoundingClientRect().height,font:parseFloat(getComputedStyle(f).fontSize),
+     appearance:getComputedStyle(f).appearance,background:getComputedStyle(f).backgroundImage,
+     aria:f.getAttribute('aria-labelledby'),label:f.options[f.selectedIndex]?.text})),
+    resetSameRow:Math.abs(reset.top-last.top)<=8,resetHeight:reset.height};
+  });
+  assert.ok(metrics.height<=340,'Filter panel should be slim, not a long form: '+metrics.height);
+  assert.equal(metrics.columns,2);
+  assert.ok(metrics.controls.every(f=>f.height===44&&f.font>=16&&f.appearance==='none'&&f.background!=='none'&&f.aria));
+  assert.deepEqual(metrics.controls.map(f=>f.label),['Tous','Toutes','Toutes','Toutes','Confirmées']);
+  assert.equal(metrics.resetSameRow,true);
+  assert.ok(metrics.resetHeight>=44);
   await page.locator('#activityAccountFilter').selectOption('demo-fr-current');
   assert.equal(await page.locator('#activityAppliedFilters').isVisible(),true);
   assert.match(await page.locator('#activityFilterHint').innerText(),/1 filtre actif/);

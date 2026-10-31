@@ -250,32 +250,32 @@
         <div class="trace-activity-filters" aria-label="Filtres des transactions">
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityAccountFilterTitle">Compte</span>
-            <select class="input trace-activity-native-select" id="activityAccountFilter"><option value="all">Tous les comptes</option></select>
+            <select class="input trace-activity-native-select" id="activityAccountFilter" aria-labelledby="activityAccountFilterTitle"><option value="all">Tous les comptes</option></select>
             <div class="trace-activity-filter-chips" id="activityAccountFilterChips" role="group" aria-labelledby="activityAccountFilterTitle"></div>
           </div>
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityCategoryFilterTitle">Catégorie</span>
-            <select class="input trace-activity-native-select" id="activityCategoryFilter"><option value="all">Toutes les catégories</option></select>
+            <select class="input trace-activity-native-select" id="activityCategoryFilter" aria-labelledby="activityCategoryFilterTitle"><option value="all">Toutes les catégories</option></select>
             <div class="trace-activity-filter-chips" id="activityCategoryFilterChips" role="group" aria-labelledby="activityCategoryFilterTitle"></div>
           </div>
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityNatureFilterTitle">Nature</span>
-            <select class="input trace-activity-native-select" id="activityNatureFilter"><option value="all">Toutes les natures</option></select>
+            <select class="input trace-activity-native-select" id="activityNatureFilter" aria-labelledby="activityNatureFilterTitle"><option value="all">Toutes les natures</option></select>
             <div class="trace-activity-filter-chips" id="activityNatureFilterChips" role="group" aria-labelledby="activityNatureFilterTitle"></div>
           </div>
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityCurrencyFilterTitle">Devise du compte</span>
-            <select class="input trace-activity-native-select" id="activityCurrencyFilter"><option value="all">Toutes les devises</option></select>
+            <select class="input trace-activity-native-select" id="activityCurrencyFilter" aria-labelledby="activityCurrencyFilterTitle"><option value="all">Toutes les devises</option></select>
             <div class="trace-activity-filter-chips" id="activityCurrencyFilterChips" role="group" aria-labelledby="activityCurrencyFilterTitle"></div>
           </div>
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityStatusFilterTitle">Statut</span>
-            <select class="input trace-activity-native-select" id="activityStatusFilter"><option value="confirmed">Confirmées</option></select>
+            <select class="input trace-activity-native-select" id="activityStatusFilter" aria-labelledby="activityStatusFilterTitle"><option value="confirmed">Confirmées</option></select>
             <div class="trace-activity-filter-chips" id="activityStatusFilterChips" role="group" aria-labelledby="activityStatusFilterTitle"></div>
           </div>
-        </div>
-        <div class="trace-activity-filter-actions">
-          <button type="button" class="linkbtn" id="activityResetFilters">Réinitialiser</button>
+          <div class="trace-activity-filter-actions">
+            <button type="button" class="linkbtn" id="activityResetFilters" aria-label="Réinitialiser tous les filtres">Réinitialiser</button>
+          </div>
         </div>
         </details>
         <div id="activityAppliedFilters" class="trace-activity-applied-filters" role="group" aria-label="Filtres actifs" hidden></div>
