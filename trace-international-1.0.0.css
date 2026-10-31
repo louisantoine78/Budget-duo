@@ -916,3 +916,95 @@
 @media(prefers-reduced-motion:reduce){
  .page[data-page="home"] .trace-home-more>summary span{transition:none}
 }
+
+
+/* TRACE 5.37 — Budget editorial pass (candidate only).
+   Two editable rows per family first; further rows stay accessible by native details. */
+.page[data-page="budget"] .budget-hero-card{
+ min-height:0;padding:18px 19px 17px;border-radius:18px;box-shadow:none;
+ background:#163f37;
+}
+.page[data-page="budget"] .budget-hero-card::before{display:none}
+.page[data-page="budget"] #budgetHeroTotal{
+ margin:9px 0 3px;font-size:clamp(29px,8vw,37px);
+ line-height:1.12;letter-spacing:-.04em;font-variant-numeric:tabular-nums;
+}
+.page[data-page="budget"] #budgetHeroSub{font-size:11px;line-height:1.4;color:#d5e7de}
+.page[data-page="budget"] .budget-hero-card .budget-copy-chip{position:relative;z-index:1}
+.page[data-page="budget"] .trace-budget-family-head{
+ display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+ gap:8px;align-items:center;margin:20px 2px 8px;
+}
+.page[data-page="budget"] .trace-budget-family-title{min-width:0}
+.page[data-page="budget"] .trace-budget-family-title h2{
+ margin:0;font-size:15px;letter-spacing:-.025em;color:#193f32;line-height:1.25;
+}
+.page[data-page="budget"] .trace-budget-family-title small{
+ display:block;margin-top:3px;font-size:11px;color:#65796c;font-weight:550;
+}
+.page[data-page="budget"] .trace-budget-family-total{
+ color:#1c503d;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+.page[data-page="budget"] .budget-add-link{
+ min-height:44px;padding:9px 4px 9px 8px;font-size:11px;white-space:nowrap;
+ cursor:pointer;
+}
+.page[data-page="budget"] .trace-budget-family{
+ padding:3px 15px;margin-bottom:3px;
+ border:1px solid #e4ebe4;border-radius:15px;box-shadow:none;background:#fffdfa;
+}
+.page[data-page="budget"] .trace-budget-family .budget-card{
+ width:100%;min-height:55px;display:flex;align-items:center;
+ padding:9px 1px;gap:11px;background:transparent;border:0;
+ border-bottom:1px solid #edf0ec;color:#1b4637;text-align:left;cursor:pointer;
+}
+.page[data-page="budget"] .trace-budget-family .budget-card:last-child{border-bottom:0}
+.page[data-page="budget"] .trace-budget-family .bicon{
+ width:32px;height:32px;flex:0 0 32px;border-radius:10px;font-size:13px;
+ background:#eff4ef;
+}
+.page[data-page="budget"] .trace-budget-family .bmain{min-width:0}
+.page[data-page="budget"] .trace-budget-family .bmain strong{
+ font-size:12px;line-height:1.3;overflow-wrap:anywhere;
+}
+.page[data-page="budget"] .trace-budget-family .bmain small{font-size:10px;line-height:1.4}
+.page[data-page="budget"] .trace-budget-family .bvalue strong{
+ color:#194a38;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.page[data-page="budget"] .trace-budget-more{border-top:1px solid #edf0ec}
+.page[data-page="budget"] .trace-budget-more>summary{
+ min-height:46px;display:flex;align-items:center;justify-content:space-between;
+ gap:8px;padding:8px 2px;color:#35654e;list-style:none;
+ cursor:pointer;font-size:12px;font-weight:720;
+}
+.page[data-page="budget"] .trace-budget-more>summary::-webkit-details-marker{display:none}
+.page[data-page="budget"] .trace-budget-chevron{
+ font-size:18px;line-height:1;transition:transform .18s ease;
+}
+.page[data-page="budget"] .trace-budget-more[open] .trace-budget-chevron{transform:rotate(180deg)}
+.page[data-page="budget"] .trace-budget-more-rows{border-top:1px solid #edf0ec}
+.page[data-page="budget"] .trace-budget-family .budget-card:focus-visible,
+.page[data-page="budget"] .trace-budget-more>summary:focus-visible,
+.page[data-page="budget"] .budget-add-link:focus-visible,
+.page[data-page="budget"] #manageBudgetCategories:focus-visible{
+ outline:3px solid #4d9b75;outline-offset:2px;border-radius:8px;
+}
+.page[data-page="budget"] .trace-budget-toolbar{
+ justify-content:flex-start;margin:6px 2px 2px;
+}
+.page[data-page="budget"] #manageBudgetCategories{
+ min-height:44px;padding:10px 4px;font-size:11px;font-weight:670;color:#507360;
+}
+.page[data-page="budget"] .trace-budget-family .trace-budget-empty{
+ margin:10px 0;border:0;box-shadow:none;background:#f5f8f4;
+}
+@media(max-width:360px){
+ .page[data-page="budget"] .trace-budget-family-head{gap:5px}
+ .page[data-page="budget"] .trace-budget-family-title h2{font-size:14px}
+ .page[data-page="budget"] .trace-budget-family-total{font-size:12px}
+ .page[data-page="budget"] .trace-budget-family{padding-inline:11px}
+ .page[data-page="budget"] .trace-budget-family .budget-card{gap:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ .page[data-page="budget"] .trace-budget-chevron{transition:none}
+}

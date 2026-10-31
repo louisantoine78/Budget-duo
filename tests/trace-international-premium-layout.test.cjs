@@ -292,3 +292,22 @@ test('Annual Budget has selectable months and Activity shows removable applied f
  assert.match(app,/data-clear-activity-filter/);
  assert.match(css,/\.trace-year-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 });
+
+
+test('Budget editorial layout keeps three editable families with progressive rows',()=>{
+ assert.match(shell,/id="budgetSections"/);
+ assert.match(app,/const expandedBudgetKinds=new Set/);
+ assert.match(app,/const items=rows\.filter\(filter\),visible=items\.slice\(0,2\),more=items\.slice\(2\)/);
+ assert.match(app,/const total=items\.reduce\(\(sum,item\)=>sum\+budgetAmt\(item,sId\),0\)/);
+ assert.match(app,/data-budget-extra/);
+ assert.match(app,/details\.addEventListener\('toggle',refresh\)/);
+ assert.match(app,/data-budget-edit/);
+ assert.match(app,/data-budget-add/);
+ assert.match(app,/id="manageBudgetCategories"/);
+ assert.match(css,/\.page\[data-page="budget"\] \.trace-budget-more>summary/);
+ assert.match(css,/\.page\[data-page="budget"\] \.budget-add-link\{[\s\S]*?min-height:44px/);
+ assert.match(css,/\.page\[data-page="budget"\] \.trace-budget-family \.budget-card:focus-visible/);
+ assert.doesNotMatch(shell,/class="card hero-card budget-hero-card" style=/);
+ assert.match(shell,/id="annualBudgetChart"/);
+ assert.match(shell,/id="budgetCategoryImpact"/);
+});

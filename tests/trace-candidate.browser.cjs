@@ -350,6 +350,27 @@ let base;
   await page.locator('#traceBudgetToActivity').click();
   assert.equal(await page.locator('#activityCategoryFilter').inputValue(),'groceries');
  });
+ await test('Budget shows a compact summary and keeps additional editable rows accessible',async()=>{
+  await go('budget');
+  assert.equal(await page.locator('#budgetSections .trace-budget-family').count(),3);
+  assert.equal(await page.locator('#budgetSections .trace-budget-family-total').count(),3);
+  for(const kind of ['income','fixed','variable']){
+   const family=page.locator('#budgetSections [data-budget-family="'+kind+'"]');
+   assert.ok((await family.locator(':scope > .budget-card').count())<=2);
+   assert.ok(await page.locator('#budgetSections .trace-budget-family-head [data-budget-add="'+kind+'"]').isVisible());
+  }
+  const folded=page.locator('#budgetSections details[data-budget-extra]');
+  if(await folded.count()){
+   const first=folded.first(),entry=first.locator('[data-budget-edit]').first();
+   assert.equal(await entry.isVisible(),false);
+   await first.locator('summary').click();
+   assert.equal(await entry.isVisible(),true);
+   assert.match(await first.locator('summary').innerText(),/Masquer/);
+   await first.locator('summary').click();
+   assert.equal(await entry.isVisible(),false);
+  }
+  assert.ok(await page.locator('#manageBudgetCategories').isVisible());
+ });
  await test('pending EUR activity remains separate from confirmed spending',async()=>{
   await page.locator('#activityAdvancedFilters>summary').click();
   await page.locator('#activityCategoryFilter').selectOption('all');
