@@ -86,6 +86,34 @@ let base;
   assert.match(await text('homeBalance'),/3\s*670,00/);
   assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
  });
+ await test('editorial Home starts with essentials, keeps secondary tools on demand',async()=>{
+  const more=page.locator('#homeMoreDetails');
+  assert.equal(await more.count(),1);
+  assert.equal(await more.evaluate(el=>el.open),false);
+  assert.equal(await page.locator('#homeImportCalendar').isVisible(),false);
+  assert.equal(await page.locator('#shareCard').isVisible(),false);
+  const before=await page.locator('#homeBalance').innerText();
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   assert.equal(await page.locator('.trace-home-month-kpis [data-kpi]').count(),3);
+   const cards=await page.locator('.trace-home-month-kpis').evaluate(el=>({
+    border:getComputedStyle(el).borderTopWidth,
+    titles:[...el.querySelectorAll('.k-label')].map(n=>n.textContent),
+    values:[...el.querySelectorAll('.k-value')].map(n=>getComputedStyle(n).fontSize)
+   }));
+   assert.equal(cards.border,'1px');
+   assert.deepEqual(cards.titles,['Revenus','Dépenses','Marge du mois']);
+   assert.ok(cards.values.every(n=>parseFloat(n)>=15));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+  }
+  await page.setViewportSize({width:390,height:844});
+  await more.locator('summary').click();
+  assert.equal(await page.locator('#homeImportCalendar').isVisible(),true);
+  assert.equal(await page.locator('#shareCard').isVisible(),true);
+  await more.locator('summary').click();
+  assert.equal(await more.evaluate(el=>el.open),false);
+  assert.equal(await page.locator('#homeBalance').innerText(),before);
+ });
  await test('premium panels share a financial form language across transaction and budget',async()=>{
   const backdrop=page.locator('#sheetBackdrop');
   for(const width of [320,390,768]){
@@ -181,9 +209,11 @@ let base;
  });
  await test('Home import coverage opens the actual calendar without asserting bank synchronization',async()=>{
   await go('home');
+  await page.locator('#homeMoreDetails summary').click();
   const coverage=await text('homeImportCoverage');
   assert.match(coverage,/\d+ \/ \d+ journées vérifiées/);
   assert.doesNotMatch(coverage,/synchronisé|automatique|banque à jour/i);
+  assert.equal(await page.locator('#homeImportCalendar').isVisible(),true);
   await page.locator('#homeImportCalendar').click();
   assert.equal(await page.locator('#activityImport').isVisible(),true);
   assert.equal(await page.locator('#importCalendar').isVisible(),true);
@@ -235,6 +265,42 @@ let base;
   assert.equal(await page.locator('#activityTabs [role="tab"]').count(),3);
   assert.equal(await page.locator('#activityAdvancedFilters').evaluate(el=>el.open),false);
   await go('home');
+ });
+ await test('Activity financial totals read as one quiet strip without hiding filters',async()=>{
+  await go('activity');
+  const drawer=page.locator('#activityAdvancedFilters');
+  await drawer.evaluate(el=>{el.open=false});
+  assert.equal(await drawer.evaluate(el=>el.open),false);
+  assert.equal(await page.locator('.activity-stats .statbox').count(),3);
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   const stats=await page.locator('.activity-stats .statbox').evaluateAll(nodes=>nodes.map(n=>{
+    const st=getComputedStyle(n);return {background:st.backgroundColor,topBorder:st.borderTopWidth,
+     number:parseFloat(getComputedStyle(n.querySelector('b')).fontSize)};
+   }));
+   assert.ok(stats.every(s=>s.background==='rgba(0, 0, 0, 0)'&&s.topBorder==='0px'&&s.number>=14));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+  }
+  await page.setViewportSize({width:390,height:844});
+  await drawer.locator('summary').click();
+  assert.equal(await drawer.evaluate(el=>el.open),true);
+  await drawer.locator('summary').click();
+  await go('home');
+ });
+ await test('small Home account pills preserve 44px touch targets',async()=>{
+  await go('home');
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   const pills=await page.locator('#traceIntlHome .trace-intl-chip').evaluateAll(nodes=>nodes.map(n=>{
+    const r=n.getBoundingClientRect(),sty=getComputedStyle(n),pseudo=getComputedStyle(n,'::before');
+    return {height:r.height,width:r.width,font:parseFloat(sty.fontSize),
+     visibleHeight:r.height-parseFloat(pseudo.top)-parseFloat(pseudo.bottom)};
+   }));
+   assert.ok(pills.length>=2);
+   assert.ok(pills.every(p=>p.height>=44&&p.width<=124&&p.font<=11&&p.visibleHeight<=31));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+  }
+  await page.setViewportSize({width:390,height:844});
  });
  await test('account chips show native EUR without changing the official principal or budget',async()=>{
   const budget=await text('homeBudgetAvailable');

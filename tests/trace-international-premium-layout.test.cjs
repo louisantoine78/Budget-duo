@@ -271,6 +271,10 @@ test('Home shares one panel, keeps two separate metrics and both expected detail
 });
 
 test('Import calendar stays a compact Home shortcut and detailed Budget stays in Budget',()=>{
+ assert.match(home,/id="homeMoreDetails"/);
+ assert.match(home,/class="grid grid-3 trace-home-month-kpis"/);
+ assert.match(css,/\.trace-home-more>summary/);
+ assert.match(css,/\.activity-stats \.statbox/);
  assert.match(home,/id="homeImportCalendar"/);
  assert.match(home,/id="homeImportCoverage"/);
  assert.match(app,/function renderHomeImportCoverage\(\)/);
@@ -278,7 +282,9 @@ test('Import calendar stays a compact Home shortcut and detailed Budget stays in
  assert.match(app,/Aucune opération en attente/);
  assert.match(home,/id="homeBudgetSub" hidden/);
  assert.match(home,/id="homeBudgetTrack"[^>]* hidden/);
- assert.match(css,/\.trace-home-unified \.trace-intl-chip\{min-height:44px;max-width:139px/);
+ assert.match(css,/\.trace-home-unified \.trace-intl-chip\{[\s\S]*?min-height:44px;max-width:122px/);
+ assert.match(css,/\.trace-home-unified \.trace-intl-chip::before\{[\s\S]*?inset:7px 0/);
+ assert.match(css,/\.trace-home-unified \.trace-intl-chip-name\{[\s\S]*?text-overflow:ellipsis/);
 });
 test('Annual Budget has selectable months and Activity shows removable applied filters',()=>{
  assert.match(shell,/id="annualBudgetChart"/);

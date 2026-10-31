@@ -151,8 +151,8 @@
           <div class="progress" id="homeBudgetTrack" role="progressbar" aria-label="Budget consommé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><i id="homeBudgetProgress" style="width:0%"></i></div>
           <div class="progress-row" hidden><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
         </article></div>
-      <div class="section-head trace-home-month-head"><h2>Ce mois-ci</h2><small>Revenus · dépenses · marge</small></div>
-      <div class="grid grid-3" style="margin-top:14px">
+      <div class="section-head trace-home-month-head"><h2>Ce mois-ci</h2></div>
+      <div class="grid grid-3 trace-home-month-kpis" style="margin-top:14px">
         <button class="card kpi clickable" data-kpi="income"><div class="k-label">Revenus</div><div class="k-value" id="homeIncome">—</div><div class="k-note" id="homeIncomeNote">Voir le détail</div></button>
         <button class="card kpi clickable" data-kpi="spending"><div class="k-label">Dépenses</div><div class="k-value" id="homeSpending">—</div><div class="k-note" id="homeSpendingNote">Voir le détail</div></button>
         <button class="card kpi clickable" data-kpi="saving"><div class="k-label">Marge du mois</div><div class="k-value" id="homeSaving">—</div><div class="k-note" id="homeSavingNote">Revenus − dépenses (hors virements)</div></button>
@@ -164,7 +164,6 @@
         <span class="alert-text"><strong>Opérations à vérifier</strong><div id="pendingText">Chargement…</div></span><span class="chev">›</span>
       </button>
       <div id="homeReviewAccounts" class="trace-home-review-accounts" aria-label="Opérations à vérifier par compte bancaire"></div>
-      <button type="button" class="trace-home-import-coverage" id="homeImportCalendar" aria-label="Ouvrir le calendrier de vérification des imports"><span class="trace-home-import-mark" aria-hidden="true">▦</span><span class="trace-home-import-copy"><strong>Calendrier des imports</strong><small id="homeImportCoverage">Suivi de vérification à consulter</small></span><span aria-hidden="true">›</span></button>
 
       <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="analysisBtn">Analyses</button></div>
       <article class="card clickable" id="homeTrendCard">
@@ -173,12 +172,16 @@
         <div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div>
       </article>
 
+      <details class="trace-home-more" id="homeMoreDetails">
+        <summary>Outils et partage <span aria-hidden="true">⌄</span></summary>
+      <button type="button" class="trace-home-import-coverage" id="homeImportCalendar" aria-label="Ouvrir le calendrier de vérification des imports"><span class="trace-home-import-mark" aria-hidden="true">▦</span><span class="trace-home-import-copy"><strong>Calendrier des imports</strong><small id="homeImportCoverage">Suivi de vérification à consulter</small></span><span aria-hidden="true">›</span></button>
       <div class="section-head"><h2>Partage</h2><button class="linkbtn" id="shareOpen">Ouvrir</button></div>
       <button class="card share-card" id="shareCard" style="width:100%;text-align:left;border:1px solid rgba(18,63,56,.06)">
         <span class="share-avatar" id="partnerAvatar">É</span>
         <span class="share-main"><b id="shareLabel">Solde avec votre partenaire</b><strong id="shareBalance">—</strong><small id="shareSmall">Solde continu</small></span>
         <span class="chev">›</span>
       </button>
+      </details>
     </section>
 
     <section class="page" data-page="budget">
