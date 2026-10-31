@@ -359,3 +359,14 @@ test('Activity uses low-noise underlined tabs and no hidden financial KPIs',()=>
  assert.match(shell,/id="activityIncome"/);
  assert.match(shell,/id="activityNet"/);
 });
+
+test('Budget editorial categories preserve real money, compact copy and zero-item drilldowns',()=>{
+ const insights=get('trace-insights-5.37.0.js');
+ assert.match(insights,/Répartition des dépenses confirmées/);
+ assert.match(insights,/virements internes et paiements de carte exclus/);
+ assert.match(insights,/class="trace-insight-inactive-row" data-insight-category/);
+ assert.match(insights,/target\.querySelectorAll\('\[data-insight-category\]'\)/);
+ assert.match(css,/#budgetCategoryImpact \.trace-insight-category-track\{/);
+ assert.match(css,/#budgetCategoryImpact \.trace-insight-inactive-row:focus-visible/);
+ assert.match(css,/#transactionList \.trace-activity-day \.tx\{/);
+});

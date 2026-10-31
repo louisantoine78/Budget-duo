@@ -22,7 +22,7 @@ function renderCategories(target,{rows=[],totalExpense=0,budgetTotal=0,month='',
    (planned>0?pct(spent,planned)+' % du budget consommé':'Budget non défini')+'"><b>'+(planned>0?pct(spent,planned)+' %':'—')+'</b></div>'+
    '<div><strong>'+(planned>0?'Budget consommé':'Budget à compléter')+'</strong><span>'+fmt(spent)+' dépensés'+(planned>0?' sur '+fmt(planned):'')+'</span><small>'+
    (planned>0?(spent>planned?'Dépassement de '+fmt(spent-planned):'Encore '+fmt(planned-spent)+' sur ton budget'):'Ajoute tes catégories prévues pour suivre la progression')+'</small></div></div>':'')+
-  '<p class="trace-insights-explain">La part des dépenses montre leur répartition. Le pourcentage du budget et la barre indiquent la progression de chaque catégorie.</p>';
+  '<p class="trace-insights-explain">Répartition des dépenses confirmées · progression par rapport au budget prévu.</p>';
  if(!cats.length&&!inactive.length){target.innerHTML=output+'<div class="trace-insights-empty">Aucune dépense confirmée sur ce mois. Importe tes opérations pour voir la répartition réelle.</div>';return;}
  output+='<div class="trace-insight-category-list">'+cats.map((c,i)=>{
    const over=c.budget>0&&c.actual>c.budget+.005,unused=Math.max(0,c.budget-c.actual),used=pct(c.actual,spent),
@@ -36,8 +36,10 @@ function renderCategories(target,{rows=[],totalExpense=0,budgetTotal=0,month='',
  }).join('')+'</div>';
  if(limit&&cats.length>limit)output+='<button class="trace-insight-more" type="button" data-insight-expand>Afficher les '+(cats.length-limit)+' autres catégories <span aria-hidden="true">↓</span></button>';
  if(inactive.length)output+='<div class="trace-insight-inactive"><div class="trace-insight-inactive-title">Autres catégories <small>Aucune dépense ni prévision ce mois</small></div>'+
-  inactive.map(c=>'<div class="trace-insight-inactive-row"><span>'+esc(c.name)+'</span><small>0 $ · non budgété</small></div>').join('')+'</div>';
- output+='<p class="trace-insights-foot">Total du mois : '+fmt(spent)+' dépensés'+(planned?' sur '+fmt(planned)+' prévus.':' · aucun budget global prévu.')+' Les virements internes et paiements de carte ne sont pas des dépenses.</p>';
+  inactive.map(c=>'<button type="button" class="trace-insight-inactive-row" data-insight-category="'+esc(String(c.id||''))+'" aria-label="Consulter '+esc(c.name)+' · aucune dépense ni prévision"><span>'+esc(c.name)+'</span><small>0 $ · non budgété</small></button>').join('')+'</div>';
+ output+='<p class="trace-insights-foot"><strong>'+fmt(spent)+' dépensés</strong>'+
+  (planned?' sur '+fmt(planned)+' prévus':' · aucun budget global prévu')+
+  ' · virements internes et paiements de carte exclus.</p>';
  target.innerHTML=output;
  target.querySelector('[data-insight-expand]')?.addEventListener('click',e=>{
   target.querySelectorAll('.trace-insight-category[hidden]').forEach(el=>{el.hidden=false;});

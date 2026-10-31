@@ -358,6 +358,37 @@ let base;
   assert.match(await page.locator('#budgetCategoryImpact .trace-insight-inactive-row').innerText(),/0 \$ · non budgété/);
   assert.match(await page.locator('#budgetCategoryImpact .trace-insights-head').innerText(),/178 \$/);
   assert.equal(await page.locator('#budgetCategoryImpact [data-insight-expand]').count(),0);
+  const all=await page.locator('#budgetCategoryImpact [data-insight-category]').count();
+  assert.equal(all,3,'All configured expense categories must be navigable');
+  const before=await page.locator('#budgetCategoryImpact .trace-insights-head>b').innerText();
+  await page.locator('#budgetCategoryImpact .trace-insight-inactive-row').click();
+  assert.match(await page.locator('#sheetTitle').innerText(),/Dépenses · Logement/);
+  assert.match(await page.locator('#sheetBody').innerText(),/Aucune opération confirmée/);
+  await page.locator('#closeSheet').click();
+  assert.equal(await page.locator('#budgetCategoryImpact .trace-insights-head>b').innerText(),before);
+  await go('home');
+ });
+ await test('Budget and Activity rows are slim, readable and retain complete financial figures',async()=>{
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   await go('budget');
+   assert.ok(await page.locator('#budgetCategoryImpact .trace-insights-explain').innerText()
+    .then(t=>t.length<105));
+   const cards=await page.locator('#budgetCategoryImpact .trace-insight-category').evaluateAll(nodes=>
+    nodes.map(el=>({h:el.getBoundingClientRect().height,tag:el.tagName,
+     amount:el.querySelector('.trace-insight-category-value')?.textContent,
+     progress:getComputedStyle(el.querySelector('.trace-insight-category-track')).height})));
+   assert.ok(cards.every(c=>c.h>=70&&c.h<=120&&c.tag==='BUTTON'&&c.progress==='4px'));
+   assert.ok(cards.some(c=>c.amount.includes('104')&&c.amount.includes('300')));
+   await go('activity');
+   const rows=await page.locator('#transactionList .trace-activity-day .tx').evaluateAll(nodes=>
+    nodes.map(el=>({height:el.getBoundingClientRect().height,width:el.getBoundingClientRect().width,
+     title:el.querySelector('.tx-main b')?.textContent,amount:el.querySelector('.tx-amt')?.textContent})));
+   assert.ok(rows.length>=3);
+   assert.ok(rows.every(r=>r.height>=44&&r.title&&r.amount));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+  }
+  await page.setViewportSize({width:390,height:844});
   await go('home');
  });
  await test('Annual Budget is now a twelve-month selectable overview with clear actuals',async()=>{
