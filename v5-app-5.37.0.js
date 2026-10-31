@@ -1441,11 +1441,29 @@ function requestInternationalRates(currencies){
  });
 }
 
+function homeReconciliationBadge(){
+ // A reconciliation is a dated bank statement, not a claim that the whole
+ // household or every account is synchronized with the bank.
+ if(homeScope!=='mine')return 'À rapprocher';
+ const available=visibleBankAccounts(me).filter(a=>accountType(a)==='checking');
+ const preferred=state.household.primaryBankAccountByOwner?.[me];
+ const selected=available.find(a=>a.id===preferred)||available[0];
+ if(!selected)return 'À configurer';
+ const today=localDateISO(),month=String(CM);
+ let latest=null;
+ for(const row of state.reconciliations){
+  if(row.accountId!==selected.id||row.status!=='confirmed'||
+   typeof row.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(row.date)||
+   row.date.slice(0,7)!==month||row.date>today)continue;
+  if(!latest||row.date>latest.date)latest=row;
+ }
+ return latest?'Rapproché au '+latest.date.slice(8,10)+'/'+latest.date.slice(5,7):'À rapprocher';
+}
 function renderHome(){const sId=scope(homeScope),s=summary(CM,sId),cons=s.eb?s.expense/s.eb*100:0,b=bank(sId);$('#homeMonthLabel').textContent=monthLabel(CM);$('#homeGreeting').textContent=homeScope==='mine'?`Bonjour ${member(me).name}`:'Votre situation';$('#homeBudgetAvailable').textContent=s.eb?money(s.eb-s.expense):'À définir';$('#homeBudgetSub').textContent=s.eb?`sur ${money(s.eb)} prévus ce mois`:'Budget du mois à compléter';$('#homeBudgetProgress').style.width=`${Math.min(100,Math.max(0,cons))}%`;$('#homeBudgetTrack').setAttribute('aria-valuenow',String(Math.round(Math.min(100,Math.max(0,cons)))));$('#homeBudgetPercent').textContent=`${cons.toFixed(0)} % consommé`;$('#homeBudgetSpent').textContent=`${money(s.expense)} dépensés`;$('#homeBalance').textContent=b.net===null?'À configurer':b.needsCardReview?'À vérifier':money(b.net);
  $('#homeChecking').textContent=b.checking===null?'—':money(b.checking);
  $('#homeCard').textContent=b.card===null?'—':b.needsCardReview?
   'Avoir estimé '+money(b.cardCredit):money(b.cardDebt)+' de dette';
- $('#reconcileBadge').textContent=b.needsCardReview?'Carte à vérifier':state.reconciliations.length?'✓ Rapproché':'À rapprocher';
+ $('#reconcileBadge').textContent=b.needsCardReview?'Carte à vérifier':homeReconciliationBadge();
  const cardWarning=$('#homeCardWarning');
  if(cardWarning){
   cardWarning.hidden=!b.needsCardReview;

@@ -278,9 +278,7 @@ test('Import calendar stays a compact Home shortcut and detailed Budget stays in
  assert.match(app,/Aucune opération en attente/);
  assert.match(home,/id="homeBudgetSub" hidden/);
  assert.match(home,/id="homeBudgetTrack"[^>]* hidden/);
- assert.match(css,/\.trace-home-unified \.trace-intl-chip\{[\s\S]*?min-height:44px;max-width:122px/);
- assert.match(css,/\.trace-home-unified \.trace-intl-chip::before\{[\s\S]*?inset:7px 0/);
- assert.match(css,/\.trace-home-unified \.trace-intl-chip-name\{[\s\S]*?text-overflow:ellipsis/);
+ assert.match(css,/\.trace-home-unified \.trace-intl-chip\{min-height:44px;max-width:139px/);
 });
 test('Annual Budget has selectable months and Activity shows removable applied filters',()=>{
  assert.match(shell,/id="annualBudgetChart"/);

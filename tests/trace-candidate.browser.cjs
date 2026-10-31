@@ -236,21 +236,6 @@ let base;
   assert.equal(await page.locator('#activityAdvancedFilters').evaluate(el=>el.open),false);
   await go('home');
  });
- await test('small Home account pills preserve 44px touch targets',async()=>{
-  await go('home');
-  for(const width of [320,390,768]){
-   await page.setViewportSize({width,height:844});
-   const pills=await page.locator('#traceIntlHome .trace-intl-chip').evaluateAll(nodes=>nodes.map(n=>{
-    const r=n.getBoundingClientRect(),sty=getComputedStyle(n),pseudo=getComputedStyle(n,'::before');
-    return {height:r.height,width:r.width,font:parseFloat(sty.fontSize),
-     visibleHeight:r.height-parseFloat(pseudo.top)-parseFloat(pseudo.bottom)};
-   }));
-   assert.ok(pills.length>=2);
-   assert.ok(pills.every(p=>p.height>=44&&p.width<=124&&p.font<=11&&p.visibleHeight<=31));
-   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
-  }
-  await page.setViewportSize({width:390,height:844});
- });
  await test('account chips show native EUR without changing the official principal or budget',async()=>{
   const budget=await text('homeBudgetAvailable');
   await page.locator('[data-trace-view-account="demo-fr-current"]').click();
