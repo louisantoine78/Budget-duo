@@ -12,16 +12,18 @@ function categoryRows(rows,totalExpense){
  if(leftover>.005)items.push({id:'',name:'Autres dépenses / catégories masquées',actual:leftover,budget:0});
  return items.filter(c=>c.actual>.005||c.budget>.005).sort((a,b)=>b.actual-a.actual||b.budget-a.budget||a.name.localeCompare(b.name));
 }
-function renderCategories(target,{rows=[],totalExpense=0,budgetTotal=0,month='',onCategory=null,limit=0,showSummary=false}={}){
+function renderCategories(target,{rows=[],totalExpense=0,budgetTotal=0,month='',onCategory=null,limit=0,showSummary=false,showAllCategories=false}={}){
  if(!target)return;
- const cats=categoryRows(rows,totalExpense),spent=round(totalExpense),planned=round(budgetTotal);
+ const cats=categoryRows(rows,totalExpense),inactive=showAllCategories?
+   (rows||[]).filter(c=>!c.archived&&round(c.actual)<=.005&&round(c.budget)<=.005).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''), 'fr')):[],
+  spent=round(totalExpense),planned=round(budgetTotal);
  let output='<div class="trace-insights-head"><div><strong>Où va mon argent ?</strong><small>'+esc(monthName(month))+' · dépenses confirmées par catégorie</small></div><b>'+fmt(spent)+'</b></div>'+
   (showSummary?'<div class="trace-budget-snapshot"><div class="trace-budget-ring" style="--trace-budget-pct:'+Math.min(100,pct(spent,planned))+'%;" role="img" aria-label="'+
    (planned>0?pct(spent,planned)+' % du budget consommé':'Budget non défini')+'"><b>'+(planned>0?pct(spent,planned)+' %':'—')+'</b></div>'+
    '<div><strong>'+(planned>0?'Budget consommé':'Budget à compléter')+'</strong><span>'+fmt(spent)+' dépensés'+(planned>0?' sur '+fmt(planned):'')+'</span><small>'+
    (planned>0?(spent>planned?'Dépassement de '+fmt(spent-planned):'Encore '+fmt(planned-spent)+' sur ton budget'):'Ajoute tes catégories prévues pour suivre la progression')+'</small></div></div>':'')+
   '<p class="trace-insights-explain">La part des dépenses montre leur répartition. Le pourcentage du budget et la barre indiquent la progression de chaque catégorie.</p>';
- if(!cats.length){target.innerHTML=output+'<div class="trace-insights-empty">Aucune dépense confirmée sur ce mois. Importe tes opérations pour voir la répartition réelle.</div>';return;}
+ if(!cats.length&&!inactive.length){target.innerHTML=output+'<div class="trace-insights-empty">Aucune dépense confirmée sur ce mois. Importe tes opérations pour voir la répartition réelle.</div>';return;}
  output+='<div class="trace-insight-category-list">'+cats.map((c,i)=>{
    const over=c.budget>0&&c.actual>c.budget+.005,unused=Math.max(0,c.budget-c.actual),used=pct(c.actual,spent),
     consumed=pct(c.actual,c.budget),state=!c.budget?'unbudgeted':over?'over':consumed>=80?'near':'within';
@@ -33,6 +35,8 @@ function renderCategories(target,{rows=[],totalExpense=0,budgetTotal=0,month='',
     '<span class="trace-insight-category-track"><i style="width:'+Math.min(100,c.budget?pct(c.actual,c.budget):0)+'%"></i></span></button>';
  }).join('')+'</div>';
  if(limit&&cats.length>limit)output+='<button class="trace-insight-more" type="button" data-insight-expand>Afficher les '+(cats.length-limit)+' autres catégories <span aria-hidden="true">↓</span></button>';
+ if(inactive.length)output+='<div class="trace-insight-inactive"><div class="trace-insight-inactive-title">Autres catégories <small>Aucune dépense ni prévision ce mois</small></div>'+
+  inactive.map(c=>'<div class="trace-insight-inactive-row"><span>'+esc(c.name)+'</span><small>0 $ · non budgété</small></div>').join('')+'</div>';
  output+='<p class="trace-insights-foot">Total du mois : '+fmt(spent)+' dépensés'+(planned?' sur '+fmt(planned)+' prévus.':' · aucun budget global prévu.')+' Les virements internes et paiements de carte ne sont pas des dépenses.</p>';
  target.innerHTML=output;
  target.querySelector('[data-insight-expand]')?.addEventListener('click',e=>{

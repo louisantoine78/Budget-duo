@@ -137,12 +137,11 @@
           <span class="badge" id="reconcileBadge">À rapprocher</span>
           <p id="homeCardWarning" class="trace-card-balance-warning" role="status" hidden></p>
           <div id="traceIntlHome" class="trace-intl-home" aria-label="Consulter le solde de mes comptes"></div>
-          <details class="trace-home-balance-breakdown">
-            <summary>Détail du solde</summary>
+          <div class="trace-home-balance-breakdown" aria-label="Composition du solde estimé">
             <div class="mini-account"><span>Compte courant</span><span id="homeChecking">—</span></div>
             <div class="mini-account"><span>Dette de carte</span><span id="homeCard">—</span></div>
             <p class="scope-label">Solde courant moins dette des cartes associées, hors épargne.</p>
-          </details>
+          </div>
         </article><article class="card hero-card trace-home-available" aria-label="Budget du mois">
           <div class="trace-home-panel-head"><div class="label">Budget</div><button type="button" class="trace-home-panel-link trace-home-budget-link" id="homeBudgetShortcut" aria-label="Ouvrir le budget détaillé">Voir le budget <span aria-hidden="true">›</span></button></div>
           <div class="trace-home-budget-label">Reste à dépenser</div>
@@ -172,8 +171,8 @@
         <div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div>
       </article>
 
-      <details class="trace-home-more" id="homeMoreDetails">
-        <summary>Outils et partage <span aria-hidden="true">⌄</span></summary>
+      <div class="trace-home-more" id="homeMoreDetails" aria-label="Outils et partage">
+        <div class="section-head trace-home-tools-head"><h2>Outils</h2></div>
       <button type="button" class="trace-home-import-coverage" id="homeImportCalendar" aria-label="Ouvrir le calendrier de vérification des imports"><span class="trace-home-import-mark" aria-hidden="true">▦</span><span class="trace-home-import-copy"><strong>Calendrier des imports</strong><small id="homeImportCoverage">Suivi de vérification à consulter</small></span><span aria-hidden="true">›</span></button>
       <div class="section-head"><h2>Partage</h2><button class="linkbtn" id="shareOpen">Ouvrir</button></div>
       <button class="card share-card" id="shareCard" style="width:100%;text-align:left;border:1px solid rgba(18,63,56,.06)">
@@ -181,7 +180,7 @@
         <span class="share-main"><b id="shareLabel">Solde avec votre partenaire</b><strong id="shareBalance">—</strong><small id="shareSmall">Solde continu</small></span>
         <span class="chev">›</span>
       </button>
-      </details>
+      </div>
     </section>
 
     <section class="page" data-page="budget">
@@ -251,27 +250,27 @@
         <div class="trace-activity-filters" aria-label="Filtres des transactions">
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityAccountFilterTitle">Compte</span>
-            <select class="input trace-activity-native-select" id="activityAccountFilter" tabindex="-1" aria-hidden="true"><option value="all">Tous les comptes</option></select>
+            <select class="input trace-activity-native-select" id="activityAccountFilter"><option value="all">Tous les comptes</option></select>
             <div class="trace-activity-filter-chips" id="activityAccountFilterChips" role="group" aria-labelledby="activityAccountFilterTitle"></div>
           </div>
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityCategoryFilterTitle">Catégorie</span>
-            <select class="input trace-activity-native-select" id="activityCategoryFilter" tabindex="-1" aria-hidden="true"><option value="all">Toutes les catégories</option></select>
+            <select class="input trace-activity-native-select" id="activityCategoryFilter"><option value="all">Toutes les catégories</option></select>
             <div class="trace-activity-filter-chips" id="activityCategoryFilterChips" role="group" aria-labelledby="activityCategoryFilterTitle"></div>
           </div>
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityNatureFilterTitle">Nature</span>
-            <select class="input trace-activity-native-select" id="activityNatureFilter" tabindex="-1" aria-hidden="true"><option value="all">Toutes les natures</option></select>
+            <select class="input trace-activity-native-select" id="activityNatureFilter"><option value="all">Toutes les natures</option></select>
             <div class="trace-activity-filter-chips" id="activityNatureFilterChips" role="group" aria-labelledby="activityNatureFilterTitle"></div>
           </div>
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityCurrencyFilterTitle">Devise du compte</span>
-            <select class="input trace-activity-native-select" id="activityCurrencyFilter" tabindex="-1" aria-hidden="true"><option value="all">Toutes les devises</option></select>
+            <select class="input trace-activity-native-select" id="activityCurrencyFilter"><option value="all">Toutes les devises</option></select>
             <div class="trace-activity-filter-chips" id="activityCurrencyFilterChips" role="group" aria-labelledby="activityCurrencyFilterTitle"></div>
           </div>
           <div class="trace-activity-filter-field">
             <span class="trace-activity-filter-title" id="activityStatusFilterTitle">Statut</span>
-            <select class="input trace-activity-native-select" id="activityStatusFilter" tabindex="-1" aria-hidden="true"><option value="confirmed">Confirmées</option></select>
+            <select class="input trace-activity-native-select" id="activityStatusFilter"><option value="confirmed">Confirmées</option></select>
             <div class="trace-activity-filter-chips" id="activityStatusFilterChips" role="group" aria-labelledby="activityStatusFilterTitle"></div>
           </div>
         </div>

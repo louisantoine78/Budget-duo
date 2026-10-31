@@ -86,12 +86,16 @@ let base;
   assert.match(await text('homeBalance'),/3\s*670,00/);
   assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
  });
- await test('editorial Home starts with essentials, keeps secondary tools on demand',async()=>{
+ await test('Home always displays balance detail, calendar, sharing and essentials without drawers',async()=>{
   const more=page.locator('#homeMoreDetails');
   assert.equal(await more.count(),1);
-  assert.equal(await more.evaluate(el=>el.open),false);
-  assert.equal(await page.locator('#homeImportCalendar').isVisible(),false);
-  assert.equal(await page.locator('#shareCard').isVisible(),false);
+  assert.equal(await more.evaluate(el=>el.tagName),'DIV');
+  assert.equal(await more.locator('summary').count(),0);
+  assert.equal(await page.locator('.trace-home-balance-breakdown').evaluate(el=>el.tagName),'DIV');
+  assert.equal(await page.locator('#homeImportCalendar').isVisible(),true);
+  assert.equal(await page.locator('#shareCard').isVisible(),true);
+  assert.equal(await page.locator('#homeChecking').isVisible(),true);
+  assert.equal(await page.locator('#homeCard').isVisible(),true);
   const before=await page.locator('#homeBalance').innerText();
   for(const width of [320,390,768]){
    await page.setViewportSize({width,height:844});
@@ -107,11 +111,8 @@ let base;
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
   }
   await page.setViewportSize({width:390,height:844});
-  await more.locator('summary').click();
   assert.equal(await page.locator('#homeImportCalendar').isVisible(),true);
   assert.equal(await page.locator('#shareCard').isVisible(),true);
-  await more.locator('summary').click();
-  assert.equal(await more.evaluate(el=>el.open),false);
   assert.equal(await page.locator('#homeBalance').innerText(),before);
  });
  await test('premium panels share a financial form language across transaction and budget',async()=>{
@@ -310,7 +311,6 @@ let base;
  });
  await test('Home import coverage opens the actual calendar without asserting bank synchronization',async()=>{
   await go('home');
-  await page.locator('#homeMoreDetails summary').click();
   const coverage=await text('homeImportCoverage');
   assert.match(coverage,/\d+ \/ \d+ journées vérifiées/);
   assert.doesNotMatch(coverage,/synchronisé|automatique|banque à jour/i);
@@ -319,6 +319,17 @@ let base;
   assert.equal(await page.locator('#activityImport').isVisible(),true);
   assert.equal(await page.locator('#importCalendar').isVisible(),true);
   await page.locator('#activityImportBack').click();
+  await go('home');
+ });
+ await test('Budget renders every configured expense category, including those at zero, without fake spending',async()=>{
+  await go('budget');
+  assert.deepEqual(await page.locator('#budgetCategoryImpact .trace-insight-category-main strong').allInnerTexts(),
+   ['Épicerie','Voyages']);
+  assert.deepEqual(await page.locator('#budgetCategoryImpact .trace-insight-inactive-row span').allInnerTexts(),
+   ['Logement']);
+  assert.match(await page.locator('#budgetCategoryImpact .trace-insight-inactive-row').innerText(),/0 \$ · non budgété/);
+  assert.match(await page.locator('#budgetCategoryImpact .trace-insights-head').innerText(),/178 \$/);
+  assert.equal(await page.locator('#budgetCategoryImpact [data-insight-expand]').count(),0);
   await go('home');
  });
  await test('Annual Budget is now a twelve-month selectable overview with clear actuals',async()=>{
@@ -336,7 +347,10 @@ let base;
  await test('Activity applied filters are shown outside the drawer and cleared individually',async()=>{
   await go('activity');
   await page.locator('#activityAdvancedFilters>summary').click();
-  await page.locator('#activityAccountFilterChips [data-value="demo-fr-current"]').click();
+  assert.equal(await page.locator('#activityAccountFilter').isVisible(),true);
+  assert.equal(await page.locator('#activityAccountFilterChips').isVisible(),false);
+  assert.equal(await page.locator('.trace-activity-filters').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+  await page.locator('#activityAccountFilter').selectOption('demo-fr-current');
   assert.equal(await page.locator('#activityAppliedFilters').isVisible(),true);
   assert.match(await page.locator('#activityFilterHint').innerText(),/1 filtre actif/);
   await page.locator('#activityAppliedFilters [data-clear-activity-filter="account"]').click();

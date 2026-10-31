@@ -184,31 +184,26 @@ async function main(){
      assert.equal(await page.locator('.budget-hero-card').innerText(),mineBudget);
      await activate(page.locator('.navbtn[data-nav="activity"]'));
      await activate(page.locator('#activityAdvancedFilters>summary'));
-     // Premium 5.37: the five history filters must present compact buttons
-     // rather than visible native dropdowns, without changing filtering.
+     // Compact native dropdowns retain all five filtering dimensions,
+     // keyboard/screenreader support and the original onchange financial logic.
      for(const id of ['activityAccountFilter','activityCategoryFilter',
        'activityNatureFilter','activityCurrencyFilter','activityStatusFilter']){
-      assert.equal(await page.locator('#'+id+'Chips button').count()>0,true,
-       'Missing premium buttons for '+id);
-      const nativeStyle=await page.locator('#'+id).evaluate(el=>({
-       hidden:el.getAttribute('aria-hidden'),clip:getComputedStyle(el).clipPath,
-       pointer:getComputedStyle(el).pointerEvents
+      const box=await page.locator('#'+id).evaluate(el=>({
+       hidden:el.getAttribute('aria-hidden'),height:el.getBoundingClientRect().height,
+       visible:getComputedStyle(el).display!=='none',pointer:getComputedStyle(el).pointerEvents
       }));
-      assert.equal(nativeStyle.hidden,'true','Legacy dropdown must not be announced');
-      assert.equal(nativeStyle.clip,'inset(50%)','Legacy dropdown must be visually clipped');
-      assert.equal(nativeStyle.pointer,'none','Legacy dropdown must not intercept touch');
-      const targets=await page.locator('#'+id+'Chips button').evaluateAll(nodes=>
-       nodes.map(el=>el.getBoundingClientRect().height));
-      assert.ok(targets.every(h=>h>=44),'Filter buttons must be touch friendly: '+id);
+      assert.equal(box.hidden,null,'Native dropdown must be accessible');
+      assert.ok(box.visible&&box.height>=42&&box.height<=45,'Compact 44px dropdown missing: '+id);
+      assert.notEqual(box.pointer,'none','Dropdown must accept touch: '+id);
+      assert.equal(await page.locator('#'+id+'Chips').isVisible(),false);
      }
-     await activate(page.locator('#activityStatusFilterChips [data-value="pending"]'));
+     await page.locator('#activityStatusFilter').selectOption('pending');
      assert.equal(await page.locator('#activityStatusFilter').inputValue(),'pending');
-     assert.equal(await page.locator('#activityStatusFilterChips [data-value="pending"]').getAttribute('aria-pressed'),'true');
-     await activate(page.locator('#activityStatusFilterChips [data-value="confirmed"]'));
+     await page.locator('#activityStatusFilter').selectOption('confirmed');
      assert.equal(await page.locator('#activityStatusFilter').inputValue(),'confirmed');
-     await activate(page.locator('#activityCurrencyFilterChips [data-value="EUR"]'));
+     await page.locator('#activityCurrencyFilter').selectOption('EUR');
      assert.equal(await page.locator('#activityCurrencyFilter').inputValue(),'EUR');
-     await activate(page.locator('#activityCurrencyFilterChips [data-value="all"]'));
+     await page.locator('#activityCurrencyFilter').selectOption('all');
      assert.equal(await page.locator('#activityCurrencyFilter').inputValue(),'all');
      const journal=[];
      for(const [tab,panel] of [['transactions','activityTransactions'],

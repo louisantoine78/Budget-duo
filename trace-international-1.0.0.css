@@ -1008,3 +1008,102 @@
 @media(prefers-reduced-motion:reduce){
  .page[data-page="budget"] .trace-budget-chevron{transition:none}
 }
+
+
+/* 5.37 editorial visibility pass — no hidden Home utilities, compact native
+   filtering, zero-activity budget categories disclosed without fabricated data. */
+.page[data-page="home"] .trace-home-more{
+ margin:14px 0 10px;border-top:1px solid #e5ebe5;padding-top:7px;
+}
+.page[data-page="home"] .trace-home-tools-head{
+ margin:7px 0 7px;
+}
+.page[data-page="home"] .trace-home-tools-head h2{
+ font-size:14px;font-weight:690;letter-spacing:-.015em;
+}
+.page[data-page="home"] .trace-home-more .trace-home-import-coverage{
+ margin-top:0;min-height:50px;padding-block:8px;border-radius:12px;
+}
+.page[data-page="home"] .trace-home-more .section-head{
+ margin-top:14px;margin-bottom:8px;
+}
+.page[data-page="home"] .trace-home-balance-breakdown{
+ display:grid;gap:2px;padding:9px 0 0;margin-top:9px;
+ border-top:1px solid rgba(203,221,207,.55);
+ color:inherit;
+}
+.page[data-page="home"] .trace-home-balance-breakdown .mini-account{
+ display:flex;align-items:center;justify-content:space-between;
+ min-height:24px;padding:1px 0;border:0;background:transparent;
+ gap:9px;font-size:11px;font-weight:520;
+}
+.page[data-page="home"] .trace-home-balance-breakdown .scope-label{
+ font-size:10px;line-height:1.35;margin:5px 0 0;opacity:.68;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer{
+ border:1px solid #e5ebe5;background:#fdfefa;border-radius:12px;
+ margin:9px 0 11px;box-shadow:none;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer>summary{
+ min-height:42px;padding:8px 12px;font-size:12px;font-weight:660;
+ color:#385c49;gap:8px;
+}
+.page[data-page="activity"] .trace-filter-hint{
+ font-size:10px;letter-spacing:0;color:#829187;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer .trace-activity-filters{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:9px 10px;margin:0 11px 8px;
+}
+.page[data-page="activity"] .trace-activity-filter-field{
+ min-width:0;display:grid;gap:5px;
+ padding:0!important;border:0!important;background:transparent!important;
+ box-shadow:none!important;border-radius:0!important;
+}
+.page[data-page="activity"] .trace-activity-filter-title{
+ font-size:10px;font-weight:630;color:#65786a;
+ letter-spacing:.01em;
+}
+.page[data-page="activity"] .trace-activity-filter-chips{
+ display:none!important;
+}
+.page[data-page="activity"] .trace-activity-filters .trace-activity-native-select{
+ display:block!important;position:relative!important;
+ width:100%!important;height:43px!important;min-height:43px!important;
+ max-width:100%!important;opacity:1!important;pointer-events:auto!important;
+ clip-path:none!important;overflow:hidden!important;
+ border:1px solid #e1e9e0!important;border-radius:10px!important;
+ background:#fff!important;color:#2c4637!important;
+ font-size:16px!important;font-weight:510!important;line-height:1.2!important;
+ padding:8px 8px!important;text-overflow:ellipsis;
+ -webkit-appearance:auto;appearance:auto;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer .trace-activity-filter-actions{
+ margin:4px 12px 9px;
+}
+.page[data-page="activity"] #activityResetFilters{
+ min-height:38px;font-size:11px;font-weight:620;
+}
+.page[data-page="budget"] .trace-insight-inactive{
+ margin:12px 0 4px;border-top:1px solid #e8eee8;padding-top:11px;
+}
+.page[data-page="budget"] .trace-insight-inactive-title{
+ display:flex;justify-content:space-between;gap:7px;flex-wrap:wrap;
+ font-size:12px;font-weight:680;color:#456653;margin-bottom:8px;
+}
+.page[data-page="budget"] .trace-insight-inactive-title small{
+ font-size:10px;font-weight:460;color:#879489;
+}
+.page[data-page="budget"] .trace-insight-inactive-row{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;padding:9px 0;border-bottom:1px solid #f0f2ed;
+ font-size:12px;font-weight:550;color:#61796a;
+}
+.page[data-page="budget"] .trace-insight-inactive-row small{
+ font-size:11px;font-weight:500;color:#89968b;white-space:nowrap;
+}
+@media(max-width:350px){
+ .page[data-page="activity"] .trace-activity-filter-drawer .trace-activity-filters{
+  grid-template-columns:minmax(0,1fr);
+ }
+}

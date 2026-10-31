@@ -51,7 +51,7 @@ test('premium CSS uses layout, subtle elevation, focus and reduced motion',()=>{
 });
 test('premium layout remains readable at 320–360px without changing five main tabs',()=>{
  assert.match(css,/\.trace-activity-main-tabs\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
- assert.match(css,/\.trace-home-balance-breakdown summary\{[^}]*min-height:44px/);
+ assert.match(css,/\.trace-home-balance-breakdown\{[^}]*margin-top:/);
  assert.match(css,/\.trace-activity-filter-drawer>summary\{[^}]*min-height:48px/);
  assert.doesNotMatch(home,/id="homeBudgetCategories"/);
  assert.match(home,/id="homeAccountsBtn"/);
@@ -273,7 +273,8 @@ test('Home shares one panel, keeps two separate metrics and both expected detail
 test('Import calendar stays a compact Home shortcut and detailed Budget stays in Budget',()=>{
  assert.match(home,/id="homeMoreDetails"/);
  assert.match(home,/class="grid grid-3 trace-home-month-kpis"/);
- assert.match(css,/\.trace-home-more>summary/);
+ assert.match(home,/<div class="trace-home-more" id="homeMoreDetails"/);
+ assert.doesNotMatch(home,/<details class="trace-home-more"/);
  assert.match(css,/\.activity-stats \.statbox/);
  assert.match(home,/id="homeImportCalendar"/);
  assert.match(home,/id="homeImportCoverage"/);
@@ -309,4 +310,15 @@ test('Budget keeps proven financial rendering and progressive categories',()=>{
  assert.doesNotMatch(shell,/class="card hero-card budget-hero-card" style=/);
  assert.match(shell,/id="annualBudgetChart"/);
  assert.match(shell,/id="budgetCategoryImpact"/);
+});
+
+test('all Home tools are visible by default, mobile filters use native selects and Budget keeps zero categories',()=>{
+ assert.match(home,/<div class="trace-home-balance-breakdown"/);
+ assert.match(home,/<div class="trace-home-more" id="homeMoreDetails"/);
+ assert.doesNotMatch(home,/<details class="trace-home-more"/);
+ assert.match(shell,/id="activityAccountFilter"[^>]*><option/);
+ assert.doesNotMatch(shell,/id="activityAccountFilter"[^>]*aria-hidden/);
+ assert.match(css,/\.trace-activity-filters \.trace-activity-native-select\{/);
+ assert.match(css,/\.trace-activity-filter-chips\{\s*display:none!important/);
+ assert.match(app,/showAllCategories:true/);
 });
