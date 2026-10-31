@@ -39,3 +39,17 @@ test('premium presentation is scoped to sheets, accessible and mobile friendly',
  assert.doesNotMatch(js,/saveDocument\(|state\.transactions|state\.budgets|client\.rpc\(/);
 });
 
+
+test('editorial financial sheets remove decorative nesting but retain all controls',()=>{
+ for(const id of ['manual','transaction','transaction-validate','budget-add','budget-edit']){
+  assert.match(css,new RegExp('data-trace-panel="'+id+'"'));
+ }
+ assert.match(css,/\.trace-edit-card-index,/);
+ assert.match(css,/\.trace-manual-symbol,/);
+ assert.match(css,/\.trace-budget-share-error/);
+ assert.match(css,/min-height:52px/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+ assert.match(js,/Saisie manuelle\./);
+ assert.match(js,/Poste du budget mensuel\./);
+ assert.match(js,/Contrôle avant validation\./);
+});

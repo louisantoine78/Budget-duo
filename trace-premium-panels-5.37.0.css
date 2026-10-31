@@ -154,3 +154,184 @@
 
 /* Hide older pseudo-kickers when the new common heading is present. */
 #sheetBackdrop.trace-intl-premium-dialog #sheetTitle::before{display:none!important}
+
+
+/* TRACE 5.37 — editorial transaction and budget sheets, iPhone first.
+   Only the preview's decorated sheets; fields and financial mechanics untouched. */
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) .sheet{
+ background:#fffdfa;border-color:#e5e9e2;
+ box-shadow:0 -10px 46px rgba(11,36,27,.14);border-radius:23px 23px 0 0;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) .sheet-head{
+ background:#fffdfa;box-shadow:none;border-bottom:1px solid #e8ede6;
+ padding-top:9px;padding-bottom:13px;margin-bottom:14px;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) .trace-panel-eyebrow{
+ letter-spacing:.065em;color:#64776a;font-size:10px;font-weight:680;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) .trace-panel-eyebrow::before{display:none}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetTitle{
+ font-size:clamp(23px,6vw,27px);font-weight:760;
+ letter-spacing:-.045em;margin-top:0;color:#183d30;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) .trace-panel-caption{
+ color:#708075;font-size:11px;margin:3px 0 0;line-height:1.35;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody :is(input.input,select.input,textarea.input):not([aria-hidden="true"]):not(.trace-manual-choice-native){
+ border:1px solid #dfe6de;background:#fff;
+ border-radius:11px;min-height:49px;box-shadow:none;font-weight:530;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody .label2{
+ color:#526a5b;font-size:12px;font-weight:680;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody .primary.full{
+ border:0;background:#174b3b;color:#fff;min-height:52px;
+ border-radius:12px;box-shadow:none;letter-spacing:-.01em;font-weight:740;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody .secondary.full{
+ min-height:46px;border:0;border-radius:10px;background:transparent;
+ color:#516c5b;box-shadow:none;font-weight:650;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody .secondary.full.trace-danger{
+ background:transparent;color:#a0473b;border-top:1px solid #eee4de;
+ border-radius:0;margin-top:14px!important;
+}
+
+/* Budget: context becomes a subtle line; the amount is the focal control. */
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="budget-add"],[data-trace-panel="budget-edit"]) #sheetBody>.settings-hero{
+ display:block;border:0;border-radius:0;background:transparent;box-shadow:none;
+ padding:0 0 15px;margin:0 0 17px;border-bottom:1px solid #e9ede7;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="budget-add"],[data-trace-panel="budget-edit"]) #sheetBody>.settings-hero .pico{display:none}
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="budget-add"],[data-trace-panel="budget-edit"]) #sheetBody>.settings-hero b{
+ color:#274638;font-size:13px;font-weight:750;letter-spacing:-.015em;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="budget-add"],[data-trace-panel="budget-edit"]) #sheetBody>.settings-hero small{
+ margin-top:3px;font-size:11px;color:#768579;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="budget-add"],[data-trace-panel="budget-edit"]) #sheetBody .budget-amount-field{
+ border:1px solid #d9e4d9;border-radius:12px;background:#fff;box-shadow:none;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="budget-add"],[data-trace-panel="budget-edit"]) #sheetBody .budget-amount-field .input{
+ font-size:27px!important;font-weight:750;letter-spacing:-.045em;
+}
+
+/* Manual: remove promotional artwork, make movement and account choices calm. */
+#sheetBackdrop[data-trace-panel="manual"] #sheetBody:has(.trace-manual-hero){
+ background:transparent;border-radius:0;padding-top:0;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-hero{
+ padding:0 0 12px;margin:0 0 17px;border:0;border-bottom:1px solid #e8ede7;
+ background:transparent;border-radius:0;box-shadow:none;gap:0;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-symbol,
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-hero .trace-kicker{
+ display:none;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-hero b{
+ color:#254b3a;font-size:14px;font-weight:720;letter-spacing:-.01em;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-hero small{
+ color:#738174;font-size:11px;line-height:1.35;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-types{
+ background:#f1f4ef;border:1px solid #e4e9e2;border-radius:12px;
+ padding:4px;box-shadow:none;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-types .choice.selected{
+ border-color:#dfe6dd;border-radius:9px;box-shadow:none;background:#fffdfa;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-fields,
+#sheetBackdrop[data-trace-panel="manual"] .trace-intl-transaction{
+ border-color:#e8ede7;background:#fffdfa;box-shadow:none;border-radius:12px;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-choice-chip{
+ background:#fff;border-color:#dfe8df;color:#395a48;box-shadow:none;
+ border-radius:11px;font-size:12px;font-weight:680;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-choice-chip[aria-pressed="true"],
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-choice-chip.is-active{
+ color:#fff;background:#1d5440;border-color:#1d5440;box-shadow:none;
+}
+
+/* Activity: one continuous form with section rules, not three illustrated cards. */
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-layout{
+ display:block;padding-top:0;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-lead{
+ margin:0 0 11px;color:#738175;font-size:11px;line-height:1.4;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-card{
+ border:0;border-radius:0;background:transparent;box-shadow:none;
+ border-bottom:1px solid #e7ece5;padding:19px 0 21px;margin:0;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-card:first-of-type{
+ padding-top:7px;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-card-head{
+ margin:0 0 15px;gap:0;align-items:center;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-card-index,
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-card-head p,
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-impact-symbol{
+ display:none;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-card-head h3{
+ color:#1b4433;font-size:15px;font-weight:760;letter-spacing:-.025em;margin:0;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-impact{
+ margin-top:18px;background:#f7f9f5;border-color:#e7ece4;border-radius:13px;
+ box-shadow:none;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-impact-head{
+ gap:0;
+}
+#sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-impact-head h3{
+ color:#284d3a;font-size:13px;font-weight:730;
+}
+@media(min-width:761px){
+ #sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) .sheet{border-radius:22px}
+}
+@media(max-width:390px){
+ #sheetBackdrop:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-card{padding:16px 0 18px}
+ #sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody .primary.full{min-height:52px}
+}

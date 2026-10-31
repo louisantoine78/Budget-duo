@@ -121,6 +121,11 @@ let base;
    await page.locator('#quickAdd').click();
    await page.locator('#traceAddManual').click();
    assert.equal(await backdrop.getAttribute('data-trace-panel'),'manual');
+   if(await page.locator('.trace-manual-symbol').count())
+    assert.equal(await page.locator('.trace-manual-symbol').evaluate(el=>getComputedStyle(el).display),'none');
+   if(await page.locator('.trace-manual-hero').count())
+    assert.equal(await page.locator('.trace-manual-hero').evaluate(el=>getComputedStyle(el).backgroundImage),'none');
+   assert.equal(await backdrop.locator('.sheet').evaluate(el=>getComputedStyle(el).backgroundImage),'none');
    assert.match(await page.locator('.trace-panel-eyebrow').innerText(),/MOUVEMENT FINANCIER/);
    assert.equal(await backdrop.locator('.trace-panel-caption').count(),1);
    assert.equal(await page.locator('#closeSheet').getAttribute('aria-label'),'Fermer Ajouter une opération');
@@ -140,6 +145,8 @@ let base;
    assert.equal(panel,'budget-add','Missing '+kind+' premium form');
    assert.ok(await page.locator('.trace-panel-caption').isVisible());
    assert.ok(await page.locator('#budgetAddAmount').isVisible());
+   assert.equal(await page.locator('#sheetBody>.settings-hero .pico').evaluate(el=>getComputedStyle(el).display),'none');
+   assert.equal(await page.locator('#sheetBody>.settings-hero').evaluate(el=>getComputedStyle(el).backgroundImage),'none');
    assert.ok(await page.locator('#saveBudgetAdd').evaluate(el=>el.getBoundingClientRect().height)>=48);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
    await page.locator('#cancelBudgetAdd').click();
@@ -152,6 +159,19 @@ let base;
   await page.locator('#closeSheet').click();
   assert.equal(await backdrop.getAttribute('data-trace-panel')==='budget-add',false,
    'Opening a different sheet may not retain prior premium labels');
+  await go('home');
+ });
+ await test('Activity transaction details use a quiet editorial form without index badges',async()=>{
+  await go('activity');
+  await page.locator('#activityTabs [data-tab="transactions"]').click();
+  await page.locator('[data-tx-open="demo-groceries"]').first().click();
+  assert.equal(await page.locator('#sheetBackdrop').getAttribute('data-trace-panel'),'transaction');
+  assert.equal(await page.locator('.trace-edit-card-index').first().evaluate(el=>getComputedStyle(el).display),'none');
+  assert.equal(await page.locator('.trace-edit-card').first().evaluate(el=>getComputedStyle(el).boxShadow),'none');
+  assert.ok(await page.locator('#txName').isVisible());
+  assert.ok(await page.locator('#txSave').evaluate(el=>el.getBoundingClientRect().height)>=48);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+  await page.locator('#closeSheet').click();
   await go('home');
  });
  await test('premium patrimoine and bank setup share the same responsive sheet standard',async()=>{
