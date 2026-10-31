@@ -12,8 +12,13 @@ test('fictional PWA export ships only the generated static allowlist',()=>{
   assert.equal(result.status,0,result.stderr);
   const audit=JSON.parse(fs.readFileSync(path.join(dest,'trace-lab-export-audit.json'),'utf8'));
   assert.equal(audit.schema,'trace-537-isolated-export-v1');
-  assert.equal(audit.count,69);
-  assert.equal(Object.keys(audit.files).length,69);
+  // 68 generated application assets + 2 premium form assets + 1 worker.
+  assert.equal(audit.count,71);
+  assert.equal(Object.keys(audit.files).length,71);
+  for(const asset of ['trace-premium-panels-5.37.0.js','trace-premium-panels-5.37.0.css']){
+   assert.match(audit.files[asset]||'',/^[0-9a-f]{64}$/,'Premium asset missing: '+asset);
+   assert.equal(fs.existsSync(path.join(dest,asset)),true,asset);
+  }
   for(const banned of ['config.js','cloud.js','app.js','sw.js','manifest.webmanifest',
     'reset-trace.html','package.json','.env','migrations','.git','tests'])
    assert.equal(fs.existsSync(path.join(dest,banned)),false,banned+' must not ship');
