@@ -294,12 +294,11 @@ test('Annual Budget has selectable months and Activity shows removable applied f
 });
 
 
-test('Budget editorial layout keeps three editable families with progressive rows',()=>{
+test('Budget keeps proven financial rendering and progressive categories',()=>{
  assert.match(shell,/id="budgetSections"/);
- assert.match(app,/const expandedBudgetKinds=new Set/);
- assert.match(app,/const items=rows\.filter\(filter\),visible=items\.slice\(0,2\),more=items\.slice\(2\)/);
- assert.match(app,/const total=items\.reduce\(\(sum,item\)=>sum\+budgetAmt\(item,sId\),0\)/);
- assert.match(app,/data-budget-extra/);
+ assert.match(app,/const previouslyOpen=list.dataset.traceBudgetContext===budgetContext/);
+ assert.match(app,/const entries=\[\.\.\.card.querySelectorAll\(':scope > \.budget-card'\)\]/);
+ assert.match(app,/entries\.slice\(2\)\.forEach\(node=>rest\.append\(node\)\)/);
  assert.match(app,/details\.addEventListener\('toggle',refresh\)/);
  assert.match(app,/data-budget-edit/);
  assert.match(app,/data-budget-add/);
