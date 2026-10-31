@@ -228,7 +228,7 @@ async function main(){
      await activate(page.locator('#quickAdd'));
      await activate(page.locator('#traceAddManual'));
      assert.equal(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')),true);
-     assert.equal(await page.locator('#manualTxAmount').evaluate(el=>getComputedStyle(el).fontSize),'16px',
+     assert.ok(await page.locator('#manualTxAmount').evaluate(el=>parseFloat(getComputedStyle(el).fontSize))>=16,
       'iPhone inputs below 16px trigger Safari focus zoom');
      // Compact manual-operation choices: no native dropdown interaction and
      // no persistence until the real Save button is explicitly confirmed.

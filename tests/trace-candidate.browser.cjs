@@ -131,6 +131,9 @@ let base;
    assert.equal(await page.locator('#closeSheet').getAttribute('aria-label'),'Fermer Ajouter une opération');
    assert.ok(await page.locator('#closeSheet').evaluate(el=>el.getBoundingClientRect().height)>=44);
    assert.ok(await page.locator('#saveManualTx').evaluate(el=>el.getBoundingClientRect().height)>=48);
+   const amountStyle=await page.locator('#manualTxAmount').evaluate(el=>({size:parseFloat(getComputedStyle(el).fontSize),
+    weight:Number(getComputedStyle(el).fontWeight)}));
+   assert.ok(amountStyle.size>=19&&amountStyle.size<=21&&amountStyle.weight<650);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
    await page.locator('#cancelManualTx').click();
    assert.equal(await backdrop.evaluate(el=>el.classList.contains('open')),false);
@@ -145,6 +148,9 @@ let base;
    assert.equal(panel,'budget-add','Missing '+kind+' premium form');
    assert.ok(await page.locator('.trace-panel-caption').isVisible());
    assert.ok(await page.locator('#budgetAddAmount').isVisible());
+   const budgetAmount=await page.locator('#budgetAddAmount').evaluate(el=>({size:parseFloat(getComputedStyle(el).fontSize),
+    weight:Number(getComputedStyle(el).fontWeight)}));
+   assert.ok(budgetAmount.size>=20&&budgetAmount.size<=22&&budgetAmount.weight<650);
    assert.equal(await page.locator('#sheetBody>.settings-hero .pico').evaluate(el=>getComputedStyle(el).display),'none');
    assert.equal(await page.locator('#sheetBody>.settings-hero').evaluate(el=>getComputedStyle(el).backgroundImage),'none');
    assert.ok(await page.locator('#saveBudgetAdd').evaluate(el=>el.getBoundingClientRect().height)>=48);
@@ -169,6 +175,9 @@ let base;
   assert.equal(await page.locator('.trace-edit-card-index').first().evaluate(el=>getComputedStyle(el).display),'none');
   assert.equal(await page.locator('.trace-edit-card').first().evaluate(el=>getComputedStyle(el).boxShadow),'none');
   assert.ok(await page.locator('#txName').isVisible());
+  const txAmount=await page.locator('#txAmount').evaluate(el=>({size:parseFloat(getComputedStyle(el).fontSize),
+   weight:Number(getComputedStyle(el).fontWeight)}));
+  assert.ok(txAmount.size>=19&&txAmount.size<=21&&txAmount.weight<650);
   assert.ok(await page.locator('#txSave').evaluate(el=>el.getBoundingClientRect().height)>=48);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
   await page.locator('#closeSheet').click();
@@ -313,11 +322,16 @@ let base;
    await page.setViewportSize({width,height:844});
    const pills=await page.locator('#traceIntlHome .trace-intl-chip').evaluateAll(nodes=>nodes.map(n=>{
     const r=n.getBoundingClientRect(),sty=getComputedStyle(n),pseudo=getComputedStyle(n,'::before');
+    const name=n.querySelector('.trace-intl-chip-name');
     return {height:r.height,width:r.width,font:parseFloat(sty.fontSize),
-     visibleHeight:r.height-parseFloat(pseudo.top)-parseFloat(pseudo.bottom)};
+     visibleHeight:r.height-parseFloat(pseudo.top)-parseFloat(pseudo.bottom),
+     label:name?.textContent,unclipped:!name||name.scrollWidth<=name.clientWidth+1,
+     fullName:n.getAttribute('title'),aria:n.getAttribute('aria-label')};
    }));
    assert.ok(pills.length>=2);
-   assert.ok(pills.every(p=>p.height>=44&&p.width<=124&&p.font<=11&&p.visibleHeight<=31));
+   assert.ok(pills.every(p=>p.height>=44&&p.width<=152&&p.font<=11&&p.visibleHeight<=31));
+   assert.ok(pills.every(p=>p.unclipped&&p.aria?.includes('Consulter')&&p.fullName));
+   assert.ok(pills.some(p=>p.label==='Canada')&&pills.some(p=>p.label==='France'));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
   }
   await page.setViewportSize({width:390,height:844});

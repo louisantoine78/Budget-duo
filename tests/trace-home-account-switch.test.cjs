@@ -178,3 +178,24 @@ test('unlinked card across two candidate current accounts requires mapping expla
  assert.match(h.nodes.warning.textContent,/sans compte de règlement/);
  assert.equal(h.events.writes,0);
 });
+
+test('Home short labels remove redundant generic account wording without changing names',()=>{
+ const window={};vm.runInNewContext(source,{window});
+ const f=window.TraceInternationalUI.homeAccountShortLabel;
+ const checking=[
+  {id:'ca',name:'Compte Canada · compte courant CAD',currency:'CAD'},
+  {id:'fr',name:'France · compte EUR',currency:'EUR'},
+  {id:'ds',name:'Desjardins · courant',currency:'CAD'}
+ ];
+ assert.equal(f(checking[0],checking),'Canada');
+ assert.equal(f(checking[1],checking),'France');
+ assert.equal(f(checking[2],checking),'Desjardins');
+ assert.equal(checking[0].name,'Compte Canada · compte courant CAD');
+ const similar=[
+  {id:'a',name:'Canada · Desjardins',currency:'CAD'},
+  {id:'b',name:'Canada · RBC',currency:'CAD'}
+ ];
+ assert.equal(f(similar[0],similar),'Canada · Desjardins');
+ assert.equal(f(similar[1],similar),'Canada · RBC');
+ assert.notEqual(f(similar[0],similar),f(similar[1],similar));
+});

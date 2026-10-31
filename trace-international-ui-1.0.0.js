@@ -1,6 +1,35 @@
 /* TRACE International 5.37 premium one-tap account viewing (read-only). */
 (function(root){'use strict';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* The Home pill is a navigation label, not the account's stored name.
+ * Keep the full name in title/accessible text; never rename the account. */
+function homeAccountShortLabel(account,checking=[]){
+ const raw=String(account?.name||'Compte').trim()||'Compte';
+ const currency=String(account?.currency||'').toUpperCase();
+ const sections=raw.split(/\s*[·—–|]\s*/).map(v=>v.trim()).filter(Boolean);
+ const first=(sections[0]||raw).replace(/^compte(?:\s+bancaire)?\s+/i,'')
+  .replace(/\s+(?:CAD|EUR|USD|GBP|CHF)\s*$/i,'').trim();
+ const stem=first||raw;
+ const key=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const base=key(stem);
+ const other=checking.filter(a=>{
+  const segments=String(a.name||'Compte').split(/\s*[·—–|]\s*/);
+  const value=(segments[0]||'Compte').replace(/^compte(?:\s+bancaire)?\s+/i,'')
+   .replace(/\s+(?:CAD|EUR|USD|GBP|CHF)\s*$/i,'').trim();
+  return key(value||a.name||'Compte')===base&&String(a.currency||'').toUpperCase()===currency;
+ });
+ if(other.length<2)return stem;
+ // Try distinctive second segments before falling back to a stable ordinal.
+ const second=sections.slice(1).find(v=>!new RegExp('^(?:compte|courant|'+currency+')$', 'i').test(v));
+ const extra=second?.replace(/^(?:compte\s+courant|compte)\s+/i,'')
+  .replace(/\s+(?:CAD|EUR|USD|GBP|CHF)\s*$/i,'').trim();
+ if(extra){
+  const taken=other.some(a=>a.id!==account.id&&String(a.name||'')
+   .toLocaleLowerCase('fr').includes(extra.toLocaleLowerCase('fr')));
+  if(!taken)return stem+' · '+extra;
+ }
+ return stem+' '+(other.findIndex(a=>a.id===account.id)+1);
+}
 // Read-only display selection. Never stored in household settings.
 let viewState=null;
 function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode,checkingNode,cardNode,
@@ -36,9 +65,10 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
   '<div class="trace-intl-switch" role="group" aria-label="Consulter les soldes par compte">'+
   checking.map(a=>'<button type="button" class="trace-intl-chip'+(a.id===selectedId?' is-active':'')+
    '" data-trace-view-account="'+esc(a.id)+'" aria-pressed="'+(a.id===selectedId?'true':'false')+'"'+
-   ' title="'+esc(a.name||'Compte')+' · '+esc(I.currency(a))+'">'+
+   ' title="'+esc(a.name||'Compte')+' · '+esc(I.currency(a))+'"'+
+   ' aria-label="Consulter '+esc(a.name||'Compte')+' · '+esc(I.currency(a))+'">'+
    (a.id===primaryId?'<span class="trace-intl-chip-star" aria-hidden="true">★</span> ':'')+
-   '<span class="trace-intl-chip-name">'+esc(a.name||'Compte')+'</span>'+
+   '<span class="trace-intl-chip-name">'+esc(compact?homeAccountShortLabel(a,checking):a.name||'Compte')+'</span>'+
    ' <small class="trace-intl-chip-currency">'+esc(I.currency(a))+'</small></button>').join('')+'</div>'+
   '<p class="trace-intl-view-note">Toucher un compte pour consulter son solde · aucune modification du compte principal.</p></div>':'')+
  (compact?'':'<details class="trace-intl-primary-control"><summary><span>★ Compte principal</span><small>Modifier</small></summary>'+
@@ -137,5 +167,5 @@ function render({host,accounts=[],owner,mainId,estimates={},rates={},balanceNode
   a.nativeCurrency!=='CAD'&&a.balance!==null&&a.cad===null).map(a=>a.nativeCurrency))];
  if(missingCurrencies.length&&typeof requestRate==='function')requestRate(missingCurrencies);
 }
-root.TraceInternationalUI=Object.freeze({render});
+root.TraceInternationalUI=Object.freeze({render,homeAccountShortLabel});
 })(typeof window!=='undefined'?window:globalThis);

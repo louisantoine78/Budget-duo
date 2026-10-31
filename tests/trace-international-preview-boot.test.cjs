@@ -17,7 +17,7 @@ function element(selector){
   dataset:{},checked:false,files:[],classList:{add(){},remove(){},toggle(){},contains(){return false}},
   addEventListener(name,fn){this['on'+name]=fn;},setAttribute(){},removeAttribute(){},
   querySelector:s=>element(s),querySelectorAll:()=>[],closest:s=>element(s),
-  appendChild(){},getAttribute(){return null},focus(){},click(){},replaceChildren(){}
+  appendChild(){},append(){},getAttribute(){return null},focus(){},click(){},replaceChildren(){}
  };
  els.set(selector,o);return o;
 }

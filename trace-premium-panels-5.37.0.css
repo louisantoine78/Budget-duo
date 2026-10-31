@@ -335,3 +335,59 @@
  [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
  [data-trace-panel="budget-edit"]) #sheetBody .primary.full{min-height:52px}
 }
+
+/* TRACE 5.37 refinement: quieter money and readable Home account names.
+ * Small but legible amounts, stable numeric alignment, no financial mutation. */
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="budget-add"],[data-trace-panel="budget-edit"]) #sheetBody .budget-amount-field .input{
+ font-size:21px!important;font-weight:580!important;letter-spacing:-.025em!important;
+ font-variant-numeric:tabular-nums;line-height:1.35;
+}
+#sheetBackdrop.trace-intl-premium-dialog[data-trace-panel="manual"] #manualTxAmount{
+ font-size:20px!important;font-weight:580!important;letter-spacing:-.022em!important;
+ font-variant-numeric:tabular-nums;text-align:left;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-money-control input{
+ font-size:20px!important;font-weight:580!important;letter-spacing:-.02em!important;
+ font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-currency{
+ border:0;border-radius:0;background:transparent;
+ color:#64776b;font-size:11px;font-weight:600;right:14px;padding:0;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is([data-trace-panel="transaction"],[data-trace-panel="transaction-validate"]) .trace-edit-money-control input{
+ padding-right:62px!important;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody input[type="number"].input:not(
+ #manualTxAmount,#txAmount,#budgetAddAmount,#budgetEditAmount){
+ font-size:16px!important;font-weight:520;letter-spacing:0;
+ font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody .trace-intl-help{
+ font-size:11px;line-height:1.45;color:#6f8073;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="manual"],[data-trace-panel="transaction"],
+ [data-trace-panel="transaction-validate"],[data-trace-panel="budget-add"],
+ [data-trace-panel="budget-edit"]) #sheetBody :is(input.input,select.input):not([aria-hidden="true"]):focus-visible{
+ border-color:#6ba084;outline:2px solid rgba(39,114,77,.18);outline-offset:1px;
+}
+/* Home: an account selector shows the meaningful short name only.
+ * Its tooltip and accessible name retain the complete bank account identity. */
+.trace-home-unified .trace-intl-chip{
+ max-width:150px;gap:4px;padding-inline:9px;font-size:11px;font-weight:620;
+}
+.trace-home-unified .trace-intl-chip-name{
+ font-size:11px;letter-spacing:-.01em;
+}
+.trace-home-unified .trace-intl-chip-currency{
+ font-size:9px;font-weight:650;opacity:.7;
+}
+@media(max-width:360px){
+ .trace-home-unified .trace-intl-chip{max-width:145px}
+}
