@@ -21,6 +21,7 @@ test('premium panel covers manual entries, budget, bank and wealth with standard
  const types=window.TraceSheetPremium.types;
  assert.equal(new Set(types.map(t=>t.key)).size,types.length);
  for(const key of ['quick-add','manual','transaction','budget-add','budget-edit',
+  'account-detail','budget-category-detail',
   'bank-movement','international-transfer','foreign-expense','settlement',
   'budget-copy','account','investment','reconciliation']){
   assert.ok(types.some(t=>t.key===key),key);
@@ -80,4 +81,18 @@ test('technical banking facts are progressively disclosed without hiding editabl
  assert.match(css,/trace-edit-record-meta/);
  assert.match(css,/trace-edit-explanation summary:focus-visible/);
  assert.match(js,/key:'foreign-expense'/);
+});
+
+test('account and budget-category read-only details share the premium style without hiding evidence',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ assert.match(js,/key:'account-detail',selector:'#traceAccountAllTx'/);
+ assert.match(js,/key:'budget-category-detail',selector:'#traceBudgetToActivity'/);
+ assert.match(css,/data-trace-panel="account-detail"/);
+ assert.match(css,/data-trace-panel="budget-category-detail"/);
+ assert.match(app,/trace-account-detail-section-title/);
+ assert.match(app,/trace-account-detail-actions/);
+ assert.match(app,/trace-insight-sheet-kicker/);
+ assert.match(app,/traceDeferredAccountReview\(a\)/);
+ assert.match(app,/traceAccountBankProofNotice\(a,reconcile\?\.date\|\|null\)/);
+ assert.match(app,/id="traceBudgetToActivity"/);
 });

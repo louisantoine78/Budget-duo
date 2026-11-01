@@ -773,3 +773,168 @@
 @media(prefers-reduced-motion:reduce){
  #sheetBackdrop.trace-intl-premium-dialog .trace-edit-explanation{scroll-behavior:auto}
 }
+
+
+/* TRACE 5.37 — premium financial read-only details. No fields, statuses or
+ * reconciliation notices are suppressed. Navigation and calculations untouched. */
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="account-detail"],[data-trace-panel="budget-category-detail"]) .sheet{
+ background:#fffdfa;border-color:#e5ebe4;box-shadow:0 -10px 32px rgba(18,48,31,.1);
+ border-radius:22px 22px 0 0;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="account-detail"],[data-trace-panel="budget-category-detail"]) .sheet-head{
+ padding:7px 5px 13px;margin:0 -5px 14px;border-bottom:1px solid #e8eee7;
+ background:transparent;grid-template-columns:minmax(0,1fr) 44px;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="account-detail"],[data-trace-panel="budget-category-detail"]) .trace-panel-eyebrow{
+ font-size:9px;font-weight:640;letter-spacing:.075em;color:#809182;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="account-detail"],[data-trace-panel="budget-category-detail"]) #sheetTitle{
+ font-size:23px;line-height:1.16;letter-spacing:-.035em;
+ font-weight:690;color:#1c3e2d;margin-top:5px;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="account-detail"],[data-trace-panel="budget-category-detail"]) #closeSheet{
+ width:44px;height:44px;min-width:44px;min-height:44px;
+ border:0;border-radius:50%;box-shadow:none;
+ background:transparent;color:#657c6c;font-size:25px;font-weight:300;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-hero{
+ display:grid;gap:5px;
+ border:0;border-radius:0;
+ padding:9px 0 17px;
+ border-bottom:1px solid #e8eee7;
+ background:transparent;box-shadow:none;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-kicker{
+ font-size:10px;font-weight:610;color:#758778;letter-spacing:.055em;
+ line-height:1.4;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-hero strong{
+ font-size:clamp(29px,7vw,38px);
+ font-weight:625;letter-spacing:-.045em;
+ color:#1a4331;line-height:1.2;
+ font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-hero small{
+ font-size:11px;color:#6e8776;line-height:1.45;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-section-title{
+ font-size:11px;color:#607969;font-weight:680;
+ margin-top:18px;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-info{
+ margin:8px 0 15px;border-top:1px solid #e8eee8;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-info>div{
+ min-height:43px;padding:12px 0;
+ border-bottom:1px solid #edf1eb;
+ align-items:center;gap:13px;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-info span{
+ color:#738778;font-size:11px;font-weight:530;flex:0 0 39%;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-info b{
+ color:#274939;font-size:11px;font-weight:645;line-height:1.35;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-operations-heading{
+ align-items:center;min-height:33px;margin:17px 0 7px;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-operations-heading h2{
+ font-size:13px;color:#284939;letter-spacing:-.015em;font-weight:680;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-operations-heading small{
+ font-size:10px;color:#869588;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-last{
+ display:grid;gap:0;
+ border-top:1px solid #e9eee7;border-bottom:1px solid #e9eee7;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-last-line{
+ background:transparent;border:0;border-radius:0;
+ border-bottom:1px solid #edf1eb;padding:11px 2px;box-shadow:none;
+ align-items:center;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-last-line:last-child{
+ border-bottom:0;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-last-line b{
+ font-size:12px;color:#2d4d3e;font-weight:650;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-last-line small{
+ font-size:10px;color:#829286;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-last-line strong{
+ font-size:12px;font-weight:670;color:#26523c;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-actions{
+ display:grid;gap:4px;margin:20px 0 4px;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-actions .primary.full{
+ min-height:50px;border:0;border-radius:12px;
+ background:#1b513b;color:#fff;box-shadow:none;
+ font-size:14px;font-weight:660;margin:0;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] .trace-account-detail-actions .secondary.full{
+ min-height:44px;border:0;border-radius:10px;
+ background:transparent;box-shadow:none;
+ color:#6a826e;font-size:12px;font-weight:580;margin:0;
+}
+#sheetBackdrop[data-trace-panel="account-detail"] #traceAccountSelectPrimary{
+ min-height:44px;background:#f6f9f4;border:1px solid #e4ece2;
+ border-radius:11px;color:#366248;box-shadow:none;
+ font-size:12px;font-weight:650;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] .trace-insight-sheet-intro{
+ display:grid;gap:5px;padding:10px 0 18px;margin:0 0 6px;
+ border:0;border-bottom:1px solid #e7eee6;
+ border-radius:0;background:transparent;box-shadow:none;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] .trace-insight-sheet-kicker{
+ font-size:10px;font-weight:670;letter-spacing:.075em;
+ color:#7b8d7e;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] .trace-insight-sheet-intro strong{
+ color:#1d4934;font-size:32px;font-weight:630;
+ letter-spacing:-.045em;line-height:1.2;font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] .trace-insight-sheet-intro small{
+ color:#6c8171;font-size:11px;line-height:1.4;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] #sheetBody>.tx{
+ min-height:55px;padding:11px 2px;gap:10px;
+ border-bottom:1px solid #edf1ec;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] #sheetBody>.tx .tx-icon{
+ width:32px;height:32px;border-radius:10px;
+ background:#edf4ef;color:#456b55;font-size:13px;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] #sheetBody>.tx .tx-main b{
+ color:#264535;font-size:12px;font-weight:650;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] #sheetBody>.tx .tx-main small{
+ color:#7a8d7e;font-size:10px;overflow-wrap:anywhere;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] #sheetBody>.tx .tx-amt{
+ color:#254b36;font-weight:675;font-size:12px;
+ font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] #sheetBody>.trace-insights-foot{
+ font-size:11px!important;margin:12px 0 0!important;
+ padding-top:12px;border-top:1px solid #e8eee7;
+ color:#798979!important;
+}
+#sheetBackdrop[data-trace-panel="budget-category-detail"] #traceBudgetToActivity{
+ min-height:50px;width:100%;margin:17px 0 2px;
+ border-radius:12px;border:0;background:#1b513b;
+ color:#fff;box-shadow:none;font-size:14px;font-weight:660;
+}
+@media(min-width:761px){
+ #sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="account-detail"],[data-trace-panel="budget-category-detail"]) .sheet{
+ border-radius:22px;width:min(510px,100%);
+ }
+}

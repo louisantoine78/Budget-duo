@@ -363,6 +363,9 @@ let base;
   const before=await page.locator('#budgetCategoryImpact .trace-insights-head>b').innerText();
   await page.locator('#budgetCategoryImpact .trace-insight-inactive-row').click();
   assert.match(await page.locator('#sheetTitle').innerText(),/Dépenses · Logement/);
+  assert.equal(await page.locator('#sheetBackdrop').getAttribute('data-trace-panel'),'budget-category-detail');
+  assert.equal(await page.locator('.trace-insight-sheet-kicker').innerText(),'DÉPENSES CONFIRMÉES');
+  assert.ok(await page.locator('#traceBudgetToActivity').isVisible());
   assert.match(await page.locator('#sheetBody').innerText(),/Aucune opération confirmée/);
   await page.locator('#closeSheet').click();
   assert.equal(await page.locator('#budgetCategoryImpact .trace-insights-head>b').innerText(),before);
@@ -568,8 +571,18 @@ let base;
  await test('account detail shows two recent operations and opens filtered Activity',async()=>{
   await accountSettings();
   await page.locator('[data-details-bank="demo-fr-current"]').click();
+  assert.equal(await page.locator('#sheetBackdrop').getAttribute('data-trace-panel'),'account-detail');
   assert.equal(await page.locator('.trace-account-last-line').count(),2);
+  assert.equal(await page.locator('.trace-account-detail-section-title').innerText(),'Informations du compte');
+  assert.equal(await page.locator('.trace-account-detail-info>div').count(),5);
+  assert.ok(await page.locator('#traceAccountDetailBack').isVisible());
   assert.match(await text('sheetBody'),/À vérifier/);
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   assert.ok(await page.locator('#traceAccountAllTx').evaluate(el=>el.getBoundingClientRect().height>=44));
+  }
+  await page.setViewportSize({width:390,height:844});
   await page.locator('#traceAccountAllTx').click();
   assert.equal(await page.locator('#activityAccountFilter').inputValue(),'demo-fr-current');
   assert.ok(await page.locator('.trace-activity-day').count()>0);
@@ -580,6 +593,9 @@ let base;
   assert.deepEqual(headings,['Revenus','Dépenses fixes','Dépenses variables']);
   assert.equal(await page.locator('#annualBudgetChart [data-insight-month]').count(),12);
   await page.locator('#budgetCategoryImpact [data-insight-category="groceries"]').click();
+  assert.equal(await page.locator('#sheetBackdrop').getAttribute('data-trace-panel'),'budget-category-detail');
+  assert.match(await page.locator('.trace-insight-sheet-intro strong').innerText(),/104/);
+  assert.ok(await page.locator('#traceBudgetToActivity').isVisible());
   await page.locator('#traceBudgetToActivity').click();
   assert.equal(await page.locator('#activityCategoryFilter').inputValue(),'groceries');
  });

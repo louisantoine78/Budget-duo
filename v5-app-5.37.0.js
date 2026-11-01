@@ -792,9 +792,10 @@ function insightCategoryDrilldown(month,scopeValue,categoryId){
  const expenses=listed.filter(t=>['expense','group_expense','person_payment','refund'].includes(t.type));
  const amount=expenses.reduce((n,t)=>n+(t.type==='refund'?-alloc(t,scopeValue):alloc(t,scopeValue)),0);
  openSheet('Dépenses · '+esc(category?.name||'Autres'),
-  '<div class="trace-insight-sheet-intro"><strong>'+money(Math.max(0,amount))+'</strong><small>'+esc(monthLabel(month))+' · ta part selon le filtre sélectionné</small></div>'+
+  '<div class="trace-insight-sheet-intro"><span class="trace-insight-sheet-kicker">DÉPENSES CONFIRMÉES</span><strong>'+money(Math.max(0,amount))+'</strong><small>'+esc(monthLabel(month))+' · ta part selon le filtre sélectionné</small></div>'+
   (expenses.length?expenses.map(txRow).join(''):'<div class="empty-note">Aucune opération confirmée dans cette catégorie.</div>')+
-  '<div class="trace-insights-foot">Les virements et paiements de carte sont exclus des dépenses de consommation.</div>'+  '<button type="button" class="primary full" id="traceBudgetToActivity" style="margin-top:12px">Voir dans Activité ›</button>');
+  '<div class="trace-insights-foot">Virements internes et paiements de carte exclus du budget.</div>'+
+  '<button type="button" class="primary full" id="traceBudgetToActivity">Voir les opérations dans Activité</button>');
  $$('[data-tx-open]').forEach(el=>el.onclick=()=>editTransaction(el.dataset.txOpen));
  $('#traceBudgetToActivity').onclick=()=>openActivityCategory(month,categoryId);
 }
@@ -1250,6 +1251,7 @@ function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
   '<div class="trace-account-detail-hero"><span class="trace-account-detail-kicker">'+
   esc(traceAccountTitle(a))+' · '+esc(currency)+' · '+esc(a.country||'Pays à définir')+(a.archived?' · Archivé':'')+'</span>'+
   '<strong>'+esc(traceAccountNative(a))+'</strong><small>'+traceAccountCAD(a)+'</small></div>'+
+  '<div class="trace-account-detail-section-title">Informations du compte</div>'+
   '<div class="trace-account-detail-info">'+
   '<div><span>Compte</span><b>'+esc(shortAccountLabel(a))+'</b></div>'+
   '<div><span>Titulaire</span><b>'+esc(shortMemberName(a.owner))+'</b></div>'+
@@ -1265,11 +1267,11 @@ function openTraceAccountDetail(id,{householdView=false,onBack=null}={}){
   (a.owner===me&&!a.archived&&accountType(a)==='checking'?
   '<button type="button" class="trace-intl-set-primary" id="traceAccountSelectPrimary">'+
   (state.household.primaryBankAccountByOwner?.[me]===a.id?'★ Compte principal':'☆ Définir comme principal')+'</button>':'')+
-  '<div class="section-head"><h2>Deux dernières opérations</h2></div>'+
+  '<div class="section-head trace-account-operations-heading"><h2>Dernières opérations</h2><small>2 plus récentes</small></div>'+
   '<div class="trace-account-last">'+(latest.length?latest.map(txLine).join(''):
     '<p class="empty-note">Aucune opération enregistrée sur ce compte.</p>')+'</div>'+
-  '<button type="button" class="primary full" id="traceAccountAllTx" style="margin-top:12px">Voir toutes les opérations</button>'+
-  '<button type="button" class="secondary full" id="traceAccountDetailBack" style="margin-top:8px">Retour aux comptes</button>');
+  '<div class="trace-account-detail-actions"><button type="button" class="primary full" id="traceAccountAllTx">Voir toutes les opérations</button>'+
+  '<button type="button" class="secondary full" id="traceAccountDetailBack">Retour aux comptes</button></div>');
  bindTraceDeferredPurchaseForm(a);
  $$('[data-trace-bank-proof-open]').forEach(btn=>btn.onclick=()=>
   openTraceAccountActivity(a.id,btn.dataset.traceBankProofOpen));
