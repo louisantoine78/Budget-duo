@@ -398,7 +398,10 @@ let base;
   await go('budget');
   assert.equal(await page.locator('#annualBudgetChart .trace-year-month').count(),12);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-totals>div').count(),3);
+  assert.match(await page.locator('#annualBudgetChart .trace-year-totals').innerText(),/Dépenses \/ revenus/);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-selected').count(),1);
+  assert.equal(await page.locator('#annualBudgetChart .trace-year-selected span').count(),4);
+  assert.match(await page.locator('#annualBudgetChart .trace-year-diagnosis').innerText(),/Principal poste classé/);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-result-main strong').count(),1);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-budget-check').count(),1);
   assert.ok(await page.locator('#annualBudgetChart .trace-year-coverage').isVisible());
@@ -410,8 +413,20 @@ let base;
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
    assert.ok(await page.locator('#annualBudgetChart .trace-year-result-main').isVisible());
    assert.equal(await page.locator('#annualBudgetChart [data-insight-month]').count(),12);
+   if(width===390){
+    assert.equal(await page.locator('#annualBudgetChart .trace-year-grid')
+     .evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),4);
+    assert.equal(await page.locator('#annualBudgetChart .trace-year-selected>div')
+     .evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+   }
   }
   await page.setViewportSize({width:390,height:844});
+  await page.locator('#annualBudgetDetails').click();
+  assert.equal(await page.locator('#traceAnnualDetail .trace-year-month').count(),12);
+  assert.equal(await page.locator('#traceAnnualDetail .trace-year-selected span').count(),4);
+  assert.equal(await page.locator('#traceAnnualDetail .trace-year-grid')
+   .evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),4);
+  await page.locator('#closeSheet').click();
   const target=page.locator('#annualBudgetChart [data-insight-month]').first();
   const selectedMonth=await target.getAttribute('data-insight-month');
   await target.click();

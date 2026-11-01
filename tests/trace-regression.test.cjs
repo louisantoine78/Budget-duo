@@ -181,9 +181,15 @@ test('annual diagnosis uses confirmed flows, comparable months and no future amo
  assert.ok(html.includes('1 mois a dépassé le budget prévu'));
  assert.ok(html.includes('Mois le plus dépensier parmi les mois renseignés : janvier (600 $)'));
  assert.ok(html.includes('2 mois sans mouvement confirmé'));
- assert.ok(html.includes('1 mois budgété sans mouvement confirmé'));
+ assert.ok(html.includes('1 mois budgété sans dépense confirmée'));
  assert.ok(!html.split('trace-year-grid')[0].includes('9 999 $'),'Future budget must be excluded from the summary');
  assert.ok(html.includes('2 mois comparables avec prévision et mouvements'));
+ assert.ok(html.includes('44 %'),'800 / 1800 = 44 % on recorded flows');
+ assert.ok(html.includes('Dépenses / revenus'));
+ assert.ok(html.includes('Revenus confirmés'));
+ assert.ok(html.includes('Dépenses confirmées'));
+ assert.ok(html.includes('Écart au budget'));
+ assert.ok(html.includes('pas un taux d’épargne'));
 });
 test('annual overview never labels an unimported month as zero real spending',()=>{
  const node={innerHTML:''};
@@ -192,10 +198,47 @@ test('annual overview never labels an unimported month as zero real spending',()
   {month:'2026-02',elapsed:true,hasBudget:false,hasTransactions:false,budget:0,expense:0,income:0}
  ]});
  assert.ok(node.innerHTML.includes('Aucune opération confirmée : bilan non calculable'));
- assert.ok(node.innerHTML.includes('Différence</small><strong>—'));
+ assert.ok(node.innerHTML.includes('Différence revenus − dépenses</small><strong class="">—'));
  assert.ok(node.innerHTML.includes('Comparaison au budget indisponible'));
- assert.ok(node.innerHTML.includes('Enregistré <b>À vérifier'));
+ assert.ok(node.innerHTML.includes('Dépenses confirmées <b>À vérifier'));
  assert.ok(node.innerHTML.includes('Non renseigné'));
+});
+test('annual category insight is grounded and escaped, not repeated in the headline',()=>{
+ const node={innerHTML:''};
+ I537.renderAnnual(node,{year:'2026',months:[
+  {month:'2026-01',elapsed:true,hasBudget:true,hasTransactions:true,
+   hasExpenseTransactions:true,budget:100,expense:105,income:200,selected:true}
+ ],topCategory:{name:'Épicerie <script>alert(1)</script>',amount:78}});
+ assert.ok(node.innerHTML.includes('Principal poste classé : Épicerie'));
+ assert.ok(!node.innerHTML.includes('<script>'));
+ assert.ok(node.innerHTML.includes('Dépenses / revenus'));
+ assert.ok(node.innerHTML.includes('53 %'));
+ assert.equal((node.innerHTML.match(/class="trace-year-result-main"/g)||[]).length,1);
+});
+test('income-only or transfer-only months do not masquerade as a month with zero spending',()=>{
+ const node={innerHTML:''};
+ I537.renderAnnual(node,{year:'2026',months:[
+  {month:'2026-01',elapsed:true,hasBudget:true,hasTransactions:true,
+   hasExpenseTransactions:false,budget:100,expense:0,income:400,selected:true},
+  {month:'2026-02',elapsed:true,hasBudget:true,hasTransactions:true,
+   hasExpenseTransactions:true,budget:200,expense:250,income:500}
+ ]});
+ assert.ok(node.innerHTML.includes('1 mois comparable avec prévision et mouvements'));
+ assert.ok(node.innerHTML.includes('1 mois budgété sans dépense confirmée'));
+ assert.ok(node.innerHTML.includes('Enregistré'));
+ assert.ok(node.innerHTML.includes('Dépenses confirmées <b>À vérifier'));
+ assert.ok(node.innerHTML.includes('Écart au budget <b>—'));
+ assert.ok(node.innerHTML.includes('Flux seuls'));
+});
+test('the annual ratio is unavailable when there is no confirmed income',()=>{
+ const node={innerHTML:''};
+ I537.renderAnnual(node,{year:'2026',months:[
+  {month:'2026-01',elapsed:true,hasBudget:false,hasTransactions:true,hasExpenseTransactions:true,
+   budget:0,expense:70,income:0,selected:true}
+ ]});
+ assert.ok(node.innerHTML.includes('Dépenses / revenus</small><strong>—'));
+ assert.ok(!node.innerHTML.includes('NaN'));
+ assert.ok(!node.innerHTML.includes('Infinity'));
 });
 test('wealth view avoids fictitious price series',()=>{
  const node={innerHTML:''};

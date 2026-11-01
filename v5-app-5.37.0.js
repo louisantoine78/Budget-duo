@@ -782,8 +782,29 @@ function insightYear(year,scopeValue,selected){
   return{month:m,budget:v.eb,expense:v.expense,income:v.income,elapsed:m<=CM,
    current:m===CM,selected:m===selected,
    hasBudget:v.eb>0,
-   hasTransactions:txs(m,scopeValue,true).length>0};
+   hasTransactions:txs(m,scopeValue,true).length>0,
+   hasExpenseTransactions:txs(m,scopeValue,true)
+    .some(t=>['expense','group_expense','person_payment','refund'].includes(t.type))};
  });
+}
+function insightYearTopCategory(year,scopeValue){
+ // Confirmed CAD budget impact only, within the selected scope. Archived
+ // categories remain attributable; unknown categories are not relabeled.
+ const sums=new Map();
+ for(let i=0;i<12;i++){
+  const m=year+'-'+String(i+1).padStart(2,'0');
+  if(m>CM)continue;
+  for(const t of txs(m,scopeValue,true)){
+   if(!['expense','group_expense','person_payment','refund'].includes(t.type))continue;
+   const c=state.categories.find(x=>x.id===t.categoryId&&x.type==='expense');
+   if(!c)continue;
+   const previous=sums.get(c.id)||{name:c.name,amount:0};
+   previous.amount+=t.type==='refund'?-alloc(t,scopeValue):alloc(t,scopeValue);
+   sums.set(c.id,previous);
+  }
+ }
+ return[...sums.values()].filter(x=>x.amount>.005)
+  .sort((a,b)=>b.amount-a.amount||a.name.localeCompare(b.name))[0]||null;
 }
 function insightCategoryDrilldown(month,scopeValue,categoryId){
  const category=state.categories.find(c=>c.id===categoryId),
@@ -824,7 +845,7 @@ function insightWealthData(scopeValue,bankResult,ports,missing){
 function openAnnualBudgetAnalysis(){
  const month=budgetMonth,sId=scope(budgetScope),year=month.slice(0,4);
  openSheet('Mon année '+year,'<div id="traceAnnualDetail"></div>');
- window.TraceInsights.renderAnnual($('#traceAnnualDetail'),{year,months:insightYear(year,sId,month)});
+ window.TraceInsights.renderAnnual($('#traceAnnualDetail'),{year,months:insightYear(year,sId,month),topCategory:insightYearTopCategory(year,sId)});
  $$('#traceAnnualDetail [data-insight-month]').forEach(b=>b.onclick=()=>{
   setBudgetMonth(b.dataset.insightMonth);closeSheet();navigate('budget');
  });
@@ -1564,7 +1585,7 @@ function renderBudget(){
   const year=month.slice(0,4);
   window.TraceInsights.renderCategories($('#budgetCategoryImpact'),{rows:breakdown(month,sId,true),totalExpense:s.expense,
    budgetTotal:s.eb,month,showAllCategories:true,onCategory:id=>insightCategoryDrilldown(month,sId,id)});
-  window.TraceInsights.renderAnnual($('#annualBudgetChart'),{year,months:insightYear(year,sId,month)});
+  window.TraceInsights.renderAnnual($('#annualBudgetChart'),{year,months:insightYear(year,sId,month),topCategory:insightYearTopCategory(year,sId)});
   $$('#annualBudgetChart [data-insight-month]').forEach(btn=>btn.onclick=e=>{
    e.stopPropagation();setBudgetMonth(btn.dataset.insightMonth);
   });

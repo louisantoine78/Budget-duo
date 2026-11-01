@@ -89,14 +89,16 @@ function renderTrend(target,{months=[],selected='',headline=true,compact=false}=
  output+='<p class="trace-insights-foot">Les mois non renseignés ne sont pas traités comme des mois à 0 $. Les mois en cours et les jours non importés peuvent changer ce bilan.</p>';
  target.innerHTML=output;
 }
-function renderAnnual(target,{months=[],year=''}={}){
+function renderAnnual(target,{months=[],year='',topCategory=null}={}){
  if(!target)return;
  const elapsed=(months||[]).filter(m=>m.elapsed);
  // A statement-import gap is not evidence of zero spending. No projection,
  // annualized estimate, or savings claim is made from partial statements.
  const recorded=elapsed.filter(m=>m.hasTransactions);
  const budgeted=elapsed.filter(m=>m.hasBudget);
- const comparable=elapsed.filter(m=>m.hasBudget&&m.hasTransactions);
+ // Income-only or transfer-only months cannot establish zero expenses.
+ const comparable=elapsed.filter(m=>m.hasBudget&&
+  (m.hasExpenseTransactions??m.hasTransactions));
  const income=round(recorded.reduce((n,m)=>n+(m.income||0),0));
  const spent=round(recorded.reduce((n,m)=>n+(m.expense||0),0));
  const result=round(income-spent);
@@ -106,6 +108,7 @@ function renderAnnual(target,{months=[],year=''}={}){
  const overMonths=comparable.filter(m=>Number(m.expense||0)>Number(m.budget||0)+.005).length;
  const missing=elapsed.length-recorded.length,hasActual=recorded.length>0,
   peak=recorded.length>1?[...recorded].filter(m=>m.expense>.005).sort((a,b)=>b.expense-a.expense)[0]:null,
+  spendingShare=hasActual&&income>.005?Math.round(spent/income*100):null,
   shown=n=>hasActual?fmt(n):'—';
  const chosen=(months||[]).find(m=>m.selected)||(months||[]).find(m=>m.current)||(months||[])[0];
  const maxValue=Math.max(1,...(months||[]).map(m=>Math.max(Number(m.budget)||0,Number(m.expense)||0)));
@@ -124,7 +127,10 @@ function renderAnnual(target,{months=[],year=''}={}){
   '<div class="trace-year-totals" aria-label="Revenus, dépenses et différence confirmés">'+
    '<div><small>Revenus</small><strong>'+shown(income)+'</strong></div>'+
    '<div><small>Dépenses</small><strong>'+shown(spent)+'</strong></div>'+
-   '<div class="'+(result<-.005?'trace-year-negative':'')+'"><small>Différence</small><strong>'+shown(result)+'</strong></div></div></section>';
+   '<div class="'+(spendingShare!==null&&spendingShare>100?'trace-year-negative':'')+
+    '"><small>Dépenses / revenus</small><strong>'+(spendingShare===null?'—':spendingShare+' %')+'</strong></div></div>'+
+   (spendingShare!==null?'<p class="trace-year-ratio-note">Part des revenus confirmés représentée par les dépenses confirmées, pas un taux d’épargne.</p>':'')+
+   '</section>';
  if(comparable.length){
   html+='<section class="trace-year-budget-check" aria-label="Respect du budget sur les mois comparables">'+
    '<div class="trace-year-budget-top"><div><strong>Budget vs dépenses</strong><small>'+
@@ -140,6 +146,9 @@ function renderAnnual(target,{months=[],year=''}={}){
   html+='<div class="trace-year-budget-empty">Comparaison au budget indisponible : aucun mois avec prévision et mouvements confirmés.</div>';
  }
  const messages=[];
+ if(topCategory&&Number(topCategory.amount)>.005&&recorded.length)
+  messages.push('Principal poste classé : '+String(topCategory.name||'Autre')+
+   ' ('+fmt(topCategory.amount)+')');
  if(overMonths)messages.push(overMonths+' mois '+(overMonths>1?'ont dépassé':'a dépassé')+' le budget prévu');
  else if(comparable.length)messages.push('Aucun dépassement sur les '+comparableLabel);
  if(peak)messages.push('Mois le plus dépensier parmi les mois renseignés : '+
@@ -147,7 +156,7 @@ function renderAnnual(target,{months=[],year=''}={}){
  if(missing)messages.push(missing+' mois sans mouvement confirmé : données à vérifier');
  if(budgeted.length>comparable.length){
   const n=budgeted.length-comparable.length;
-  messages.push(n+' mois budgété'+(n>1?'s':'')+' sans mouvement confirmé');
+  messages.push(n+' mois budgété'+(n>1?'s':'')+' sans dépense confirmée');
  }
  if(!messages.length)messages.push('Tous les mois écoulés comportent des mouvements confirmés');
  html+='<div class="trace-year-diagnosis" aria-label="Lecture rapide">'+
@@ -158,9 +167,10 @@ function renderAnnual(target,{months=[],year=''}={}){
   '<span><i class="trace-year-key real"></i>Enregistré</span></div>';
  html+='<div class="trace-year-grid" role="group" aria-label="Choisir un mois du budget">'+(months||[]).map(m=>{
   const absent=!m.hasBudget&&!m.hasTransactions,b=widths(m),
-   over=m.hasBudget&&m.hasTransactions&&m.expense>m.budget+.005,
+   over=m.hasBudget&&(m.hasExpenseTransactions??m.hasTransactions)&&m.expense>m.budget+.005,
    month=monthName(m.month),caption=absent?'Non renseigné':over?'Dépassement':
-    m.hasTransactions?(m.hasBudget?'Avec budget':'Sans budget'):'Prévu seul',
+    m.hasTransactions?((m.hasExpenseTransactions??m.hasTransactions)?
+     (m.hasBudget?'Avec budget':'Sans budget'):'Flux seuls'):'Prévu seul',
    displayMonth=month.slice(0,3),selected=m.month===chosen?.month;
   return '<button type="button" class="trace-year-month'+(selected?' is-selected':'')+(absent?' is-empty':'')+
    (over?' is-over':'')+'" data-insight-month="'+esc(m.month)+'" aria-pressed="'+selected+
@@ -174,12 +184,14 @@ function renderAnnual(target,{months=[],year=''}={}){
  }).join('')+'</div>';
  if(chosen){
   const hasPlan=Boolean(chosen.hasBudget),hasActivity=Boolean(chosen.hasTransactions),
+   hasExpense=Boolean(chosen.hasExpenseTransactions??chosen.hasTransactions),
    differenceMonth=round((chosen.budget||0)-(chosen.expense||0));
   html+='<div class="trace-year-selected" aria-label="Détail du mois sélectionné">'+
    '<strong>'+esc(monthName(chosen.month))+'</strong>'+
-   '<div><span>Budget <b>'+(hasPlan?fmt(chosen.budget):'Non défini')+'</b></span>'+
-   '<span>Enregistré <b>'+(hasActivity?fmt(chosen.expense):'À vérifier')+'</b></span>'+
-   '<span>Écart <b>'+(hasPlan&&hasActivity?fmt(differenceMonth):'—')+'</b></span></div></div>';
+   '<div><span>Revenus confirmés <b>'+(hasActivity?fmt(chosen.income):'À vérifier')+'</b></span>'+
+   '<span>Dépenses confirmées <b>'+(hasExpense?fmt(chosen.expense):'À vérifier')+'</b></span>'+
+   '<span>Budget prévu <b>'+(hasPlan?fmt(chosen.budget):'Non défini')+'</b></span>'+
+   '<span>Écart au budget <b>'+(hasPlan&&hasExpense?fmt(differenceMonth):'—')+'</b></span></div></div>';
  }
  html+='<p class="trace-insights-foot">Lecture partielle : un mois sans mouvement importé ne signifie pas zéro dépense. Les prévisions et les opérations sont présentées séparément. Aucun montant futur n’est extrapolé.</p>';
  target.innerHTML=html;
