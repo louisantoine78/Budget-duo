@@ -466,6 +466,38 @@ let base;
   await page.locator('#activityAdvancedFilters>summary').click();
   await go('home');
  });
+ await test('Add and Import use the same refined financial action list at all phone sizes',async()=>{
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   await go('home');
+   await page.locator('#quickAdd').click();
+   const box=page.locator('#sheetBackdrop');
+   assert.equal(await box.getAttribute('data-trace-panel'),'quick-add');
+   assert.equal(await page.locator('#sheetTitle').innerText(),'Ajouter');
+   assert.equal(await page.locator('.trace-panel-caption').count(),0);
+   assert.equal(await box.locator('.trace-add-choice').count(),2);
+   const geometry=await box.locator('.trace-add-choice').evaluateAll(nodes=>nodes.map(el=>({
+     height:el.getBoundingClientRect().height,
+     width:el.getBoundingClientRect().width,
+     hasSymbol:Boolean(el.querySelector('.trace-add-choice-symbol')),
+     hasChevron:Boolean(el.querySelector('.trace-add-choice-chevron')),
+     background:getComputedStyle(el).backgroundColor,
+     text:el.innerText
+   })));
+   assert.ok(geometry.every(x=>x.height>=70&&x.height<=112&&x.hasSymbol&&x.hasChevron));
+   assert.match(geometry[0].text,/Nouvelle opération/);
+   assert.match(geometry[1].text,/Importer/);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   await page.locator('#traceAddImport').click();
+   assert.equal(await box.getAttribute('data-trace-panel'),'import-choices');
+   assert.equal(await box.locator('.trace-add-choice').count(),2);
+   assert.equal(await page.locator('.trace-panel-caption').count(),0);
+   assert.match(await page.locator('#traceAddMonthly').innerText(),/validation manuelle/);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   await page.locator('#closeSheet').click();
+  }
+  await page.setViewportSize({width:390,height:844});
+ });
  await test('the plus routes manual, daily screenshots and monthly CSV/PDF to one import workspace',async()=>{
   await page.locator('#quickAdd').click();
   assert.equal(await page.locator('#traceAddManual').count(),1);

@@ -938,3 +938,113 @@
  border-radius:22px;width:min(510px,100%);
  }
 }
+
+
+/* TRACE 5.37 — restrained Add / Import action sheets.
+ * Only the four choice links change; original financial flows remain intact. */
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) .sheet{
+ background:#fffdfa;border:1px solid #e8eee7;
+ box-shadow:0 -10px 32px rgba(18,49,32,.12);
+ border-radius:22px 22px 0 0;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) .sheet-head{
+ background:transparent;box-shadow:none;
+ border-bottom:1px solid #e8eee8;
+ margin:0 -4px 13px;padding:7px 4px 13px;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) .trace-panel-eyebrow{
+ color:#7b9081;font-size:9px;font-weight:660;letter-spacing:.08em;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) .trace-panel-eyebrow::before{
+ display:none;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetTitle{
+ color:#1d422f;font-size:23px;letter-spacing:-.04em;font-weight:680;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice-list{
+ display:grid;gap:0;padding:0;margin:0 0 7px;
+ border:1px solid #e6ece5;border-radius:15px;overflow:hidden;
+ background:#fffefa;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice{
+ display:grid;
+ grid-template-columns:34px minmax(0,1fr) 20px;
+ grid-template-rows:auto auto;
+ gap:3px 11px;
+ align-items:center;text-align:left;
+ min-height:77px;width:100%;margin:0;padding:12px 13px;
+ border:0;border-radius:0;box-shadow:none;
+ border-bottom:1px solid #e9eee8;
+ color:#244b35;background:transparent;
+ transition:background-color .14s ease;
+ cursor:pointer;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice:last-child{
+ border-bottom:0;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice:is(:hover,:focus-visible){
+ background:#f3f8f3;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice:focus-visible{
+ outline:2px solid #519d74;outline-offset:-3px;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) .trace-add-choice-symbol{
+ grid-column:1;grid-row:1 / span 2;
+ display:grid;place-items:center;
+ width:34px;height:34px;
+ background:#edf4ee;color:#376e50;
+ font-size:16px;line-height:1;font-weight:490;
+ border-radius:10px;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice>strong{
+ grid-column:2;grid-row:1;
+ font-size:13px;line-height:1.35;font-weight:690;
+ letter-spacing:-.012em;min-width:0;color:#254735;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice>small{
+ grid-column:2;grid-row:2;
+ font-size:11px;line-height:1.4;font-weight:480;
+ min-width:0;color:#788a7c;
+}
+#sheetBackdrop.trace-intl-premium-dialog:is(
+ [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) .trace-add-choice-chevron{
+ grid-column:3;grid-row:1 / span 2;
+ font-size:18px;color:#819788;
+ text-align:center;font-weight:360;
+}
+@media(max-width:359px){
+ #sheetBackdrop.trace-intl-premium-dialog:is(
+  [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice{
+  grid-template-columns:30px minmax(0,1fr) 16px;
+  gap:3px 8px;padding:10px 10px;min-height:73px;
+ }
+ #sheetBackdrop.trace-intl-premium-dialog:is(
+  [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) .trace-add-choice-symbol{
+  width:30px;height:30px;
+ }
+}
+@media(min-width:761px){
+ #sheetBackdrop.trace-intl-premium-dialog:is(
+  [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) .sheet{
+  width:min(430px,100%);border-radius:20px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #sheetBackdrop.trace-intl-premium-dialog:is(
+  [data-trace-panel="quick-add"],[data-trace-panel="import-choices"]) #sheetBody .trace-add-choice{
+  transition:none;
+ }
+}

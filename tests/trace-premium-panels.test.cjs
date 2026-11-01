@@ -96,3 +96,18 @@ test('account and budget-category read-only details share the premium style with
  assert.match(app,/traceAccountBankProofNotice\(a,reconcile\?\.date\|\|null\)/);
  assert.match(app,/id="traceBudgetToActivity"/);
 });
+
+test('the Add and Import menus keep one consistent accessible visual hierarchy',()=>{
+ for(const key of ['quick-add','import-choices'])assert.ok(js.includes("key:'"+key+"'"));
+ assert.match(app,/id="traceAddManual"/);
+ assert.match(app,/id="traceAddImport"/);
+ assert.match(app,/id="traceAddDaily"/);
+ assert.match(app,/id="traceAddMonthly"/);
+ assert.match(app,/trace-add-choice-symbol/);
+ assert.match(app,/trace-add-choice-chevron/);
+ assert.match(css,/data-trace-panel="quick-add"/);
+ assert.match(css,/data-trace-panel="import-choices"/);
+ assert.match(css,/\.trace-add-choice:focus-visible/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+ assert.match(app,/CSV ou PDF · validation manuelle/);
+});

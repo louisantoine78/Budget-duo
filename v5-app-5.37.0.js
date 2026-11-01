@@ -1614,14 +1614,14 @@ function manualCategories(type){
 function openTraceAddMenu(){
  openSheet('Ajouter',
   '<div class="trace-add-choice-list" role="group" aria-label="Que souhaites-tu ajouter ?">'+
-  '<button type="button" class="trace-add-choice" id="traceAddManual"><strong>Ajouter manuellement</strong><small>Une dépense, un revenu, un virement ou un remboursement</small><span aria-hidden="true">›</span></button>'+
-  '<button type="button" class="trace-add-choice" id="traceAddImport"><strong>Importer des opérations</strong><small>Captures quotidiennes, CSV et relevés bancaires</small><span aria-hidden="true">›</span></button></div>');
+  '<button type="button" class="trace-add-choice" id="traceAddManual"><span class="trace-add-choice-symbol" aria-hidden="true">＋</span><strong>Nouvelle opération</strong><small>Dépense, revenu, virement ou remboursement</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button>'+
+  '<button type="button" class="trace-add-choice" id="traceAddImport"><span class="trace-add-choice-symbol" aria-hidden="true">↓</span><strong>Importer des opérations</strong><small>Captures, CSV ou relevés PDF</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button></div>');
  $('#traceAddManual').onclick=()=>openManualTransaction();
  $('#traceAddImport').onclick=()=>{
   openSheet('Importer',
    '<div class="trace-add-choice-list" role="group" aria-label="Choisir le type de document">'+
-   '<button type="button" class="trace-add-choice" id="traceAddDaily"><strong>Opérations quotidiennes</strong><small>Captures et suivi jour par jour, par compte</small><span aria-hidden="true">›</span></button>'+
-   '<button type="button" class="trace-add-choice" id="traceAddMonthly"><strong>Relevé mensuel</strong><small>CSV bancaire ou revue PDF contrôlée, sans validation automatique</small><span aria-hidden="true">›</span></button></div>');
+   '<button type="button" class="trace-add-choice" id="traceAddDaily"><span class="trace-add-choice-symbol" aria-hidden="true">▤</span><strong>Opérations quotidiennes</strong><small>Captures et suivi par compte</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button>'+
+   '<button type="button" class="trace-add-choice" id="traceAddMonthly"><span class="trace-add-choice-symbol" aria-hidden="true">≡</span><strong>Relevé mensuel</strong><small>CSV ou PDF · validation manuelle</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button></div>');
   $('#traceAddDaily').onclick=()=>openTraceImportWorkspace('daily');
   $('#traceAddMonthly').onclick=()=>openTraceImportWorkspace('monthly');
  };

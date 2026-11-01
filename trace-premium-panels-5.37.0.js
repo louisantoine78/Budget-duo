@@ -4,10 +4,10 @@
 (function(){
  'use strict';
  const TYPES=[
-  {key:'quick-add',selector:'#traceAddManual',eyebrow:'AJOUTER DANS TRACE',
-   description:'Choisis une saisie manuelle ou un document à importer.'},
-  {key:'import-choices',selector:'#traceAddDaily',eyebrow:'DOCUMENTS BANCAIRES',
-   description:'Choisis comment rapprocher tes opérations.'},
+  {key:'quick-add',selector:'#traceAddManual',eyebrow:'NOUVELLE ACTION',
+   description:''},
+  {key:'import-choices',selector:'#traceAddDaily',eyebrow:'IMPORT BANCAIRE',
+   description:''},
   {key:'budget-setup',selector:'#budgetNoCatManage',eyebrow:'BUDGET · PREMIERS PAS',
    description:'Prépare tes catégories avant la première planification.'},
   {key:'manual',selector:'#saveManualTx',eyebrow:'MOUVEMENT FINANCIER',
