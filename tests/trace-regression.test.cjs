@@ -132,6 +132,12 @@ test('card evidence has no second bank transaction',()=>assert.match(appSource,/
 const insightSource=fs.readFileSync(path.join(__dirname,'..','trace-insights-1.0.0.js'),'utf8');
 vm.runInContext(insightSource,ctx,{filename:'trace-insights-1.0.0.js'});
 const I=ctx.window.TraceInsights;
+// Candidate-only annual analysis: do not replace the legacy 1.0.0 regression
+// surface or silently test the wrong renderer.
+const annualCtx=vm.createContext({window:{}});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'..','trace-insights-5.37.0.js'),'utf8'),
+ annualCtx,{filename:'trace-insights-5.37.0.js'});
+const I537=annualCtx.window.TraceInsights;
 test('card credit classification is in incoming menu',()=>assert.ok(U.kindsFor('card','in').some(k=>k.id==='card_payment_received')));
 test('card credit not available on checking',()=>assert.equal(G.allowed('card_payment_received','checking','in'),false));
 test('card received never quick confirms',()=>assert.equal(G.safeForQuickApproval('card','card_payment_received','PAIEMENT CAISSE'),false));
@@ -157,6 +163,38 @@ test('insights escapes unsafe labels',()=>{
 test('annual view does not call unfilled month zero',()=>{
  const node={innerHTML:''};
  I.renderAnnual(node,{year:'2026',months:[{month:'2026-02',elapsed:true,hasBudget:false,hasTransactions:false,budget:0,expense:0}]});
+ assert.ok(node.innerHTML.includes('Non renseigné'));
+});
+test('annual diagnosis uses confirmed flows, comparable months and no future amounts',()=>{
+ const node={innerHTML:''};
+ I537.renderAnnual(node,{year:'2026',months:[
+  {month:'2026-01',elapsed:true,hasBudget:true,hasTransactions:true,budget:500,expense:600,income:1000,selected:true},
+  {month:'2026-02',elapsed:true,hasBudget:true,hasTransactions:true,budget:300,expense:200,income:800},
+  {month:'2026-03',elapsed:true,hasBudget:true,hasTransactions:false,budget:450,expense:0,income:0},
+  {month:'2026-04',elapsed:true,hasBudget:false,hasTransactions:false,budget:0,expense:0,income:0},
+  {month:'2026-05',elapsed:false,hasBudget:true,hasTransactions:false,budget:9999,expense:0,income:0}
+ ]});
+ const html=node.innerHTML.replace(/\s/g,' ');
+ assert.ok(html.includes('1 800 $'),'Annual confirmed income must be 1800');
+ assert.ok(html.includes('800 $'),'Annual confirmed expense must be 800');
+ assert.ok(html.includes('2 / 4 mois avec mouvements'));
+ assert.ok(html.includes('1 mois a dépassé le budget prévu'));
+ assert.ok(html.includes('Mois le plus dépensier parmi les mois renseignés : janvier (600 $)'));
+ assert.ok(html.includes('2 mois sans mouvement confirmé'));
+ assert.ok(html.includes('1 mois budgété sans mouvement confirmé'));
+ assert.ok(!html.split('trace-year-grid')[0].includes('9 999 $'),'Future budget must be excluded from the summary');
+ assert.ok(html.includes('2 mois comparables avec prévision et mouvements'));
+});
+test('annual overview never labels an unimported month as zero real spending',()=>{
+ const node={innerHTML:''};
+ I537.renderAnnual(node,{year:'2026',months:[
+  {month:'2026-01',elapsed:true,hasBudget:true,hasTransactions:false,budget:950,expense:0,income:0,selected:true},
+  {month:'2026-02',elapsed:true,hasBudget:false,hasTransactions:false,budget:0,expense:0,income:0}
+ ]});
+ assert.ok(node.innerHTML.includes('Aucune opération confirmée : bilan non calculable'));
+ assert.ok(node.innerHTML.includes('Différence</small><strong>—'));
+ assert.ok(node.innerHTML.includes('Comparaison au budget indisponible'));
+ assert.ok(node.innerHTML.includes('Enregistré <b>À vérifier'));
  assert.ok(node.innerHTML.includes('Non renseigné'));
 });
 test('wealth view avoids fictitious price series',()=>{

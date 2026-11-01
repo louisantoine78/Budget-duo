@@ -781,7 +781,7 @@ function insightYear(year,scopeValue,selected){
   const m=year+'-'+String(i+1).padStart(2,'0'),v=summary(m,scopeValue);
   return{month:m,budget:v.eb,expense:v.expense,income:v.income,elapsed:m<=CM,
    current:m===CM,selected:m===selected,
-   hasBudget:state.budgets.some(b=>b.month===m&&budgetAmt(b,scopeValue)>0),
+   hasBudget:v.eb>0,
    hasTransactions:txs(m,scopeValue,true).length>0};
  });
 }

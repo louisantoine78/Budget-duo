@@ -399,6 +399,19 @@ let base;
   assert.equal(await page.locator('#annualBudgetChart .trace-year-month').count(),12);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-totals>div').count(),3);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-selected').count(),1);
+  assert.equal(await page.locator('#annualBudgetChart .trace-year-result-main strong').count(),1);
+  assert.equal(await page.locator('#annualBudgetChart .trace-year-budget-check').count(),1);
+  assert.ok(await page.locator('#annualBudgetChart .trace-year-coverage').isVisible());
+  assert.ok(await page.locator('#annualBudgetChart .trace-year-diagnosis').isVisible());
+  assert.match(await page.locator('#annualBudgetChart .trace-year-result-main').innerText(),/Différence revenus/);
+  assert.match(await page.locator('#annualBudgetChart .trace-year-diagnosis').innerText(),/mois sans mouvement/);
+  for(const width of [320,390,768,1440]){
+   await page.setViewportSize({width,height:844});
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   assert.ok(await page.locator('#annualBudgetChart .trace-year-result-main').isVisible());
+   assert.equal(await page.locator('#annualBudgetChart [data-insight-month]').count(),12);
+  }
+  await page.setViewportSize({width:390,height:844});
   const target=page.locator('#annualBudgetChart [data-insight-month]').first();
   const selectedMonth=await target.getAttribute('data-insight-month');
   await target.click();
