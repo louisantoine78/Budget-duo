@@ -32,8 +32,8 @@ const smoke=spawnSync(process.execPath,['--test','--test-reporter=tap',
  cwd:root,encoding:'utf8',timeout:90000
 });
 if(smoke.status!==0){
- const lines=smoke.stdout.split('\\n'),failure=lines.findIndex(line=>/^not ok \\d+/.test(line));
- const detail=failure<0?smoke.stdout.slice(-2800):lines.slice(failure,Math.min(failure+32,lines.length)).join('\\n');
+ const lines=smoke.stdout.split('\n'),failure=lines.findIndex(line=>/^not ok \d+/.test(line));
+ const detail=failure<0?smoke.stdout.slice(-2800):lines.slice(failure,Math.min(failure+32,lines.length)).join('\n');
  throw Error('Candidate UI/finance preflight failed: '+detail.slice(0,3200));
 }
 const passed=Number(smoke.stdout.match(/# pass (\d+)/)?.[1]||0);
