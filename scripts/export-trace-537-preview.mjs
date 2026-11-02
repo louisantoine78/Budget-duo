@@ -28,7 +28,8 @@ const smoke=spawnSync(process.execPath,['--test','--test-reporter=tap',
  'tests/trace-activity-four-tabs.test.cjs',
  'tests/trace-home-reconciliation-status.test.cjs',
  'tests/trace-activity-keyboard.test.cjs',
- 'tests/trace-international-friend-sharing-ui.test.cjs'],{
+ 'tests/trace-international-friend-sharing-ui.test.cjs',
+ 'tests/trace-premium-system.test.cjs'],{
  cwd:root,encoding:'utf8',timeout:90000
 });
 if(smoke.status!==0){

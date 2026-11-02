@@ -585,6 +585,39 @@ let base;
   await page.locator('#activityImportBack').click();
   await go('home');
  });
+ await test('all screens use one premium palette with visible status and safe native controls',async()=>{
+  for(const width of [320,390,768,1440]){
+   await page.setViewportSize({width,height:844});
+   for(const name of ['home','budget','activity','wealth']){
+    await go(name);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   }
+   const asset=page.locator('#assetGrid .asset-card').first();
+   if(await asset.count()){
+    const style=await asset.evaluate(el=>({
+     background:getComputedStyle(el).backgroundColor,
+     border:getComputedStyle(el).borderTopColor,
+     amount:getComputedStyle(el.querySelector('b')).fontVariantNumeric
+    }));
+    assert.notEqual(style.background,'rgb(255, 255, 255)');
+    assert.match(style.amount,/tabular-nums/);
+   }
+   await go('activity');
+   await page.locator('#activityTabReview').click();
+   const review=page.locator('#activityReviewAccountFilter');
+   assert.ok(await review.isVisible());
+   assert.equal(await review.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))>=16,true);
+   await page.locator('#activityTabTransactions').click();
+   await page.locator('#activityAdvancedFilters').evaluate(el=>{el.open=true});
+   const selects=await page.locator('#activityAdvancedFilters select').evaluateAll(nodes=>
+    nodes.map(el=>({height:el.getBoundingClientRect().height,
+      font:parseFloat(getComputedStyle(el).fontSize)})));
+   assert.ok(selects.every(x=>x.height>=44&&x.font>=16));
+   await page.locator('#activityAdvancedFilters').evaluate(el=>{el.open=false});
+  }
+  await page.setViewportSize({width:390,height:844});
+  await go('home');
+ });
  await test('Activity financial totals read as one quiet strip without hiding filters',async()=>{
   await go('activity');
   const drawer=page.locator('#activityAdvancedFilters');
