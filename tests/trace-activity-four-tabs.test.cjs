@@ -20,7 +20,7 @@ function mountTabs(){
  const i=app.indexOf('function showTab(t){'),j=app.indexOf('\n}\n',i)+2;
  assert.ok(i>0&&j>i);
  const nodes=Object.fromEntries(['activityTransactions','activityReview','activityImport',
- 'activitySharing','activityPeriodControl','activityMonthLabel','activityTabs','activityPageTitle'].map(x=>['#'+x,{
+ 'activitySharing','activityPeriodControl','activityMonthLabel','activityTabs','activityPageTitle','activityImportCalendar'].map(x=>['#'+x,{
  textContent:'',classList:{hidden:false,toggle(n,v){this.hidden=v}}}]));
  const buttons=['transactions','review','sharing'].map(x=>({dataset:{tab:x},
  classList:{active:false,toggle(n,v){this.active=v}},
@@ -132,4 +132,24 @@ test('remaining review rows can be displayed without dropping historical evidenc
  assert.doesNotMatch(complete.node.innerHTML,/data-review-more/);
  assert.equal(complete.more.onclick,null);
  assert.equal(JSON.stringify(complete.state),complete.before);
+});
+
+test('Activity offers direct calendar access without adding a fourth tab or cloning its data',()=>{
+ assert.match(html,/id="activityImportCalendar"[^>]*aria-label="Ouvrir le calendrier de suivi des imports"/);
+ assert.equal((html.match(/id="activityImportCalendar"/g)||[]).length,1);
+ assert.equal((html.match(/id="importCalendar"/g)||[]).length,1);
+ assert.equal((html.match(/id="homeImportCalendar"/g)||[]).length,1);
+ assert.match(app,/\$\('#activityImportCalendar'\)\?\.addEventListener\('click',\(\)=>openTraceImportWorkspace\('daily'\)\)/);
+ assert.match(css,/\.trace-activity-calendar-access\.hidden\{display:none!important\}/);
+ assert.match(css,/@media\(max-width:359px\)/);
+ assert.doesNotMatch(html,/data-tab="import"/);
+ const m=mountTabs();
+ m.showTab('import');
+ assert.equal(m.nodes['#activityImportCalendar'].classList.hidden,true);
+ m.showTab('review');
+ assert.equal(m.nodes['#activityImportCalendar'].classList.hidden,false);
+ m.showTab('sharing');
+ assert.equal(m.nodes['#activityImportCalendar'].classList.hidden,false);
+ m.showTab('transactions');
+ assert.equal(m.nodes['#activityImportCalendar'].classList.hidden,false);
 });

@@ -1160,3 +1160,46 @@
 #sheetBackdrop.trace-premium-form-pass #sheetBody .trace-manual-account-empty{
  color:#5e7263;
 }
+
+
+/* TRACE 5.37 — permanent import-calendar access in Activity.
+ * One entry point to the EXISTING calendar; no duplicate month or bank data. */
+.page[data-page="activity"] .trace-activity-heading{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;min-width:0;margin-bottom:12px;
+}
+.page[data-page="activity"] .trace-activity-heading>div{min-width:0}
+.page[data-page="activity"] .trace-activity-calendar-access{
+ display:inline-flex;align-items:center;justify-content:center;gap:7px;
+ min-width:0;max-width:185px;min-height:44px;padding:8px 9px;
+ border:1px solid #e0e9e0;border-radius:11px;
+ background:#fffdfa;box-shadow:none;
+ color:#2f5d44;font-size:11px;font-weight:650;
+ line-height:1.3;text-align:left;cursor:pointer;flex:none;
+}
+.page[data-page="activity"] .trace-activity-calendar-access>span:nth-child(2){
+ min-width:0;overflow-wrap:break-word;
+}
+.page[data-page="activity"] .trace-activity-calendar-symbol{
+ flex:none;color:#477358;font-size:17px;font-weight:400;
+}
+.page[data-page="activity"] .trace-activity-calendar-chevron{
+ flex:none;color:#607f68;font-size:17px;font-weight:400;
+}
+.page[data-page="activity"] .trace-activity-calendar-access:hover{
+ background:#f4f8f3;border-color:#cbdccc;
+}
+.page[data-page="activity"] .trace-activity-calendar-access:focus-visible{
+ outline:2px solid #397b5d;outline-offset:2px;
+}
+.page[data-page="activity"] .trace-activity-calendar-access.hidden{display:none!important}
+@media(max-width:359px){
+ .page[data-page="activity"] .trace-activity-heading{gap:6px}
+ .page[data-page="activity"] .trace-activity-calendar-access{
+  max-width:148px;gap:5px;padding:7px 6px;font-size:10px;
+ }
+ .page[data-page="activity"] .trace-activity-calendar-symbol{font-size:15px}
+}
+@media(prefers-reduced-motion:reduce){
+ .page[data-page="activity"] .trace-activity-calendar-access{transition:none}
+}

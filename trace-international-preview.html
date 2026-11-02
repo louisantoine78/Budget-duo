@@ -222,7 +222,14 @@
     </section>
 
     <section class="page" data-page="activity">
-      <div class="hero-row"><div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title" id="activityPageTitle">Activité</h1></div></div>
+      <div class="hero-row trace-activity-heading">
+        <div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title" id="activityPageTitle">Activité</h1></div>
+        <button type="button" class="trace-activity-calendar-access" id="activityImportCalendar" aria-label="Ouvrir le calendrier de suivi des imports">
+          <span class="trace-activity-calendar-symbol" aria-hidden="true">▦</span>
+          <span>Calendrier des imports</span>
+          <span class="trace-activity-calendar-chevron" aria-hidden="true">›</span>
+        </button>
+      </div>
       <div class="budget-context-row trace-activity-period" id="activityPeriodControl">
         <div class="budget-month-nav">
           <button type="button" id="activityPrevMonth" aria-label="Mois précédent" class="period-arrow">

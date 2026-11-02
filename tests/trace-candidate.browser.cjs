@@ -520,6 +520,53 @@ let base;
   assert.equal(await page.locator('#activityAdvancedFilters').evaluate(el=>el.open),false);
   await go('home');
  });
+ await test('Activity exposes the same import calendar in one tap at 320, 390 and 768 pixels',async()=>{
+  await go('activity');
+  const shortcut=page.locator('#activityImportCalendar');
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   assert.equal(await shortcut.isVisible(),true);
+   assert.equal(await shortcut.evaluate(el=>el.getBoundingClientRect().height>=44),true);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
+   await shortcut.click();
+   assert.equal(await page.locator('#activityImport').isVisible(),true);
+   assert.equal(await page.locator('#importCalendar').isVisible(),true);
+   assert.equal(await page.locator('#activityTabs').isVisible(),false);
+   assert.equal(await shortcut.isVisible(),false);
+   await page.locator('#activityImportBack').click();
+   assert.equal(await shortcut.isVisible(),true);
+  }
+  await page.locator('#activityTabReview').click();
+  assert.equal(await shortcut.isVisible(),true);
+  await shortcut.click();
+  assert.equal(await page.locator('#activityImport').isVisible(),true);
+  await page.locator('#activityImportBack').click();
+  await go('home');
+ });
+ await test('Manual financial chips keep selection, native values, and validation without committing',async()=>{
+  const balance=await text('homeBalance');
+  await page.locator('#quickAdd').click();
+  await page.locator('#traceAddManual').click();
+  const chips=page.locator('#manualTxAccountChips [data-trace-choice]:visible');
+  assert.ok(await chips.count()>1);
+  await chips.first().focus();
+  await chips.first().press('End');
+  const selected=page.locator('#manualTxAccountChips [data-trace-choice][aria-pressed="true"]');
+  assert.equal(await selected.count(),1);
+  assert.equal(await selected.getAttribute('data-trace-choice'),await page.locator('#manualTxAccount').inputValue());
+  const owner=page.locator('#manualTxBeneficiaryChips [data-trace-choice="custom"]');
+  if(await owner.isVisible()){
+   await owner.click();
+   assert.equal(await page.locator('#manualFriendsGroup').isVisible(),true);
+  }
+  await page.locator('#manualTxAmount').fill('40.005');
+  await page.locator('#saveManualTx').click();
+  assert.match(await text('manualMovementError'),/centime/);
+  assert.equal(await page.locator('#manualMovementError').getAttribute('role'),'alert');
+  assert.equal(await page.locator('#manualMovementError').getAttribute('aria-live'),'polite');
+  await page.locator('#cancelManualTx').click();
+  assert.equal(await text('homeBalance'),balance);
+ });
  await test('Activity financial totals read as one quiet strip without hiding filters',async()=>{
   await go('activity');
   const drawer=page.locator('#activityAdvancedFilters');
