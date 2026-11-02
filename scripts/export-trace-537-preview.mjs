@@ -15,6 +15,16 @@ if(dest===root||dest.startsWith(root+'/')&&!dest.startsWith(resolve(root,'trace-
  throw Error('Export destination must be outside the source repo or inside the dedicated export directory');
 const check=spawnSync(process.execPath,['scripts/build-trace-preview-pwa.mjs','--check'],{cwd:root,encoding:'utf8',timeout:60000});
 if(check.status!==0)throw Error('PWA asset cache is stale: '+check.stderr.slice(0,450));
+// Preflight only the isolated candidate: no database access or production writes.
+const smoke=spawnSync(process.execPath,['--test',
+ 'tests/trace-premium-panels.test.cjs',
+ 'tests/trace-international-editor.test.cjs',
+ 'tests/trace-international-money-integrity.test.cjs',
+ 'tests/trace-international-friend-allocations.test.cjs'],{
+ cwd:root,encoding:'utf8',timeout:90000
+});
+if(smoke.status!==0)throw Error('Candidate UI/finance preflight failed: '+(smoke.stdout+'\n'+smoke.stderr).slice(-3500));
+console.log('Candidate UI/finance preflight: '+(smoke.stdout.match(/# tests [0-9]+|# pass [0-9]+|# fail [0-9]+/g)||[]).join(', '));
 const sw=await readFile(resolve(root,'trace-international-preview-sw.js'),'utf8');
 const match=sw.match(/const ASSETS=(\[[\s\S]*?\]);/);
 if(!match)throw Error('Missing generated service-worker asset allowlist');
