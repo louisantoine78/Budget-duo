@@ -25,4 +25,16 @@ Le script est **opt-in** et n'utilise aucun réseau externe pour l'application t
 
 ## Blocages avant publication
 
-La suite WebKit premium **ne couvre pas le mode hors ligne**, volontairement laissé au test strict séparé. Il reste à résoudre/qualifier l'erreur de rechargement WebKit Linux, exécuter les parcours sur un **véritable iPhone avec Safari**, et valider intégralement les contrôles financiers, PostgreSQL isolé, le retour arrière et la porte de release `mission_base_ancestor`. **Production NO-GO** jusqu'à validation explicite ; les fichiers 5.36.5, `main`, migrations et données réelles sont hors du périmètre.
+La suite WebKit premium **ne couvre pas le mode hors ligne**, volontairement laissé au test strict séparé. Il reste à résoudre/qualifier l'erreur de rechargement WebKit Linux, exécuter les parcours sur un **véritable iPhone avec Safari**, et valider intégralement les contrôles financiers, PostgreSQL isolé, le retour arrière et la validation indépendante des portes de release. **Production NO-GO** jusqu'à validation explicite ; les fichiers 5.36.5, `main`, migrations et données réelles sont hors du périmètre.
+
+
+## Qualification automatisée complète · 2 novembre 2026
+
+**Commit testé dans un checkout Git complet et propre :** `4def1a770fa1af29f58ce34190dcca73e60f73d1`. L'historique Git a été récupéré intégralement avant de vérifier le commit de base immuable `6eb6c17e5c9eba2d3727ebea404cce5fec0424c6`.
+
+- `node scripts/test-trace-native.mjs --report ...` : **116/116 fichiers de suites**, **1 809 scénarios**, **0 fichier en échec** ; inventaire exact des tests suivi par Git et cache PWA valides.
+- PostgreSQL embarqué `@electric-sql/pglite`, dans `/tmp` uniquement : **18 + 9 + 42 + 12 = 81 contrôles d'intégration** réussis. Aucun test sur Supabase réel.
+- `TRACE_PGLITE_MODULE=<chemin PGlite isolé> node scripts/check-trace-537-release-gates.cjs` : **17/17 portes automatisées PASS**, y compris `mission_base_ancestor`, `stable_entries_unchanged`, `candidate_auto_deploy_disabled`, `native_node_suite` et les quatre portes PostgreSQL. État final Git propre.
+- Trois défaillances initiales de l'ancienne suite native provenaient exclusivement de l'outillage de tests : assertion d'un texte d'interface périmé, simulation DOM incomplète et propagation de `NODE_TEST_CONTEXT` à un sous-processus. Corrections vérifiées avant le passage des 116 suites. Aucun calcul financier n'a été modifié.
+
+**Verdict indépendant du programme :** `Automated: PASS; Production: NO-GO pending browser, iPhone and explicit finance sign-off.` Ce verdict ne résout pas l'échec du rechargement hors ligne dans WebKit Linux, ne constitue pas un test Safari physique, et n'autorise aucune migration, fusion dans `main` ou publication.
