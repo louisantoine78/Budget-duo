@@ -77,7 +77,7 @@ function render(){
 
 
  root.innerHTML='<section class="trace-daily-panel">'+
-  '<div class="trace-daily-top"><div><span class="trace-kicker">JOURNAL BANCAIRE</span><h2>Calendrier des imports</h2></div><span class="trace-daily-progress">'+completed+' / '+available+' jours validés</span></div>'+
+  '<div class="trace-daily-top"><div><span class="trace-kicker">JOURNAL BANCAIRE</span><h2>Chaque jour, au clair.</h2></div><span class="trace-daily-progress">'+completed+' / '+available+' jours validés</span></div>'+
   '<p class="trace-daily-sub">Étape 2 · Importe les captures du compte choisi, puis vérifie et valide ses opérations.</p>'+
   '<div class="trace-premium-account-header"><strong>Compte sélectionné</strong><small>Tu peux changer de compte ici</small></div>'+
   '<div class="trace-premium-account-options" role="group" aria-label="Changer le compte à importer">'+accountChoices+'</div>'+
@@ -98,7 +98,7 @@ function render(){
     '<span><i class="cal-dot inprogress"></i> En cours</span>'+
     '<span><i class="cal-dot validated"></i> Validée</span></div>'+
   '<p class="trace-cal-legend-help">Une journée est validée seulement après ta confirmation, même sans mouvement.</p>'+
-  '<p class="trace-day-hint">Choisis une date pour consulter, importer ou valider ses opérations. Au clavier : flèches pour parcourir, Entrée pour ouvrir.</p>'+
+  '<p class="trace-day-hint">Touche une date pour importer ou consulter ses opérations.</p>'+
   '<div class="trace-cal-grid"><div class="trace-cal-week">L</div><div class="trace-cal-week">M</div><div class="trace-cal-week">M</div><div class="trace-cal-week">J</div><div class="trace-cal-week">V</div><div class="trace-cal-week">S</div><div class="trace-cal-week">D</div>'+tiles.join('')+'</div>'+
   (gaps.length?'<div class="trace-gap-warning"><b>'+gaps.length+' jour'+(gaps.length>1?'s':'')+' à vérifier</b> entre les imports : '+gaps.map(x=>x.slice(8)+'/'+x.slice(5,7)).join(', ')+'. Tu peux continuer les autres imports normalement.</div>':'')+
   (last?'<div class="trace-last-import">Dernier import : '+esc(stamp(last.lastImportedAt))+' · opérations du '+esc(last.date)+'</div>':'<div class="trace-last-import">Aucun import enregistré pour ce compte.</div>')+

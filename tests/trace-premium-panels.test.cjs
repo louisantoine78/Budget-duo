@@ -240,9 +240,14 @@ test('financial form alerts are urgent while non-error synchronization feedback 
  assert.equal(status.attrs['aria-live'],'polite');
 });
 test('calendar explains the single existing workflow with visible focus',()=>{
- const calendar=fs.readFileSync(path.join(root,'trace-import-calendar-2.1.2.js'),'utf8');
+ const calendar=fs.readFileSync(path.join(root,'trace-import-calendar-5.37.0.js'),'utf8');
  assert.match(calendar,/<h2>Calendrier des imports<\/h2>/);
  assert.match(calendar,/Au clavier : flèches pour parcourir, Entrée pour ouvrir/);
  assert.match(css,/#activityImport #importCalendar \.trace-cal-date:focus-visible/);
  assert.equal((html.match(/id="importCalendar"/g)||[]).length,1);
+ const stableCalendar=fs.readFileSync(path.join(root,'trace-import-calendar-2.1.2.js'),'utf8');
+ assert.match(stableCalendar,/<h2>Chaque jour, au clair\.<\/h2>/);
+ assert.doesNotMatch(stableCalendar,/Au clavier : flèches pour parcourir/);
+ assert.match(html,/src="trace-import-calendar-5\.37\.0\.js"/);
+ assert.doesNotMatch(html,/src="trace-import-calendar-2\.1\.2\.js"/);
 });
