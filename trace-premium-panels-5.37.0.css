@@ -1048,3 +1048,100 @@
   transition:none;
  }
 }
+
+
+/* TRACE 5.37.0 — form finishing pass (preview only).
+   Retain every control, value, split editor, historical FX field and save action. */
+#sheetBackdrop.trace-intl-premium-dialog.trace-premium-form-pass .sheet{
+ background:#fffdfa;
+}
+#sheetBackdrop.trace-intl-premium-dialog.trace-premium-form-pass .sheet-head{
+ background:#fffdfa;
+}
+#sheetBackdrop.trace-premium-form-pass .trace-panel-eyebrow{
+ font-size:9px;font-weight:660;letter-spacing:.065em;color:#7a8b7e;
+}
+#sheetBackdrop.trace-premium-form-pass .trace-panel-eyebrow::before{
+ display:none;
+}
+#sheetBackdrop.trace-premium-form-pass .trace-panel-caption{
+ font-size:11px;line-height:1.45;color:#738578;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody .label2{
+ font-size:11px;line-height:1.45;font-weight:650;color:#5e7263;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(input.input,select.input,textarea.input):not([aria-hidden="true"]):not(.trace-manual-choice-native){
+ background:#fff;border:1px solid #dee7dd;border-radius:11px;
+ box-shadow:none;color:#253b2f;font-size:16px;font-weight:500;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(input.input,select.input,textarea.input)[aria-invalid="true"]{
+ border-color:#be6558!important;background:#fffaf8!important;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(input.input,select.input,textarea.input):focus-visible{
+ border-color:#367b5b;outline:2px solid #367b5b;outline-offset:2px;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(
+ #manualTxAmount,#manualPurchaseAmount,#manualDestAmount,#manualTransferFee,
+ #txAmount,#txOriginalAmount,#budgetAddAmount,#budgetEditAmount,
+ #manualFriendsAmount,#manualPartnerAmount){
+ font-variant-numeric:tabular-nums;letter-spacing:-.025em;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(
+ .trace-manual-choice-pills,.trace-manual-account-pills,.trace-manual-category-pills){
+ min-width:0;max-width:100%;gap:6px;scroll-padding-inline:4px;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody .trace-manual-choice-chip{
+ border-radius:11px;min-height:44px;max-width:min(205px,75vw);
+ padding:10px 13px;border:1px solid #e1e8e0;
+ background:#fff;box-shadow:none;color:#3c5b48;
+ font-size:12px;font-weight:610;line-height:1.3;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody .trace-manual-choice-chip:is([aria-pressed="true"],.is-active){
+ background:#eaf3ec;border-color:#669a79;color:#214d35;
+ box-shadow:inset 0 0 0 1px #669a79;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody .trace-manual-choice-chip:focus-visible{
+ outline:2px solid #397b5d;outline-offset:2px;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(
+ #manualFriendsGroup,.trace-edit-friends,.trace-budget-share,.trace-debtor-row){
+ background:#fafbf9;border:1px solid #e4ebe3;
+ border-radius:12px;box-shadow:none;min-width:0;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(
+ .trace-friend-debtors,.trace-debtor-list,.trace-edit-friends-grid){
+ min-width:0;max-width:100%;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(
+ #manualMovementError,#traceBudgetShareError,#traceBudgetCopyError,
+ #traceFeedback,#txFeedback,.trace-budget-share-error,.trace-movement-error):not(:empty){
+ border-radius:10px;padding:10px 12px;margin-block:10px;
+ border:1px solid #ebd1c8;background:#fff8f5;
+ color:#924c3c;font-size:12px;line-height:1.5;
+ box-shadow:none;overflow-wrap:anywhere;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody .primary.full{
+ background:#194a37;border:0;border-radius:11px;
+ box-shadow:none;min-height:50px;font-size:14px;font-weight:670;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody .secondary.full:not(.trace-danger){
+ box-shadow:none;background:transparent;border:0;color:#667f6d;
+ font-size:13px;font-weight:600;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody :is(.trace-edit-actions,.trace-budget-sheet-actions){
+ min-width:0;
+}
+@media(max-width:390px){
+ #sheetBackdrop.trace-premium-form-pass #sheetBody .trace-manual-choice-chip{
+  max-width:min(185px,72vw);padding-inline:11px;
+ }
+ #sheetBackdrop.trace-premium-form-pass #sheetBody :is(
+  .trace-edit-friends-grid,.trace-debtor-list,.trace-budget-fieldset){
+  min-width:0;max-width:100%;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #sheetBackdrop.trace-premium-form-pass #sheetBody .trace-manual-choice-chip{
+  transition:none!important;
+ }
+}

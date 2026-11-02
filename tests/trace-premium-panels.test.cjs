@@ -111,3 +111,20 @@ test('the Add and Import menus keep one consistent accessible visual hierarchy',
  assert.match(css,/prefers-reduced-motion:reduce/);
  assert.match(app,/CSV ou PDF · validation manuelle/);
 });
+
+test('5.37 forms retain native editors with quiet, accessible validation feedback',()=>{
+ for(const key of ['manual','transaction','transaction-validate','budget-add',
+  'budget-edit','bank-movement','international-transfer','foreign-expense','settlement']){
+  assert.ok(js.includes("'"+key+"'"),key);
+ }
+ assert.match(js,/function refineFormFeedback\(body,key\)/);
+ assert.match(js,/message\.setAttribute\('aria-live','polite'\)/);
+ assert.match(js,/message\.setAttribute\('aria-atomic','true'\)/);
+ assert.match(js,/backdrop\.classList\.remove\('trace-premium-form-pass'\)/);
+ assert.match(css,/\.trace-manual-choice-chip:is\(\[aria-pressed="true"\],\.is-active\)/);
+ assert.match(css,/\[aria-invalid="true"\]/);
+ assert.match(css,/#manualFriendsGroup/);
+ assert.match(css,/#manualDestAmount/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+ assert.doesNotMatch(js,/saveDocument\(|client\.rpc\(|state\.transactions/);
+});

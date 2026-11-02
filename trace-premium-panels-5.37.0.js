@@ -44,6 +44,22 @@
  const create=(tag,cls,value)=>{
   const n=document.createElement(tag);n.className=cls;n.textContent=value;return n;
  };
+ const FORM_PANELS=new Set(['manual','transaction','transaction-validate',
+  'budget-add','budget-edit','bank-movement','international-transfer',
+  'foreign-expense','settlement']);
+ function refineFormFeedback(body,key){
+  if(!FORM_PANELS.has(key))return;
+  body.closest('.sheet-backdrop')?.classList.add('trace-premium-form-pass');
+  // Existing save/validation callbacks remain authoritative. Only make their
+  // original feedback readable to assistive technologies.
+  body.querySelectorAll('#manualMovementError,#traceBudgetShareError,'+
+   '#traceBudgetCopyError,#traceFeedback,#txFeedback,.trace-movement-error,'+
+   '.trace-budget-share-error').forEach(message=>{
+    if(!message.hasAttribute('role'))message.setAttribute('role','status');
+    message.setAttribute('aria-live','polite');
+    message.setAttribute('aria-atomic','true');
+  });
+ }
  function decorate(backdrop,title,html){
   if(!backdrop||typeof html!=='string')return;
   const head=backdrop.querySelector('.sheet-head'),body=backdrop.querySelector('#sheetBody'),
@@ -61,6 +77,8 @@
   backdrop.dataset.tracePanel=spec.key;
   body.dataset.tracePanel=spec.key;
   body.classList.add('trace-intl-premium-body');
+  backdrop.classList.remove('trace-premium-form-pass');
+  refineFormFeedback(body,spec.key);
   const eyebrow=create('span','trace-panel-eyebrow',spec.eyebrow);
   head.insertBefore(eyebrow,heading);
   if(spec.description){
