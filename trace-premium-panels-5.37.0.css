@@ -1145,3 +1145,18 @@
   transition:none!important;
  }
 }
+
+/* Legibility of small editorial headings on ivory, while retaining subtle hierarchy. */
+#sheetBackdrop.trace-premium-form-pass .trace-panel-eyebrow{
+ color:#536b5a;font-size:10px;
+}
+#sheetBackdrop.trace-premium-form-pass .trace-panel-caption{
+ color:#5e7263;font-size:11px;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody .trace-movement-help{
+ color:#536b5a;line-height:1.55;
+}
+#sheetBackdrop.trace-premium-form-pass #sheetBody .trace-manual-category-empty,
+#sheetBackdrop.trace-premium-form-pass #sheetBody .trace-manual-account-empty{
+ color:#5e7263;
+}

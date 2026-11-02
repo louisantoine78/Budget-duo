@@ -165,3 +165,15 @@ test('manual selectors navigate with arrows and reuse the original click handler
  assert.equal(prevented,5,'native Enter stays untouched');
  assert.equal(hidden.clickCount,0,'hidden categories cannot be selected');
 });
+
+test('small form headings preserve readable contrast against the ivory modal',()=>{
+ const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255)
+  .map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
+ const lum=h=>rgb(h).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);
+ const ratio=(a,b)=>{const x=lum(a),y=lum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+ for(const ink of ['#536b5a','#5e7263']){
+  assert.ok(ratio(ink,'#fffdfa')>=4.5,ink);
+ }
+ assert.match(css,/#sheetBackdrop\.trace-premium-form-pass \.trace-panel-eyebrow\{[\s\S]*?color:#536b5a;font-size:10px/);
+ assert.match(css,/#sheetBackdrop\.trace-premium-form-pass \.trace-panel-caption\{[\s\S]*?color:#5e7263;font-size:11px/);
+});
