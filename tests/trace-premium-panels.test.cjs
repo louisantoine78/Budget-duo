@@ -128,3 +128,40 @@ test('5.37 forms retain native editors with quiet, accessible validation feedbac
  assert.match(css,/prefers-reduced-motion:reduce/);
  assert.doesNotMatch(js,/saveDocument\(|client\.rpc\(|state\.transactions/);
 });
+
+test('manual selectors navigate with arrows and reuse the original click handler',()=>{
+ const window={};vm.runInNewContext(js,{window});
+ const makeButton=(value,hidden=false)=>{
+  const b={dataset:{traceChoice:value},hidden,disabled:false,
+   clickCount:0,focusCount:0,click(){this.clickCount++},
+   focus(){this.focusCount++},getAttribute(){return null},
+   closest(){return this}};
+  return b;
+ };
+ const a=makeButton('one'),b=makeButton('two'),hidden=makeButton('hidden',true);
+ const c=makeButton('three'),buttons=[a,b,hidden,c];
+ const group={dataset:{},addEventListener(type,handler){this.handler=handler},
+  querySelectorAll(){return buttons},contains(button){return buttons.includes(button)}};
+ const root={querySelector(id){return id==='#manualTxCategoryChips'?group:null}};
+ window.TraceSheetPremium.enhanceChoices(root);
+ window.TraceSheetPremium.enhanceChoices(root);
+ assert.equal(group.dataset.traceKeyboard,'yes');
+ let prevented=0;
+ const emit=(key,target)=>{
+  group.handler({key,target,preventDefault(){prevented++}});
+ };
+ emit('ArrowRight',b);
+ assert.equal(c.clickCount,1);
+ assert.equal(c.focusCount,1);
+ emit('ArrowRight',c);
+ assert.equal(a.clickCount,1,'wrap to the first visible option');
+ emit('Home',c);
+ assert.equal(a.clickCount,2);
+ emit('End',a);
+ assert.equal(c.clickCount,2);
+ emit('ArrowLeft',a);
+ assert.equal(c.clickCount,3);
+ emit('Enter',c);
+ assert.equal(prevented,5,'native Enter stays untouched');
+ assert.equal(hidden.clickCount,0,'hidden categories cannot be selected');
+});

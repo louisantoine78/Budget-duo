@@ -47,9 +47,42 @@
  const FORM_PANELS=new Set(['manual','transaction','transaction-validate',
   'budget-add','budget-edit','bank-movement','international-transfer',
   'foreign-expense','settlement']);
+ // Arrow keys and Home/End use the SAME choice buttons and click callbacks
+ // as touch. No mirror state, duplicate financial select or new save path.
+ function enhanceChoices(body){
+  const ids=['manualTxAccountChips','manualTxCategoryChips',
+   'manualTxBeneficiaryChips','manualPurchaseCurrencyChips'];
+  for(const id of ids){
+   const group=body.querySelector('#'+id);
+   if(!group||group.dataset.traceKeyboard==='yes')continue;
+   group.dataset.traceKeyboard='yes';
+   group.addEventListener('keydown',event=>{
+    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
+    const current=event.target.closest?.('[data-trace-choice]');
+    if(!current||!group.contains(current))return;
+    const enabled=Array.from(group.querySelectorAll('[data-trace-choice]'))
+     .filter(button=>!button.hidden&&!button.disabled&&
+      button.getAttribute('aria-hidden')!=='true');
+    if(!enabled.length)return;
+    const position=enabled.indexOf(current);
+    if(position<0)return;
+    event.preventDefault();
+    const last=enabled.length-1;
+    const nextIndex=event.key==='Home'?0:event.key==='End'?last:
+     (position+(event.key==='ArrowLeft'||event.key==='ArrowUp'?-1:1)+enabled.length)%enabled.length;
+    const next=enabled[nextIndex],value=next.dataset.traceChoice;
+    next.click();
+    // Some category pickers redraw the buttons after selection.
+    const after=Array.from(group.querySelectorAll('[data-trace-choice]'))
+     .find(button=>button.dataset.traceChoice===value&&!button.hidden&&!button.disabled);
+    (after||next).focus({preventScroll:false});
+   });
+  }
+ }
  function refineFormFeedback(body,key){
   if(!FORM_PANELS.has(key))return;
   body.closest('.sheet-backdrop')?.classList.add('trace-premium-form-pass');
+  if(key==='manual')enhanceChoices(body);
   // Existing save/validation callbacks remain authoritative. Only make their
   // original feedback readable to assistive technologies.
   body.querySelectorAll('#manualMovementError,#traceBudgetShareError,'+
@@ -89,5 +122,5 @@
   const close=backdrop.querySelector('#closeSheet');
   if(close){close.setAttribute('aria-label','Fermer '+String(title||'ce panneau'));close.setAttribute('type','button');}
  }
- window.TraceSheetPremium=Object.freeze({decorate,types:TYPES.map(({key,selector})=>({key,selector}))});
+ window.TraceSheetPremium=Object.freeze({decorate,enhanceChoices,types:TYPES.map(({key,selector})=>({key,selector}))});
 })();
