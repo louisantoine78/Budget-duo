@@ -28,8 +28,8 @@ const smoke=spawnSync(process.execPath,['--test','--test-reporter=tap',
  cwd:root,encoding:'utf8',timeout:90000
 });
 if(smoke.status!==0)throw Error('Candidate UI/finance preflight failed: '+(smoke.stdout+'\n'+smoke.stderr).slice(-3500));
-const passed=Number(smoke.stdout.match(/# pass (\\d+)/)?.[1]||0);
-const failed=Number(smoke.stdout.match(/# fail (\\d+)/)?.[1]||-1);
+const passed=Number(smoke.stdout.match(/# pass (\d+)/)?.[1]||0);
+const failed=Number(smoke.stdout.match(/# fail (\d+)/)?.[1]||-1);
 if(passed<15||failed!==0)throw Error('Candidate test reporter missing or incomplete: '+smoke.stdout.slice(-1400));
 console.log('Candidate UI/finance preflight: '+(smoke.stdout.match(/# tests [0-9]+|# pass [0-9]+|# fail [0-9]+/g)||[]).join(', '));
 const sw=await readFile(resolve(root,'trace-international-preview-sw.js'),'utf8');
