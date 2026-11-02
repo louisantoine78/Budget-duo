@@ -107,6 +107,6 @@ self.addEventListener('fetch',event=>{
 `;
 const output=resolve(root,'trace-international-preview-sw.js');
 if(process.argv.includes('--check')){
- if(await readFile(output,'utf8')!==source)throw Error('Cache laboratoire périmé : exécuter node scripts/build-trace-preview-pwa.mjs');
+ if(await readFile(output,'utf8')!==source)throw Error('Cache laboratoire périmé ('+version+') : exécuter node scripts/build-trace-preview-pwa.mjs');
 }else await writeFile(output,source);
 console.log('Laboratory static cache '+version+': '+names.length+' assets, production untouched');
