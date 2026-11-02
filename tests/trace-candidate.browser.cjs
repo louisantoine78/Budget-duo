@@ -563,9 +563,27 @@ let base;
   await page.locator('#saveManualTx').click();
   assert.match(await text('manualMovementError'),/centime/);
   assert.equal(await page.locator('#manualMovementError').getAttribute('role'),'alert');
-  assert.equal(await page.locator('#manualMovementError').getAttribute('aria-live'),'polite');
+  assert.equal(await page.locator('#manualMovementError').getAttribute('aria-live'),'assertive');
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),balance);
+ });
+
+ await test('calendar date keyboard focuses adjacent valid days without opening their actions',async()=>{
+  await go('activity');
+  await page.locator('#activityImportCalendar').click();
+  const first=page.locator('#importCalendar .trace-cal-date:not([disabled])').first();
+  await first.waitFor({state:'visible'});
+  const source=await first.getAttribute('data-select-day');
+  await first.focus();await first.press('ArrowRight');
+  const focused=await page.evaluate(()=>document.activeElement?.dataset?.selectDay||'');
+  assert.notEqual(focused,source);
+  assert.equal(await page.locator('#traceDayModal').count(),0,'arrow focus does not open a day');
+  await page.locator('[data-select-day="'+focused+'"]').press('Enter');
+  assert.equal(await page.locator('#traceDayModal').isVisible(),true);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#traceDayModal').count(),0);
+  await page.locator('#activityImportBack').click();
+  await go('home');
  });
  await test('Activity financial totals read as one quiet strip without hiding filters',async()=>{
   await go('activity');

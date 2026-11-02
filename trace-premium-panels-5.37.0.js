@@ -79,6 +79,45 @@
    });
   }
  }
+ // A calendar day is an action button, not an editable financial input.
+ // Arrow keys move focus only; Enter/Space still invoke the existing day action.
+ function onCalendarDayKeydown(event){
+  const key=event.key;
+  if(event.defaultPrevented||event.altKey||event.ctrlKey||event.metaKey||event.isComposing||
+   !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(key))return;
+  const current=event.target?.closest?.('.trace-cal-date[data-select-day]');
+  if(!current||current.disabled)return;
+  const grid=current.closest('.trace-cal-grid');
+  if(!grid||!grid.closest('#importCalendar'))return;
+  const enabled=Array.from(grid.querySelectorAll('.trace-cal-date[data-select-day]'))
+   .filter(button=>!button.disabled&&!button.hidden);
+  const pos=enabled.indexOf(current);
+  if(pos<0)return;
+  const date=current.dataset.selectDay;
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return;
+  const day=Number(date.slice(8));
+  let next=null;
+  if(key==='ArrowLeft'&&pos>0)next=enabled[pos-1];
+  if(key==='ArrowRight'&&pos<enabled.length-1)next=enabled[pos+1];
+  if(key==='ArrowUp'||key==='ArrowDown'){
+   const wanted=day+(key==='ArrowUp'?-7:7);
+   next=enabled.find(button=>Number(button.dataset.selectDay.slice(8))===wanted);
+  }
+  if(key==='Home'||key==='End'){
+   const weekDay=(new Date(date+'T12:00:00').getDay()+6)%7;
+   const first=day-weekDay,last=first+6;
+   const week=enabled.filter(button=>{
+    const n=Number(button.dataset.selectDay.slice(8));
+    return n>=first&&n<=last;
+   });
+   if(week.length)next=key==='Home'?week[0]:week[week.length-1];
+  }
+  if(!next||next===current)return;
+  event.preventDefault();
+  next.focus({preventScroll:false});
+ }
+ if(typeof document!=='undefined'&&document.addEventListener)
+  document.addEventListener('keydown',onCalendarDayKeydown);
  function refineFormFeedback(body,key){
   if(!FORM_PANELS.has(key))return;
   body.closest('.sheet-backdrop')?.classList.add('trace-premium-form-pass');
@@ -88,8 +127,12 @@
   body.querySelectorAll('#manualMovementError,#traceBudgetShareError,'+
    '#traceBudgetCopyError,#traceFeedback,#txFeedback,.trace-movement-error,'+
    '.trace-budget-share-error').forEach(message=>{
-    if(!message.hasAttribute('role'))message.setAttribute('role','status');
-    message.setAttribute('aria-live','polite');
+    const error=message.matches?.('#manualMovementError,#traceBudgetShareError,'+
+     '#traceBudgetCopyError,.trace-movement-error,.trace-budget-share-error');
+    // Explicit errors must not be downgraded from an alert to polite status.
+    if(error)message.setAttribute('role','alert');
+    else if(!message.hasAttribute('role'))message.setAttribute('role','status');
+    message.setAttribute('aria-live',error?'assertive':'polite');
     message.setAttribute('aria-atomic','true');
   });
  }
@@ -122,5 +165,5 @@
   const close=backdrop.querySelector('#closeSheet');
   if(close){close.setAttribute('aria-label','Fermer '+String(title||'ce panneau'));close.setAttribute('type','button');}
  }
- window.TraceSheetPremium=Object.freeze({decorate,enhanceChoices,types:TYPES.map(({key,selector})=>({key,selector}))});
+ window.TraceSheetPremium=Object.freeze({decorate,enhanceChoices,onCalendarDayKeydown,types:TYPES.map(({key,selector})=>({key,selector}))});
 })();

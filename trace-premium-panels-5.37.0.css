@@ -1203,3 +1203,17 @@
 @media(prefers-reduced-motion:reduce){
  .page[data-page="activity"] .trace-activity-calendar-access{transition:none}
 }
+
+
+/* Calendar keys are read-only focus moves; make the destination obvious. */
+#activityImport #importCalendar .trace-cal-date:focus-visible{
+ outline:3px solid #397b5d!important;
+ outline-offset:2px;
+ box-shadow:0 0 0 5px rgba(57,123,93,.12);
+}
+#activityImport #importCalendar .trace-cal-date[disabled]{
+ cursor:default;
+}
+#activityImport #importCalendar .trace-day-hint{
+ color:#536b5a;line-height:1.45;
+}

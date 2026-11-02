@@ -118,7 +118,7 @@ test('5.37 forms retain native editors with quiet, accessible validation feedbac
   assert.ok(js.includes("'"+key+"'"),key);
  }
  assert.match(js,/function refineFormFeedback\(body,key\)/);
- assert.match(js,/message\.setAttribute\('aria-live','polite'\)/);
+ assert.match(js,/message\.setAttribute\('aria-live',error\?'assertive':'polite'\)/);
  assert.match(js,/message\.setAttribute\('aria-atomic','true'\)/);
  assert.match(js,/backdrop\.classList\.remove\('trace-premium-form-pass'\)/);
  assert.match(css,/\.trace-manual-choice-chip:is\(\[aria-pressed="true"\],\.is-active\)/);
@@ -176,4 +176,73 @@ test('small form headings preserve readable contrast against the ivory modal',()
  }
  assert.match(css,/#sheetBackdrop\.trace-premium-form-pass \.trace-panel-eyebrow\{[\s\S]*?color:#536b5a;font-size:10px/);
  assert.match(css,/#sheetBackdrop\.trace-premium-form-pass \.trace-panel-caption\{[\s\S]*?color:#5e7263;font-size:11px/);
+});
+
+test('calendar keyboard moves focus only, skips blocked days and leaves save callbacks untouched',()=>{
+ const window={},document={addEventListener(){}};
+ vm.runInNewContext(js,{window,document});
+ let activated=0,focused=null,prevented=0;
+ const month='2026-10-';
+ const days=[12,13,14,15,16,17,18,19,20,21,22,23,24,25];
+ const grid={closest:(selector)=>selector==='#importCalendar'?{}:null,
+  querySelectorAll:()=>buttons};
+ const buttons=days.map(day=>{
+  const button={dataset:{selectDay:month+String(day)},disabled:day===14,
+   hidden:false,focus(){focused=day;},click(){activated++;}};
+  button.closest=selector=>selector==='.trace-cal-grid'?grid:button;
+  return button;
+ });
+ const emit=(day,key,mods={})=>{
+  focused=null;prevented=0;
+  const e={key,target:buttons[days.indexOf(day)],preventDefault(){prevented++},...mods};
+  window.TraceSheetPremium.onCalendarDayKeydown(e);
+  return{focused,prevented};
+ };
+ assert.deepEqual(emit(13,'ArrowRight'),{focused:15,prevented:1},'skip blocked day');
+ assert.deepEqual(emit(20,'ArrowUp'),{focused:13,prevented:1},'same weekday');
+ assert.deepEqual(emit(16,'Home'),{focused:12,prevented:1},'Monday');
+ assert.deepEqual(emit(16,'End'),{focused:18,prevented:1},'Sunday');
+ assert.deepEqual(emit(19,'ArrowLeft'),{focused:18,prevented:1});
+ assert.deepEqual(emit(18,'ArrowDown'),{focused:25,prevented:1});
+ assert.deepEqual(emit(25,'ArrowDown'),{focused:null,prevented:0},'no next week');
+ assert.deepEqual(emit(13,'Enter'),{focused:null,prevented:0});
+ assert.deepEqual(emit(13,'ArrowRight',{ctrlKey:true}),{focused:null,prevented:0});
+ assert.equal(activated,0,'keyboard focus must never import or validate');
+});
+test('financial form alerts are urgent while non-error synchronization feedback stays polite',()=>{
+ const window={};
+ const errorIds=['manualMovementError','traceBudgetShareError','traceBudgetCopyError'];
+ const all=[...errorIds,'traceFeedback'].map(id=>({
+  id,attrs:{},setAttribute(k,v){this.attrs[k]=v},
+  hasAttribute(k){return Object.hasOwn(this.attrs,k)},
+  matches(selector){return selector.split(',').some(s=>s==='#'+id)}
+ }));
+ const classList={add(){},remove(){}},backdrop={classList,dataset:{},removeAttribute(){},querySelector(selector){
+  return selector==='.sheet-head'?head:selector==='#sheetBody'?body:
+   selector==='#sheetTitle'?heading:selector==='.sheet'?dialog:null;
+ }};
+ const head={querySelectorAll:()=>[],insertBefore(){}},
+  heading={insertAdjacentElement(){}},
+  dialog={setAttribute(){}},
+  body={classList,dataset:{},removeAttribute(){},closest:()=>backdrop,
+   querySelector(selector){return selector==='#saveManualTx'?{}:null},
+   querySelectorAll(){return all;}};
+ const document={createElement(){return{className:'',textContent:''}},addEventListener(){}};
+ vm.runInNewContext(js,{window,document});
+ window.TraceSheetPremium.decorate(backdrop,'Ajouter une opération','form markup');
+ for(const x of all.filter(m=>errorIds.includes(m.id))){
+  assert.equal(x.attrs.role,'alert',x.id);
+  assert.equal(x.attrs['aria-live'],'assertive',x.id);
+  assert.equal(x.attrs['aria-atomic'],'true',x.id);
+ }
+ const status=all.find(x=>x.id==='traceFeedback');
+ assert.equal(status.attrs.role,'status');
+ assert.equal(status.attrs['aria-live'],'polite');
+});
+test('calendar explains the single existing workflow with visible focus',()=>{
+ const calendar=fs.readFileSync(path.join(root,'trace-import-calendar-2.1.2.js'),'utf8');
+ assert.match(calendar,/<h2>Calendrier des imports<\/h2>/);
+ assert.match(calendar,/Au clavier : flèches pour parcourir, Entrée pour ouvrir/);
+ assert.match(css,/#activityImport #importCalendar \.trace-cal-date:focus-visible/);
+ assert.equal((html.match(/id="importCalendar"/g)||[]).length,1);
 });
