@@ -16,14 +16,21 @@ if(dest===root||dest.startsWith(root+'/')&&!dest.startsWith(resolve(root,'trace-
 const check=spawnSync(process.execPath,['scripts/build-trace-preview-pwa.mjs','--check'],{cwd:root,encoding:'utf8',timeout:60000});
 if(check.status!==0)throw Error('PWA asset cache is stale: '+check.stderr.slice(0,450));
 // Preflight only the isolated candidate: no database access or production writes.
-const smoke=spawnSync(process.execPath,['--test',
+const smoke=spawnSync(process.execPath,['--test','--test-reporter=tap',
  'tests/trace-premium-panels.test.cjs',
  'tests/trace-international-editor.test.cjs',
  'tests/trace-international-money-integrity.test.cjs',
- 'tests/trace-international-friend-allocations.test.cjs'],{
+ 'tests/trace-international-friend-allocations.test.cjs',
+ 'tests/trace-international-premium-layout.test.cjs',
+ 'tests/trace-preview-pwa.test.cjs',
+ 'tests/trace-international-financial-guards.test.cjs',
+ 'tests/trace-international-fx-zero-budget-guard.test.cjs'],{
  cwd:root,encoding:'utf8',timeout:90000
 });
 if(smoke.status!==0)throw Error('Candidate UI/finance preflight failed: '+(smoke.stdout+'\n'+smoke.stderr).slice(-3500));
+const passed=Number(smoke.stdout.match(/# pass (\\d+)/)?.[1]||0);
+const failed=Number(smoke.stdout.match(/# fail (\\d+)/)?.[1]||-1);
+if(passed<15||failed!==0)throw Error('Candidate test reporter missing or incomplete: '+smoke.stdout.slice(-1400));
 console.log('Candidate UI/finance preflight: '+(smoke.stdout.match(/# tests [0-9]+|# pass [0-9]+|# fail [0-9]+/g)||[]).join(', '));
 const sw=await readFile(resolve(root,'trace-international-preview-sw.js'),'utf8');
 const match=sw.match(/const ASSETS=(\[[\s\S]*?\]);/);
