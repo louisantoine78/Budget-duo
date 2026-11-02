@@ -31,7 +31,11 @@ const smoke=spawnSync(process.execPath,['--test','--test-reporter=tap',
  'tests/trace-international-friend-sharing-ui.test.cjs'],{
  cwd:root,encoding:'utf8',timeout:90000
 });
-if(smoke.status!==0)throw Error('Candidate UI/finance preflight failed: '+(smoke.stdout+'\n'+smoke.stderr).slice(-3500));
+if(smoke.status!==0){
+ const lines=smoke.stdout.split('\\n'),failure=lines.findIndex(line=>/^not ok \\d+/.test(line));
+ const detail=failure<0?smoke.stdout.slice(-2800):lines.slice(failure,Math.min(failure+32,lines.length)).join('\\n');
+ throw Error('Candidate UI/finance preflight failed: '+detail.slice(0,3200));
+}
 const passed=Number(smoke.stdout.match(/# pass (\d+)/)?.[1]||0);
 const failed=Number(smoke.stdout.match(/# fail (\d+)/)?.[1]||-1);
 if(passed<15||failed!==0)throw Error('Candidate test reporter missing or incomplete: '+smoke.stdout.slice(-1400));
