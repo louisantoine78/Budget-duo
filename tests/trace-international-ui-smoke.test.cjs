@@ -28,7 +28,7 @@ const elem=id=>{
  if(!nodes.has(id))nodes.set(id,{
   id,innerHTML:'',textContent:'',value:'',href:'',hidden:false,
   classList:{toggle(){}},style:{},dataset:{insightMonth:'2026-10',analysisInvest:'celi'},
-  querySelector(){return elem(id+':child');},querySelectorAll(){return[];}
+  querySelector(){return elem(id+':child');},querySelectorAll(){return[];},append(){}
  });
  return nodes.get(id);
 };
@@ -52,7 +52,7 @@ const ctx={
  shortMonth:m=>m,esc:s=>String(s),money:n=>String(n)+' $',
  $,$$,document:{querySelectorAll:()=>[]},location:{href:'https://test.invalid/app.html'},URL,Date,
  updateSegments(){},manageCategories(){},openBudgetAdd(){},openBudgetEdit(){},
- breakdown:()=>[],insightYear:()=>[{month:activeMonth}],insightMonths:()=>[{month:activeMonth,...smry,hasData:true}],
+ breakdown:()=>[],insightYear:()=>[{month:activeMonth}],insightYearTopCategory:()=>null,insightMonths:()=>[{month:activeMonth,...smry,hasData:true}],
  insightCategoryDrilldown(){},openSheet(title,html){elem('#sheetBody').innerHTML=html;},
  closeSheet(){},navigate(){},setBudgetMonth(m){elem('#budgetMonthPicker').value=m;},
  window:{TraceInsights:{

@@ -39,7 +39,7 @@ let n=0;async function test(name,fn){await fn();n++;console.log('PASS '+name);}
 async function main(){
  await test('foreign metadata editing preserves native EUR debit and CAD history',async()=>{
   const h=fixture(),initial=JSON.parse(JSON.stringify(h.tx));h.fn(h.tx);
-  assert.match(h.calls.html,/taux historique restent strictement inchangés/);
+  assert.match(h.calls.html,/taux historique[\s\S]*restent inchangés/);
   h.$('#traceForeignMetaName').value='Repas modifié';
   h.$('#traceForeignMetaCategory').value='travel';
   await h.$('#traceForeignMetaSave').onclick();

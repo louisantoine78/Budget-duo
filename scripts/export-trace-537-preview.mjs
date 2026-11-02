@@ -16,6 +16,8 @@ if(dest===root||dest.startsWith(root+'/')&&!dest.startsWith(resolve(root,'trace-
 const check=spawnSync(process.execPath,['scripts/build-trace-preview-pwa.mjs','--check'],{cwd:root,encoding:'utf8',timeout:60000});
 if(check.status!==0)throw Error('PWA asset cache is stale: '+check.stderr.slice(0,450));
 // Preflight only the isolated candidate: no database access or production writes.
+// Never inherit Node's internal test-child flag when an export is itself tested.
+const smokeEnv={...process.env};delete smokeEnv.NODE_TEST_CONTEXT;
 const smoke=spawnSync(process.execPath,['--test','--test-reporter=tap',
  'tests/trace-premium-panels.test.cjs',
  'tests/trace-international-editor.test.cjs',
@@ -30,7 +32,7 @@ const smoke=spawnSync(process.execPath,['--test','--test-reporter=tap',
  'tests/trace-activity-keyboard.test.cjs',
  'tests/trace-international-friend-sharing-ui.test.cjs',
  'tests/trace-premium-system.test.cjs'],{
- cwd:root,encoding:'utf8',timeout:90000
+ cwd:root,encoding:'utf8',timeout:90000,env:smokeEnv
 });
 if(smoke.status!==0){
  const lines=smoke.stdout.split('\n'),failure=lines.findIndex(line=>/^not ok \d+/.test(line));

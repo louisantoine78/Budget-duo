@@ -12,10 +12,17 @@ test('fictional PWA export ships only the generated static allowlist',()=>{
   assert.equal(result.status,0,result.stderr);
   const audit=JSON.parse(fs.readFileSync(path.join(dest,'trace-lab-export-audit.json'),'utf8'));
   assert.equal(audit.schema,'trace-537-isolated-export-v1');
-  // 68 generated application assets + 2 premium form assets + 1 worker.
-  assert.equal(audit.count,71);
-  assert.equal(Object.keys(audit.files).length,71);
-  for(const asset of ['trace-premium-panels-5.37.0.js','trace-premium-panels-5.37.0.css']){
+  // The expected list is the generated exact allowlist plus its isolated worker.
+  // Do not freeze a historical asset count when candidate-only modules are added.
+  const sw=fs.readFileSync(path.join(root,'trace-international-preview-sw.js'),'utf8');
+  const match=sw.match(/const ASSETS=(\[[\s\S]*?\]);/);
+  assert.ok(match,'Generated SW asset allowlist must be present');
+  const assets=JSON.parse(match[1]),expected=assets.length+1;
+  assert.ok(expected>=72,'Premium candidate must not lose static assets');
+  assert.equal(audit.count,expected);
+  assert.equal(Object.keys(audit.files).length,expected);
+  for(const asset of ['trace-premium-panels-5.37.0.js','trace-premium-panels-5.37.0.css',
+    'trace-premium-system-5.37.0.css']){
    assert.match(audit.files[asset]||'',/^[0-9a-f]{64}$/,'Premium asset missing: '+asset);
    assert.equal(fs.existsSync(path.join(dest,asset)),true,asset);
   }
