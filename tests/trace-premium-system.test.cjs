@@ -67,3 +67,14 @@ test('presentation cannot alter posting, financial calculations or application n
  assert.equal((html.match(/data-tab="sharing"/g)||[]).length,1);
  assert.equal((html.match(/data-nav="/g)||[]).length,4);
 });
+
+test('premium filter surface preserves the custom native-select chevron',()=>{
+ const rule=css.match(/\.page\[data-page="activity"\] #activityAdvancedFilters \.trace-activity-filters \.trace-activity-native-select\{([^}]*)\}/);
+ assert.ok(rule,'the narrowed filter rule must exist');
+ assert.match(rule[1],/background-color:var\(--trace37-tint\)!important/);
+ assert.doesNotMatch(rule[1],/(?:^|;)\s*background\s*:/,
+  'background shorthand would erase the accessible selector arrow');
+ const base=read('trace-international-1.0.0.css');
+ assert.match(base,/\.trace-activity-native-select/);
+ assert.match(base,/background-image:url\(/);
+});

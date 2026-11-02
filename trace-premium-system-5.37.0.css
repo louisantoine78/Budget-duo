@@ -97,7 +97,7 @@
  color:var(--trace37-muted);font-weight:590;
 }
 .page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters .trace-activity-native-select{
- background:var(--trace37-tint)!important;
+ background-color:var(--trace37-tint)!important;
  color:var(--trace37-ink)!important;
  border-color:var(--trace37-border)!important;
  border-radius:11px!important;
