@@ -24,7 +24,11 @@ const smoke=spawnSync(process.execPath,['--test','--test-reporter=tap',
  'tests/trace-international-premium-layout.test.cjs',
  'tests/trace-preview-pwa.test.cjs',
  'tests/trace-international-financial-guards.test.cjs',
- 'tests/trace-international-fx-zero-budget-guard.test.cjs'],{
+ 'tests/trace-international-fx-zero-budget-guard.test.cjs',
+ 'tests/trace-activity-four-tabs.test.cjs',
+ 'tests/trace-home-reconciliation-status.test.cjs',
+ 'tests/trace-activity-keyboard.test.cjs',
+ 'tests/trace-international-friend-sharing-ui.test.cjs'],{
  cwd:root,encoding:'utf8',timeout:90000
 });
 if(smoke.status!==0)throw Error('Candidate UI/finance preflight failed: '+(smoke.stdout+'\n'+smoke.stderr).slice(-3500));
