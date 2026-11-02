@@ -94,7 +94,7 @@
   const pos=enabled.indexOf(current);
   if(pos<0)return;
   const date=current.dataset.selectDay;
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
   const day=Number(date.slice(8));
   let next=null;
   if(key==='ArrowLeft'&&pos>0)next=enabled[pos-1];
