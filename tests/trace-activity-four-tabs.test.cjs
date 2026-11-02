@@ -4,6 +4,7 @@ const fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const app=read('v5-app-5.37.0.js'),html=read('trace-international-preview.html'),
  css=read('trace-international-1.0.0.css');
+const premium=read('trace-premium-panels-5.37.0.css');
 test('three Activity tabs are visible and Import is reserved for plus',()=>{
  const ids=['data-tab="transactions"','data-tab="review"','data-tab="sharing"'];
  const at=ids.map(x=>html.indexOf(x));
@@ -140,7 +141,7 @@ test('Activity offers direct calendar access without adding a fourth tab or clon
  assert.equal((html.match(/id="importCalendar"/g)||[]).length,1);
  assert.equal((html.match(/id="homeImportCalendar"/g)||[]).length,1);
  assert.match(app,/\$\('#activityImportCalendar'\)\?\.addEventListener\('click',\(\)=>openTraceImportWorkspace\('daily'\)\)/);
- assert.match(css,/\.trace-activity-calendar-access\.hidden\{display:none!important\}/);
+ assert.match(premium,/\.trace-activity-calendar-access\.hidden\{display:none!important\}/);
  assert.match(css,/@media\(max-width:359px\)/);
  assert.doesNotMatch(html,/data-tab="import"/);
  const m=mountTabs();
