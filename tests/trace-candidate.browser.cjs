@@ -590,6 +590,11 @@ let base;
   });
   assert.equal(borders.outer,'0px','account select must not draw two boxes');
   assert.equal(borders.select,'1px','the actual select retains one fine outline');
+  const section=await page.locator('#manualTxAccount').evaluate(el=>el.closest('.trace-edit-card'));
+  assert.ok(section,'the original Comptes et nature section remains in the form');
+  const frame=await page.locator('#manualTxAccount').evaluate(el=>
+   getComputedStyle(el.closest('.trace-edit-card')).borderTopWidth);
+  assert.equal(frame,'1px','premium section cards must not be removed to flatten select controls');
   await page.locator('#manualPurchaseAmount').fill('10');
   await page.locator('#manualPurchaseCurrency').selectOption('CAD');
   assert.equal(await page.locator('#manualTxAmount').inputValue(),'10.00');
@@ -614,6 +619,10 @@ let base;
   const bank=Number(await page.locator('#manualTxAmount').inputValue());
   assert.ok(bank>0&&bank!==10,'USD to CAD must have a positive non-identity dated quote');
   assert.match(await text('manualPurchaseEstimate'),/CAD|\$/);
+  const note=await page.locator('#manualFxPublished').innerText();
+  assert.match(note,/1 USD = .* CAD/);
+  assert.match(note,/fictif de démonstration/,'private preview may not claim a real downloaded rate');
+  assert.match(note,/2026-10-24/,'the quote observation date must be shown');
   assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),true);
   await page.locator('#manualTxCategory').selectOption('groceries');
   assert.ok(Number(await page.locator('#manualTxAmount').inputValue())>0);
@@ -1060,6 +1069,11 @@ let base;
   await page.locator('#sheetBackdrop').waitFor({state:'hidden'});await go('home');
   assert.match(await text('homeBalance'),/1\s*122,60/);
   assert.match(await text('homeSpending'),/416/);
+  await go('activity');
+  const row=page.locator('[data-tx-open]').filter({hasText:'Fictional 50 USD paid from EUR'});
+  assert.equal(await row.count(),1);
+  assert.match(await row.innerText(),/Achat .*USD.*Compte .*€/,
+   'activity must show original purchase and the actual native bank debit side by side');
  });
  await test('CAD to EUR transfer preserves actual debit, receipt and included fees with no budget expense',async()=>{
   const budget=await text('homeBudgetAvailable'),spending=await text('homeSpending');
