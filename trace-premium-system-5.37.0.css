@@ -267,3 +267,21 @@
 #sheetBackdrop[data-trace-panel="manual"] #manualCategorySuggestion{
  color:#5f7868;font-size:12px;line-height:1.45;
 }
+
+/* Shared premium rhythm: monthly budget additions use the same compact
+ * native fields and quiet context surface as manual finance sheets. */
+#sheetBackdrop.trace-intl-premium-dialog[data-trace-panel="budget-add"] #sheetBody>.trace-budget-sheet-context{
+ background:var(--trace37-tint);
+ border:1px solid var(--trace37-border);border-radius:13px;
+ padding:12px 14px;margin:5px 0 13px;
+}
+#sheetBackdrop.trace-intl-premium-dialog[data-trace-panel="budget-add"] #sheetBody .trace-budget-fieldset .label2{
+ color:var(--trace37-muted);font-weight:670;font-size:12px;
+}
+#sheetBackdrop.trace-intl-premium-dialog[data-trace-panel="budget-add"] #sheetBody #budgetAddCategory{
+ min-height:50px;background:#fafcf9;color:var(--trace37-ink);
+ border:1px solid var(--trace37-border);border-radius:12px;font-size:16px;
+}
+#sheetBackdrop.trace-intl-premium-dialog[data-trace-panel="budget-add"] #sheetBody .trace-budget-amount-stage{
+ padding-top:15px;margin-bottom:14px;border-color:var(--trace37-rule);
+}

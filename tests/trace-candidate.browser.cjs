@@ -570,6 +570,44 @@ let base;
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),balance);
  });
+ await test('a CAD debit shows indicative EUR purchase conversion without changing bank amount',async()=>{
+  await go('home');
+  const initial=await text('homeBalance');
+  await page.locator('#quickAdd').click();
+  await page.locator('#traceAddManual').click();
+  const bank=page.locator('#manualTxAccount');
+  const cad=await bank.locator('option').evaluateAll(nodes=>nodes.find(n=>/CAD/.test(n.textContent))?.value||'');
+  assert.ok(cad,'a CAD account should exist');
+  await bank.selectOption(cad);
+  await page.locator('#manualTxAmount').fill('100');
+  await page.locator('#manualPurchaseCurrency').selectOption('EUR');
+  const estimate=page.locator('#manualPurchaseEstimate');
+  await page.waitForFunction(()=>{
+   const value=document.querySelector('#manualPurchaseEstimate')?.textContent||'';
+   return /Estimation indicative|Estimation indisponible/.test(value);
+  },{timeout:12000});
+  const displayed=await estimate.innerText();
+  assert.match(displayed,/EUR|indisponible/);
+  assert.equal(await page.locator('#manualTxAmount').inputValue(),'100');
+  assert.equal(await page.locator('#manualPurchaseAmount').inputValue(),'');
+  await page.locator('#cancelManualTx').click();
+  assert.equal(await text('homeBalance'),initial);
+ });
+ await test('Analyse opens from the beginning and annual budget shows chart before long guidance',async()=>{
+  await go('home');
+  await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
+  await page.locator('#analysisBtn').click();
+  assert.equal(await page.locator('#sheetBackdrop .sheet').evaluate(n=>n.scrollTop),0);
+  await page.locator('#closeSheet').click();
+  await go('budget');
+  const grid=page.locator('#annualBudgetChart .trace-year-grid');
+  const more=page.locator('#annualBudgetChart .trace-year-diagnosis');
+  if(await grid.count()&&await more.count()){
+   const order=await grid.evaluate(n=>n.compareDocumentPosition(
+    document.querySelector('#annualBudgetChart .trace-year-diagnosis')) & Node.DOCUMENT_POSITION_FOLLOWING);
+   assert.ok(order,'month comparisons should precede long annual diagnosis');
+  }
+ });
  await test('calendar date keyboard focuses adjacent valid days without opening their actions',async()=>{
   await go('activity');
   await page.locator('#activityImportCalendar').click();
