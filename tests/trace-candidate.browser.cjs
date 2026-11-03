@@ -576,6 +576,50 @@ let base;
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),balance);
  });
+ await test('iPhone movement card presents real expense tabs and a single-line amount with currency',async()=>{
+  await go('home');
+  const balance=await text('homeBalance');
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
+  const group=page.locator('#manualFamilies');
+  assert.equal(await group.isVisible(),true);
+  assert.equal(await group.getAttribute('aria-label'),'Nature du mouvement');
+  const tabs=group.locator('[data-manual-family]');
+  assert.equal(await tabs.count(),4,'financial subtypes must remain available');
+  assert.equal(await group.locator('[data-manual-family="expenses"]').getAttribute('aria-pressed'),'true');
+  const expenseBorder=await group.locator('[data-manual-family="expenses"]').evaluate(el=>
+   ({width:getComputedStyle(el).borderTopWidth,background:getComputedStyle(el).backgroundColor}));
+  assert.equal(expenseBorder.width,'1px');
+  assert.ok(expenseBorder.background!=='rgba(0, 0, 0, 0)'&&expenseBorder.background!=='transparent',
+   'the selected Dépenses tab must have an actual visible frame');
+  await group.locator('[data-manual-family="incoming"]').click();
+  assert.equal(await group.locator('[data-manual-family="incoming"]').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('#manualKind').inputValue(),'income');
+  await group.locator('[data-manual-family="expenses"]').click();
+  assert.equal(await page.locator('#manualKind').inputValue(),'expense');
+  assert.equal(await page.locator('#manualPreciseDetails').evaluate(el=>el.open),false);
+  await page.locator('#manualPreciseDetails summary').click();
+  assert.equal(await page.locator('#manualKind').isVisible(),true);
+  await page.locator('#manualPreciseDetails summary').click();
+  const positions=await page.evaluate(()=>{
+   const amount=document.querySelector('#manualPurchaseAmount').getBoundingClientRect();
+   const currency=document.querySelector('#manualPurchaseCurrency').getBoundingClientRect();
+   const label=document.querySelector('label[for="manualPurchaseCurrency"]').getBoundingClientRect();
+   const date=document.querySelector('#manualTxDate').getBoundingClientRect();
+   return {amount:{x:amount.x,y:amount.y,w:amount.width,h:amount.height},
+    currency:{x:currency.x,y:currency.y,w:currency.width,h:currency.height},
+    label:{w:label.width,h:label.height},dateY:date.y};
+  });
+  assert.ok(Math.abs(positions.amount.y-positions.currency.y)<=5,JSON.stringify(positions));
+  assert.ok(positions.currency.x>positions.amount.x+positions.amount.w-1,JSON.stringify(positions));
+  assert.ok(positions.currency.w>=85&&positions.amount.w>=110,JSON.stringify(positions));
+  assert.ok(positions.dateY>positions.amount.y,'date comes after amount and before conversion');
+  assert.ok(positions.label.w<=2,'accessible currency label must not occupy another grid row');
+  await page.locator('#manualTxAccount').selectOption('demo-fr-current');
+  assert.equal(await page.locator('#manualTxAccount').inputValue(),'demo-fr-current',
+   'bank account must remain selectable after styling');
+  await page.locator('#cancelManualTx').click();
+  assert.equal(await text('homeBalance'),balance);
+ });
  await test('one amount and currency use account-native values with no nested dropdown frame',async()=>{
   await go('home');
   const balance=await text('homeBalance');
