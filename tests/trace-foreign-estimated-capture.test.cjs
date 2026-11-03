@@ -66,3 +66,15 @@ test('batch importer rechecks the live candidate and refuses a second posting',(
  assert.match(src,/amountConflict:!!estimatedCorrection/);
  assert.match(src,/matchAmount:estimatedCorrection\?\.bankAmount/);
 });
+
+test('bank-confirmed foreign purchase is not re-offered for correction',()=>{
+ assert.equal(fixture({fxBankAmountStatus:'bank_confirmed'}).match(),null);
+ assert.equal(fixture({bankDebitReview:{source:'capture_compare_confirmed'}}).match(),null);
+});
+test('purchase quote and true bank debit retain separate metadata',()=>{
+ for(const part of ['bankQuoteMeta={purchaseCurrency,bankCurrency:fromCurrency',
+  'purchaseFxReference:savedPurchaseQuote.rate',
+  'purchaseFxRateDate:savedPurchaseQuote.observationDate',
+  "fxBankAmountStatus:bankOverride?'bank_confirmed':'estimated'"])
+  assert.ok(src.includes(part),part);
+});

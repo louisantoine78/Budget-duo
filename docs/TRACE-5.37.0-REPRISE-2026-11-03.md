@@ -81,3 +81,8 @@
 - La validation du lot d'images relit les transactions vivantes et refuse dans ce cas de comptabiliser une deuxième dépense même si « doublon possible » a été sélectionné. L'utilisateur peut ouvrir et modifier explicitement l'opération initiale, puis réexaminer la capture.
 - Test isolé : `node --test tests/trace-foreign-estimated-capture.test.cjs`. Les captures importées sous les autres parcours ne sont pas encore certifiées comme rapprochement automatique ; ne pas prétendre que la correction du débit et l'écriture de preuve sont automatisées.
 - Aucun changement des formules de change ou écritures existantes, ni de la branche main.
+
+## 3 novembre — origine du cours FX vs débit bancaire réel
+- Pour les nouvelles dépenses en devise étrangère enregistrées sur un compte CAD, statut `fxBankAmountStatus:'estimated'` ou `'bank_confirmed'` selon si le client accepte l'estimation ou saisit le débit réel.
+- Le taux de change observé et sa source, lorsqu'ils ont été effectivement récupérés, sont conservés séparément dans `purchaseFxReference`, `purchaseFxRateDate`, `purchaseFxRateSource`. Le taux CAD 1:1 du compte reste distinct.
+- Une écriture déjà confirmée par la banque n'est pas requalifiée en estimation à la lecture d'une capture ; les écritures historiques sans indicateur restent de simples correspondances possibles.

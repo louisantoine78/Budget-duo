@@ -1697,7 +1697,7 @@ function openTraceImportWorkspace(mode='daily'){
 }
 function openManualTransaction(preferredKind='expense'){
  const M=window.TraceMovement,Guide=window.TraceImportGuide,U=window.TraceOperationUI;
- let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0,purchaseCurrencyTouched=false,bankEstimate=null,bankOverride=false,lastPurchaseKey='',hadPurchaseAmount=false;
+ let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0,purchaseCurrencyTouched=false,bankEstimate=null,bankQuoteMeta=null,bankOverride=false,lastPurchaseKey='',hadPurchaseAmount=false;
  const bankAccounts=visibleBankAccounts(me);
  const validCardTarget=(from,to)=>{
   if(!from||!to||accountType(from)!=='checking'||accountType(to)!=='card'||from.owner!==to.owner||
@@ -1905,6 +1905,7 @@ function openManualTransaction(preferredKind='expense'){
    sourceChanged=purchaseKey!==lastPurchaseKey;
   if(sourceChanged){
    lastPurchaseKey=purchaseKey;
+   bankQuoteMeta=null;
    bankOverride=false;
    $m('manualFxConfirm').checked=false;
    $m('manualTxAmount').closest?.('.manual-money-row')?.classList?.remove?.('trace-bank-editing');
@@ -1992,6 +1993,8 @@ function openManualTransaction(preferredKind='expense'){
      const provider=previewMode?'cours fictif de démonstration':
       quotedSources.some(source=>/manuel/i.test(source))?'dont un taux saisi manuellement':
       'référence Banque du Canada · Valet';
+     bankQuoteMeta={purchaseCurrency,bankCurrency:fromCurrency,requestedDate:bookingDate,
+      rate:reference,observationDate:reportDay,source:provider};
      fxPublished.textContent='1 '+purchaseCurrency+' = '+digits+' '+fromCurrency+
       ' · '+provider+' · observation '+reportDay+
       (reportDay===bookingDate?'':' · dernier jour publié disponible')+'.';
@@ -2021,6 +2024,7 @@ function openManualTransaction(preferredKind='expense'){
      }
     }).catch(()=>{
      if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
+     bankQuoteMeta=null;
      estimate.textContent='Taux de référence indisponible pour cette date. Tu peux indiquer le débit réel.';
      fxPublished.textContent='Aucun cours officiel vérifié pour '+bookingDate+'. Ne pas utiliser un taux inventé.';
      editBank.hidden=bankOverride;
@@ -2289,8 +2293,18 @@ function openManualTransaction(preferredKind='expense'){
     }
    }else related=validateFriendLink(kind,$m('manualRelatedExpense').value,date,booking.amountCAD);
   }catch(e){error.textContent=String(e.message||e);return;}
+  const cadForeignPurchase=nativeCurrency==='CAD'&&sourceAmount>0&&purchaseCode!=='CAD'&&def.type==='expense';
+  // Bank-CAD identity (1:1) is not the published foreign purchase quote.
+  const savedPurchaseQuote=cadForeignPurchase&&bankQuoteMeta&&
+   bankQuoteMeta.purchaseCurrency===purchaseCode&&
+   bankQuoteMeta.bankCurrency===nativeCurrency&&
+   bankQuoteMeta.requestedDate===date?bankQuoteMeta:null;
   const item={id:txDocId(),date,name,note:'',merchant:'',type:def.type,transferPurpose:def.purpose||null,
    status:'confirmed',...booking,...transferFees,...savingsLeg,
+   ...(cadForeignPurchase?{fxBankAmountStatus:bankOverride?'bank_confirmed':'estimated',
+     ...(savedPurchaseQuote?{purchaseFxReference:savedPurchaseQuote.rate,
+      purchaseFxRateDate:savedPurchaseQuote.observationDate,
+      purchaseFxRateSource:savedPurchaseQuote.source}:{})}:{}),
    ...(['transfer','card_payment'].includes(kind)?{toBankAmount:destinationBankAmount,
     toBankCurrency:window.TraceInternational.currency(bankAccounts.find(a=>a.id===targetId))}:{}),
    categoryId,accountId,payerId:me,...shares,...friendDebtors,
@@ -4389,7 +4403,9 @@ function tracePossibleForeignDebitCorrection(row,accountId){
  if(!smartStrictDate(date)||name.length<4||observed===null)return null;
  const options=state.transactions.filter(t=>{
   if(t?.status!=='confirmed'||t.type!=='expense'||t.accountId!==accountId||
-     t.date!==date||['csv','image'].includes(t.source)||t.bankCurrency!=='CAD'||
+     t.date!==date||['csv','image'].includes(t.source)||
+     t.fxBankAmountStatus==='bank_confirmed'||t.bankDebitReview?.source==='capture_compare_confirmed'||
+     t.bankCurrency!=='CAD'||
      !I.valid(t.currency)||t.currency==='CAD'||!(Number(t.amountOriginal)>0)||
      normalizedMerchant(t.name)!==name)return false;
   const estimate=smartExactBankAmount(t.bankAmount);
