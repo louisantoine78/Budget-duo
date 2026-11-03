@@ -1663,7 +1663,7 @@ function openTraceImportWorkspace(mode='daily'){
 }
 function openManualTransaction(preferredKind='expense'){
  const M=window.TraceMovement,Guide=window.TraceImportGuide,U=window.TraceOperationUI;
- let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0,purchaseCurrencyTouched=false,bankEstimate=null,bankOverride=false,lastPurchaseKey='';
+ let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0,purchaseCurrencyTouched=false,bankEstimate=null,bankOverride=false,lastPurchaseKey='',hadPurchaseAmount=false;
  const bankAccounts=visibleBankAccounts(me);
  const validCardTarget=(from,to)=>{
   if(!from||!to||accountType(from)!=='checking'||accountType(to)!=='card'||from.owner!==to.owner||
@@ -1850,8 +1850,10 @@ function openManualTransaction(preferredKind='expense'){
    bankOverride=false;
    $m('manualFxConfirm').checked=false;
    $m('manualTxAmount').closest('.manual-money-row')?.classList.remove('trace-bank-editing');
-   if(originalMoney!==null&&originalMoney>0)
-    $m('manualTxAmount').value=sourceCurrency===fromCurrency?originalMoney.toFixed(2):'';
+   if(hadPurchaseAmount||$m('manualPurchaseAmount').value.trim()!=='')
+    $m('manualTxAmount').value=originalMoney!==null&&originalMoney>0&&sourceCurrency===fromCurrency?
+     originalMoney.toFixed(2):'';
+   hadPurchaseAmount=$m('manualPurchaseAmount').value.trim()!=='';
   }
   const amount=I.exactMoney($m('manualTxAmount').value),
    preview=$m('manualMovementImpact'),token=++previewToken,
@@ -1909,7 +1911,7 @@ function openManualTransaction(preferredKind='expense'){
       estimate.textContent='Montant réel du compte : '+I.money(I.exactMoney($m('manualTxAmount').value)||0,fromCurrency)+
        ' · achat de '+I.money(originalAmount,purchaseCurrency)+'.';
      }
-     editBank.hidden=false;
+     editBank.hidden=bankOverride;
      if(!bankOverride){
       const real=bankEstimate;
       const matches=sourceChanged||!amount||amount!==real;
@@ -1925,7 +1927,7 @@ function openManualTransaction(preferredKind='expense'){
     }).catch(()=>{
      if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
      estimate.textContent='Taux de référence indisponible pour cette date. Tu peux indiquer le débit réel.';
-     editBank.hidden=false;
+     editBank.hidden=bankOverride;
      quoteConsent.hidden=true;
     });
    }
@@ -2062,7 +2064,12 @@ function openManualTransaction(preferredKind='expense'){
   sync();
  };
  $m('manualFxRate').oninput=sync;
- $m('manualPurchaseAmount').oninput=sync;
+ $m('manualPurchaseAmount').oninput=()=>{
+  // Once the customer types an amount, its purchase currency is intentional
+  // and MUST NOT silently follow a later bank-account selection.
+  purchaseCurrencyTouched=true;
+  sync();
+ };
  $m('manualDestAmount').oninput=sync;
  $m('manualFriendsAmount').oninput=sync;
  $m('manualPartnerAmount').oninput=sync;
