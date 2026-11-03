@@ -1660,7 +1660,7 @@ function openTraceImportWorkspace(mode='daily'){
 }
 function openManualTransaction(preferredKind='expense'){
  const M=window.TraceMovement,Guide=window.TraceImportGuide,U=window.TraceOperationUI;
- let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0;
+ let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0,purchaseCurrencyTouched=false,bankEstimate=null;
  const bankAccounts=visibleBankAccounts(me);
  const validCardTarget=(from,to)=>{
   if(!from||!to||accountType(from)!=='checking'||accountType(to)!=='card'||from.owner!==to.owner||
@@ -1700,16 +1700,18 @@ function openManualTransaction(preferredKind='expense'){
   '<label class="label2" for="manualKind">Nature précise</label><select class="input" id="manualKind"></select>'+ 
   '<p class="trace-movement-help" id="manualKindHelp" aria-live="polite"></p>'+
   '<div class="trace-manual-fields"><label class="label2" for="manualTxName">Description</label><input class="input" id="manualTxName" maxlength="80" type="text" placeholder="Ex. Restaurant, remboursement Mathilde">'+
-  '<div class="formrow manual-money-row"><div><label class="label2" for="manualTxAmount">Montant</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
+  '<div class="trace-purchase-entry"><label class="label2" for="manualPurchaseAmount">Montant de l’opération · devise d’achat</label>'+
+  '<div class="trace-purchase-pair"><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal" placeholder="0,00" aria-describedby="manualPurchaseHint">'+
+  '<select class="input trace-manual-choice-native" id="manualPurchaseCurrency" tabindex="-1" aria-hidden="true" aria-label="Devise de l’opération">'+
+   currencyChoices.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select></div>'+
+  '<span id="manualPurchaseHint" class="trace-field-hint">Saisis le prix payé dans la devise du commerçant.</span>'+
+  '<div class="trace-manual-choice-pills" id="manualPurchaseCurrencyChips" role="group" aria-label="Devise de l’opération">'+
+   manualChips(currencyChoices.map(c=>[c,c]))+'</div>'+
+  '<p id="manualPurchaseEstimate" class="trace-intl-help" role="status" aria-live="polite"></p>'+
+  '<button type="button" class="secondary trace-use-estimate" id="manualApplyBankEstimate" hidden>Reprendre le montant estimé pour le compte</button></div>'+
+  '<div class="formrow manual-money-row"><div><label class="label2" for="manualTxAmount">Montant débité ou crédité par la banque</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
   '<div><label class="label2" for="manualTxDate">Date</label><input class="input" id="manualTxDate" type="date" value="'+localDateISO()+'"></div></div>'+
   '<div class="trace-intl-transaction"><small id="manualBankCurrencyNote">Montant dans la devise du compte</small>'+
-  '<div class="formrow"><div><label class="label2" for="manualPurchaseCurrency" id="manualPurchaseCurrencyLabel">Devise d’achat</label>'+
-  '<select class="input trace-manual-choice-native" id="manualPurchaseCurrency" tabindex="-1" aria-hidden="true">'+
-   currencyChoices.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select>'+
-  '<div class="trace-manual-choice-pills" id="manualPurchaseCurrencyChips" role="group" aria-labelledby="manualPurchaseCurrencyLabel">'+
-   manualChips(currencyChoices.map(c=>[c,c]))+'</div></div>'+
-  '<div><label class="label2" for="manualPurchaseAmount">Prix d’achat d’origine (facultatif)</label><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
-  '<p id="manualPurchaseEstimate" class="trace-intl-help" role="status" aria-live="polite"></p>'+
   '<label class="label2" id="manualFxRateLabel" for="manualFxRate">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
   '<p class="trace-intl-help">Le montant ci-dessus est celui réellement débité par la banque. En l’absence de taux de référence disponible, entre un taux vérifié.</p>'+
   '<div id="manualDestAmountWrap" hidden><label class="label2" id="manualDestAmountLabel" for="manualDestAmount">Montant réellement reçu sur le compte destinataire</label><input class="input" id="manualDestAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
@@ -1849,27 +1851,51 @@ function openManualTransaction(preferredKind='expense'){
    preview.textContent='Carte à débit différé : simulation uniquement en lecture seule. Aucune écriture possible.';
    return;
   }
-  // Reference-only purchase estimate. Never rewrite the real bank debit,
-  // frozen CAD booking, user-entered purchase amount or split allocations.
+  // A bank debit is authoritative only if explicitly provided by the user.
+  // The purchase-currency input is a reference; quotes never post money.
   estimate.textContent='';
-  if(purchaseCurrency&&purchaseCurrency!==fromCurrency&&amount!==null&&amount>0){
+  bankEstimate=null;
+  const estimateButton=$m('manualApplyBankEstimate');
+  estimateButton.hidden=true;
+  const originalAmount=window.TraceInternational.exactMoney($m('manualPurchaseAmount').value);
+  if(purchaseCurrency&&originalAmount!==null&&originalAmount>0){
    const I=window.TraceInternational,manual=$m('manualFxRate').value.trim();
-   estimate.textContent='Estimation du prix en '+purchaseCurrency+' en cours…';
+   estimate.textContent='Conversion indicative en '+fromCurrency+' en cours…';
    const bankQuote=fromCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
     manual?Promise.resolve({cadPerUnit:Number(manual),date:bookingDate}):I.getRate(fromCurrency,bookingDate);
    const purchaseQuote=purchaseCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
     I.getRate(purchaseCurrency,bookingDate);
    Promise.all([bankQuote,purchaseQuote]).then(([fromRate,toRate])=>{
     if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
-    const reference=Number(fromRate?.cadPerUnit)/Number(toRate?.cadPerUnit);
+    const reference=Number(toRate?.cadPerUnit)/Number(fromRate?.cadPerUnit);
     if(!Number.isFinite(reference)||reference<=0)throw Error('Taux invalide');
-    const converted=Math.round(amount*reference*100)/100;
-    estimate.textContent='Estimation indicative : '+I.money(converted,purchaseCurrency)+
-     ' au taux de référence du '+(toRate.date||bookingDate)+
-     '. Les frais et le cours réellement appliqués par la banque peuvent différer.';
+    bankEstimate=Math.round(originalAmount*reference*100)/100;
+    estimate.textContent='Estimation dans ton compte : '+I.money(bankEstimate,fromCurrency)+
+     ' · taux de référence du '+(toRate.date||bookingDate)+
+     '. Vérifie le débit réel : la banque peut appliquer des frais ou un autre cours.';
+    estimateButton.hidden=amount!==null&&amount>0;
    }).catch(()=>{
     if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
-    estimate.textContent='Estimation indisponible pour cette date. Saisis le prix d’achat réel si tu le connais.';
+    estimate.textContent='Taux non disponible pour cette date : renseigne le montant bancaire réel.';
+   });
+  }else if(purchaseCurrency&&purchaseCurrency!==fromCurrency&&amount!==null&&amount>0){
+   // Reverse read-only calculation when only the bank debit is known.
+   const I=window.TraceInternational,manual=$m('manualFxRate').value.trim();
+   estimate.textContent='Prix d’achat indicatif en cours…';
+   const bankQuote=fromCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
+    manual?Promise.resolve({cadPerUnit:Number(manual),date:bookingDate}):I.getRate(fromCurrency,bookingDate);
+   const purchaseQuote=purchaseCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
+    I.getRate(purchaseCurrency,bookingDate);
+   Promise.all([bankQuote,purchaseQuote]).then(([fromRate,toRate])=>{
+    if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
+    const rate=Number(fromRate?.cadPerUnit)/Number(toRate?.cadPerUnit);
+    if(!Number.isFinite(rate)||rate<=0)throw Error('Taux invalide');
+    const converted=Math.round(amount*rate*100)/100;
+    estimate.textContent='Prix d’achat estimé : '+I.money(converted,purchaseCurrency)+
+     ' · taux de référence du '+(toRate.date||bookingDate)+'.';
+   }).catch(()=>{
+    if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
+    estimate.textContent='Taux de référence indisponible pour cette date.';
    });
   }
   if(fromCurrency==='CAD'){
@@ -1936,7 +1962,7 @@ function openManualTransaction(preferredKind='expense'){
  });
  $m('manualKind').onchange=()=>choose($m('manualKind').value,true);
  $m('manualTxBeneficiary').onchange=sync;
- $m('manualPurchaseCurrency').onchange=sync;
+ $m('manualPurchaseCurrency').onchange=()=>{purchaseCurrencyTouched=true;sync();};
  const categorySearch=$m('manualTxCategorySearch');
  if(categorySearch?.addEventListener)categorySearch.addEventListener('input',()=>{
   // Accent-insensitive search; "epicerie" finds "Épicerie".
@@ -1979,8 +2005,14 @@ function openManualTransaction(preferredKind='expense'){
  }
  $m('manualTxAccount').onchange=()=>{
   const a=bankAccounts.find(a=>a.id===$m('manualTxAccount').value);
-  $m('manualPurchaseCurrency').value=window.TraceInternational.currency(a);
+  if(!purchaseCurrencyTouched)$m('manualPurchaseCurrency').value=window.TraceInternational.currency(a);
   choose(kind,true);
+ };
+ $m('manualApplyBankEstimate').onclick=()=>{
+  // Explicit consent only: this is a draft field value, not a bank fact.
+  if(bankEstimate===null||!(bankEstimate>0))return;
+  $m('manualTxAmount').value=bankEstimate.toFixed(2);
+  sync();
  };
  $m('manualTxDate').onchange=sync;
  $m('manualTarget').onchange=sync;
@@ -3042,6 +3074,7 @@ function editTransaction(id,validating=false){
  };
  openSheet(validating?'Vérifier l’opération':'Modifier la transaction',
  '<div class="trace-edit-layout">'+
+ (validating?'<div class="trace-review-status" role="status"><span class="trace-review-dot" aria-hidden="true"></span><span><strong>À vérifier</strong><small>Aucune validation bancaire sans ta confirmation.</small></span></div>':'')+
  '<p class="trace-edit-lead">Corrige les informations utiles, puis vérifie l’impact avant d’enregistrer.</p>'+
  '<section class="trace-edit-card" aria-labelledby="traceEditNatureTitle">'+
   '<div class="trace-edit-card-head"><span class="trace-edit-card-index" aria-hidden="true">01</span>'+

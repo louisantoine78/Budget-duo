@@ -116,14 +116,13 @@ function renderAnnual(target,{months=[],year='',topCategory=null}={}){
   spent:Math.min(100,Math.max(0,Number(m.expense||0)/maxValue*100))});
  const comparableLabel=comparable.length+' mois comparable'+(comparable.length>1?'s':'');
  let html='<div class="trace-year-header"><div><strong>Bilan '+esc(year)+'</strong>'+
-  '<small>Opérations confirmées, sans estimation des mois manquants</small></div>'+
+  '<small>Seulement les opérations connues</small></div>'+
   '<span class="trace-year-coverage">'+recorded.length+' / '+elapsed.length+' mois avec mouvements</span></div>';
  html+='<section class="trace-year-result" aria-label="Bilan des opérations confirmées">'+
   '<div class="trace-year-result-main"><small>Différence revenus − dépenses</small>'+
   '<strong class="'+(result<-.005?'trace-year-result-negative':'')+'">'+shown(result)+'</strong>'+
-  '<span>'+(hasActual?(recorded.length===1?'Sur 1 mois avec des mouvements confirmés':
-   'Sur '+recorded.length+' mois avec des mouvements confirmés')+' · hors virements internes':
-   'Aucune opération confirmée : bilan non calculable')+'</span></div>'+
+  '<span>'+(hasActual?(recorded.length===1?'Sur 1 mois renseigné':
+   'Sur '+recorded.length+' mois renseignés'):'Pas encore de données confirmées')+'</span></div>'+
   '<div class="trace-year-totals" aria-label="Revenus, dépenses et différence confirmés">'+
    '<div><small>Revenus</small><strong>'+shown(income)+'</strong></div>'+
    '<div><small>Dépenses</small><strong>'+shown(spent)+'</strong></div>'+
@@ -159,8 +158,9 @@ function renderAnnual(target,{months=[],year='',topCategory=null}={}){
   messages.push(n+' mois budgété'+(n>1?'s':'')+' sans dépense confirmée');
  }
  if(!messages.length)messages.push('Tous les mois écoulés comportent des mouvements confirmés');
- const diagnosis='<div class="trace-year-diagnosis" aria-label="Lecture rapide">'+
-  '<strong>À retenir</strong>'+messages.map(msg=>'<p>'+esc(msg)+'</p>').join('')+'</div>';
+ const diagnosis='<details class="trace-year-diagnosis" aria-label="Explications détaillées de l’année">'+
+  '<summary>Comprendre les chiffres <span aria-hidden="true">⌄</span></summary>'+
+  '<div class="trace-year-diagnosis-content">'+messages.map(msg=>'<p>'+esc(msg)+'</p>').join('')+'</div></details>';
  html+='<div class="trace-year-month-head"><strong>Évolution mois par mois</strong>'+
   '<small>Touche un mois pour examiner ses chiffres</small></div>';
  html+='<div class="trace-year-legend"><span><i class="trace-year-key budget"></i>Prévu</span>'+
