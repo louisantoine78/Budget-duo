@@ -198,7 +198,7 @@ test('annual overview never labels an unimported month as zero real spending',()
   {month:'2026-02',elapsed:true,hasBudget:false,hasTransactions:false,budget:0,expense:0,income:0}
  ]});
  assert.ok(node.innerHTML.includes('Pas encore de données confirmées'));
- assert.ok(!node.innerHTML.includes('Différence revenus − dépenses</small><strong class="">0 
+ assert.ok(!node.innerHTML.includes('Différence revenus − dépenses</small><strong class="">0'));
  assert.ok(node.innerHTML.includes('Différence revenus − dépenses</small><strong class="">—'));
  assert.ok(node.innerHTML.includes('Comparaison au budget indisponible'));
  assert.ok(node.innerHTML.includes('Dépenses confirmées <b>À vérifier'));
