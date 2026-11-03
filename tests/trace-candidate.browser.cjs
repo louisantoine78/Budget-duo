@@ -643,14 +643,14 @@ let base;
     const st=getComputedStyle(el),wrapper=el.closest('.trace-edit-select-control'),
      bounds=el.getBoundingClientRect();
     return {
-     extraChevron:getComputedStyle(wrapper,'::after').display,
+     extraChevron:getComputedStyle(wrapper,'::after').content,
      cssArrow:st.backgroundImage,ellipsis:st.textOverflow,
      rightPadding:parseFloat(st.paddingRight),
      right:bounds.right,screen:document.documentElement.clientWidth,
      pageOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth
     };
    });
-   assert.equal(mobile.extraChevron,'none','one chevron only on native account selector');
+   assert.equal(mobile.extraChevron,'none','the wrapper must not generate a second chevron');
    assert.match(mobile.cssArrow,/svg/i,'the select retains its one background chevron');
    assert.equal(mobile.ellipsis,'ellipsis','long account labels must not overlap the arrow');
    assert.ok(mobile.rightPadding>=44,'reserve the chevron gutter');

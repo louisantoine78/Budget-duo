@@ -67,3 +67,9 @@
 - Provenance, cotation, observation datée et éventuelle journée ouvrable précédente toujours présentes ; seule la phrase technique sur l'horaire de publication est retirée. L'aide à la conversion reste accessible par aria-describedby sans paragraphe visuel supplémentaire.
 - Tests de régression Chromium candidats : viewport 320/390/768, absence double chevron, gouttière, troncature, pas de débordement, nouveau texte d'estimation et correction manuelle.
 - Aucun changement des règles de validation bancaire, de rapprochement, des calculs, des RPC Supabase ou de production. Chromium, WebKit et Safari physique encore à exécuter sur le HEAD exact.
+
+## 3 novembre — correction après préflight du laboratoire
+- La compilation prévisualisation a révélé qu'un sélecteur CSS `display:none!important` était interdit par les tests de non-masquage des sélecteurs financiers de l'Activité.
+- Le pseudo-élément décoratif ::after du champ bancaire utilise dorénavant uniquement `content:none!important` ; le vrai select natif et les contrôles Activity restent visibles et utilisables.
+- Le scénario navigateur vérifie la propriété de contenu du pseudo-élément plutôt que son display.
+- Nouvelle prévisualisation requise après régénération contrôlée du cache.

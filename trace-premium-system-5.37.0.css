@@ -570,7 +570,7 @@
 /* iPhone: the unified selector's ::after and the native select's SVG
  * were drawing two chevrons in the same right-hand area. Keep only SVG. */
 #sheetBackdrop[data-trace-panel="manual"] .trace-edit-select-control:has(>select.trace-manual-choice-native)::after{
- content:none!important;display:none!important;
+ content:none!important;
 }
 #sheetBackdrop[data-trace-panel="manual"] #sheetBody[data-trace-manual-selectors="native"] #manualTxAccount{
  box-sizing:border-box!important;width:100%!important;min-width:0!important;
