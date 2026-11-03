@@ -25,7 +25,7 @@ const m=new Function(...Object.keys(ctx),app.slice(i,j)+
 '\nreturn {rows:traceActivityRows,controls:traceActivityControls,group:traceActivityGroupHTML,pending:traceActivityPendingRow,open:openActivityCategory};')(...Object.values(ctx));
 
 const windowReal={TraceInternational:{
- currency:a=>a?.currency||'CAD',
+ currency:a=>a?.currency||'CAD',valid:code=>['CAD','EUR','USD','GBP','CHF'].includes(code),
  amountOnAccount:(t,a,leg)=> {
   const cur=a?.currency||'CAD';
   const explicit=leg==='destination'?t.toBankAmount:t.bankAmount;
@@ -44,9 +44,12 @@ const realRow=(t,account='all',currency='all',using=windowReal)=>{
  const start=app.indexOf('function txRow(t){'),
   end=app.indexOf('\n/* CSV import:',start);
  assert.ok(start>0&&end>start);
+ const helperFrom=app.indexOf('function tracePurchaseAccountLine('),
+  helperTo=app.indexOf('function traceActivityNatureLabel(',helperFrom);
+ assert.ok(helperFrom>0&&helperTo>helperFrom);
  const real=new Function('state','window','cat','accountType','isFinancialPeriod',
   'esc','money','activityAccountFilter','activityFilters',
-  'return ('+app.slice(start,end)+');');
+  app.slice(helperFrom,helperTo)+'\nreturn ('+app.slice(start,end)+');');
  return real({...state,investmentAccounts:[]},using,id=>({name:'Courses',icon:'◇'}),
   a=>a?.type,()=>true,String,n=>Number(n).toFixed(2),account,
   {currency,category:'all',nature:'all',status:'all'})(t);
