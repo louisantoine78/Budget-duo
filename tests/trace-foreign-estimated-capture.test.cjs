@@ -5,7 +5,7 @@ const assert=require('node:assert/strict'),{test}=require('node:test'),
  fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const src=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
-const ui=fs.readFileSync(path.join(root,'trace-bank-ui-2.8.1.js'),'utf8');
+const ui=fs.readFileSync(path.join(root,'trace-bank-ui-5.37.0.js'),'utf8');
 const begin=src.indexOf('function tracePossibleForeignDebitCorrection('),
  end=src.indexOf('\nfunction smartDrafts(',begin);
 assert.ok(begin>=0&&end>begin,'Candidate FX discrepancy matcher must exist');
@@ -124,4 +124,13 @@ test('the reviewed screenshot bridge checks account, direction and a unique tran
  assert.throws(()=>helper('manual_2',good),/incertaine/);
  assert.throws(()=>helper('manual_1',{...good,amount:46.125}),/incertaine/);
  assert.equal(calls.length,1);
+});
+
+test('candidate preview loads only versioned bank review code, keeping stable 5.36.5 script unchanged',()=>{
+ const preview=fs.readFileSync(path.join(root,'trace-international-preview.html'),'utf8');
+ const stable=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ assert.match(preview,/src="trace-bank-ui-5\.37\.0\.js"/);
+ assert.doesNotMatch(preview,/src="trace-bank-ui-2\.8\.1\.js"/);
+ assert.match(stable,/src="trace-bank-ui-2\.8\.1\.js"/);
+ assert.doesNotMatch(stable,/src="trace-bank-ui-5\.37\.0\.js"/);
 });

@@ -111,3 +111,10 @@
 - Tests de transaction réelle pour 70/30, parts fixes des proches, remboursement existant, mutation de catégorie/bénéficiaire et montant contradictoire.
 
 - Les tests de répartition vérifient les montants à partir des centimes entiers : pas de comparaison `===` sur une somme flottante. Les écritures « Moi » n'ont pas de `splitAmounts` car la répartition est portée par le bénéficiaire et `split`. Deux tests complémentaires vérifient les centimes pour le couple et les amis.
+
+## 3 novembre — correction de l'unique collision d'actif stable (Gate A)
+- Comparaison immuable `6eb6c17` → `46335a62` : parmi les **51 fichiers/chemins protégés**, seul `trace-bank-ui-2.8.1.js` était modifié. Le fichier de base et celui de `main` étaient strictement identiques.
+- Le fichier protégé `trace-bank-ui-2.8.1.js` est restauré **octet pour octet** depuis `main`/`6eb6c17`. Le contenu amélioré de la candidate est conservé **intégralement** comme `trace-bank-ui-5.37.0.js`, sans réécriture.
+- Seule la prévisualisation 5.37 charge le nouveau nom. La page `index.html` reste inchangée et continue de référencer `trace-bank-ui-2.8.1.js`.
+- Le test de rapprochement utilise le fichier versionné 5.37 et vérifie les deux chemins de chargement. Le SW du labo sera régénéré pendant le build, sans toucher au SW stable.
+- La suite native complète du commit précédent `46335a62` avait déjà passé 119 suites, 1 841 scénarios, 62 fichiers syntaxiques. Requalifier **ce nouveau commit**, car ces résultats ne valent pas automatiquement pour lui.
