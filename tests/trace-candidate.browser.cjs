@@ -591,10 +591,10 @@ let base;
   const estimate=page.locator('#manualPurchaseEstimate');
   await page.waitForFunction(()=>{
    const value=document.querySelector('#manualPurchaseEstimate')?.textContent||'';
-   return /Estimation indicative|Estimation indisponible/.test(value);
+   return /Prix d’achat estimé|Taux de référence indisponible/.test(value);
   },{timeout:12000});
   const displayed=await estimate.innerText();
-  assert.match(displayed,/Estimation indicative|Estimation indisponible/);
+  assert.match(displayed,/Prix d’achat estimé|Taux de référence indisponible/);
   assert.match(displayed,/€|indisponible/);
   assert.equal(await page.locator('#manualTxAmount').inputValue(),'100');
   assert.equal(await page.locator('#manualPurchaseAmount').inputValue(),'');

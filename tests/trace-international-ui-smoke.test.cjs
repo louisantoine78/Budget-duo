@@ -28,7 +28,7 @@ const elem=id=>{
  if(!nodes.has(id))nodes.set(id,{
   id,innerHTML:'',textContent:'',value:'',href:'',hidden:false,
   classList:{toggle(){}},style:{},dataset:{insightMonth:'2026-10',analysisInvest:'celi'},
-  querySelector(){return elem(id+':child');},querySelectorAll(){return[];},append(){}
+  querySelector(){return elem(id+':child');},querySelectorAll(){return[];},append(){},addEventListener(){}
  });
  return nodes.get(id);
 };
