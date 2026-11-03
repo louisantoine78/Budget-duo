@@ -4763,7 +4763,7 @@ function tracePurchaseAccountLine(t,a){
     native===null||!Number.isFinite(native))return '';
  const ratio=Math.abs(Number(native))/orig;
  if(!(ratio>0)||!Number.isFinite(ratio))return '';
- return 'Achat '+I.money(orig,source)+' · Compte '+I.money(Math.abs(Number(native)),bank)+
+ return 'Achat '+I.money(orig,source)+' '+source+' · Compte '+I.money(Math.abs(Number(native)),bank)+' '+bank+
   ' · 1 '+source+' = '+ratio.toLocaleString('fr-CA',{maximumFractionDigits:6})+' '+bank+
   ' (taux comptabilisé)';
 }
