@@ -155,6 +155,10 @@
   fieldPair('manualKind',oneBody,names.nature);
   const help=doc.getElementById('manualKindHelp');if(help)oneBody.appendChild(help);
   fieldPair('manualTxName',twoBody,names.description);
+  // The purchase-first currency/amount is its own real financial field group.
+  // Preserve it when the legacy form is rearranged into three premium sections.
+  const purchase=fields.querySelector('.trace-purchase-entry');
+  if(purchase)twoBody.appendChild(purchase);
   const moneyRow=fields.querySelector('.manual-money-row');if(moneyRow)twoBody.appendChild(moneyRow);
   // The international fields belong to the actual amount form. Preserve the
   // whole group before removing its old container, including destination legs.
