@@ -679,6 +679,39 @@ let base;
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),start);
  });
+ await test('50 EUR on a CAD account keeps dated FX and optional real debit',async()=>{
+  await go('home');
+  const before=await text('homeBalance');
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
+  await page.locator('#manualTxAccount').selectOption('demo-ca-current');
+  await page.locator('#manualPurchaseCurrency').selectOption('EUR');
+  await page.locator('#manualTxName').fill('Fictional 50 EUR on CAD');
+  await page.locator('#manualPurchaseAmount').fill('50');
+  await page.waitForFunction(()=>document.querySelector('#manualPurchaseEstimate')
+   ?.textContent?.includes('Comptabilisé sur ce compte (estimation)'),{timeout:12000});
+  assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'EUR');
+  assert.equal(await page.locator('#manualPurchaseAmount').inputValue(),'50');
+  const estimate=Number(await page.locator('#manualTxAmount').inputValue());
+  assert.ok(estimate>50,'a real foreign quote must not be silently treated as 1:1');
+  const provenance=await page.locator('#manualFxPublished').innerText();
+  assert.match(provenance,/1 EUR = .* CAD/);
+  assert.match(provenance,/cours fictif de démonstration/);
+  assert.match(provenance,/observation \d{4}-\d{2}-\d{2}/);
+  assert.equal(await page.locator('#manualTxAmount').isVisible(),false,
+   'the additional bank amount is secondary for a normal purchase');
+  assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),true);
+  assert.equal(await page.locator('#manualEditBankAmount').isVisible(),true);
+  await page.locator('#manualEditBankAmount').click();
+  assert.equal(await page.locator('#manualTxAmount').isVisible(),true);
+  await page.locator('#manualTxAmount').fill('78.35');
+  await page.waitForFunction(()=>document.querySelector('#manualPurchaseEstimate')
+   ?.textContent?.includes('Montant confirmé sur le compte'),{timeout:12000});
+  assert.equal(await page.locator('#manualTxAmount').inputValue(),'78.35');
+  assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),false,
+   'an explicit bank debit must not be treated as an unapproved estimate');
+  await page.locator('#cancelManualTx').click();
+  assert.equal(await text('homeBalance'),before,'cancel must not create a posting');
+ });
  await test('a EUR account converts a CAD purchase to EUR without posting before save',async()=>{
   await go('home');
   const start=await text('homeBalance');

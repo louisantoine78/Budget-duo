@@ -1,5 +1,7 @@
 # TRACE 5.37.0 — Reprise complète en nouvelle conversation
 
+> **Point de reprise du 3 novembre 2026** : lire d'abord [TRACE-5.37.0-REPRISE-2026-11-03.md](./TRACE-5.37.0-REPRISE-2026-11-03.md). Dernier HEAD initial `0ab054c73ecc6f258c05e7624a848dccea04f1a3`, sauvegarde `backup/trace-5.37.0-2026-11-03-0ab054c`. Conserver `main` intact et ne pas confondre les tests WebKit simulés avec une validation iPhone physique.
+
 ## Intention
 Poursuivre **sans repartir de zéro** TRACE, PWA premium de gestion budgétaire personnelle et de couple, iPhone-first. Le propriétaire souhaite une application adulte, sobre, rapide, claire et qualitative : montrer les montants essentiels et cacher les détails secondaires derrière une action volontaire. Conserver la logique financière existante et les décisions approuvées.
 
