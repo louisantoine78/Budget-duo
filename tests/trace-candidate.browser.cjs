@@ -595,6 +595,31 @@ let base;
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),initial);
  });
+ await test('purchase-first EUR quote proposes CAD without silently changing a real bank debit',async()=>{
+  await go('home');
+  const before=await text('homeBalance');
+  await page.locator('#quickAdd').click();
+  await page.locator('#traceAddManual').click();
+  const purchase=page.locator('#manualPurchaseAmount');
+  assert.equal(await purchase.isVisible(),true);
+  assert.equal(await purchase.evaluate(n=>n.compareDocumentPosition(
+   document.querySelector('#manualTxAmount'))&Node.DOCUMENT_POSITION_FOLLOWING)>0,true);
+  await page.locator('#manualTxAccount').selectOption('demo-ca-current');
+  await purchase.fill('50');
+  await page.locator('#manualPurchaseCurrency').selectOption('EUR');
+  await page.waitForFunction(()=>
+   /Estimation dans ton compte|Taux non disponible/.test(
+    document.querySelector('#manualPurchaseEstimate')?.textContent||''),{timeout:12000});
+  const txt=await page.locator('#manualPurchaseEstimate').innerText();
+  assert.match(txt,/Estimation dans ton compte/,'fictional dated EUR quote must resolve');
+  assert.equal(await page.locator('#manualTxAmount').inputValue(),'');
+  assert.equal(await page.locator('#manualApplyBankEstimate').isVisible(),true);
+  await page.locator('#manualApplyBankEstimate').click();
+  assert.equal(await page.locator('#manualTxAmount').inputValue(),'80.00');
+  assert.equal(await purchase.inputValue(),'50');
+  await page.locator('#cancelManualTx').click();
+  assert.equal(await text('homeBalance'),before,'a suggested FX amount is never posted before saving');
+ });
  await test('Analyse opens from the beginning and annual budget shows chart before long guidance',async()=>{
   await go('home');
   await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
