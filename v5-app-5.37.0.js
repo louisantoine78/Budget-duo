@@ -3353,7 +3353,9 @@ function editTransaction(id,validating=false,debitReview=null){
   $('#txAmount').value=debitReview.amount.toFixed(2);
   // Only the bank debit can change. Preserve account, date, merchant, purchase.
   for(const selector of ['#txType','#txName','#txDate','#txAccount',
-   '#txOriginalCurrency','#txOriginalAmount'])$(selector).disabled=true;
+   '#txOriginalCurrency','#txOriginalAmount','#txCategory','#txWho',
+   '#txFriendsAmount','#txPartnerAmount','#txFriendDebtorName',
+   '#txFriendDebtorShares','#txFxOverride'])$(selector).disabled=true;
   $('#txOtherMovement').hidden=true;$('#txRemove').hidden=true;
  }
  $('#txOriginalCurrency').value=t.currency||window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId));
@@ -3432,7 +3434,15 @@ function editTransaction(id,validating=false,debitReview=null){
     message.textContent='Aucun taux vérifié pour cette date : la répartition CAD sera calculée avant enregistrement. Aucun montant fictif.';
     message.classList.remove('hidden');return;
    }
-   const impact=movementImpact(selected,cad,who,friend,partnerAmount);
+   const impact=debitReview?(()=>{
+    const sharing=traceReviewedDebitSharing(t,cad,me,partner),
+     allocation=sharing.splitAmounts||{
+      la:sharing.beneficiary==='la'?cad:0,
+      partner:sharing.beneficiary==='partner'?cad:0,friends:0};
+    return{bank:-cad,budget:{la:allocation.la,partner:allocation.partner,
+     couple:Math.round((cad-allocation.friends)*100)/100},
+     friends:allocation.friends};
+   })():movementImpact(selected,cad,who,friend,partnerAmount);
    const all=[impact.bank,impact.budget[me],impact.budget[partner],impact.budget.couple];
    if(!all.every(Number.isFinite))throw Error('Montant ou répartition invalide.');
    $('#txImpactBank').textContent=(impact.bank<0?'−':'+')+I.money(amount,currency);
@@ -3486,6 +3496,13 @@ function editTransaction(id,validating=false,debitReview=null){
      amount!==debitReview.amount||accountId!==debitReview.accountId||date!==debitReview.date||
      type!=='expense'||name!==t.name||$('#txOriginalCurrency').value!==t.currency||
      original!==window.TraceInternational.exactMoney(t.amountOriginal)||
+     categoryId!==t.categoryId||beneficiary!==t.beneficiary||
+     $('#txFxOverride').value.trim()!==''||
+     (t.beneficiary==='custom'&&
+      (window.TraceInternational.exactMoney($('#txFriendsAmount').value)!==
+        window.TraceInternational.exactMoney(t.splitAmounts?.friends)||
+       window.TraceInternational.exactMoney($('#txPartnerAmount').value)!==
+        window.TraceInternational.exactMoney(t.splitAmounts?.[partner])))||
      tracePossibleForeignDebitCorrection({date,name,amount},accountId)?.id!==t.id){
     $('#traceFeedback').textContent='La transaction ou le montant ont changé. Rouvre la capture pour recommencer le rapprochement.';return;
    }
@@ -3522,10 +3539,13 @@ function editTransaction(id,validating=false,debitReview=null){
      await window.TraceInternational.getRate(currency,date));
    booking=window.TraceInternational.resolveBooking({account,bankAmount:amount,date,quote,
     originalCurrency:$('#txOriginalCurrency').value,originalAmount:$('#txOriginalAmount').value||null});
-   sharing=beneficiary==='custom'?traceCustomShares(booking.amountCAD,$('#txFriendsAmount').value,$('#txPartnerAmount').value):
+   sharing=debitReview?traceReviewedDebitSharing(t,booking.amountCAD,me,partner):
+    beneficiary==='custom'?traceCustomShares(booking.amountCAD,$('#txFriendsAmount').value,$('#txPartnerAmount').value):
     {beneficiary,...traceSplit(beneficiary,booking.amountCAD)};
-   friendDebtors=friendDebtorFields(sharing.splitAmounts?.friends,
-    $('#txFriendDebtorName').value,$('#txFriendDebtorShares').value,t.id);
+   friendDebtors=debitReview?
+    {friendDebtorName:t.friendDebtorName??null,friendDebtorShares:t.friendDebtorShares??null}:
+    friendDebtorFields(sharing.splitAmounts?.friends,
+     $('#txFriendDebtorName').value,$('#txFriendDebtorShares').value,t.id);
   }catch(e){$('#traceFeedback').textContent=e.message;return;}
   const received=window.TraceMovement.paidForExpense(state.transactions,t.id);
    if(received>0&&Math.round(Number(sharing.splitAmounts?.friends||0)*100)<received){
@@ -4466,6 +4486,51 @@ function tracePossibleForeignDebitCorrection(row,accountId){
  return options.length===1?options[0]:null;
 }
 /* Snapshot the real transaction, not a stale screenshot dialog. */
+/* A bank correction may change the total, never the intent of the original
+ * couple/friends allocation. Do not recompute using today's default split. */
+function traceReviewedDebitSharing(t,amountCAD,owner='la',other='partner'){
+ const I=window.TraceInternational,total=I.exactMoney(amountCAD),
+  old=I.exactMoney(t?.amountCAD),cents=Math.round(Number(total)*100);
+ if(total===null||!(total>0)||!Number.isSafeInteger(cents))
+  throw Error('Montant bancaire révisé invalide.');
+ if(t.beneficiary==='couple'){
+  const oldLa=I.exactMoney(t.splitAmounts?.la),oldPartner=I.exactMoney(t.splitAmounts?.partner),
+   percent=Number(t.split?.la);
+  let ratio;
+  if(old!==null&&old>0&&oldLa!==null&&oldPartner!==null&&
+     Math.abs(oldLa+oldPartner-old)<.009)ratio=oldLa/old;
+  else if(Number.isFinite(percent)&&percent>=0&&percent<=100&&
+    Math.abs(percent+Number(t.split?.partner)-100)<.02)ratio=percent/100;
+  else throw Error('Répartition historique du couple à vérifier manuellement.');
+  const la=Math.round(cents*ratio)/100,partnerAmount=(cents-Math.round(la*100))/100;
+  return{beneficiary:'couple',splitMode:'percent',
+   split:{la:la/total*100,partner:partnerAmount/total*100},
+   splitAmounts:{la,partner:partnerAmount}};
+ }
+ if(t.beneficiary==='custom'){
+  if(!['la','partner'].includes(owner)||other==owner||
+      !['la','partner'].includes(other))throw Error('Propriétaire de la dépense inconnu.');
+  const f=I.exactMoney(t.splitAmounts?.friends),
+   counterpart=I.exactMoney(t.splitAmounts?.[other]);
+  if(f===null||counterpart===null||f<0||counterpart<0)
+   throw Error('Partage historique des amis incomplet.');
+  const ownerCents=cents-Math.round(f*100)-Math.round(counterpart*100);
+  if(ownerCents<0)throw Error('Le débit réel est inférieur aux parts déjà attribuées aux proches.');
+  const byPerson={la:0,partner:0,friends:f};
+  byPerson[owner]=ownerCents/100;byPerson[other]=counterpart;
+  return{beneficiary:'custom',splitMode:'percent',
+   split:{la:byPerson.la/total*100,partner:byPerson.partner/total*100,
+    friends:byPerson.friends/total*100},
+   splitAmounts:byPerson};
+ }
+ if(t.beneficiary===owner||t.beneficiary===other){
+  const person=t.beneficiary;
+  return{beneficiary:person,splitMode:'percent',
+   split:{la:person==='la'?100:0,partner:person==='partner'?100:0},
+   splitAmounts:null};
+ }
+ throw Error('Répartition initiale non reconnue. Vérifie cette dépense avant correction.');
+}
 function traceForeignDebitFingerprint(t){
  return t?JSON.stringify([t.id,t.status,t.type,t.accountId,t.date,t.name,
   t.bankCurrency,t.bankAmount,t.amountCAD,t.currency,t.amountOriginal,

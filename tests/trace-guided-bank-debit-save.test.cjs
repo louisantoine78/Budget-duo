@@ -36,11 +36,11 @@ function setup(options={}){
  const entries={
   '#txAmount':{value:String(options.bankAmount??46.12)},
   '#txType':{value:'expense'},'#txDate':{value:'2026-11-03'},
-  '#txName':{value:'Cafe Voyage'},'#txCategory':{value:'food'},
-  '#txAccount':{value:'ca'},'#txWho':{value:'la'},
+  '#txName':{value:'Cafe Voyage'},'#txCategory':{value:t.categoryId},
+  '#txAccount':{value:'ca'},'#txWho':{value:t.beneficiary},
   '#txOriginalCurrency':{value:'GBP'},'#txOriginalAmount':{value:'25'},
-  '#txFxOverride':{value:''},'#txFriendsAmount':{value:'0'},
-  '#txPartnerAmount':{value:'0'},'#txFriendDebtorName':{value:''},
+  '#txFxOverride':{value:''},'#txFriendsAmount':{value:String(t.splitAmounts?.friends||0)},
+  '#txPartnerAmount':{value:String(t.splitAmounts?.partner||0)},'#txFriendDebtorName':{value:''},
   '#txFriendDebtorShares':{value:''},
   '#txDebitReviewConfirm':{checked:options.checked??false},
   '#txCsvDistinctVerified':{checked:false},
@@ -147,4 +147,59 @@ test('failed cloud persistence leaves the original operation untouched',async()=
  assert.equal(c.writes.length,0);
  assert.equal(JSON.stringify(c.t),before);
  assert.equal(c.entries['#txSave'].disabled,false);
+});
+
+test('existing 70/30 couple split persists even if default split later changes',async()=>{
+ const c=setup({checked:true,transaction:{
+  beneficiary:'couple',split:{la:70,partner:30},
+  splitAmounts:{la:31.85,partner:13.65}
+ }});
+ await c.save(false);
+ assert.equal(c.writes.length,1);
+ const s=c.writes[0].row.splitAmounts;
+ assert.equal(s.la,32.28);
+ assert.equal(s.partner,13.84);
+ assert.equal(s.la+s.partner,46.12);
+ assert.equal(c.writes[0].row.beneficiary,'couple');
+});
+test('a custom share preserves friends and partner fixed amounts; the owner absorbs FX delta',async()=>{
+ const c=setup({checked:true,transaction:{
+  beneficiary:'custom',split:{la:34.065934,partner:21.978022,friends:43.956044},
+  splitAmounts:{la:15.50,partner:10,friends:20},friendDebtorName:'Camille'
+ }});
+ await c.save(false);
+ assert.equal(c.writes.length,1);
+ const row=c.writes[0].row;
+ assert.equal(row.splitAmounts.la,16.12);
+ assert.equal(row.splitAmounts.partner,10);
+ assert.equal(row.splitAmounts.friends,20);
+ assert.equal(row.friendDebtorName,'Camille');
+ assert.equal(row.splitAmounts.la+row.splitAmounts.partner+row.splitAmounts.friends,46.12);
+});
+test('an approved friends repayment remains protected after a banking correction',async()=>{
+ const c=setup({checked:true,reimbursed:1250,transaction:{
+  beneficiary:'custom',splitAmounts:{la:15.5,partner:10,friends:20},
+  friendDebtorName:'Camille'
+ }});
+ await c.save(false);
+ assert.equal(c.writes.length,1);
+ assert.equal(c.writes[0].row.splitAmounts.friends,20);
+ assert.equal(c.t.friendDebtorName,'Camille');
+});
+test('changed category, beneficiary or manual FX rate must be rejected',async()=>{
+ for(const [field,value] of [['#txCategory','other'],['#txWho','couple'],['#txFxOverride','1.5']]){
+  const c=setup({checked:true});c.entries[field].value=value;
+  await c.save(false);
+  assert.equal(c.writes.length,0,field);
+ }
+});
+test('a confirmed friend share cannot exceed the corrected bank debit',async()=>{
+ const c=setup({checked:true,bankAmount:46.12,transaction:{
+  beneficiary:'custom',splitAmounts:{la:5.5,partner:20,friends:20},
+  friendDebtorName:'Camille'
+ }});
+ c.entries['#txAmount'].value='20';
+ c.debitReview.amount=20;
+ await c.save(false);
+ assert.equal(c.writes.length,0);
 });

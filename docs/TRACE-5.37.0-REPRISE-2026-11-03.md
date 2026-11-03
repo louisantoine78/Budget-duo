@@ -102,3 +102,10 @@
 - Scénarios : absence de consentement, sauvegarde unique 45,50 → 46,12 CAD (prix GBP et source du taux intacts), enregistrement d'une preuve, transaction modifiée durant la revue, prix original modifié, montant saisi divergent, devise/compte/commerçant divergent, décimales invalides, erreur de persistance.
 - Nouvel invariant : si le propriétaire, la devise ou le type différé du compte bancaire change pendant l'examen, la sauvegarde s'arrête même si la transaction elle-même n'a pas changé.
 - Contrôle d'intégration DOM réel Chromium et Safari toujours distinct et non revendiqué comme exécuté.
+
+## 3 novembre — protection des répartitions historiques pendant une correction de débit
+- Un nouveau helper financier `traceReviewedDebitSharing` évite de recalculer la répartition du couple d'après le **pourcentage par défaut actuel**, qui peut avoir changé depuis l'achat. Il conserve le ratio enregistré et recalcule les cents sans montant perdu.
+- Pour « Avec amis », les parts en CAD des amis et du partenaire restent fixes. Seule la part du payeur absorbe l'écart de taux et/ou de frais ; impossible de descendre sous les engagements existants. Les noms des débiteurs et l'historique des remboursements sont préservés.
+- Le mode de correction bancaire verrouille également catégorie, bénéficiaire, montants des amis et partenaire, champs des débiteurs et taux manuel. Contrôles répétés à l'enregistrement.
+- L'aperçu de l'impact reflète la même répartition que l'écriture finale, et non la répartition courante par défaut.
+- Tests de transaction réelle pour 70/30, parts fixes des proches, remboursement existant, mutation de catégorie/bénéficiaire et montant contradictoire.
