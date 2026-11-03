@@ -1464,6 +1464,40 @@ function requestInternationalRates(currencies){
  });
 }
 
+// Foreground FX refresh. The Bank of Canada publishes by 16:30 ET on
+// business days; check at 16:45 ET and hourly thereafter if the app is open.
+// This is NOT a cloud cron: when the app is closed, dated rates are retrieved
+// on next open/edit. No bank-account balances or transactions are changed.
+let traceFxRefreshStamp='';
+function traceRefreshPublishedFxRates(){
+ if(internationalPreviewMode()||typeof window==='undefined'||!window.TraceInternational)return;
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',
+  year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',
+  minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+ const p=key=>parts.find(part=>part.type===key)?.value;
+ const hour=Number(p('hour')),minute=Number(p('minute'));
+ if(hour<16||hour===16&&minute<45)return;
+ const date=p('year')+'-'+p('month')+'-'+p('day'),
+  slot=date+'-'+hour;
+ if(traceFxRefreshStamp===slot)return;
+ traceFxRefreshStamp=slot;
+ Promise.allSettled(['EUR','USD','GBP','CHF'].map(async code=>{
+  const quote=await window.TraceInternational.getRate(code,date);
+  internationalQuotes[code]=quote;
+ })).then(()=>{
+  if(!internationalPreviewMode()){
+   if($('#traceIntlHome'))renderHome();
+   if($('#wealthTotal'))renderWealth();
+  }
+ });
+}
+if(typeof window!=='undefined'&&typeof window.setInterval==='function'){
+ window.setInterval(traceRefreshPublishedFxRates,60*1000);
+ window.addEventListener?.('focus',traceRefreshPublishedFxRates);
+ window.document?.addEventListener?.('visibilitychange',()=>{
+  if(!window.document.hidden)traceRefreshPublishedFxRates();
+ });
+}
 function homeReconciliationBadge(){
  // A reconciliation is a dated bank statement, not a claim that the whole
  // household or every account is synchronized with the bank.
@@ -1910,9 +1944,14 @@ function openManualTransaction(preferredKind='expense'){
      const reportDay=fromRate.date===toRate.date?fromRate.date:
       purchaseCurrency+' : '+toRate.date+' · '+fromCurrency+' : '+fromRate.date;
      const previewMode=internationalPreviewMode();
+     const quotedSources=[toRate.source,fromRate.source].filter(source=>
+      source&&source!=='identité');
+     const provider=previewMode?'cours fictif de démonstration':
+      quotedSources.some(source=>/manuel/i.test(source))?'dont un taux saisi manuellement':
+      'référence Banque du Canada · Valet';
      fxPublished.textContent='1 '+purchaseCurrency+' = '+digits+' '+fromCurrency+
-      ' · Taux '+(previewMode?'fictif de démonstration':'de référence Banque du Canada')+
-      ' · publié le '+reportDay+(reportDay===bookingDate?'':' (dernier jour ouvrable disponible)')+
+      ' · '+provider+' · observation '+reportDay+
+      (reportDay===bookingDate?'':' (dernier jour publié disponible)')+
       '. Publication habituelle : jours ouvrables vers 16 h 30 (HE).';
      if(!bankOverride){
       $m('manualTxAmount').value=bankEstimate.toFixed(2);
