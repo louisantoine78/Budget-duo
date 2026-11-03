@@ -543,22 +543,25 @@ let base;
   await page.locator('#activityImportBack').click();
   await go('home');
  });
- await test('Manual financial chips keep selection, native values, and validation without committing',async()=>{
+ await test('native iPhone financial selectors expose every option and preserve validation',async()=>{
   const balance=await text('homeBalance');
   await page.locator('#quickAdd').click();
   await page.locator('#traceAddManual').click();
-  const chips=page.locator('#manualTxAccountChips [data-trace-choice]:visible');
-  assert.ok(await chips.count()>1);
-  await chips.first().focus();
-  await chips.first().press('End');
-  const selected=page.locator('#manualTxAccountChips [data-trace-choice][aria-pressed="true"]');
-  assert.equal(await selected.count(),1);
-  assert.equal(await selected.getAttribute('data-trace-choice'),await page.locator('#manualTxAccount').inputValue());
-  const owner=page.locator('#manualTxBeneficiaryChips [data-trace-choice="custom"]');
-  if(await owner.isVisible()){
-   await owner.click();
-   assert.equal(await page.locator('#manualFriendsGroup').isVisible(),true);
+  for(const id of ['manualTxAccount','manualTxCategory','manualTxBeneficiary','manualPurchaseCurrency']){
+   const el=page.locator('#'+id);
+   assert.ok(await el.isVisible(),id+' must be a visible native select');
+   assert.equal(await el.getAttribute('aria-hidden'),null);
+   assert.equal(await el.getAttribute('tabindex'),null);
+   assert.ok(await el.evaluate(n=>n.getBoundingClientRect().height)>=44);
   }
+  assert.ok(await page.locator('#manualTxAccount option').count()>1);
+  assert.ok(await page.locator('#manualTxCategory option').count()>=2);
+  const accounts=await page.locator('#manualTxAccount option').evaluateAll(nodes=>
+   nodes.map(n=>n.value).filter(Boolean));
+  await page.locator('#manualTxAccount').selectOption(accounts[accounts.length-1]);
+  assert.equal(await page.locator('#manualTxAccount').inputValue(),accounts[accounts.length-1]);
+  await page.locator('#manualTxBeneficiary').selectOption('custom');
+  assert.equal(await page.locator('#manualFriendsGroup').isVisible(),true);
   await page.locator('#manualTxAmount').fill('40.005');
   await page.locator('#saveManualTx').click();
   assert.match(await text('manualMovementError'),/centime/);
@@ -567,7 +570,6 @@ let base;
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),balance);
  });
-
  await test('calendar date keyboard focuses adjacent valid days without opening their actions',async()=>{
   await go('activity');
   await page.locator('#activityImportCalendar').click();

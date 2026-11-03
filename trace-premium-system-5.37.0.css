@@ -235,3 +235,35 @@
  .page[data-page] :is(.asset-card,.trace-review-more,.trace-activity-applied-chip),
  #sheetBackdrop .trace-account-overview-row{transition:none!important}
 }
+
+/* 5.37 iPhone feedback — native, full-width selectors replace hidden mirrors.
+ * The original select remains the sole authoritative finance form value. */
+#sheetBackdrop[data-trace-panel="manual"] #sheetBody[data-trace-manual-selectors="native"] select.trace-manual-choice-native{
+ position:relative!important;display:block!important;
+ width:100%!important;height:50px!important;min-height:50px!important;
+ padding:10px 38px 10px 13px!important;margin:5px 0 9px!important;
+ border:1px solid #d4e3d7!important;border-radius:12px!important;
+ background-color:#fafcf9!important;
+ color:#234736!important;font-size:16px!important;font-weight:560!important;
+ opacity:1!important;overflow:visible!important;clip-path:none!important;
+ pointer-events:auto!important;appearance:auto!important;-webkit-appearance:menulist!important;
+ box-shadow:none!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] #sheetBody[data-trace-manual-selectors="native"] :is(
+ #manualTxAccountChips,#manualTxCategoryChips,#manualTxBeneficiaryChips,
+ #manualPurchaseCurrencyChips,#manualTxAccountSearch,#manualTxCategorySearch,
+ #manualTxAccountNoResults,#manualTxCategoryNoResults){
+ display:none!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] #sheetBody[data-trace-manual-selectors="native"] select.trace-manual-choice-native:focus-visible{
+ outline:3px solid rgba(52,130,90,.24)!important;outline-offset:2px!important;
+ border-color:#287353!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualPurchaseEstimate{
+ display:block;margin:10px 0 2px;color:#426553;
+ font-size:12px;line-height:1.5;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualPurchaseEstimate:empty{display:none}
+#sheetBackdrop[data-trace-panel="manual"] #manualCategorySuggestion{
+ color:#5f7868;font-size:12px;line-height:1.45;
+}

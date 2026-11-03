@@ -153,7 +153,7 @@ function scope(s){return s==='mine'?me:'couple';}
 function showGate(id){$('#cloudGate').classList.remove('hidden');['cloudLoadingPanel','cloudConfigPanel','cloudAuthPanel','cloudWorkspacePanel'].forEach(x=>$('#'+x)?.classList.toggle('hidden',x!==id));$('#app').classList.add('cloud-locked');}
 function hideGate(){$('#cloudGate').classList.add('hidden');$('#app').classList.remove('cloud-locked');}
 function sync(k,t){if(traceWritesBlocked&&k==='synced'){k='error';t='Conflit de données — rechargement nécessaire';}$('#syncPill').dataset.status=k;$('#syncLabel').textContent=(t||({synced:'Synchronisé',loading:'Connexion…',error:'Erreur'}[k]||k))+' · v'+window.__TRACE_BUILD__;}
-function openSheet(t,h){$('#sheetBackdrop').classList.remove('trace-premium-edit','trace-premium-movement','trace-premium-settlement','trace-premium-manual');$('#sheetTitle').textContent=t;$('#sheetBody').innerHTML=h;window.TraceSheetPremium?.decorate?.($('#sheetBackdrop'),t,h);$('#sheetBackdrop').classList.add('open');document.body.classList.add('sheet-open');}
+function openSheet(t,h){$('#sheetBackdrop').classList.remove('trace-premium-edit','trace-premium-movement','trace-premium-settlement','trace-premium-manual');$('#sheetTitle').textContent=t;$('#sheetBody').innerHTML=h;window.TraceSheetPremium?.decorate?.($('#sheetBackdrop'),t,h);const panel=$('#sheetBackdrop .sheet');if(panel)panel.scrollTop=0;$('#sheetBody').scrollTop=0;$('#sheetBackdrop').classList.add('open');document.body.classList.add('sheet-open');}
 function closeSheet(){$('#sheetBackdrop').classList.remove('open');document.body.classList.remove('sheet-open');}
 function split(t,id){const n=t.splitAmounts?.[id];if(n!==undefined&&n!==null&&Number.isFinite(Number(n))&&Number(n)>=0)return Number(n);const d=state.household.defaultSplit||{la:50,partner:50};return Math.round(Number(t.amountCAD||0)*Number(t.split?.[id]??d[id]??50))/100;}
 function alloc(t,s){const a=Number(t.amountCAD||0);
@@ -1660,7 +1660,7 @@ function openTraceImportWorkspace(mode='daily'){
 }
 function openManualTransaction(preferredKind='expense'){
  const M=window.TraceMovement,Guide=window.TraceImportGuide,U=window.TraceOperationUI;
- let kind='expense',categoryTouched=false,previewToken=0;
+ let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0;
  const bankAccounts=visibleBankAccounts(me);
  const validCardTarget=(from,to)=>{
   if(!from||!to||accountType(from)!=='checking'||accountType(to)!=='card'||from.owner!==to.owner||
@@ -1708,7 +1708,7 @@ function openManualTransaction(preferredKind='expense'){
    currencyChoices.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select>'+
   '<div class="trace-manual-choice-pills" id="manualPurchaseCurrencyChips" role="group" aria-labelledby="manualPurchaseCurrencyLabel">'+
    manualChips(currencyChoices.map(c=>[c,c]))+'</div></div>'+
-  '<div><label class="label2" for="manualPurchaseAmount">Prix d’achat d’origine (facultatif)</label><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
+  '<div><label class="label2" for="manualPurchaseAmount">Prix d’achat d’origine (facultatif)</label><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+\n  '<p id="manualPurchaseEstimate" class="trace-intl-help" role="status" aria-live="polite"></p>'+
   '<label class="label2" id="manualFxRateLabel" for="manualFxRate">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
   '<p class="trace-intl-help">Le montant ci-dessus est celui réellement débité par la banque. En l’absence de taux de référence disponible, entre un taux vérifié.</p>'+
   '<div id="manualDestAmountWrap" hidden><label class="label2" id="manualDestAmountLabel" for="manualDestAmount">Montant réellement reçu sur le compte destinataire</label><input class="input" id="manualDestAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
@@ -1834,6 +1834,8 @@ function openManualTransaction(preferredKind='expense'){
   if(kind==='friend_reimbursement')linkOptions();
   const amount=window.TraceInternational.exactMoney($m('manualTxAmount').value),
    preview=$m('manualMovementImpact'),token=++previewToken,
+   estimate=$m('manualPurchaseEstimate'),estimateToken=++purchaseEstimateToken,
+   purchaseCurrency=$m('manualPurchaseCurrency').value,bookingDate=$m('manualTxDate').value,
    who=budget&&expense?$m('manualTxBeneficiary').value:me,
    friends=Number($m('manualFriendsAmount').value||0),otherPart=Number($m('manualPartnerAmount').value||0),
    selectedKind=kind;
@@ -1845,6 +1847,29 @@ function openManualTransaction(preferredKind='expense'){
   }catch{
    preview.textContent='Carte à débit différé : simulation uniquement en lecture seule. Aucune écriture possible.';
    return;
+  }
+  // Reference-only purchase estimate. Never rewrite the real bank debit,
+  // frozen CAD booking, user-entered purchase amount or split allocations.
+  estimate.textContent='';
+  if(purchaseCurrency&&purchaseCurrency!==fromCurrency&&amount!==null&&amount>0){
+   const I=window.TraceInternational,manual=$m('manualFxRate').value.trim();
+   estimate.textContent='Estimation du prix en '+purchaseCurrency+' en cours…';
+   const bankQuote=fromCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
+    manual?Promise.resolve({cadPerUnit:Number(manual),date:bookingDate}):I.getRate(fromCurrency,bookingDate);
+   const purchaseQuote=purchaseCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
+    I.getRate(purchaseCurrency,bookingDate);
+   Promise.all([bankQuote,purchaseQuote]).then(([fromRate,toRate])=>{
+    if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
+    const reference=Number(fromRate?.cadPerUnit)/Number(toRate?.cadPerUnit);
+    if(!Number.isFinite(reference)||reference<=0)throw Error('Taux invalide');
+    const converted=Math.round(amount*reference*100)/100;
+    estimate.textContent='Estimation indicative : '+I.money(converted,purchaseCurrency)+
+     ' au taux de référence du '+(toRate.date||bookingDate)+
+     '. Les frais et le cours réellement appliqués par la banque peuvent différer.';
+   }).catch(()=>{
+    if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
+    estimate.textContent='Estimation indisponible pour cette date. Saisis le prix d’achat réel si tu le connais.';
+   });
   }
   if(fromCurrency==='CAD'){
    preview.textContent=movementImpactText(kind,amount||0,who,friends,otherPart);
@@ -1898,6 +1923,9 @@ function openManualTransaction(preferredKind='expense'){
   $m('manualTxCategoryNoResults').hidden=categories.length!==0;
   $m('manualTxCategoryNoResults').textContent=categories.length?
    'Aucune catégorie correspondante':'Aucune catégorie disponible pour ce mouvement.';
+  $m('manualCategorySuggestion').textContent=categories.length?
+   'Toutes les catégories actives de ce type sont proposées dans le menu. Pour en ajouter : Budget → Catégories.':
+   'Aucune catégorie active : ajoute-en depuis Budget → Catégories.';
   categoryTouched=false;
   sync();
  }
@@ -1958,6 +1986,7 @@ function openManualTransaction(preferredKind='expense'){
  $m('manualSavings').onchange=sync;
  $m('manualTxAmount').oninput=sync;
  $m('manualFxRate').oninput=sync;
+ $m('manualPurchaseAmount').oninput=sync;
  $m('manualDestAmount').oninput=sync;
  $m('manualFriendsAmount').oninput=sync;
  $m('manualPartnerAmount').oninput=sync;
@@ -5420,7 +5449,7 @@ function renderAnalysis(){
  const exp=known.reduce((n,m)=>n+m.expense,0),inc=known.reduce((n,m)=>n+m.income,0);
  openSheet('Comprendre mon budget',
   '<div class="segment analysis-scope" id="analysisScope"><button class="seg '+(analysisScope==='mine'?'active':'')+'" data-scope="mine">Moi</button><button class="seg '+(analysisScope==='couple'?'active':'')+'" data-scope="couple">Couple</button></div>'+
-  '<p class="trace-insights-explain">Seulement '+known.length+' mois renseigné(s) sur les six derniers. Un mois sans données n’est pas un mois à 0 $.</p>'+
+  '<p class="trace-insights-explain">'+known.length+' mois renseigné(s) sur les six derniers · aucune extrapolation des mois manquants.</p>'+
   '<div class="trace-insight-statpair"><div><small>Dépenses des mois renseignés</small><b>'+money(exp)+'</b></div>'+
   '<div><small>Revenus enregistrés</small><b>'+money(inc)+'</b></div></div>'+
   '<div id="traceAnalysisTrend" class="trace-insight-modal"></div>'+

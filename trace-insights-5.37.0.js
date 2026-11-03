@@ -159,7 +159,7 @@ function renderAnnual(target,{months=[],year='',topCategory=null}={}){
   messages.push(n+' mois budgété'+(n>1?'s':'')+' sans dépense confirmée');
  }
  if(!messages.length)messages.push('Tous les mois écoulés comportent des mouvements confirmés');
- html+='<div class="trace-year-diagnosis" aria-label="Lecture rapide">'+
+ const diagnosis='<div class="trace-year-diagnosis" aria-label="Lecture rapide">'+
   '<strong>À retenir</strong>'+messages.map(msg=>'<p>'+esc(msg)+'</p>').join('')+'</div>';
  html+='<div class="trace-year-month-head"><strong>Évolution mois par mois</strong>'+
   '<small>Touche un mois pour examiner ses chiffres</small></div>';
@@ -193,6 +193,7 @@ function renderAnnual(target,{months=[],year='',topCategory=null}={}){
    '<span>Budget prévu <b>'+(hasPlan?fmt(chosen.budget):'Non défini')+'</b></span>'+
    '<span>Écart au budget <b>'+(hasPlan&&hasExpense?fmt(differenceMonth):'—')+'</b></span></div></div>';
  }
+ html+=diagnosis;
  html+='<p class="trace-insights-foot">Lecture partielle : un mois sans mouvement importé ne signifie pas zéro dépense. Les prévisions et les opérations sont présentées séparément. Aucun montant futur n’est extrapolé.</p>';
  target.innerHTML=html;
 }

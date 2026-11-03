@@ -121,7 +121,18 @@
  function refineFormFeedback(body,key){
   if(!FORM_PANELS.has(key))return;
   body.closest('.sheet-backdrop')?.classList.add('trace-premium-form-pass');
-  if(key==='manual')enhanceChoices(body);
+  if(key==='manual'){
+   // On iPhone, genuine accessible native selects are more reliable than
+   // mirrored horizontal chips. They remain the only values used by saving.
+   for(const id of ['manualTxAccount','manualTxCategory',
+    'manualTxBeneficiary','manualPurchaseCurrency']){
+    const control=body.querySelector('#'+id);
+    if(!control)continue;
+    control.removeAttribute('aria-hidden');
+    control.removeAttribute('tabindex');
+   }
+   body.dataset.traceManualSelectors='native';
+  }
   // Existing save/validation callbacks remain authoritative. Only make their
   // original feedback readable to assistive technologies.
   body.querySelectorAll('#manualMovementError,#traceBudgetShareError,'+
