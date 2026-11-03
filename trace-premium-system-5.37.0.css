@@ -391,3 +391,56 @@
 .page[data-page="budget"] #annualBudgetChart .trace-year-result-main strong{
  letter-spacing:-.03em;font-variant-numeric:tabular-nums;
 }
+
+/* TRACE single-surface financial selectors: never draw nested dropdown capsules. */
+#sheetBackdrop.trace-intl-premium-dialog[data-trace-panel="manual"] .trace-edit-control.trace-edit-select-control{
+ border:0!important;border-radius:0!important;outline:0!important;
+ padding:0!important;background:transparent!important;box-shadow:none!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] #sheetBody[data-trace-manual-selectors="native"] .trace-edit-control select.trace-manual-choice-native{
+ margin:4px 0 7px!important;border-radius:11px!important;
+ border:1px solid #dae4dc!important;box-shadow:none!important;
+ background-color:#fffdfa!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-purchase-entry{
+ background:transparent!important;border:0!important;padding:5px 0 12px!important;
+ margin:10px 0 9px!important;border-radius:0!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-purchase-pair{
+ grid-template-columns:minmax(0,1fr) 106px!important;
+ align-items:stretch;gap:8px;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualPurchaseAmount{
+ background:#fffdfa;border:1px solid #dce6dd;min-height:50px;
+ box-shadow:none;font-size:21px;font-weight:540;letter-spacing:-.025em;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualPurchaseCurrency{
+ border:1px solid #dce6dd!important;border-radius:11px!important;
+ background-color:#fffdfa!important;box-shadow:none!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualPurchaseEstimate{
+ margin:9px 0 4px;color:#335b46;font-size:12px;line-height:1.55;
+ font-weight:570;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-bank-adjust:not([hidden]){
+ display:block;min-height:44px;padding:9px 0;margin:3px 0 0;
+ background:transparent;border:0;box-shadow:none;color:#28654b;
+ font-size:12px;font-weight:690;text-decoration:underline;text-underline-offset:3px;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-fx-acknowledge:not([hidden]){
+ display:flex;gap:10px;align-items:flex-start;margin:8px 0 4px;
+ font-size:12px;line-height:1.45;font-weight:560;color:#355947;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualFxConfirm{
+ flex:none;margin:1px 0 0;width:18px;height:18px;accent-color:#26694f;
+}
+#sheetBackdrop[data-trace-panel="manual"] .manual-money-row>div:first-child{display:none}
+#sheetBackdrop[data-trace-panel="manual"] .manual-money-row.trace-bank-editing>div:first-child{
+ display:block;flex:1;min-width:0;
+}
+#sheetBackdrop[data-trace-panel="manual"] .manual-money-row:not(.trace-bank-editing)>div:last-child{
+ flex:1 1 100%;width:100%;
+}
+#sheetBackdrop[data-trace-panel="manual"] .manual-money-row:not(.trace-bank-editing){
+ border:0;padding:2px 0 10px;
+}

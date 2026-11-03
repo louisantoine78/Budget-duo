@@ -1663,7 +1663,7 @@ function openTraceImportWorkspace(mode='daily'){
 }
 function openManualTransaction(preferredKind='expense'){
  const M=window.TraceMovement,Guide=window.TraceImportGuide,U=window.TraceOperationUI;
- let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0,purchaseCurrencyTouched=false,bankEstimate=null;
+ let kind='expense',categoryTouched=false,previewToken=0,purchaseEstimateToken=0,purchaseCurrencyTouched=false,bankEstimate=null,bankOverride=false,lastPurchaseKey='';
  const bankAccounts=visibleBankAccounts(me);
  const validCardTarget=(from,to)=>{
   if(!from||!to||accountType(from)!=='checking'||accountType(to)!=='card'||from.owner!==to.owner||
@@ -1703,17 +1703,18 @@ function openManualTransaction(preferredKind='expense'){
   '<label class="label2" for="manualKind">Nature précise</label><select class="input" id="manualKind"></select>'+ 
   '<p class="trace-movement-help" id="manualKindHelp" aria-live="polite"></p>'+
   '<div class="trace-manual-fields"><label class="label2" for="manualTxName">Description</label><input class="input" id="manualTxName" maxlength="80" type="text" placeholder="Ex. Restaurant, remboursement Mathilde">'+
-  '<div class="trace-purchase-entry"><label class="label2" for="manualPurchaseAmount">Montant de l’opération · devise d’achat</label>'+
+  '<div class="trace-purchase-entry"><label class="label2" for="manualPurchaseAmount">Montant de l’opération</label>'+
   '<div class="trace-purchase-pair"><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal" placeholder="0,00" aria-describedby="manualPurchaseHint">'+
   '<label class="sr-only" for="manualPurchaseCurrency">Devise de l’opération</label>'+
   '<select class="input trace-manual-choice-native" id="manualPurchaseCurrency" tabindex="-1" aria-hidden="true">'+
    currencyChoices.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select></div>'+
-  '<span id="manualPurchaseHint" class="trace-field-hint">Saisis le prix payé dans la devise du commerçant.</span>'+
+  '<span id="manualPurchaseHint" class="trace-field-hint">Devise de l’opération · la comptabilisation suit celle du compte sélectionné.</span>'+
   '<div class="trace-manual-choice-pills" id="manualPurchaseCurrencyChips" role="group" aria-label="Devise de l’opération">'+
    manualChips(currencyChoices.map(c=>[c,c]))+'</div>'+
   '<p id="manualPurchaseEstimate" class="trace-intl-help" role="status" aria-live="polite"></p>'+
-  '<button type="button" class="secondary trace-use-estimate" id="manualApplyBankEstimate" hidden>Reprendre le montant estimé pour le compte</button></div>'+
-  '<div class="formrow manual-money-row"><div><label class="label2" for="manualTxAmount">Montant débité ou crédité par la banque</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
+  '<label id="manualFxConfirmWrap" class="trace-fx-acknowledge" hidden><input id="manualFxConfirm" type="checkbox"> Confirmer ce montant estimé pour la comptabilisation</label>'+
+  '<button type="button" class="secondary trace-bank-adjust" id="manualEditBankAmount" hidden>Montant réellement débité différent ?</button></div>'+
+  '<div class="formrow manual-money-row"><div><label class="label2" for="manualTxAmount">Montant exact sur le relevé bancaire</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
   '<div><label class="label2" for="manualTxDate">Date</label><input class="input" id="manualTxDate" type="date" value="'+localDateISO()+'"></div></div>'+
   '<div class="trace-intl-transaction"><small id="manualBankCurrencyNote">Montant dans la devise du compte</small>'+
   '<label class="label2" id="manualFxRateLabel" for="manualFxRate">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
@@ -1839,7 +1840,20 @@ function openManualTransaction(preferredKind='expense'){
   if(distinct)$m('manualDestAmountLabel').textContent=(kind==='savings_withdrawal'?'Montant réellement sorti du compte d’épargne (':'Montant réellement reçu sur le compte destinataire (')+
    window.TraceInternational.currency(destination)+') · obligatoire';
   if(kind==='friend_reimbursement')linkOptions();
-  const amount=window.TraceInternational.exactMoney($m('manualTxAmount').value),
+  const I=window.TraceInternational,sourceCurrency=$m('manualPurchaseCurrency').value,
+   originalMoney=I.exactMoney($m('manualPurchaseAmount').value),
+   purchaseKey=[from?.id,sourceCurrency,$m('manualPurchaseAmount').value,
+    $m('manualTxDate').value,$m('manualFxRate').value].join('|'),
+   sourceChanged=purchaseKey!==lastPurchaseKey;
+  if(sourceChanged){
+   lastPurchaseKey=purchaseKey;
+   bankOverride=false;
+   $m('manualFxConfirm').checked=false;
+   $m('manualTxAmount').closest('.manual-money-row')?.classList.remove('trace-bank-editing');
+   if(originalMoney!==null&&originalMoney>0)
+    $m('manualTxAmount').value=sourceCurrency===fromCurrency?originalMoney.toFixed(2):'';
+  }
+  const amount=I.exactMoney($m('manualTxAmount').value),
    preview=$m('manualMovementImpact'),token=++previewToken,
    estimate=$m('manualPurchaseEstimate'),estimateToken=++purchaseEstimateToken,
    purchaseCurrency=$m('manualPurchaseCurrency').value,bookingDate=$m('manualTxDate').value,
@@ -1855,55 +1869,73 @@ function openManualTransaction(preferredKind='expense'){
    preview.textContent='Carte à débit différé : simulation uniquement en lecture seule. Aucune écriture possible.';
    return;
   }
-  // A bank debit is authoritative only if explicitly provided by the user.
-  // The purchase-currency input is a reference; quotes never post money.
+  // The typed purchase is authoritative in its own currency. The bank value
+  // is a dated estimate until the user confirms it or provides the real debit.
   estimate.textContent='';
-  bankEstimate=null;
-  const estimateButton=$m('manualApplyBankEstimate');
-  estimateButton.hidden=true;
-  const originalAmount=window.TraceInternational.exactMoney($m('manualPurchaseAmount').value);
+  const quoteConsent=$m('manualFxConfirmWrap'),editBank=$m('manualEditBankAmount');
+  quoteConsent.hidden=true;
+  editBank.hidden=true;
+  if(sourceChanged)bankEstimate=null;
+  const originalAmount=originalMoney;
   if(purchaseCurrency&&originalAmount!==null&&originalAmount>0){
-   const I=window.TraceInternational,manual=$m('manualFxRate').value.trim();
-   estimate.textContent='Conversion indicative en '+fromCurrency+' en cours…';
-   const bankQuote=fromCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
-    manual?Promise.resolve({cadPerUnit:Number(manual),date:bookingDate}):I.getRate(fromCurrency,bookingDate);
-   const purchaseQuote=purchaseCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
-    I.getRate(purchaseCurrency,bookingDate);
-   Promise.all([bankQuote,purchaseQuote]).then(([fromRate,toRate])=>{
-    if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
-    const reference=Number(toRate?.cadPerUnit)/Number(fromRate?.cadPerUnit);
-    if(!Number.isFinite(reference)||reference<=0)throw Error('Taux invalide');
-    bankEstimate=Math.round(originalAmount*reference*100)/100;
-    estimate.textContent='Estimation dans ton compte : '+I.money(bankEstimate,fromCurrency)+
-     ' · taux de référence du '+(toRate.date||bookingDate)+
-     '. Vérifie le débit réel : la banque peut appliquer des frais ou un autre cours.';
-    estimateButton.hidden=amount!==null&&amount>0;
-   }).catch(()=>{
-    if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
-    estimate.textContent='Taux non disponible pour cette date : renseigne le montant bancaire réel.';
-   });
+   if(purchaseCurrency===fromCurrency){
+    bankEstimate=originalAmount;
+    if(!bankOverride)$m('manualTxAmount').value=originalAmount.toFixed(2);
+    estimate.textContent='Comptabilisé sur ce compte : '+I.money(originalAmount,fromCurrency)+
+     ' · même devise, sans conversion.';
+   }else{
+    if(!bankOverride){
+     estimate.textContent='Conversion vers '+fromCurrency+' en cours…';
+     $m('manualTxAmount').value='';
+    }
+    const manual=$m('manualFxRate').value.trim();
+    const bankQuote=fromCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
+     manual?Promise.resolve({cadPerUnit:Number(manual),date:bookingDate}):I.getRate(fromCurrency,bookingDate);
+    const purchaseQuote=purchaseCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
+     I.getRate(purchaseCurrency,bookingDate);
+    Promise.all([bankQuote,purchaseQuote]).then(([fromRate,toRate])=>{
+     if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
+     const reference=Number(toRate?.cadPerUnit)/Number(fromRate?.cadPerUnit);
+     if(!Number.isFinite(reference)||reference<=0)throw Error('Taux invalide');
+     bankEstimate=Math.round(originalAmount*reference*100)/100;
+     if(!(bankEstimate>0))throw Error('Conversion au centime non disponible');
+     if(!bankOverride){
+      $m('manualTxAmount').value=bankEstimate.toFixed(2);
+      estimate.textContent='Comptabilisé sur ce compte (estimation) : '+I.money(bankEstimate,fromCurrency)+
+       ' · référence du '+(toRate.date||bookingDate)+
+       '. Le débit réel peut varier selon les frais et le taux bancaire.';
+      quoteConsent.hidden=false;
+     }else{
+      estimate.textContent='Montant réel du compte : '+I.money(I.exactMoney($m('manualTxAmount').value)||0,fromCurrency)+
+       ' · achat de '+I.money(originalAmount,purchaseCurrency)+'.';
+     }
+     editBank.hidden=false;
+     if(!bankOverride){
+      const real=bankEstimate;
+      const matches=sourceChanged||!amount||amount!==real;
+      if(matches){
+       if(fromCurrency==='CAD')preview.textContent=movementImpactText(kind,real,who,friends,otherPart);
+       else try{
+        const booking=I.resolveBooking({account:from,bankAmount:real,date:bookingDate,quote:fromRate});
+        preview.textContent='Référence historique : '+I.money(booking.amountCAD,'CAD')+
+         ' · '+movementImpactText(kind,booking.amountCAD,who,friends,otherPart);
+       }catch{preview.textContent='Montant CAD à vérifier avant enregistrement.';}
+      }
+     }
+    }).catch(()=>{
+     if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
+     estimate.textContent='Taux de référence indisponible pour cette date. Tu peux indiquer le débit réel.';
+     editBank.hidden=false;
+     quoteConsent.hidden=true;
+    });
+   }
   }else if(purchaseCurrency&&purchaseCurrency!==fromCurrency&&amount!==null&&amount>0){
-   // Reverse read-only calculation when only the bank debit is known.
-   const I=window.TraceInternational,manual=$m('manualFxRate').value.trim();
-   estimate.textContent='Prix d’achat indicatif en cours…';
-   const bankQuote=fromCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
-    manual?Promise.resolve({cadPerUnit:Number(manual),date:bookingDate}):I.getRate(fromCurrency,bookingDate);
-   const purchaseQuote=purchaseCurrency==='CAD'?Promise.resolve({cadPerUnit:1,date:bookingDate}):
-    I.getRate(purchaseCurrency,bookingDate);
-   Promise.all([bankQuote,purchaseQuote]).then(([fromRate,toRate])=>{
-    if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
-    const rate=Number(fromRate?.cadPerUnit)/Number(toRate?.cadPerUnit);
-    if(!Number.isFinite(rate)||rate<=0)throw Error('Taux invalide');
-    const converted=Math.round(amount*rate*100)/100;
-    estimate.textContent='Prix d’achat estimé : '+I.money(converted,purchaseCurrency)+
-     ' · taux de référence du '+(toRate.date||bookingDate)+'.';
-   }).catch(()=>{
-    if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
-    estimate.textContent='Taux de référence indisponible pour cette date.';
-   });
+   // Legacy accounts can still enter an authoritative bank debit first.
+   estimate.textContent='Montant en '+fromCurrency+' confirmé par le compte. Prix d’achat non renseigné.';
   }
   if(fromCurrency==='CAD'){
-   preview.textContent=movementImpactText(kind,amount||0,who,friends,otherPart);
+   const effective=I.exactMoney($m('manualTxAmount').value);
+   preview.textContent=movementImpactText(kind,effective||0,who,friends,otherPart);
   }else if(amount===null||!(amount>0)){
    preview.textContent='Montant bancaire au centime à compléter · '+fromCurrency;
   }else{
@@ -2012,16 +2044,23 @@ function openManualTransaction(preferredKind='expense'){
   if(!purchaseCurrencyTouched)$m('manualPurchaseCurrency').value=window.TraceInternational.currency(a);
   choose(kind,true);
  };
- $m('manualApplyBankEstimate').onclick=()=>{
-  // Explicit consent only: this is a draft field value, not a bank fact.
-  if(bankEstimate===null||!(bankEstimate>0))return;
-  $m('manualTxAmount').value=bankEstimate.toFixed(2);
-  sync();
+ $m('manualEditBankAmount').onclick=()=>{
+  bankOverride=true;
+  $m('manualTxAmount').closest('.manual-money-row')?.classList.add('trace-bank-editing');
+  $m('manualFxConfirmWrap').hidden=true;
+  $m('manualFxConfirm').checked=false;
+  $m('manualEditBankAmount').hidden=true;
+  $m('manualTxAmount').focus();
  };
+ $m('manualFxConfirm').onchange=()=>{error.textContent='';};
  $m('manualTxDate').onchange=sync;
  $m('manualTarget').onchange=sync;
  $m('manualSavings').onchange=sync;
- $m('manualTxAmount').oninput=sync;
+ $m('manualTxAmount').oninput=()=>{
+  if($m('manualTxAmount').closest('.manual-money-row')?.classList.contains('trace-bank-editing'))
+   bankOverride=true;
+  sync();
+ };
  $m('manualFxRate').oninput=sync;
  $m('manualPurchaseAmount').oninput=sync;
  $m('manualDestAmount').oninput=sync;
@@ -2052,6 +2091,17 @@ function openManualTransaction(preferredKind='expense'){
    budget=def.budget!=='none',categoryId=budget?$m('manualTxCategory').value:'',
    beneficiary=budget&&def.budget!=='income'?$m('manualTxBeneficiary').value:me;
   if(!(amount>0)||!Number.isFinite(amount)||!date||!accountId||!bankAccount||budget&&!categoryId){error.textContent='Vérifie le montant au centime, le compte et la catégorie éventuelle.';return;}
+  const sourceAmount=window.TraceInternational.exactMoney($m('manualPurchaseAmount').value),
+   nativeCurrency=window.TraceInternational.currency(bankAccount),
+   purchaseCode=$m('manualPurchaseCurrency').value;
+  if(sourceAmount!==null&&sourceAmount>0&&purchaseCode!==nativeCurrency&&!bankOverride){
+   if(bankEstimate===null||Math.abs(bankEstimate-amount)>0.001){
+    error.textContent='Vérifie le taux et le montant comptabilisé avant d’enregistrer.';return;
+   }
+   if(!$m('manualFxConfirm').checked){
+    error.textContent='Confirme le montant estimé en '+nativeCurrency+' ou renseigne le débit réellement appliqué par ta banque.';return;
+   }
+  }
   // Deferred accounts are still read-only. Reject before FX lookup or any
   // asynchronous work, including attempted settlement *to* such a card.
   // The central persistence guard remains the final defense in depth.
