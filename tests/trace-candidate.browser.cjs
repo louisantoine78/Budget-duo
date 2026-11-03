@@ -640,6 +640,33 @@ let base;
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),start);
  });
+ await test('changing bank accounts preserves the purchase currency and recomputes the native draft',async()=>{
+  await go('home');
+  const initial=await text('homeBalance');
+  await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
+  await page.locator('#manualTxAccount').selectOption('demo-ca-current');
+  await page.locator('#manualPurchaseCurrency').selectOption('USD');
+  await page.locator('#manualPurchaseAmount').fill('10');
+  await page.waitForFunction(()=>/Comptabilisé sur ce compte \(estimation\)/.test(
+   document.querySelector('#manualPurchaseEstimate')?.textContent||''),{timeout:12000});
+  const cadAmount=await page.locator('#manualTxAmount').inputValue();
+  await page.locator('#manualTxAccount').selectOption('demo-fr-current');
+  assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'USD');
+  assert.equal(await page.locator('#manualPurchaseAmount').inputValue(),'10');
+  await page.waitForFunction(()=>/Comptabilisé sur ce compte \(estimation\)/.test(
+   document.querySelector('#manualPurchaseEstimate')?.textContent||'')&&
+   (document.querySelector('#manualPurchaseEstimate')?.textContent||'').includes('€'),
+   {timeout:12000});
+  const eurAmount=await page.locator('#manualTxAmount').inputValue();
+  assert.ok(Number(eurAmount)>0&&eurAmount!==cadAmount);
+  assert.equal(await page.locator('#manualFxConfirm').isChecked(),false);
+  await page.locator('#manualPurchaseAmount').fill('');
+  assert.equal(await page.locator('#manualTxAmount').inputValue(),'',
+   'clearing the source amount must clear the previous converted bank draft');
+  assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),false);
+  await page.locator('#cancelManualTx').click();
+  assert.equal(await text('homeBalance'),initial);
+ });
  await test('Analyse opens from the beginning and annual budget shows chart before long guidance',async()=>{
   await go('home');
   await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
