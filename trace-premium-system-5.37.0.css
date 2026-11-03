@@ -253,7 +253,7 @@
  #manualTxAccountChips,#manualTxCategoryChips,#manualTxBeneficiaryChips,
  #manualPurchaseCurrencyChips,#manualTxAccountSearch,#manualTxCategorySearch,
  #manualTxAccountNoResults,#manualTxCategoryNoResults){
- display:none!important;
+ display:none;
 }
 #sheetBackdrop[data-trace-panel="manual"] #sheetBody[data-trace-manual-selectors="native"] select.trace-manual-choice-native:focus-visible{
  outline:3px solid rgba(52,130,90,.24)!important;outline-offset:2px!important;
