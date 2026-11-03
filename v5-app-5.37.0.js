@@ -1756,9 +1756,9 @@ function openManualTransaction(preferredKind='expense'){
   '<p id="manualFxPublished" class="trace-fx-date-source" role="status" aria-live="polite"></p>'+
   '<label id="manualFxConfirmWrap" class="trace-fx-acknowledge" hidden><input id="manualFxConfirm" type="checkbox"> Utiliser ce montant estimé</label>'+
   '<button type="button" class="secondary trace-bank-adjust" id="manualEditBankAmount" hidden>Corriger le montant sur mon compte</button></div>'+
-  '<div class="trace-intl-transaction"><small id="manualBankCurrencyNote">Montant dans la devise du compte</small>'+
-  '<label class="label2" id="manualFxRateLabel" for="manualFxRate">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" placeholder="Recherche automatique">'+
-  '<p class="trace-intl-help">Le montant ci-dessus est celui réellement débité par la banque. En l’absence de taux de référence disponible, entre un taux vérifié.</p>'+
+  '<div class="trace-intl-transaction"><small id="manualBankCurrencyNote">Référence budgétaire CAD</small>'+
+  '<label class="label2" id="manualFxRateLabel" for="manualFxRate">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" aria-describedby="manualBankRateHelp" placeholder="Recherche automatique">'+
+  '<p class="trace-intl-help" id="manualBankRateHelp">TRACE recherche le taux daté pour valoriser ce compte en CAD. Si le taux est indisponible, renseigne uniquement un taux vérifié.</p>'+
   '<div id="manualDestAmountWrap" hidden><label class="label2" id="manualDestAmountLabel" for="manualDestAmount">Montant réellement reçu sur le compte destinataire</label><input class="input" id="manualDestAmount" type="number" min=".01" step=".01" inputmode="decimal"></div></div>'+
   '<div id="manualTransferFeeWrap" class="trace-intl-transaction" hidden><label class="label2" for="manualTransferFee">Frais déjà inclus dans le débit bancaire (facultatif)</label><input class="input" id="manualTransferFee" type="number" min="0" step=".01" inputmode="decimal" placeholder="Montant dans la devise du compte de départ"><small>Le montant du virement est le débit total de la banque, frais compris. Les frais documentés ici ne créent pas un deuxième débit ni une dépense supplémentaire.</small></div>'+
   '<div id="manualCategoryWrap"><label class="label2" id="manualTxCategoryLabel" for="manualTxCategory">Catégorie budgétaire</label>'+
@@ -1862,7 +1862,13 @@ function openManualTransaction(preferredKind='expense'){
    'Autres types de dépenses':'Type précis : '+(def.label||'Préciser');
   const from=bankAccounts.find(a=>a.id===$m('manualTxAccount').value),
    fromCurrency=window.TraceInternational.currency(from);
-  $m('manualBankCurrencyNote').textContent='Montant réellement prélevé / crédité · '+fromCurrency;
+  // CAD accounts need no separate CAD-reference form. Keep the quote input
+  // for foreign bank accounts, including same-currency EUR purchases, because
+  // their budget reference is still valued in CAD.
+  const requiresCadReference=fromCurrency!=='CAD';
+  $m('manualBankCurrencyNote').textContent='Référence budgétaire CAD · compte '+fromCurrency;
+  $m('manualBankCurrencyNote').hidden=!requiresCadReference;
+  $m('manualBankRateHelp').hidden=!requiresCadReference;
   $m('manualTransferFeeWrap').hidden=kind!=='transfer';
   const currencyBadge=$m('manualTxAmount').closest?.('.trace-edit-money-control')?.querySelector?.('.trace-edit-currency');
   if(currencyBadge)currencyBadge.textContent=fromCurrency;

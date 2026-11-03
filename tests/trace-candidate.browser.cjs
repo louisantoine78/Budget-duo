@@ -651,6 +651,10 @@ let base;
    'a same-currency transaction needs no 1:1 FX summary');
   assert.equal(await page.locator('#manualPurchaseHint').isVisible(),false,
    'an unnecessary conversion explanation must not clutter a native purchase');
+  assert.equal(await page.locator('#manualBankCurrencyNote').isVisible(),false,
+   'CAD account must not display redundant CAD valuation instructions');
+  assert.equal(await page.locator('#manualBankRateHelp').isVisible(),false,
+   'the bank reference footnote is only needed on non-CAD accounts');
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),balance);
  });
@@ -672,6 +676,8 @@ let base;
    'dated FX detail remains visible for a foreign purchase');
   assert.equal(await page.locator('#manualPurchaseHint').isVisible(),true,
    'the foreign-currency explanation remains available');
+  assert.equal(await page.locator('#manualBankRateHelp').isVisible(),false,
+   'a CAD account needs its purchase conversion, not a second CAD quote form');
   const note=await page.locator('#manualFxPublished').innerText();
   assert.match(note,/1 USD = .* CAD/);
   assert.match(note,/fictif de démonstration/,'private preview may not claim a real downloaded rate');
@@ -730,6 +736,13 @@ let base;
   await page.waitForFunction(()=>/Comptabilisé sur ce compte \(estimation\)/.test(
    document.querySelector('#manualPurchaseEstimate')?.textContent||''),{timeout:12000});
   assert.match(await text('manualPurchaseEstimate'),/EUR|€/);
+  assert.equal(await page.locator('#manualBankCurrencyNote').isVisible(),true,
+   'EUR accounts retain the dated CAD budget-reference context');
+  assert.equal(await page.locator('#manualBankRateHelp').isVisible(),true,
+   'a non-CAD bank account still allows a verified CAD rate');
+  assert.equal(await page.locator('#manualFxRate').isVisible(),true);
+  assert.equal(await page.locator('#manualFxRate').getAttribute('aria-describedby'),
+   'manualBankRateHelp');
   const converted=Number(await page.locator('#manualTxAmount').inputValue());
   assert.ok(converted>0&&converted!==10);
   await page.locator('#cancelManualTx').click();

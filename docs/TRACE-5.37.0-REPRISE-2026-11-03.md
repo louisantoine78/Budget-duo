@@ -47,3 +47,9 @@
 - Aucun calcul, ni écriture, ni modèle bancaire, ni flux FX n'a été modifié : seul le critère de visibilité des deux zones de pédagogie est ajusté.
 - Tests Chromium ajoutés aux scénarios de saisie native et USD → CAD : masquage des détails pour une même devise et maintien des détails pour la devise étrangère.
 - Les assertions statiques et la compilation JS ne remplacent pas l'exécution réelle des tests navigateur. Le protocole de validation sur le vrai iPhone reste ouvert.
+
+## Nettoyage des libellés bancaires du 3 novembre — deuxième passe
+- Le formulaire n'affiche plus la note technique « montant réellement débité » lorsque le champ réel reste secondaire : le texte était trompeur sous la saisie achat d'une carte CAD.
+- Les comptes en CAD masquent la note bancaire de valorisation CAD et son explication, mais gardent le bloc de conversion et de correction facultative pour un achat en EUR/USD.
+- Les comptes en EUR/USD/GBP/CHF conservent le champ de taux pour valoriser la référence de budget CAD, même si l'achat et le compte ont la même devise ; le champ est maintenant lié à son explication accessible.
+- Ajout d'assertions navigateur ciblées ; aucune logique financière, calcul, RPC, règle de sauvegarde ni module de production modifié. Rejouer Chromium/WebKit avant toute mise en ligne.
