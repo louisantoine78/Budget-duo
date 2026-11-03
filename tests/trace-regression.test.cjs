@@ -197,7 +197,116 @@ test('annual overview never labels an unimported month as zero real spending',()
   {month:'2026-01',elapsed:true,hasBudget:true,hasTransactions:false,budget:950,expense:0,income:0,selected:true},
   {month:'2026-02',elapsed:true,hasBudget:false,hasTransactions:false,budget:0,expense:0,income:0}
  ]});
- assert.ok(node.innerHTML.includes('Aucune opération confirmée : bilan non calculable'));
+ assert.ok(node.innerHTML.includes('Pas encore de données confirmées'));
+ assert.ok(!node.innerHTML.includes('Différence revenus − dépenses</small><strong class="">0 
+ assert.ok(node.innerHTML.includes('Différence revenus − dépenses</small><strong class="">—'));
+ assert.ok(node.innerHTML.includes('Comparaison au budget indisponible'));
+ assert.ok(node.innerHTML.includes('Dépenses confirmées <b>À vérifier'));
+ assert.ok(node.innerHTML.includes('Non renseigné'));
+});
+test('annual category insight is grounded and escaped, not repeated in the headline',()=>{
+ const node={innerHTML:''};
+ I537.renderAnnual(node,{year:'2026',months:[
+  {month:'2026-01',elapsed:true,hasBudget:true,hasTransactions:true,
+   hasExpenseTransactions:true,budget:100,expense:105,income:200,selected:true}
+ ],topCategory:{name:'Épicerie <script>alert(1)</script>',amount:78}});
+ assert.ok(node.innerHTML.includes('Principal poste classé : Épicerie'));
+ assert.ok(!node.innerHTML.includes('<script>'));
+ assert.ok(node.innerHTML.includes('Dépenses / revenus'));
+ assert.ok(node.innerHTML.includes('53 %'));
+ assert.equal((node.innerHTML.match(/class="trace-year-result-main"/g)||[]).length,1);
+});
+test('income-only or transfer-only months do not masquerade as a month with zero spending',()=>{
+ const node={innerHTML:''};
+ I537.renderAnnual(node,{year:'2026',months:[
+  {month:'2026-01',elapsed:true,hasBudget:true,hasTransactions:true,
+   hasExpenseTransactions:false,budget:100,expense:0,income:400,selected:true},
+  {month:'2026-02',elapsed:true,hasBudget:true,hasTransactions:true,
+   hasExpenseTransactions:true,budget:200,expense:250,income:500}
+ ]});
+ assert.ok(node.innerHTML.includes('1 mois comparable avec prévision et mouvements'));
+ assert.ok(node.innerHTML.includes('1 mois budgété sans dépense confirmée'));
+ assert.ok(node.innerHTML.includes('Enregistré'));
+ assert.ok(node.innerHTML.includes('Dépenses confirmées <b>À vérifier'));
+ assert.ok(node.innerHTML.includes('Écart au budget <b>—'));
+ assert.ok(node.innerHTML.includes('Flux seuls'));
+});
+test('the annual ratio is unavailable when there is no confirmed income',()=>{
+ const node={innerHTML:''};
+ I537.renderAnnual(node,{year:'2026',months:[
+  {month:'2026-01',elapsed:true,hasBudget:false,hasTransactions:true,hasExpenseTransactions:true,
+   budget:0,expense:70,income:0,selected:true}
+ ]});
+ assert.ok(node.innerHTML.includes('Dépenses / revenus</small><strong>—'));
+ assert.ok(!node.innerHTML.includes('NaN'));
+ assert.ok(!node.innerHTML.includes('Infinity'));
+});
+test('wealth view avoids fictitious price series',()=>{
+ const node={innerHTML:''};
+ I.renderWealth(node,{checking:500,cardDebt:200,investments:[{name:'CELI',cad:250,ready:true,linked:true}],
+ flows:[{month:'2026-10',kind:'deposit',amount:50}]});
+ assert.ok(node.innerHTML.includes('Mouvements par mois'));
+ assert.ok(node.innerHTML.includes('pas une courbe de performance historique'));
+});
+test('wealth chart renders documented contributions',()=>assert.ok(appSource.includes("TraceInsights.renderWealth($('#wealthTrend')")));
+test('annual view renders 12 relevant months',()=>assert.ok(appSource.includes("TraceInsights.renderAnnual($('#annualBudgetChart')")));
+test('home categories expandable',()=>assert.ok(appSource.includes('limit:8,onCategory:')));
+
+
+test('budget render iterates querySelectorAll not a single element',()=>assert.match(appSource,/\$\$\('#annualBudgetChart \[data-insight-month\]'\)\.forEach/));
+test('analysis filter buttons use all matching elements',()=>assert.match(appSource,/\$\$\('#analysisScope \.seg'\)\.forEach/));
+test('portfolio account details bind every button',()=>assert.match(appSource,/\$\$\('\[data-analysis-invest\]'\)\.forEach/));
+test('no querySelector(...).forEach remains',()=>assert.equal([...appSource.matchAll(/(?<!\$)\$\([^)]*\)\.forEach/g)].length,0));
+
+test('Activity list must use querySelectorAll helper',()=>assert.ok(appSource.includes("$$('[data-tx-open]').forEach")));
+test('Prevent undefined triple-dollar selector throughout app',()=>assert.doesNotMatch(appSource,/\${3,}\(/));
+const bankDocSource=fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8');
+const docScope={window:{}};vm.runInNewContext(bankDocSource,docScope,{filename:'trace-bank-doc-1.11.1.js'});
+const doc=docScope.window.TraceBankDocuments;
+test('simple card Paiement suggests received payment',()=>assert.equal(G.suggest('card','expense','Paiement'),'card_payment_received'));
+test('payment received direction is credit',()=>assert.equal(G.direction('card_payment_received','card','Paiement'),'in'));
+test('generic Paiement cannot be quick-approved as an expense',()=>assert.equal(G.safeForQuickApproval('card','expense','Paiement'),false));
+test('checking Paiement remains expense',()=>assert.equal(G.suggest('checking','expense','Paiement'),'expense'));
+test('merchant purchase is not a card payment',()=>assert.equal(G.suggest('card','expense','Supermarché Métro'),'expense'));
+test('plain card payment matching needs checked + sign when OCR has no evidence',()=>assert.ok(appSource.includes("d.bankDirection!=='in'&&!values?.creditChecked")));
+test('card receipt matching stays one existing transfer',()=>assert.ok(appSource.includes('additionalTransactions:0,budgetChange:0')));
+test('incoming sign is preserved from OCR to pending draft',()=>assert.ok(appSource.includes("bankDirection:['in','out'].includes(r.bankDirection)?r.bankDirection:''")));
+test('pending old OCR proof requires explicit positive-sign confirmation',()=>assert.ok(inboxSource.includes("el.dataset.bankDirection!=='in'")));
+test('OCR debit sign on payment never suggests a received transfer',()=>assert.ok(inboxSource.includes("row.bankDirection==='out'&&window.TraceImportGuide.genericCardPaymentLabel(name)")));
+test('check box exists for generic OCR payment',()=>assert.ok(inboxSource.includes('class="smart-credit-confirm"')));
+test('OCR bank source exports amount-side sign',()=>assert.ok(bankDocSource.includes("const bankDirection=prefix==='+'?'in'")));
+const ocrWord=(label,x,y)=>'5\t1\t1\t1\t1\t1\t'+x+'\t'+y+'\t'+(label.length*12)+'\t24\t96\t'+label;
+const creditTsv='level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n'+[
+ ocrWord('Paiement',150,300),ocrWord('+750,00',735,300),
+ ocrWord('7',105,425),ocrWord('OCT',145,425),
+ ocrWord('Texte',170,340)
+].join('\n');
+test('real OCR layout retains visible +750 as a card credit',()=>{
+ const rows=doc.screenshotLayoutCandidates(creditTsv,1000,1200,'2026-10-01');
+ assert.ok(rows.length>0,'No screenshot transaction row parsed');
+ assert.equal(rows[0].bankDirection,'in');
+});
+const debitTsv=creditTsv.replace('+750,00','-750,00');
+test('real OCR layout retains visible -750 as debit',()=>{
+ const rows=doc.screenshotLayoutCandidates(debitTsv,1000,1200,'2026-10-01');
+ assert.ok(rows.length>0,'No screenshot transaction row parsed');
+ assert.equal(rows[0].bankDirection,'out');
+});
+
+
+test('reconciled payment opens a read-only detail receipt',()=>assert.ok(appSource.includes('TraceCardPaymentDetail.render({')));
+test('unlink is behind an explicit confirmation',()=>assert.ok(appSource.includes("$('#traceUnlinkNow').onclick=async()=>")));
+test('card-side evidence opens the linked checking transfer',()=>assert.ok(appSource.includes("t.type==='card_statement_evidence'")));
+
+
+test('duplicate shows exact recorded transaction account and category',()=>assert.ok(appSource.includes("categoryName:state.categories.find(c=>c.id===x.categoryId)")));
+test('inspection supplies exact matching account date and amount',()=>assert.ok(appSource.includes("matchId:match?.id||''")));
+test('only confirmed duplicates are said to be accounted',()=>assert.ok(appSource.includes("status:x.status==='confirmed'?'recorded':'unconfirmed'")));
+test('smart inbox renders real existing transaction comparison',()=>assert.ok(inboxSource.includes('TraceDuplicateCompare.render({')));
+
+console.log(checked+' assertions réussies');
+));
+ // Absence of imported movements is never reclassified as zero expense.
  assert.ok(node.innerHTML.includes('Différence revenus − dépenses</small><strong class="">—'));
  assert.ok(node.innerHTML.includes('Comparaison au budget indisponible'));
  assert.ok(node.innerHTML.includes('Dépenses confirmées <b>À vérifier'));
