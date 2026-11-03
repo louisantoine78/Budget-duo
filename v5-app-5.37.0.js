@@ -1586,7 +1586,10 @@ function renderBudget(){
   window.TraceInsights.renderCategories($('#budgetCategoryImpact'),{rows:breakdown(month,sId,true),totalExpense:s.expense,
    budgetTotal:s.eb,month,showAllCategories:true,onCategory:id=>insightCategoryDrilldown(month,sId,id)});
   window.TraceInsights.renderAnnual($('#annualBudgetChart'),{year,months:insightYear(year,sId,month),topCategory:insightYearTopCategory(year,sId)});
-  $$('#annualBudgetChart [data-insight-month]').forEach(btn=>btn.onclick=e=>{
+  // The card itself opens full annual detail; expanding the inline explanation
+  // must never bubble through and open a second sheet above the disclosure.
+  $('#annualBudgetChart .trace-year-diagnosis')?.addEventListener('click',event=>event.stopPropagation());
+  $('#annualBudgetChart [data-insight-month]').forEach(btn=>btn.onclick=e=>{
    e.stopPropagation();setBudgetMonth(btn.dataset.insightMonth);
   });
   updateSegments();
