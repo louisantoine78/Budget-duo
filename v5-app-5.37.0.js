@@ -3257,6 +3257,10 @@ function editTransaction(id,validating=false,debitReview=null){
   '<div class="trace-edit-fields"><p>Montant précédemment enregistré : <strong>'+esc(window.TraceInternational.money(t.bankAmount,'CAD'))+'</strong></p>'+
   '<p>Montant observé sur la capture : <strong>'+esc(window.TraceInternational.money(debitReview.amount,'CAD'))+'</strong></p>'+
   '<p>Achat d’origine inchangé : <strong>'+esc(window.TraceInternational.money(t.amountOriginal,t.currency))+' '+esc(t.currency)+'</strong></p>'+
+  (Number(t.purchaseFxReference)>0&&t.purchaseFxRateDate?
+   '<p class="trace-intl-help">Taux de référence initial : 1 '+esc(t.currency)+' ≈ '+
+   esc(Number(t.purchaseFxReference).toLocaleString('fr-CA',{maximumFractionDigits:6}))+
+   ' CAD · observation '+esc(t.purchaseFxRateDate)+' · '+esc(t.purchaseFxRateSource||'source non renseignée')+'</p>':'')+
   '<p class="trace-intl-help">Vérifie le débit réel sur ta banque. Aucun taux n’est inventé et aucune dépense supplémentaire n’est créée.</p>'+
   '<label class="trace-fx-acknowledge"><input id="txDebitReviewConfirm" type="checkbox"> Je confirme le débit après vérification de ma capture.</label></div></section>':'')+
  '<section class="trace-edit-card" aria-labelledby="traceEditNatureTitle">'+

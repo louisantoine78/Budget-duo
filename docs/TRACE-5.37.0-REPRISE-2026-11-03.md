@@ -93,3 +93,6 @@
 - Empreinte de transaction revalidée au chargement et avant la sauvegarde, en plus de la protection CAS centrale. Une correction confirmée laisse `bankDebitReview` (audit du montant initial, réel, date, compte et moment, pas de capture copiée) et `fxBankAmountStatus:'bank_confirmed'`.
 - Un éventuel changement ultérieur du montant ou du compte invalide la preuve précédente au lieu de l'afficher comme encore confirmée.
 - Ces garde-fous sont à tester en navigateur et sur un iPhone réel avant d'envisager une mise en production.
+
+- Les libellés de la comparaison affichent également la date, la source et le taux historique d'achat si ces données existent réellement ; aucune provenance imaginée pour les anciennes écritures.
+- Le test historique d'ouverture simple a été remplacé par la vérification de l'action guidée ; ajout de tests isolés du pont de rapprochement qui rejettent une direction crédit, un mauvais identifiant et les fractions de centime.

@@ -57,7 +57,7 @@ test('two plausible same-merchant foreign entries are ambiguous',()=>{
 test('screenshot UI renders the original and observed CAD amounts and opens the original entry',()=>{
  assert.match(ui,/status\.amountConflict&&status\.matchId/);
  assert.match(ui,/data-open-estimated/);
- assert.match(ui,/bridge\.openTransaction\(id\)/);
+ assert.match(ui,/bridge\.openForeignDebitCorrection\(id,/);
  assert.match(ui,/aucune correction automatique/);
 });
 test('batch importer rechecks the live candidate and refuses a second posting',()=>{
@@ -97,4 +97,31 @@ test('the financial write keeps one transaction id and bank audit metadata',()=>
  assert.ok(src.includes("previousBankAmount:debitReview.previousAmount"));
  assert.ok(src.includes("traceForeignDebitFingerprint(state.transactions.find(x=>x.id===t.id))!==debitReview.snapshot"));
  assert.ok(src.includes("await saveDocument('transactions',next);Object.assign(t,next)"));
+});
+
+test('the guided correction displays only a genuinely recorded FX observation',()=>{
+ assert.ok(src.includes('Number(t.purchaseFxReference)>0&&t.purchaseFxRateDate'));
+ assert.ok(src.includes('source non renseignée'));
+});
+test('the reviewed screenshot bridge checks account, direction and a unique transaction',()=>{
+ const start=src.indexOf('function traceForeignDebitFingerprint('),
+  end=src.indexOf('\nfunction smartDrafts(',start);
+ assert.ok(start>0&&end>start);
+ const snippets=src.slice(start,end);
+ const bank={id:'ca',currency:'CAD'},state={accounts:[bank],transactions:[{...base}]};
+ const matches=[{...base}],calls=[];
+ const helper=new Function('state','visibleBankAccounts','me','smartExactBankAmount',
+  'tracePossibleForeignDebitCorrection','findSimilarTransaction','editTransaction',
+  snippets+'return openForeignDebitCorrection;')(
+  state,()=>[bank],'la',v=>Number.isFinite(v)&&Math.abs(v*100-Math.round(v*100))<1e-6?v:null,
+  row=>row.date==='2026-11-03'&&row.name==='Cafe Voyage'&&row.amount===46.12?matches[0]:null,
+  ()=>null,(id,validating,review)=>{calls.push({id,validating,review});return review;});
+ const good={accountId:'ca',date:'2026-11-03',name:'Cafe Voyage',amount:46.12,direction:'out'};
+ const out=helper('manual_1',good);
+ assert.equal(out.amount,46.12);assert.equal(out.previousAmount,45.50);
+ assert.equal(calls.length,1);assert.equal(calls[0].id,'manual_1');
+ assert.throws(()=>helper('manual_1',{...good,direction:'in'}),/incertaine/);
+ assert.throws(()=>helper('manual_2',good),/incertaine/);
+ assert.throws(()=>helper('manual_1',{...good,amount:46.125}),/incertaine/);
+ assert.equal(calls.length,1);
 });
