@@ -101,7 +101,8 @@ test('approved screenshot updates exactly one existing transaction and preserves
  assert.equal(next.bankDebitReview.actualBankAmount,46.12);
  assert.equal(next.bankDebitReview.source,'capture_compare_confirmed');
  assert.equal(next.categoryId,'food');
- assert.equal(next.splitAmounts.la,46.12);
+ assert.equal(next.split.la,100);
+ assert.equal(next.splitAmounts,null);
  assert.equal(c.state.transactions.length,1);
  assert.equal(c.t.bankAmount,46.12);
  assert.equal(c.ui.closed,1);
@@ -159,7 +160,7 @@ test('existing 70/30 couple split persists even if default split later changes',
  const s=c.writes[0].row.splitAmounts;
  assert.equal(s.la,32.28);
  assert.equal(s.partner,13.84);
- assert.equal(s.la+s.partner,46.12);
+ assert.equal(Math.round(s.la*100)+Math.round(s.partner*100),4612);
  assert.equal(c.writes[0].row.beneficiary,'couple');
 });
 test('a custom share preserves friends and partner fixed amounts; the owner absorbs FX delta',async()=>{
@@ -174,7 +175,7 @@ test('a custom share preserves friends and partner fixed amounts; the owner abso
  assert.equal(row.splitAmounts.partner,10);
  assert.equal(row.splitAmounts.friends,20);
  assert.equal(row.friendDebtorName,'Camille');
- assert.equal(row.splitAmounts.la+row.splitAmounts.partner+row.splitAmounts.friends,46.12);
+ assert.equal(Math.round(row.splitAmounts.la*100)+Math.round(row.splitAmounts.partner*100)+Math.round(row.splitAmounts.friends*100),4612);
 });
 test('an approved friends repayment remains protected after a banking correction',async()=>{
  const c=setup({checked:true,reimbursed:1250,transaction:{

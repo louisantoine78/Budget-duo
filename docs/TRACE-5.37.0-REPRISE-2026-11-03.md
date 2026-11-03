@@ -109,3 +109,5 @@
 - Le mode de correction bancaire verrouille également catégorie, bénéficiaire, montants des amis et partenaire, champs des débiteurs et taux manuel. Contrôles répétés à l'enregistrement.
 - L'aperçu de l'impact reflète la même répartition que l'écriture finale, et non la répartition courante par défaut.
 - Tests de transaction réelle pour 70/30, parts fixes des proches, remboursement existant, mutation de catégorie/bénéficiaire et montant contradictoire.
+
+- Les tests de répartition vérifient les montants à partir des centimes entiers : pas de comparaison `===` sur une somme flottante. Les écritures « Moi » n'ont pas de `splitAmounts` car la répartition est portée par le bénéficiaire et `split`. Deux tests complémentaires vérifient les centimes pour le couple et les amis.
