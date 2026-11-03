@@ -566,3 +566,37 @@
 #sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified #manualFamilies .trace-movement-family.selected:disabled{
  opacity:.75;
 }
+
+/* iPhone: the unified selector's ::after and the native select's SVG
+ * were drawing two chevrons in the same right-hand area. Keep only SVG. */
+#sheetBackdrop[data-trace-panel="manual"] .trace-edit-select-control:has(>select.trace-manual-choice-native)::after{
+ content:none!important;display:none!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] #sheetBody[data-trace-manual-selectors="native"] #manualTxAccount{
+ box-sizing:border-box!important;width:100%!important;min-width:0!important;
+ max-width:100%!important;overflow:hidden!important;
+ text-overflow:ellipsis!important;white-space:nowrap!important;
+ padding-left:14px!important;padding-right:50px!important;
+ background-position:right 15px center!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified .trace-edit-control:has(>select.trace-manual-choice-native){
+ min-width:0;max-width:100%;
+}
+/* Preserve the accessible explanation, but remove the repeated visible
+ * sentence between the entered transaction and the account estimate. */
+#sheetBackdrop[data-trace-panel="manual"] #manualPurchaseHint:not([hidden]){
+ position:absolute!important;width:1px!important;height:1px!important;
+ margin:-1px!important;padding:0!important;border:0!important;
+ overflow:hidden!important;white-space:nowrap!important;
+ clip-path:inset(50%)!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-fx-summary:not([hidden]){
+ gap:5px!important;padding:12px 14px!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-fx-summary #manualPurchaseEstimate{
+ font-size:18px!important;line-height:1.35!important;letter-spacing:-.025em;
+ font-weight:720!important;font-variant-numeric:tabular-nums;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-fx-acknowledge #manualFxConfirmText{
+ display:block;min-width:0;overflow-wrap:anywhere;
+}

@@ -635,6 +635,30 @@ let base;
   });
   assert.equal(borders.outer,'0px','account select must not draw two boxes');
   assert.equal(borders.select,'1px','the actual select retains one fine outline');
+  const previousSize=page.viewportSize();
+  for(const width of [320,390,768]){
+   await page.setViewportSize({width,height:844});
+   await bank.selectOption('demo-ca-card');
+   const mobile=await bank.evaluate(el=>{
+    const st=getComputedStyle(el),wrapper=el.closest('.trace-edit-select-control'),
+     bounds=el.getBoundingClientRect();
+    return {
+     extraChevron:getComputedStyle(wrapper,'::after').display,
+     cssArrow:st.backgroundImage,ellipsis:st.textOverflow,
+     rightPadding:parseFloat(st.paddingRight),
+     right:bounds.right,screen:document.documentElement.clientWidth,
+     pageOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth
+    };
+   });
+   assert.equal(mobile.extraChevron,'none','one chevron only on native account selector');
+   assert.match(mobile.cssArrow,/svg/i,'the select retains its one background chevron');
+   assert.equal(mobile.ellipsis,'ellipsis','long account labels must not overlap the arrow');
+   assert.ok(mobile.rightPadding>=44,'reserve the chevron gutter');
+   assert.ok(mobile.right<=mobile.screen+1,'account selector must fit on the phone');
+   assert.equal(mobile.pageOverflow,0,'no horizontal document overflow');
+  }
+  await page.setViewportSize(previousSize);
+  await bank.selectOption('demo-ca-current');
   const section=await page.locator('#manualTxAccount').evaluate(el=>el.closest('.trace-edit-card'));
   assert.ok(section,'the original Comptes et nature section remains in the form');
   const frame=await page.locator('#manualTxAccount').evaluate(el=>
@@ -667,13 +691,22 @@ let base;
   await page.locator('#manualPurchaseAmount').fill('10');
   await page.waitForFunction(()=>{
    const node=document.querySelector('#manualPurchaseEstimate');
-   return /Comptabilisé sur ce compte \(estimation\)/.test(node?.textContent||'');
+   return /≈/.test(node?.textContent||'');
   },{timeout:12000});
   const bank=Number(await page.locator('#manualTxAmount').inputValue());
   assert.ok(bank>0&&bank!==10,'USD to CAD must have a positive non-identity dated quote');
   assert.match(await text('manualPurchaseEstimate'),/CAD|\$/);
   assert.equal(await page.locator('#traceManualFxSummary').isVisible(),true,
    'dated FX detail remains visible for a foreign purchase');
+  assert.equal(await page.locator('#manualFxSummaryCaption').innerText(),
+   'Montant estimé sur le compte');
+  assert.match(await page.locator('#manualPurchaseEstimate').innerText(),/^≈ /);
+  assert.match(await page.locator('#manualFxConfirmText').innerText(),/^Confirmer .*CAD$/);
+  assert.equal(await page.locator('#manualEditBankAmount').innerText(),
+   'Saisir le montant réellement débité');
+  assert.equal(await page.locator('#manualPurchaseHint').evaluate(el=>
+   getComputedStyle(el).clipPath),'inset(50%)',
+   'the additional explanation is accessible but not another visible paragraph');
   assert.equal(await page.locator('#manualPurchaseHint').isVisible(),true,
    'the foreign-currency explanation remains available');
   assert.equal(await page.locator('#manualBankRateHelp').isVisible(),false,
@@ -702,7 +735,7 @@ let base;
   await page.locator('#manualTxName').fill('Fictional 50 EUR on CAD');
   await page.locator('#manualPurchaseAmount').fill('50');
   await page.waitForFunction(()=>document.querySelector('#manualPurchaseEstimate')
-   ?.textContent?.includes('Comptabilisé sur ce compte (estimation)'),{timeout:12000});
+   ?.textContent?.includes('≈ '),{timeout:12000});
   assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'EUR');
   assert.equal(await page.locator('#manualPurchaseAmount').inputValue(),'50');
   const estimate=Number(await page.locator('#manualTxAmount').inputValue());
@@ -719,8 +752,10 @@ let base;
   assert.equal(await page.locator('#manualTxAmount').isVisible(),true);
   await page.locator('#manualTxAmount').fill('78.35');
   await page.waitForFunction(()=>document.querySelector('#manualPurchaseEstimate')
-   ?.textContent?.includes('Montant confirmé sur le compte'),{timeout:12000});
+   ?.textContent?.includes('78,35'),{timeout:12000});
   assert.equal(await page.locator('#manualTxAmount').inputValue(),'78.35');
+  assert.equal(await page.locator('#manualFxSummaryCaption').innerText(),
+   'Montant réellement débité sur le compte');
   assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),false,
    'an explicit bank debit must not be treated as an unapproved estimate');
   await page.locator('#cancelManualTx').click();
@@ -733,7 +768,7 @@ let base;
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   await page.locator('#manualPurchaseCurrency').selectOption('CAD');
   await page.locator('#manualPurchaseAmount').fill('10');
-  await page.waitForFunction(()=>/Comptabilisé sur ce compte \(estimation\)/.test(
+  await page.waitForFunction(()=>/≈/.test(
    document.querySelector('#manualPurchaseEstimate')?.textContent||''),{timeout:12000});
   assert.match(await text('manualPurchaseEstimate'),/EUR|€/);
   assert.equal(await page.locator('#manualBankCurrencyNote').isVisible(),true,
@@ -755,13 +790,13 @@ let base;
   await page.locator('#manualTxAccount').selectOption('demo-ca-current');
   await page.locator('#manualPurchaseCurrency').selectOption('USD');
   await page.locator('#manualPurchaseAmount').fill('10');
-  await page.waitForFunction(()=>/Comptabilisé sur ce compte \(estimation\)/.test(
+  await page.waitForFunction(()=>/≈/.test(
    document.querySelector('#manualPurchaseEstimate')?.textContent||''),{timeout:12000});
   const cadAmount=await page.locator('#manualTxAmount').inputValue();
   await page.locator('#manualTxAccount').selectOption('demo-fr-current');
   assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'USD');
   assert.equal(await page.locator('#manualPurchaseAmount').inputValue(),'10');
-  await page.waitForFunction(()=>/Comptabilisé sur ce compte \(estimation\)/.test(
+  await page.waitForFunction(()=>/≈/.test(
    document.querySelector('#manualPurchaseEstimate')?.textContent||'')&&
    (document.querySelector('#manualPurchaseEstimate')?.textContent||'').includes('€'),
    {timeout:12000});
@@ -1172,7 +1207,7 @@ let base;
   await page.locator('#manualTxName').fill('Fictional 50 USD paid from EUR');
   await page.locator('#manualPurchaseCurrency').selectOption('USD');
   await page.locator('#manualPurchaseAmount').fill('50');
-  await page.waitForFunction(()=>/Comptabilisé sur ce compte \(estimation\)/.test(
+  await page.waitForFunction(()=>/≈/.test(
    document.querySelector('#manualPurchaseEstimate')?.textContent||''),{timeout:12000});
   await page.locator('#manualEditBankAmount').click();
   await page.locator('#manualTxAmount').fill('46.20');

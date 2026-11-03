@@ -1740,22 +1740,22 @@ function openManualTransaction(preferredKind='expense'){
   '<label class="label2" for="manualKind">Nature précise</label><select class="input" id="manualKind"></select>'+ 
   '<p class="trace-movement-help" id="manualKindHelp" aria-live="polite"></p>'+
   '<div class="trace-manual-fields"><label class="label2" for="manualTxName">Description</label><input class="input" id="manualTxName" maxlength="80" type="text" placeholder="Ex. Restaurant, remboursement Mathilde">'+
-  '<div class="trace-purchase-entry"><label class="label2" for="manualPurchaseAmount">Montant de l’opération</label>'+
+  '<div class="trace-purchase-entry"><label class="label2" for="manualPurchaseAmount">Montant de la transaction</label>'+
   '<div class="trace-purchase-pair"><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal" placeholder="0,00" aria-describedby="manualPurchaseHint">'+
   '<label class="sr-only" for="manualPurchaseCurrency">Devise de l’opération</label>'+
   '<select class="input trace-manual-choice-native" id="manualPurchaseCurrency" tabindex="-1" aria-hidden="true">'+
    currencyChoices.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select></div>'+
-  '<span id="manualPurchaseHint" class="trace-field-hint">La conversion suivra la devise du compte sélectionné.</span>'+
+  '<span id="manualPurchaseHint" class="trace-field-hint">TRACE indique le montant estimé dans la devise du compte sélectionné.</span>'+
   '<div class="trace-manual-choice-pills" id="manualPurchaseCurrencyChips" role="group" aria-label="Devise de l’opération">'+
    manualChips(currencyChoices.map(c=>[c,c]))+'</div></div>'+
   '<div class="formrow manual-money-row"><div><label class="label2" for="manualTxAmount">Montant exact sur le relevé bancaire</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
   '<div><label class="label2" for="manualTxDate">Date de l’opération</label><input class="input" id="manualTxDate" type="date" value="'+localDateISO()+'"></div></div>'+
   '<div class="trace-fx-summary" id="traceManualFxSummary" hidden>'+
-  '<span class="trace-fx-summary-caption">Conversion dans la devise du compte</span>'+
+  '<span class="trace-fx-summary-caption" id="manualFxSummaryCaption">Montant estimé sur le compte</span>'+
   '<p id="manualPurchaseEstimate" class="trace-intl-help" role="status" aria-live="polite"></p>'+
   '<p id="manualFxPublished" class="trace-fx-date-source" role="status" aria-live="polite"></p>'+
-  '<label id="manualFxConfirmWrap" class="trace-fx-acknowledge" hidden><input id="manualFxConfirm" type="checkbox"> Utiliser ce montant estimé</label>'+
-  '<button type="button" class="secondary trace-bank-adjust" id="manualEditBankAmount" hidden>Corriger le montant sur mon compte</button></div>'+
+  '<label id="manualFxConfirmWrap" class="trace-fx-acknowledge" hidden><input id="manualFxConfirm" type="checkbox"><span id="manualFxConfirmText">Confirmer le montant estimé</span></label>'+
+  '<button type="button" class="secondary trace-bank-adjust" id="manualEditBankAmount" hidden>Saisir le montant réellement débité</button></div>'+
   '<div class="trace-intl-transaction"><small id="manualBankCurrencyNote">Référence budgétaire CAD</small>'+
   '<label class="label2" id="manualFxRateLabel" for="manualFxRate">Taux · 1 unité bancaire en CAD (facultatif)</label><input id="manualFxRate" class="input" type="number" min="0" step="any" inputmode="decimal" aria-describedby="manualBankRateHelp" placeholder="Recherche automatique">'+
   '<p class="trace-intl-help" id="manualBankRateHelp">TRACE recherche le taux daté pour valoriser ce compte en CAD. Si le taux est indisponible, renseigne uniquement un taux vérifié.</p>'+
@@ -1946,6 +1946,11 @@ function openManualTransaction(preferredKind='expense'){
   // A same-currency operation has no conversion to explain. Keep the dated
   // quote and the optional real bank debit for genuinely foreign purchases.
   const foreignCurrency=Boolean(purchaseCurrency&&purchaseCurrency!==fromCurrency);
+  $m('manualFxSummaryCaption').textContent=bankOverride?
+   (def.direction===1?'Montant réellement crédité sur le compte':'Montant réellement débité sur le compte'):
+   'Montant estimé sur le compte';
+  $m('manualEditBankAmount').textContent=def.direction===1?
+   'Saisir le montant réellement crédité':'Saisir le montant réellement débité';
   $m('manualPurchaseHint').hidden=!foreignCurrency;
   $m('traceManualFxSummary').hidden=!foreignCurrency||
    (!(originalMoney>0)&&!(amount>0));
@@ -1989,15 +1994,16 @@ function openManualTransaction(preferredKind='expense'){
       'référence Banque du Canada · Valet';
      fxPublished.textContent='1 '+purchaseCurrency+' = '+digits+' '+fromCurrency+
       ' · '+provider+' · observation '+reportDay+
-      (reportDay===bookingDate?'':' · dernier jour publié disponible')+
-      ' · publication les jours ouvrables (16 h 30 HE).';
+      (reportDay===bookingDate?'':' · dernier jour publié disponible')+'.';
      if(!bankOverride){
       $m('manualTxAmount').value=bankEstimate.toFixed(2);
-      estimate.textContent='Comptabilisé sur ce compte (estimation) : '+I.money(bankEstimate,fromCurrency)+
+      estimate.textContent='≈ '+I.money(bankEstimate,fromCurrency)+' '+fromCurrency;
+      $m('manualFxConfirmText').textContent='Confirmer '+
+       bankEstimate.toLocaleString('fr-CA',{minimumFractionDigits:2,maximumFractionDigits:2})+
        ' '+fromCurrency;
       quoteConsent.hidden=false;
      }else{
-      estimate.textContent='Montant confirmé sur le compte : '+I.money(I.exactMoney($m('manualTxAmount').value)||0,fromCurrency)+
+      estimate.textContent=I.money(I.exactMoney($m('manualTxAmount').value)||0,fromCurrency)+
        ' '+fromCurrency;
      }
      editBank.hidden=bankOverride;

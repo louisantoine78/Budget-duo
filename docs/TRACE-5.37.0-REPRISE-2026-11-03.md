@@ -59,3 +59,11 @@
 - L'écran réaffirme le mode « lecture seule » et le garde de sauvegarde existant demeure inchangé ; les jetons de requête FX invalident déjà les réponses asynchrones périmées.
 - Scénario navigateur ajouté : cotation EUR sur compte CAD puis bascule vers la carte différée EUR ; vérifier absence de vieille provenance, de confirmation et d'écriture, et absence de requête réseau externe.
 - Exécution navigateur complète encore requise sur le SHA candidat exact.
+
+## 3 novembre 2026 — finition iPhone du montant de transaction et du compte
+- Cause du défaut de sélecteur : la couche unifiée dessinait une deuxième flèche via ::after, superposée au chevron SVG déjà attaché au sélecteur natif. Un seul chevron conservé, espace droit 50 px, ellipse pour les libellés longs ; l'identifiant et les options bancaires restent identiques.
+- Libellé « Montant de la transaction » ; récapitulatif « Montant estimé sur le compte » avec valeur lisible directement et signe ≈. En correction, « Montant réellement débité/crédité sur le compte », sans signe d'estimation.
+- Case à cocher financière inchangée, mais libellé chiffré et actualisé « Confirmer 45,50 CAD » ; lien « Saisir le montant réellement débité/crédité » selon le sens de l'opération.
+- Provenance, cotation, observation datée et éventuelle journée ouvrable précédente toujours présentes ; seule la phrase technique sur l'horaire de publication est retirée. L'aide à la conversion reste accessible par aria-describedby sans paragraphe visuel supplémentaire.
+- Tests de régression Chromium candidats : viewport 320/390/768, absence double chevron, gouttière, troncature, pas de débordement, nouveau texte d'estimation et correction manuelle.
+- Aucun changement des règles de validation bancaire, de rapprochement, des calculs, des RPC Supabase ou de production. Chromium, WebKit et Safari physique encore à exécuter sur le HEAD exact.
