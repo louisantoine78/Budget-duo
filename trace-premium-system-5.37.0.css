@@ -467,3 +467,95 @@
  font-size:11px;line-height:1.55;overflow-wrap:anywhere;
 }
 #sheetBackdrop[data-trace-panel="manual"] #manualFxPublished:empty{display:none}
+
+/* TRACE 5.37 · Saisie inspirée des parcours courts : un seul cadre par champ. */
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified #manualFamilies{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:5px;margin:12px 0 10px;padding:5px;
+ background:#eef3ee;border:1px solid #dae7dd;border-radius:13px;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified #manualFamilies .trace-movement-family{
+ min-height:47px;padding:9px 6px;border:1px solid transparent!important;
+ border-radius:9px;font-size:13px;font-weight:650;
+ line-height:1.2;letter-spacing:-.01em;background:transparent!important;
+ color:#506a58;box-shadow:none!important;white-space:normal;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified #manualFamilies .trace-movement-family.selected{
+ background:#fffdfa!important;border:1px solid #b3cdb9!important;
+ box-shadow:0 1px 4px rgba(28,74,46,.06)!important;color:#204d38!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified #manualFamilies .trace-movement-family:focus-visible{
+ outline:2px solid #438566;outline-offset:2px;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-precise{
+ border-top:1px solid #e9efe9;padding:9px 0 0;margin-top:6px;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-precise>summary{
+ color:#557562;font-size:12px;font-weight:600;
+ cursor:pointer;min-height:42px;padding:10px 0;list-style-position:inside;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-precise[open]>summary{
+ color:#245c43;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-precise label{
+ display:block;margin:5px 0;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified #manualTxAccount{
+ min-height:52px!important;height:52px!important;font-size:15px!important;
+ font-weight:590!important;padding-right:36px!important;
+ border:1px solid #dce6df!important;border-radius:11px!important;
+ background-color:#fffdfa!important;color:#254534!important;
+ box-shadow:none!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-purchase-pair{
+ display:grid!important;grid-template-columns:minmax(0,1fr) 99px!important;
+ column-gap:9px;align-items:stretch;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-purchase-pair>label.sr-only{
+ position:absolute!important;clip:rect(0,0,0,0)!important;clip-path:inset(50%)!important;
+ overflow:hidden!important;white-space:nowrap!important;
+ width:1px!important;height:1px!important;margin:-1px!important;
+ padding:0!important;border:0!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-purchase-pair>#manualPurchaseAmount{
+ grid-column:1;min-width:0;width:100%!important;min-height:54px;
+ font-size:23px!important;font-variant-numeric:tabular-nums;
+ border:1px solid #dce6df!important;border-radius:12px!important;
+ background:#fffdfa!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-purchase-pair>#manualPurchaseCurrency{
+ grid-column:2;min-width:0;width:100%!important;min-height:54px;
+ margin:0!important;background-color:#fffdfa!important;
+ border:1px solid #dce6df!important;border-radius:12px!important;
+ font-size:15px!important;font-weight:700!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-fx-summary:not([hidden]){
+ display:grid;gap:6px;margin:10px 0 12px;padding:13px 14px;
+ background:#f4f8f4;border:1px solid #deebdf;border-radius:13px;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-fx-summary-caption{
+ color:#6a7f70;font-size:11px;letter-spacing:.035em;
+ text-transform:uppercase;font-weight:720;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualPurchaseEstimate{
+ font-size:15px!important;font-weight:725!important;color:#254c39;
+ line-height:1.4;margin:0!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualFxPublished{
+ margin:2px 0 2px!important;padding:0!important;border:0!important;
+ background:transparent!important;border-radius:0!important;
+ font-size:11px;line-height:1.5;color:#5f7564;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-fx-acknowledge:not([hidden]){
+ margin:3px 0 0!important;padding:7px 0 0;border-top:1px solid #e0e9e0;
+ font-size:12px;font-weight:620;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-bank-adjust:not([hidden]){
+ margin:1px 0!important;min-height:40px;
+ font-size:12px;font-weight:650;
+}
+@media(min-width:550px){
+ #sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified #manualFamilies{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+ }
+}

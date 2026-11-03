@@ -152,14 +152,33 @@
   const oneBody=one.querySelector('.trace-edit-fields'),twoBody=two.querySelector('.trace-edit-fields'),
    threeBody=three.querySelector('.trace-edit-fields');
   fieldPair('manualTxAccount',oneBody,names.account);
+  const families=doc.getElementById('manualFamilies');
+  if(families){
+   families.hidden=false;families.removeAttribute('aria-hidden');
+   families.setAttribute('role','group');
+   families.setAttribute('aria-label','Nature du mouvement');
+   oneBody.appendChild(families);
+  }
   fieldPair('manualKind',oneBody,names.nature);
-  const help=doc.getElementById('manualKindHelp');if(help)oneBody.appendChild(help);
+  const precise=doc.createElement('details');precise.className='trace-manual-precise';
+  precise.id='manualPreciseDetails';
+  const summary=doc.createElement('summary');summary.id='manualPreciseSummary';
+  summary.textContent='Préciser le type de mouvement';
+  precise.appendChild(summary);
+  const preciseLabel=labelFor('manualKind');
+  const preciseInput=doc.getElementById('manualKind');
+  if(preciseLabel)precise.appendChild(preciseLabel);
+  if(preciseInput)precise.appendChild(preciseInput);
+  const help=doc.getElementById('manualKindHelp');if(help)precise.appendChild(help);
+  oneBody.appendChild(precise);
   fieldPair('manualTxName',twoBody,names.description);
   // The purchase-first currency/amount is its own real financial field group.
   // Preserve it when the legacy form is rearranged into three premium sections.
   const purchase=fields.querySelector('.trace-purchase-entry');
   if(purchase)twoBody.appendChild(purchase);
   const moneyRow=fields.querySelector('.manual-money-row');if(moneyRow)twoBody.appendChild(moneyRow);
+  const fxSummary=fields.querySelector('.trace-fx-summary');
+  if(fxSummary)twoBody.appendChild(fxSummary);
   // The international fields belong to the actual amount form. Preserve the
   // whole group before removing its old container, including destination legs.
   const international=fields.querySelector('.trace-intl-transaction');
@@ -179,7 +198,6 @@
   const secondary=doc.createElement('div');secondary.className='trace-edit-actions-secondary';
   const cancel=doc.getElementById('cancelManualTx');if(cancel)secondary.appendChild(cancel);
   layout.append(secondary,footer);
-  const families=doc.getElementById('manualFamilies');if(families){families.hidden=true;families.setAttribute('aria-hidden','true')}
   fields.remove();
   const controls=[
    ['manualTxAccount','select'],['manualKind','select'],['manualTxName','text'],
