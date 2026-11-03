@@ -593,7 +593,8 @@ let base;
    'the selected Dépenses tab must have an actual visible frame');
   await group.locator('[data-manual-family="incoming"]').click();
   assert.equal(await group.locator('[data-manual-family="incoming"]').getAttribute('aria-pressed'),'true');
-  assert.equal(await page.locator('#manualKind').inputValue(),'income');
+  assert.ok(['income','refund'].includes(await page.locator('#manualKind').inputValue()),
+   'a bank card can receive merchant refunds but cannot receive a salary');
   await group.locator('[data-manual-family="expenses"]').click();
   assert.equal(await page.locator('#manualKind').inputValue(),'expense');
   assert.equal(await page.locator('#manualPreciseDetails').evaluate(el=>el.open),false);
