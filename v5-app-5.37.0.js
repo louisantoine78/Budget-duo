@@ -1712,6 +1712,7 @@ function openManualTransaction(preferredKind='expense'){
   '<div class="trace-manual-choice-pills" id="manualPurchaseCurrencyChips" role="group" aria-label="Devise de l’opération">'+
    manualChips(currencyChoices.map(c=>[c,c]))+'</div>'+
   '<p id="manualPurchaseEstimate" class="trace-intl-help" role="status" aria-live="polite"></p>'+
+  '<p id="manualFxPublished" class="trace-fx-date-source" role="status" aria-live="polite"></p>'+
   '<label id="manualFxConfirmWrap" class="trace-fx-acknowledge" hidden><input id="manualFxConfirm" type="checkbox"> Confirmer ce montant estimé pour la comptabilisation</label>'+
   '<button type="button" class="secondary trace-bank-adjust" id="manualEditBankAmount" hidden>Montant réellement débité différent ?</button></div>'+
   '<div class="formrow manual-money-row"><div><label class="label2" for="manualTxAmount">Montant exact sur le relevé bancaire</label><input class="input" id="manualTxAmount" type="number" inputmode="decimal" min=".01" step=".01" placeholder="0,00"></div>'+
@@ -1874,7 +1875,9 @@ function openManualTransaction(preferredKind='expense'){
   // The typed purchase is authoritative in its own currency. The bank value
   // is a dated estimate until the user confirms it or provides the real debit.
   estimate.textContent='';
-  const quoteConsent=$m('manualFxConfirmWrap'),editBank=$m('manualEditBankAmount');
+  const quoteConsent=$m('manualFxConfirmWrap'),editBank=$m('manualEditBankAmount'),
+   fxPublished=$m('manualFxPublished');
+  fxPublished.textContent='';
   quoteConsent.hidden=true;
   editBank.hidden=true;
   if(sourceChanged)bankEstimate=null;
@@ -1885,6 +1888,8 @@ function openManualTransaction(preferredKind='expense'){
     if(!bankOverride)$m('manualTxAmount').value=originalAmount.toFixed(2);
     estimate.textContent='Comptabilisé sur ce compte : '+I.money(originalAmount,fromCurrency)+
      ' · même devise, sans conversion.';
+    fxPublished.textContent='Taux appliqué : 1 '+purchaseCurrency+' = 1 '+fromCurrency+
+     ' · date de l’opération : '+bookingDate+'.';
    }else{
     if(!bankOverride){
      estimate.textContent='Conversion vers '+fromCurrency+' en cours…';
@@ -1901,6 +1906,14 @@ function openManualTransaction(preferredKind='expense'){
      if(!Number.isFinite(reference)||reference<=0)throw Error('Taux invalide');
      bankEstimate=Math.round(originalAmount*reference*100)/100;
      if(!(bankEstimate>0))throw Error('Conversion au centime non disponible');
+     const digits=reference.toLocaleString('fr-CA',{maximumFractionDigits:6,minimumFractionDigits:2});
+     const reportDay=fromRate.date===toRate.date?fromRate.date:
+      purchaseCurrency+' : '+toRate.date+' · '+fromCurrency+' : '+fromRate.date;
+     const previewMode=internationalPreviewMode();
+     fxPublished.textContent='1 '+purchaseCurrency+' = '+digits+' '+fromCurrency+
+      ' · Taux '+(previewMode?'fictif de démonstration':'de référence Banque du Canada')+
+      ' · publié le '+reportDay+(reportDay===bookingDate?'':' (dernier jour ouvrable disponible)')+
+      '. Publication habituelle : jours ouvrables vers 16 h 30 (HE).';
      if(!bankOverride){
       $m('manualTxAmount').value=bankEstimate.toFixed(2);
       estimate.textContent='Comptabilisé sur ce compte (estimation) : '+I.money(bankEstimate,fromCurrency)+
@@ -1927,6 +1940,7 @@ function openManualTransaction(preferredKind='expense'){
     }).catch(()=>{
      if(estimateToken!==purchaseEstimateToken||estimate.isConnected===false)return;
      estimate.textContent='Taux de référence indisponible pour cette date. Tu peux indiquer le débit réel.';
+     fxPublished.textContent='Aucun cours officiel vérifié pour '+bookingDate+'. Ne pas utiliser un taux inventé.';
      editBank.hidden=bankOverride;
      quoteConsent.hidden=true;
     });
@@ -3621,12 +3635,14 @@ function txRow(t){
  const cad=I.exactMoney(t.amountCAD);
  const indicative=nativeCode&&nativeCode!=='CAD'&&cad!==null?
   ' · Env. '+money(cad)+' CAD':'';
+ const originalLine=receive?'':tracePurchaseAccountLine(t,source);
  return '<button type="button" class="tx trace-tx-link '+
   (outside?'trace-outside-start':'')+'" data-tx-open="'+esc(t.id)+'">'+
   '<span class="tx-icon">'+esc(c.icon||'◇')+'</span>'+
   '<span class="tx-main"><b>'+esc(t.name||t.merchant||'Transaction')+
   '</b><small>'+label+' · '+esc(t.date||'')+
   (outside?' · Hors solde de départ':'')+indicative+
+  (originalLine?' · '+esc(originalLine):'')+
   (receive?' · Réception '+esc(nativeCode):'')+'</small></span>'+
   '<span class="tx-amt '+(pos?'positive':'')+'">'+
   (t.type==='card_statement_evidence'?'↔ ':transfer?(t.toAccountId?'↔ ':'−'):pos?'+':'−')+
@@ -4701,6 +4717,17 @@ function reviewAccountLabel(id){
  return a?shortAccountLabel(a):'Compte non identifié';
 }
 /* TRACE 5.37 — filter and journal display are read-only views, not financial bookings. */
+function tracePurchaseAccountLine(t,a){
+ const I=window.TraceInternational,bank=a?I.currency(a):null,source=String(t.currency||'').toUpperCase(),
+  orig=I.exactMoney(t.amountOriginal),native=a?I.amountOnAccount(t,a,'source'):null;
+ if(!I.valid(source)||!bank||source===bank||orig===null||!(orig>0)||
+    native===null||!Number.isFinite(native))return '';
+ const ratio=Math.abs(Number(native))/orig;
+ if(!(ratio>0)||!Number.isFinite(ratio))return '';
+ return 'Achat '+I.money(orig,source)+' · Compte '+I.money(Math.abs(Number(native)),bank)+
+  ' · 1 '+source+' = '+ratio.toLocaleString('fr-CA',{maximumFractionDigits:6})+' '+bank+
+  ' (taux comptabilisé)';
+}
 function traceActivityNatureLabel(kind){
  return ({expense:'Dépense',group_expense:'Dépense partagée',person_payment:'Avance',
   income:'Revenu',refund:'Remboursement commerçant',transfer:'Virement interne',
@@ -4748,10 +4775,11 @@ function traceActivityPendingRow(t){
   recipient?'destination':'source'):null;
  const amountLabel=amount===null||!Number.isFinite(Number(amount))?
   'Montant bancaire à vérifier':window.TraceInternational.money(Math.abs(Number(amount)),cur);
+ const originalLine=recipient?'':tracePurchaseAccountLine(t,source);
  return '<button type="button" class="tx trace-tx-link trace-activity-pending" data-tx-open="'+esc(t.id)+'">'+
  '<span class="tx-icon">!</span><span class="tx-main"><b>'+esc(t.name||'Opération à vérifier')+
  '</b><small>'+esc(traceActivityNatureLabel(t.type))+' · '+esc(t.date||'Date à vérifier')+
- ' · À valider</small></span><span class="tx-amt">'+esc(amountLabel)+'</span></button>';
+ ' · À valider'+(originalLine?' · '+esc(originalLine):'')+'</small></span><span class="tx-amt">'+esc(amountLabel)+'</span></button>';
 }
 function traceActivityDayLabel(date){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return'Date à vérifier';

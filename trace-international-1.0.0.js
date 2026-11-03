@@ -287,9 +287,22 @@
    if(!fixture)throw Error('Taux de démonstration non disponible pour cette devise ou cette date');
    return fixture;
   }
-  const key=code+'-'+date;if(fxCache.has(key))return fxCache.get(key);
-  const promise=fetchDailyRate(code,date,transport).catch(error=>{fxCache.delete(key);throw error;});
-  fxCache.set(key,promise);return promise;
+  const key=code+'-'+date,now=Date.now();
+  const todayParts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',
+   year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(now));
+  const part=type=>todayParts.find(p=>p.type===type)?.value;
+  const today=part('year')+'-'+part('month')+'-'+part('day'),current=date===today;
+  const prior=fxCache.get(key);
+  // The latest previous-business-day observation is provisional for today's
+  // request. Revalidate it periodically so the new 16:30 ET release replaces it.
+  // Past dated observations, and exact same-day observations, are immutable.
+  if(prior&&(!current||prior.exact||now-prior.fetched<15*60*1000))
+   return prior.promise;
+  const entry={fetched:now,exact:false,promise:null};
+  entry.promise=fetchDailyRate(code,date,transport).then(quote=>{
+   entry.exact=quote.date===date;return quote;
+  }).catch(error=>{if(fxCache.get(key)===entry)fxCache.delete(key);throw error;});
+  fxCache.set(key,entry);return entry.promise;
  };
  // Read-only verification before attaching advances to a confirmed foreign
  // bank receipt. Association edits NEVER recalculate its historical CAD amount.

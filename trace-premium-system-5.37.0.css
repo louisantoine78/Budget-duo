@@ -444,3 +444,26 @@
 #sheetBackdrop[data-trace-panel="manual"] .manual-money-row:not(.trace-bank-editing){
  border:0;padding:2px 0 10px;
 }
+
+/* TRACE 5.37 — keep the form's sections/cadrans; flatten ONLY nested selectors.
+   The bank/category menus have a single border. The Dépense and category
+   group/card boundaries must remain visible. */
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified .trace-edit-card{
+ border:1px solid #dce9de!important;border-radius:17px!important;
+ background:#fffefa!important;padding:16px 15px 18px!important;
+ margin:0 0 13px!important;box-shadow:0 3px 15px rgba(30,73,48,.025)!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified .trace-edit-card-head{
+ margin:0 0 12px!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-edit-control.trace-edit-select-control{
+ padding:0!important;border:0!important;background:transparent!important;
+ box-shadow:none!important;border-radius:0!important;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualFxPublished{
+ display:block;margin:5px 0 10px;padding:8px 11px;
+ background:#f5f8f4;border-left:2px solid #91b19b;
+ border-radius:4px 9px 9px 4px;color:#55705b;
+ font-size:11px;line-height:1.55;overflow-wrap:anywhere;
+}
+#sheetBackdrop[data-trace-panel="manual"] #manualFxPublished:empty{display:none}
