@@ -599,6 +599,7 @@ let base;
   await go('home');
   await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
   await page.locator('#analysisBtn').click();
+  await page.waitForFunction(()=>document.querySelector('#sheetBackdrop .sheet')?.scrollTop===0,{timeout:3000});
   assert.equal(await page.locator('#sheetBackdrop .sheet').evaluate(n=>n.scrollTop),0);
   await page.locator('#closeSheet').click();
   await go('budget');
