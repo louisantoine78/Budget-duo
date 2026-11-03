@@ -615,6 +615,8 @@ let base;
   assert.ok(bank>0&&bank!==10,'USD to CAD must have a positive non-identity dated quote');
   assert.match(await text('manualPurchaseEstimate'),/CAD|\$/);
   assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),true);
+  await page.locator('#manualTxCategory').selectOption('groceries');
+  assert.ok(Number(await page.locator('#manualTxAmount').inputValue())>0);
   await page.locator('#saveManualTx').click();
   assert.match(await text('manualMovementError'),/Confirme le montant estimé/);
   assert.equal(await page.locator('#sheetBackdrop').evaluate(n=>n.classList.contains('open')),true);
