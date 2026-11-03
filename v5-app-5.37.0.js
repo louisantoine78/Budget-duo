@@ -1589,7 +1589,7 @@ function renderBudget(){
   // The card itself opens full annual detail; expanding the inline explanation
   // must never bubble through and open a second sheet above the disclosure.
   $('#annualBudgetChart .trace-year-diagnosis')?.addEventListener('click',event=>event.stopPropagation());
-  $('#annualBudgetChart [data-insight-month]').forEach(btn=>btn.onclick=e=>{
+  $$('#annualBudgetChart [data-insight-month]').forEach(btn=>btn.onclick=e=>{
    e.stopPropagation();setBudgetMonth(btn.dataset.insightMonth);
   });
   updateSegments();
