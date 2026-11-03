@@ -576,8 +576,9 @@ let base;
   await page.locator('#quickAdd').click();
   await page.locator('#traceAddManual').click();
   const bank=page.locator('#manualTxAccount');
-  const cad=await bank.locator('option').evaluateAll(nodes=>nodes.find(n=>/CAD/.test(n.textContent))?.value||'');
-  assert.ok(cad,'a CAD account should exist');
+  const cad='demo-ca-current';
+  assert.equal(await bank.locator('option[value="demo-ca-current"]').count(),1,
+   'the fictional CAD current account must be available');
   await bank.selectOption(cad);
   await page.locator('#manualTxAmount').fill('100');
   await page.locator('#manualPurchaseCurrency').selectOption('EUR');
