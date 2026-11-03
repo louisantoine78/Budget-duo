@@ -3469,6 +3469,14 @@ function editTransaction(id,validating=false,debitReview=null){
    accountId=$('#txAccount').value,beneficiary=def?.budget==='income'?t.payerId||me:$('#txWho').value;
   const account=state.accounts.find(a=>a.id===accountId);
   if(debitReview){
+   // The account itself can change during an import review, even when the
+   // transaction document remains unchanged. Never trust a stale owner,
+   // currency or deferred-card configuration for a real bank correction.
+   if(!account||account.owner!==me||window.TraceInternational.currency(account)!=='CAD'||
+      !['checking','card'].includes(accountType(account))||
+      account.paymentMode==='deferred'){
+    $('#traceFeedback').textContent='Le compte bancaire a changé. Recommence le rapprochement depuis la capture.';return;
+   }
    const original=window.TraceInternational.exactMoney($('#txOriginalAmount').value),
     current=state.transactions.find(x=>x.id===t.id);
    if(!$('#txDebitReviewConfirm')?.checked){

@@ -96,3 +96,9 @@
 
 - Les libellés de la comparaison affichent également la date, la source et le taux historique d'achat si ces données existent réellement ; aucune provenance imaginée pour les anciennes écritures.
 - Le test historique d'ouverture simple a été remplacé par la vérification de l'action guidée ; ajout de tests isolés du pont de rapprochement qui rejettent une direction crédit, un mauvais identifiant et les fractions de centime.
+
+## 3 novembre — test d'intégration de l'enregistrement du débit (sans navigateur)
+- Nouvelle suite `tests/trace-guided-bank-debit-save.test.cjs` : exécute la **vraie closure save(confirm)** extraite de l'éditeur candidat, avec un faux DOM et un registre financier en mémoire, sans service externe.
+- Scénarios : absence de consentement, sauvegarde unique 45,50 → 46,12 CAD (prix GBP et source du taux intacts), enregistrement d'une preuve, transaction modifiée durant la revue, prix original modifié, montant saisi divergent, devise/compte/commerçant divergent, décimales invalides, erreur de persistance.
+- Nouvel invariant : si le propriétaire, la devise ou le type différé du compte bancaire change pendant l'examen, la sauvegarde s'arrête même si la transaction elle-même n'a pas changé.
+- Contrôle d'intégration DOM réel Chromium et Safari toujours distinct et non revendiqué comme exécuté.
