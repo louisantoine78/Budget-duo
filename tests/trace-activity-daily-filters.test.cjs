@@ -17,6 +17,8 @@ activityMonth:'2026-10',activityAccountFilter:'all',
 activityFilters:{category:'all',nature:'all',currency:'all',status:'confirmed'},
 $,esc:String,shortAccountLabel:a=>a.name,accountType:a=>a.type,
 window:{TraceInternational:{currency:a=>a.currency,money:(n,c)=>n+' '+c,
+ exactMoney:value=>typeof value==='number'&&Number.isFinite(value)&&Math.round(value*100)===value*100?value:null,
+ valid:code=>['CAD','EUR','USD','GBP','CHF'].includes(code),
  amountOnAccount:(t,a,leg)=>leg==='destination'?t.toBankAmount:t.bankAmount}},
 txRow:t=>'<button data-tx-open="'+t.id+'"></button>',renderActivity(){},closeSheet(){},navigate(){},showTab(){}};
 const m=new Function(...Object.keys(ctx),app.slice(i,j)+
