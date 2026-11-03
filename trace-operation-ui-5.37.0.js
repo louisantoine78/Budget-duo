@@ -143,7 +143,7 @@
   const layout=doc.createElement('div');layout.className='trace-edit-layout trace-manual-unified';
   hero.replaceWith(layout);
   const lead=doc.createElement('p');lead.className='trace-edit-lead';
-  lead.textContent='Choisis le compte et la nature du mouvement, puis vérifie l’impact avant d’enregistrer.';
+  lead.textContent='Choisis le compte et le type d’opération, puis saisis le montant.';
   layout.appendChild(lead);
   const one=section('01',steps.account,'Quel compte et quel mouvement ?');
   const two=section('02',steps.details,'Description, montant et date');

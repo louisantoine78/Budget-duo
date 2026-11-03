@@ -1733,7 +1733,10 @@ function openManualTransaction(preferredKind='expense'){
   '<div class="trace-manual-choice-pills trace-manual-account-pills" id="manualTxAccountChips" role="group" aria-labelledby="manualTxAccountLabel">'+
    manualChips(accountChoices)+'</div>'+
   (bankAccounts.length>6?'<p id="manualTxAccountNoResults" class="trace-manual-account-empty" role="status" hidden>Aucun compte correspondant</p>':'')+
-  '<div class="trace-movement-families" id="manualFamilies">'+M.families.map(f=>'<button type="button" class="trace-movement-family" data-manual-family="'+f.id+'">'+esc(f.label)+'</button>').join('')+'</div>'+
+  '<div class="trace-movement-families" id="manualFamilies">'+M.families.map(f=>{
+   const labels={expenses:'Dépense',incoming:'Argent reçu',payments:'Virement',savings:'Épargne'};
+   return '<button type="button" class="trace-movement-family" data-manual-family="'+f.id+'" title="'+esc(f.description||f.label)+'" aria-pressed="false">'+esc(labels[f.id]||f.label)+'</button>';
+  }).join('')+'</div>'+
   '<label class="label2" for="manualKind">Nature précise</label><select class="input" id="manualKind"></select>'+ 
   '<p class="trace-movement-help" id="manualKindHelp" aria-live="polite"></p>'+
   '<div class="trace-manual-fields"><label class="label2" for="manualTxName">Description</label><input class="input" id="manualTxName" maxlength="80" type="text" placeholder="Ex. Restaurant, remboursement Mathilde">'+
@@ -1845,11 +1848,14 @@ function openManualTransaction(preferredKind='expense'){
  function sync(){
   syncManualPills();
   const def=M.get(kind);if(!def)return;
-  const family=M.family(kind);
+  const family=M.family(kind),eligibleFamilies=new Set(supportedKinds().map(item=>item.family));
   $m('manualFamilies')?.querySelectorAll?.('[data-manual-family]')?.forEach(button=>{
    const selected=button.dataset.manualFamily===family;
+   const allowed=eligibleFamilies.has(button.dataset.manualFamily);
    button.classList.toggle('selected',selected);
    button.setAttribute('aria-pressed',String(selected));
+   button.disabled=!allowed;
+   button.setAttribute('aria-disabled',String(!allowed));
   });
   const preciseTitle=$m('manualPreciseSummary');
   if(preciseTitle)preciseTitle.textContent=kind==='expense'?

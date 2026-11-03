@@ -559,3 +559,10 @@
   grid-template-columns:repeat(4,minmax(0,1fr));
  }
 }
+
+#sheetBackdrop[data-trace-panel="manual"] #manualFamilies .trace-movement-family:disabled{
+ opacity:.43;cursor:not-allowed;
+}
+#sheetBackdrop[data-trace-panel="manual"] .trace-manual-unified #manualFamilies .trace-movement-family.selected:disabled{
+ opacity:.75;
+}
