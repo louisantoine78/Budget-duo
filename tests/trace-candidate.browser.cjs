@@ -401,13 +401,19 @@ let base;
   assert.match(await page.locator('#annualBudgetChart .trace-year-totals').innerText(),/Dépenses \/ revenus/);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-selected').count(),1);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-selected span').count(),4);
-  assert.match(await page.locator('#annualBudgetChart .trace-year-diagnosis').innerText(),/Principal poste classé/);
+  const annualDetails=page.locator('#annualBudgetChart .trace-year-diagnosis');
+  assert.equal(await annualDetails.evaluate(node=>node.open),false,
+   'the annual explanation must start collapsed');
+  await annualDetails.locator('summary').click();
+  assert.match(await annualDetails.innerText(),/Principal poste classé/);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-result-main strong').count(),1);
   assert.equal(await page.locator('#annualBudgetChart .trace-year-budget-check').count(),1);
   assert.ok(await page.locator('#annualBudgetChart .trace-year-coverage').isVisible());
   assert.ok(await page.locator('#annualBudgetChart .trace-year-diagnosis').isVisible());
   assert.match(await page.locator('#annualBudgetChart .trace-year-result-main').innerText(),/Différence revenus/);
-  assert.match(await page.locator('#annualBudgetChart .trace-year-diagnosis').innerText(),/mois sans mouvement/);
+  assert.match(await annualDetails.innerText(),/mois sans mouvement/);
+  await annualDetails.locator('summary').click();
+  assert.equal(await annualDetails.evaluate(node=>node.open),false);
   for(const width of [320,390,768,1440]){
    await page.setViewportSize({width,height:844});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),0);
