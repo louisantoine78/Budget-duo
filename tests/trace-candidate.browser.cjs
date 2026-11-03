@@ -154,7 +154,7 @@ let base;
     !!(el.compareDocumentPosition(document.querySelector('#budgetAddCategory'))&Node.DOCUMENT_POSITION_FOLLOWING)));
    const budgetAmount=await page.locator('#budgetAddAmount').evaluate(el=>({size:parseFloat(getComputedStyle(el).fontSize),
     weight:Number(getComputedStyle(el).fontWeight)}));
-   assert.ok(budgetAmount.size>=27&&budgetAmount.size<=30&&budgetAmount.weight<650);
+   assert.ok(budgetAmount.size>=22&&budgetAmount.size<=25&&budgetAmount.weight<650);
    assert.equal(await page.locator('#sheetBody>.settings-hero .pico').evaluate(el=>getComputedStyle(el).display),'none');
    assert.equal(await page.locator('#sheetBody>.settings-hero').evaluate(el=>getComputedStyle(el).backgroundImage),'none');
    assert.ok(await page.locator('#saveBudgetAdd').evaluate(el=>el.getBoundingClientRect().height)>=48);
