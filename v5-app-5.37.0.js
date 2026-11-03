@@ -1702,7 +1702,8 @@ function openManualTransaction(preferredKind='expense'){
   '<div class="trace-manual-fields"><label class="label2" for="manualTxName">Description</label><input class="input" id="manualTxName" maxlength="80" type="text" placeholder="Ex. Restaurant, remboursement Mathilde">'+
   '<div class="trace-purchase-entry"><label class="label2" for="manualPurchaseAmount">Montant de l’opération · devise d’achat</label>'+
   '<div class="trace-purchase-pair"><input class="input" id="manualPurchaseAmount" type="number" min=".01" step=".01" inputmode="decimal" placeholder="0,00" aria-describedby="manualPurchaseHint">'+
-  '<select class="input trace-manual-choice-native" id="manualPurchaseCurrency" tabindex="-1" aria-hidden="true" aria-label="Devise de l’opération">'+
+  '<label class="sr-only" for="manualPurchaseCurrency">Devise de l’opération</label>'+
+  '<select class="input trace-manual-choice-native" id="manualPurchaseCurrency" tabindex="-1" aria-hidden="true">'+
    currencyChoices.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')+'</select></div>'+
   '<span id="manualPurchaseHint" class="trace-field-hint">Saisis le prix payé dans la devise du commerçant.</span>'+
   '<div class="trace-manual-choice-pills" id="manualPurchaseCurrencyChips" role="group" aria-label="Devise de l’opération">'+

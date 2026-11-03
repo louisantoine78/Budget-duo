@@ -381,7 +381,7 @@
  font-size:12px;font-weight:690;color:#295541;
  list-style:none;
 }
-.page[data-page="budget"] #annualBudgetChart .trace-year-diagnosis>summary::-webkit-details-marker{display:none}
+.page[data-page="budget"] #annualBudgetChart .trace-year-diagnosis>summary::-webkit-details-marker{width:0;height:0;opacity:0}
 .page[data-page="budget"] #annualBudgetChart .trace-year-diagnosis-content{
  padding:0 13px 13px;display:grid;gap:8px;
 }
