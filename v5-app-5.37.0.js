@@ -3185,8 +3185,9 @@ function requireCardEvidenceUnlink(t){
  };
  return true;
 }
-function editTransaction(id,validating=false){
+function editTransaction(id,validating=false,debitReview=null){
  const t=state.transactions.find(x=>x.id===id);if(!t)return;
+ if(debitReview&&debitReview.snapshot!==traceForeignDebitFingerprint(t))return;
  const csvReview=t.source==='csv'&&t.status!=='confirmed'?
   csvBankEvidenceMatches(t,state.transactions):[];
  // Snapshot exactly what was compared. The checkbox is not transferable to a
@@ -3251,6 +3252,13 @@ function editTransaction(id,validating=false){
  '<div class="trace-edit-layout">'+
  (validating?'<div class="trace-review-status" role="status"><span class="trace-review-dot" aria-hidden="true"></span><span><strong>À vérifier</strong><small>Aucune validation bancaire sans ta confirmation.</small></span></div>':'')+
  '<p class="trace-edit-lead">Corrige les informations utiles, puis vérifie l’impact avant d’enregistrer.</p>'+
+ (debitReview?'<section class="trace-edit-card" id="txDebitReview" role="group" aria-labelledby="txDebitReviewTitle">'+
+  '<div class="trace-edit-card-head"><div><h3 id="txDebitReviewTitle">Vérifier le débit réel</h3><p>Capture bancaire · sans nouvelle dépense</p></div></div>'+
+  '<div class="trace-edit-fields"><p>Montant précédemment enregistré : <strong>'+esc(window.TraceInternational.money(t.bankAmount,'CAD'))+'</strong></p>'+
+  '<p>Montant observé sur la capture : <strong>'+esc(window.TraceInternational.money(debitReview.amount,'CAD'))+'</strong></p>'+
+  '<p>Achat d’origine inchangé : <strong>'+esc(window.TraceInternational.money(t.amountOriginal,t.currency))+' '+esc(t.currency)+'</strong></p>'+
+  '<p class="trace-intl-help">Vérifie le débit réel sur ta banque. Aucun taux n’est inventé et aucune dépense supplémentaire n’est créée.</p>'+
+  '<label class="trace-fx-acknowledge"><input id="txDebitReviewConfirm" type="checkbox"> Je confirme le débit après vérification de ma capture.</label></div></section>':'')+
  '<section class="trace-edit-card" aria-labelledby="traceEditNatureTitle">'+
   '<div class="trace-edit-card-head"><span class="trace-edit-card-index" aria-hidden="true">01</span>'+
    '<div><h3 id="traceEditNatureTitle">L’opération</h3><p>Identifier le mouvement</p></div></div>'+
@@ -3337,6 +3345,13 @@ function editTransaction(id,validating=false){
   singleId:'txFriendDebtorName',totalId:'txFriendsAmount',
   hostId:'txFriendDebtorRows',initial:t.friendDebtorShares||[]});
  $('#txAccount').value=t.accountId||'';$('#txWho').value=t.beneficiary||me;
+ if(debitReview){
+  $('#txAmount').value=debitReview.amount.toFixed(2);
+  // Only the bank debit can change. Preserve account, date, merchant, purchase.
+  for(const selector of ['#txType','#txName','#txDate','#txAccount',
+   '#txOriginalCurrency','#txOriginalAmount'])$(selector).disabled=true;
+  $('#txOtherMovement').hidden=true;$('#txRemove').hidden=true;
+ }
  $('#txOriginalCurrency').value=t.currency||window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId));
  if($('#txOriginalCurrency').value===window.TraceInternational.currency(state.accounts.find(a=>a.id===t.accountId))&&
     Math.abs(Number(t.amountOriginal??0)-Number(t.bankAmount??t.amountCAD??0))<.01)
@@ -3449,6 +3464,20 @@ function editTransaction(id,validating=false){
    date=$('#txDate').value,name=$('#txName').value.trim(),categoryId=$('#txCategory').value,
    accountId=$('#txAccount').value,beneficiary=def?.budget==='income'?t.payerId||me:$('#txWho').value;
   const account=state.accounts.find(a=>a.id===accountId);
+  if(debitReview){
+   const original=window.TraceInternational.exactMoney($('#txOriginalAmount').value),
+    current=state.transactions.find(x=>x.id===t.id);
+   if(!$('#txDebitReviewConfirm')?.checked){
+    $('#traceFeedback').textContent='Confirme le débit bancaire après avoir vérifié la capture.';return;
+   }
+   if(!current||traceForeignDebitFingerprint(current)!==debitReview.snapshot||
+     amount!==debitReview.amount||accountId!==debitReview.accountId||date!==debitReview.date||
+     type!=='expense'||name!==t.name||$('#txOriginalCurrency').value!==t.currency||
+     original!==window.TraceInternational.exactMoney(t.amountOriginal)||
+     tracePossibleForeignDebitCorrection({date,name,amount},accountId)?.id!==t.id){
+    $('#traceFeedback').textContent='La transaction ou le montant ont changé. Rouvre la capture pour recommencer le rapprochement.';return;
+   }
+  }
   // Cross-nature CSV imports need an explicit human decision before posting.
   // Re-evaluate after edits: bank account, date or amount may have changed.
   const csvProposed={...t,accountId,date,name,bankAmount:amount,type};
@@ -3490,7 +3519,14 @@ function editTransaction(id,validating=false){
    if(received>0&&Math.round(Number(sharing.splitAmounts?.friends||0)*100)<received){
      $('#traceFeedback').textContent='Cette dépense possède déjà des remboursements liés. La part des amis ne peut pas devenir inférieure aux remboursements reçus.';return;
    }
+   const bankChanged=Number(t.bankAmount)!==amount||date!==t.date||accountId!==t.accountId;
    const next={...t,...booking,date,name,type,categoryId,accountId,...sharing,...friendDebtors,
+    ...(debitReview?{fxBankAmountStatus:'bank_confirmed',
+     bankDebitReview:{source:'capture_compare_confirmed',confirmedAt:new Date().toISOString(),
+      previousBankAmount:debitReview.previousAmount,actualBankAmount:amount,
+      currency:'CAD',date,accountId}}:
+     bankChanged&&t.fxBankAmountStatus==='bank_confirmed'?{
+      fxBankAmountStatus:'unverified',bankDebitReview:null}:{}),
     natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,status:confirm?'confirmed':t.status,transferPurpose:def.purpose||null,relatedExpenseId:null,
     ...(confirm&&csvConflicts.length?{csvReviewMatchIds:csvConflicts.map(x=>x.id),csvDistinctReviewedAt:new Date().toISOString()}:{} )};
   if(next.importFingerprint&&(amount!==(t.bankAmount??t.amountCAD)||date!==t.date||name!==t.name))next.importFingerprint=null;
@@ -3503,6 +3539,9 @@ function editTransaction(id,validating=false){
     $('#traceFeedback').textContent='Le rapprochement bancaire a changé depuis ton ouverture. Rouvre cette fiche et vérifie les opérations actuelles.';
     return;
    }
+  }
+  if(debitReview&&traceForeignDebitFingerprint(state.transactions.find(x=>x.id===t.id))!==debitReview.snapshot){
+   $('#traceFeedback').textContent='La transaction a changé avant la sauvegarde. Recommence la comparaison.';return;
   }
   const btn=$(confirm?'#txValidate':'#txSave');btn.disabled=true;
   try{await saveDocument('transactions',next);Object.assign(t,next);closeSheet();renderAll();navigate('activity');showTab(confirm?'transactions':validating?'review':'transactions');}
@@ -4413,6 +4452,25 @@ function tracePossibleForeignDebitCorrection(row,accountId){
    Math.abs(observed-estimate)/estimate<=0.15;
  });
  return options.length===1?options[0]:null;
+}
+/* Snapshot the real transaction, not a stale screenshot dialog. */
+function traceForeignDebitFingerprint(t){
+ return t?JSON.stringify([t.id,t.status,t.type,t.accountId,t.date,t.name,
+  t.bankCurrency,t.bankAmount,t.amountCAD,t.currency,t.amountOriginal,
+  t.fxBankAmountStatus,t.beneficiary,t.categoryId,t.splitAmounts]):'';
+}
+function openForeignDebitCorrection(id,evidence){
+ const accountId=String(evidence?.accountId||''),date=String(evidence?.date||''),
+  name=String(evidence?.name||''),amount=smartExactBankAmount(evidence?.amount);
+ const bank=visibleBankAccounts(me).find(a=>a.id===accountId);
+ const match=bank&&evidence?.direction==='out'&&amount!==null&&
+  tracePossibleForeignDebitCorrection({date,name,amount},accountId);
+ const other=match&&findSimilarTransaction({accountId,date,name,type:'expense',
+  bankAmount:amount,amountCAD:amount});
+ if(!match||match.id!==id||other)
+  throw Error('Correspondance devenue incertaine. Compare de nouveau la capture et le débit.');
+ return editTransaction(id,false,{accountId,date,amount,previousAmount:Number(match.bankAmount),
+  snapshot:traceForeignDebitFingerprint(match)});
 }
 function smartDrafts(accountId,date=null){
  if(!visibleBankAccounts(me).some(a=>a.id===accountId))return[];
@@ -6844,7 +6902,7 @@ window.TraceBankBridge={
  accounts:()=>visibleBankAccounts(me).map(a=>({id:a.id,name:shortAccountLabel(a),type:accountType(a),currency:window.TraceInternational.currency(a),country:a.country||'CA',opening:openingBoundary(a.id)})),
  movementPreview:movementImpactText,friendLinkCandidates:friendLinkOptions,currentOwner:()=>me,
  smartCardPaymentMatches,smartMatchCardPaymentDraft,
- smartDrafts,smartDuplicateMatches,smartStageRows,smartSaveDraft,smartIgnoreDraft,smartKeepSingleDraft,smartMoveDraftAccount,smartMoveDayDraftsAccount,smartApproveDraft,smartResetDay,smartCreateCategory,
+ smartDrafts,smartDuplicateMatches,openForeignDebitCorrection,smartStageRows,smartSaveDraft,smartIgnoreDraft,smartKeepSingleDraft,smartMoveDraftAccount,smartMoveDayDraftsAccount,smartApproveDraft,smartResetDay,smartCreateCategory,
  savingsAccounts:()=>trackedSavingsAccounts(me).map(a=>({id:a.id,name:a.name,ready:isReadySavingsAccount(a),openingDate:a.openingDate})),
  referenceDate:()=>state.household.referenceDate||'',
  month:()=>activityMonth,

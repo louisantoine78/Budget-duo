@@ -78,3 +78,23 @@ test('purchase quote and true bank debit retain separate metadata',()=>{
   "fxBankAmountStatus:bankOverride?'bank_confirmed':'estimated'"])
   assert.ok(src.includes(part),part);
 });
+
+test('the candidate offers a reviewed debit rather than a second transaction',()=>{
+ assert.ok(src.includes('function openForeignDebitCorrection(id,evidence)'));
+ assert.ok(src.includes('traceForeignDebitFingerprint(match)'));
+ assert.ok(ui.includes('bridge.openForeignDebitCorrection(id,'));
+ assert.ok(src.includes("if(!$('#txDebitReviewConfirm')?.checked)"));
+});
+test('all historical purchase facts are frozen during guided bank correction',()=>{
+ for(const id of ['#txType','#txName','#txDate','#txAccount',
+  '#txOriginalCurrency','#txOriginalAmount'])
+  assert.ok(src.includes("'"+id+"'"));
+ assert.ok(src.includes("original!==window.TraceInternational.exactMoney(t.amountOriginal)"));
+ assert.ok(src.includes("fxBankAmountStatus:'bank_confirmed'"));
+});
+test('the financial write keeps one transaction id and bank audit metadata',()=>{
+ assert.ok(src.includes("bankDebitReview:{source:'capture_compare_confirmed'"));
+ assert.ok(src.includes("previousBankAmount:debitReview.previousAmount"));
+ assert.ok(src.includes("traceForeignDebitFingerprint(state.transactions.find(x=>x.id===t.id))!==debitReview.snapshot"));
+ assert.ok(src.includes("await saveDocument('transactions',next);Object.assign(t,next)"));
+});

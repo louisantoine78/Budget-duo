@@ -86,3 +86,10 @@
 - Pour les nouvelles dépenses en devise étrangère enregistrées sur un compte CAD, statut `fxBankAmountStatus:'estimated'` ou `'bank_confirmed'` selon si le client accepte l'estimation ou saisit le débit réel.
 - Le taux de change observé et sa source, lorsqu'ils ont été effectivement récupérés, sont conservés séparément dans `purchaseFxReference`, `purchaseFxRateDate`, `purchaseFxRateSource`. Le taux CAD 1:1 du compte reste distinct.
 - Une écriture déjà confirmée par la banque n'est pas requalifiée en estimation à la lecture d'une capture ; les écritures historiques sans indicateur restent de simples correspondances possibles.
+
+## 3 novembre — correction guidée du débit bancaire depuis une capture
+- Depuis une capture CAD identifiée comme une correspondance possible unique, un parcours de comparaison s'ouvre sur la **dépense existante**, préremplit seulement le débit bancaire réellement lu et montre le montant précédent et le prix original en devise d'achat.
+- Case à cocher obligatoire pour confirmer la comparaison ; date, compte, commerçant, nature, devise et prix de l'achat restent figés pendant l'opération. Aucune modification silencieuse.
+- Empreinte de transaction revalidée au chargement et avant la sauvegarde, en plus de la protection CAS centrale. Une correction confirmée laisse `bankDebitReview` (audit du montant initial, réel, date, compte et moment, pas de capture copiée) et `fxBankAmountStatus:'bank_confirmed'`.
+- Un éventuel changement ultérieur du montant ou du compte invalide la preuve précédente au lieu de l'afficher comme encore confirmée.
+- Ces garde-fous sont à tester en navigateur et sur un iPhone réel avant d'envisager une mise en production.

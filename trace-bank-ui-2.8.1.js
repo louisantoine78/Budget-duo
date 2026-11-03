@@ -213,7 +213,16 @@ function renderCandidateRows(file,data){
  node.querySelectorAll('[data-open-estimated]').forEach(button=>{
   button.addEventListener('click',()=>{
    const id=button.dataset.openEstimated;
-   if(id)bridge.openTransaction(id);
+   if(!id)return;
+   const line=button.closest('[data-record]');
+   try{
+    bridge.openForeignDebitCorrection(id,{
+     accountId:$('#docAccount').value,date:line?.querySelector('.docDate')?.value,
+     name:line?.querySelector('.docName')?.value,
+     amount:Number(String(line?.querySelector('.docAmount')?.value||'').replace(',','.').replace(/\s/g,'')),
+     direction:line?.querySelector('.docDirection')?.value
+    });
+   }catch(error){$('#docError').textContent=String(error.message||error);}
   });
  });
  node.querySelectorAll('[data-record]').forEach(line=>{
