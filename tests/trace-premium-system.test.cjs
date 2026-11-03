@@ -60,8 +60,15 @@ test('shared palette keeps body labels legible against white and mint',()=>{
 });
 test('presentation cannot alter posting, financial calculations or application navigation',()=>{
  for(const forbidden of [/saveDocument\(/,/state\.transactions/,/window\.TraceBankBridge/,
-  /innerHTML\s*=/,/display:\s*none/,/\.hidden\s*\{/])
+  /innerHTML\s*=/,/\.hidden\s*\{/])
   assert.doesNotMatch(css,forbidden);
+ // Only visually redundant manual chips, search, and empty estimate can hide.
+ // All four real native financial selects must remain visible and usable.
+ const hideRules=[...css.matchAll(/([^{}]+)\{[^{}]*display:\s*none[^}]*\}/g)];
+ assert.ok(hideRules.length>0);
+ assert.ok(hideRules.every(match=>match[1].includes('#sheetBackdrop[data-trace-panel="manual"]')),
+  'Only the isolated manual selector mirrors may be hidden');
+ assert.match(css,/select\.trace-manual-choice-native\{[\s\S]*?pointer-events:auto!important/);
  assert.equal((html.match(/data-tab="transactions"/g)||[]).length,1);
  assert.equal((html.match(/data-tab="review"/g)||[]).length,1);
  assert.equal((html.match(/data-tab="sharing"/g)||[]).length,1);
