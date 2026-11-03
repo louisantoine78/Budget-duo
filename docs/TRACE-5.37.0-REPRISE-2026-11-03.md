@@ -53,3 +53,9 @@
 - Les comptes en CAD masquent la note bancaire de valorisation CAD et son explication, mais gardent le bloc de conversion et de correction facultative pour un achat en EUR/USD.
 - Les comptes en EUR/USD/GBP/CHF conservent le champ de taux pour valoriser la référence de budget CAD, même si l'achat et le compte ont la même devise ; le champ est maintenant lié à son explication accessible.
 - Ajout d'assertions navigateur ciblées ; aucune logique financière, calcul, RPC, règle de sauvegarde ni module de production modifié. Rejouer Chromium/WebKit avant toute mise en ligne.
+
+## Protection UX après changement de compte vers une carte différée
+- Si un ancien compte possédait une estimation FX en cours ou terminée et que le titulaire sélectionne une carte française à débit différé non libérée, toutes les anciennes informations de cotation sont effacées et les commandes de confirmation/correction sont masquées.
+- L'écran réaffirme le mode « lecture seule » et le garde de sauvegarde existant demeure inchangé ; les jetons de requête FX invalident déjà les réponses asynchrones périmées.
+- Scénario navigateur ajouté : cotation EUR sur compte CAD puis bascule vers la carte différée EUR ; vérifier absence de vieille provenance, de confirmation et d'écriture, et absence de requête réseau externe.
+- Exécution navigateur complète encore requise sur le SHA candidat exact.

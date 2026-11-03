@@ -1926,6 +1926,15 @@ function openManualTransaction(preferredKind='expense'){
    traceRefuseUnqualifiedDeferredWrite('transactions',{accountId:from?.id,
     ...(['transfer','card_payment'].includes(kind)?{toAccountId:destination?.id}:{})});
   }catch{
+   // A previously displayed FX quote may belong to another account. A
+   // deferred-card selection is read-only and must never retain that quote
+   // or an approval control. The request token above invalidates pending FX.
+   estimate.textContent='';
+   $m('manualFxPublished').textContent='';
+   $m('manualFxConfirmWrap').hidden=true;
+   $m('manualEditBankAmount').hidden=true;
+   $m('traceManualFxSummary').hidden=true;
+   $m('manualPurchaseHint').hidden=true;
    preview.textContent='Carte à débit différé : simulation uniquement en lecture seule. Aucune écriture possible.';
    return;
   }

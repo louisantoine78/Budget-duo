@@ -1084,6 +1084,20 @@ let base;
   const budget=await text('homeBudgetAvailable'),spending=await text('homeSpending');
   const remoteBefore=external.length;
   await page.locator('#quickAdd').click();await page.locator('#traceAddManual').click();
+  // Create an indicative quote, then switch to a quarantined deferred card.
+  // The previous bank account's amount/rate must not survive the switch.
+  await page.locator('#manualTxAccount').selectOption('demo-ca-current');
+  await page.locator('#manualPurchaseCurrency').selectOption('EUR');
+  await page.locator('#manualPurchaseAmount').fill('10');
+  await page.waitForFunction(()=>document.querySelector('#manualFxPublished')
+   ?.textContent?.includes('1 EUR ='),{timeout:12000});
+  await page.locator('#manualTxAccount').selectOption('demo-fr-deferred-card');
+  assert.equal(await page.locator('#manualFxPublished').textContent(),'',
+   'no stale exchange-rate provenance after switching to a deferred card');
+  assert.equal(await page.locator('#traceManualFxSummary').isVisible(),false);
+  assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),false);
+  assert.equal(await page.locator('#manualEditBankAmount').isVisible(),false);
+  assert.equal(await page.locator('#manualPurchaseHint').isVisible(),false);
   await page.locator('#manualTxAccount').selectOption('demo-fr-deferred-card');
   await page.locator('#manualTxName').fill('Must reject deferred purchase');
   await page.locator('#manualPurchaseAmount').fill('25');
