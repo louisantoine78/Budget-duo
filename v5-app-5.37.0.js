@@ -1849,7 +1849,7 @@ function openManualTransaction(preferredKind='expense'){
    lastPurchaseKey=purchaseKey;
    bankOverride=false;
    $m('manualFxConfirm').checked=false;
-   $m('manualTxAmount').closest('.manual-money-row')?.classList.remove('trace-bank-editing');
+   $m('manualTxAmount').closest?.('.manual-money-row')?.classList?.remove?.('trace-bank-editing');
    if(hadPurchaseAmount||$m('manualPurchaseAmount').value.trim()!=='')
     $m('manualTxAmount').value=originalMoney!==null&&originalMoney>0&&sourceCurrency===fromCurrency?
      originalMoney.toFixed(2):'';
@@ -2048,7 +2048,7 @@ function openManualTransaction(preferredKind='expense'){
  };
  $m('manualEditBankAmount').onclick=()=>{
   bankOverride=true;
-  $m('manualTxAmount').closest('.manual-money-row')?.classList.add('trace-bank-editing');
+  $m('manualTxAmount').closest?.('.manual-money-row')?.classList?.add?.('trace-bank-editing');
   $m('manualFxConfirmWrap').hidden=true;
   $m('manualFxConfirm').checked=false;
   $m('manualEditBankAmount').hidden=true;
@@ -2059,7 +2059,7 @@ function openManualTransaction(preferredKind='expense'){
  $m('manualTarget').onchange=sync;
  $m('manualSavings').onchange=sync;
  $m('manualTxAmount').oninput=()=>{
-  if($m('manualTxAmount').closest('.manual-money-row')?.classList.contains('trace-bank-editing'))
+  if($m('manualTxAmount').closest?.('.manual-money-row')?.classList?.contains?.('trace-bank-editing'))
    bankOverride=true;
   sync();
  };
