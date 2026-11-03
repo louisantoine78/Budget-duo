@@ -73,3 +73,11 @@
 - Le pseudo-élément décoratif ::after du champ bancaire utilise dorénavant uniquement `content:none!important` ; le vrai select natif et les contrôles Activity restent visibles et utilisables.
 - Le scénario navigateur vérifie la propriété de contenu du pseudo-élément plutôt que son display.
 - Nouvelle prévisualisation requise après régénération contrôlée du cache.
+
+## 3 novembre — rapprochement prudent des dépenses étrangères et captures CAD
+- Découverte : le détecteur générique exigeait une égalité des montants pour considérer deux achats semblables. Une dépense 25 GBP/45,50 CAD estimée pouvait donc sembler indépendante de sa capture bancaire réelle à 46,12 CAD.
+- Ajout d'un détecteur **lecture seule** pour une unique dépense manuelle en devise étrangère sur un compte CAD, confirmée, de même jour, même libellé normalisé et dont le montant diffère de 15 % maximum. Ambiguïté, devise native, dates ou commerçants différents : aucune correspondance supposée.
+- L'import capture montre « Estimation enregistrée / débit sur la capture », et un bouton « Ouvrir la dépense existante ». Il n'effectue aucune correction silencieuse.
+- La validation du lot d'images relit les transactions vivantes et refuse dans ce cas de comptabiliser une deuxième dépense même si « doublon possible » a été sélectionné. L'utilisateur peut ouvrir et modifier explicitement l'opération initiale, puis réexaminer la capture.
+- Test isolé : `node --test tests/trace-foreign-estimated-capture.test.cjs`. Les captures importées sous les autres parcours ne sont pas encore certifiées comme rapprochement automatique ; ne pas prétendre que la correction du débit et l'écriture de preuve sont automatisées.
+- Aucun changement des formules de change ou écritures existantes, ni de la branche main.

@@ -4378,6 +4378,26 @@ function smartDuplicateMatches(id,values={}){
  return out.sort((a,b)=>Number(b.status==='recorded')-Number(a.status==='recorded')||
   Number(b.exact)-Number(a.exact)).slice(0,5);
 }
+/* Read-only review of a foreign-currency purchase estimated on a CAD account.
+ * Same day and merchant, within a modest FX/fee gap; never claim a certain
+ * match or mutate the transaction. Multiple candidates remain ambiguous. */
+function tracePossibleForeignDebitCorrection(row,accountId){
+ const bank=state.accounts.find(a=>a.id===accountId),I=window.TraceInternational;
+ if(!bank||I.currency(bank)!=='CAD')return null;
+ const date=String(row?.date||''),name=normalizedMerchant(row?.name),
+  observed=smartExactBankAmount(row?.bankAmount??row?.amountCAD??row?.amount);
+ if(!smartStrictDate(date)||name.length<4||observed===null)return null;
+ const options=state.transactions.filter(t=>{
+  if(t?.status!=='confirmed'||t.type!=='expense'||t.accountId!==accountId||
+     t.date!==date||['csv','image'].includes(t.source)||t.bankCurrency!=='CAD'||
+     !I.valid(t.currency)||t.currency==='CAD'||!(Number(t.amountOriginal)>0)||
+     normalizedMerchant(t.name)!==name)return false;
+  const estimate=smartExactBankAmount(t.bankAmount);
+  return estimate!==null&&estimate!==observed&&
+   Math.abs(observed-estimate)/estimate<=0.15;
+ });
+ return options.length===1?options[0]:null;
+}
 function smartDrafts(accountId,date=null){
  if(!visibleBankAccounts(me).some(a=>a.id===accountId))return[];
  return state.smartImports.filter(d=>d.kind==='smart_draft'&&d.accountId===accountId&&d.status==='pending'&&(date===null||d.date===date)).map(d=>({...d}));
@@ -6864,18 +6884,22 @@ window.TraceBankBridge={
    if(!row.date)return{status:'date',matchName:'',matchDate:'',amountConflict:false,accountingIncluded:false};
    const t={...row,amountCAD:Number(row.amount),accountId};
    const found=findSimilarTransaction(t);
-   // A different amount for the same merchant/day is a separate purchase, not a duplicate.
+   // A different native amount is normally a separate purchase. Exception:
+   // a confirmed foreign-purchase estimate on this same CAD bank account can
+   // have a different true debit. Surface only a possible match for review.
+   const estimatedCorrection=found?null:tracePossibleForeignDebitCorrection(row,accountId);
    const included=isFinancialPeriod(t);
-   const match=found?.t;
+   const match=found?.t||estimatedCorrection;
    const matchRecorded=match?.status==='confirmed';
-   return{status:!included?'historical':found?(matchRecorded&&found.status==='exact'?'already':'possible'):'missing',
+   return{status:!included?'historical':match?(found&&matchRecorded&&found.status==='exact'?'already':'possible'):'missing',
      matchId:match?.id||'',
-     matchName:match?.name||'',matchDate:match?.date||'',matchAmount:match?.amountCAD??null,
+     matchName:match?.name||'',matchDate:match?.date||'',
+     matchAmount:estimatedCorrection?.bankAmount??match?.amountCAD??null,
      matchAccount:match?.accountId?shortAccountLabel(state.accounts.find(a=>a.id===match.accountId)):'',
      matchCategory:state.categories.find(c=>c.id===match?.categoryId)?.name||'Non catégorisée',
      matchSource:match?(matchRecorded?'Activité · opération confirmée':'Activité · à vérifier'):'',
      matchRecorded,matchStatus:found?.status||null,
-     amountConflict:false,
+     amountConflict:!!estimatedCorrection,
      accountingIncluded:included};
   });
  },
@@ -6911,6 +6935,12 @@ window.TraceBankBridge={
    const probe={date,name,type,bankAmount:amount,amountCAD:amount,accountId};
    if(method==='image')dates.add(date);
    const existing=findSimilarTransaction(probe);
+   // Never create a second expense because a screenshot shows the actual CAD
+   // debit instead of the estimate already stored on an earlier purchase.
+   // The operator must first open and explicitly correct the existing entry.
+   if(method==='image'&&type==='expense'&&
+      tracePossibleForeignDebitCorrection(probe,accountId))
+    throw new Error('Montant bancaire différent d’une dépense étrangère déjà enregistrée. Ouvre la dépense existante et vérifie son débit réel avant de réimporter la capture ; aucun doublon créé.');
    if(existing?.status==='exact'||csvImportedDuplicate(probe,state.transactions)){duplicates++;continue;}
    if(existing?.status==='possible'&&!row.allowPossibleDuplicate)throw new Error('Correspondance possible dans Trace : '+existing.t.name+' du '+existing.t.date+'. Vérifie-la explicitement avant ajout.');
    const booking=window.TraceInternational.resolveBooking({

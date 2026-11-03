@@ -176,8 +176,12 @@ function renderCandidateRows(file,data){
   (needsReview?'<div class="trace-smart-needs">'+(status.amountConflict?'Montant différent d’une opération existante.':r.needsDateReview?'Date illisible : précise-la dans les détails.':needsAmount?'Montant non reconnu.':'Lectures incertaines du montant.')+' Vérifie uniquement ce point.</div>':'')+
   originalPrice+
   (Array.isArray(r.priceCandidates)&&r.priceCandidates.length>1?'<div class="trace-smart-alternatives"><small>Montants possibles</small>'+r.priceCandidates.slice(0,3).map(n=>'<button type="button" class="trace-price-choice" data-suggest-amount="'+esc(n)+'">'+esc(Number(n).toFixed(2).replace('.',','))+' $</button>').join('')+'</div>':'')+
-  (status.status==='possible'?'<p class="trace-suspected-warning">Doublon possible : contrôle l’opération avant de la sélectionner.</p>':'')+
+  (status.amountConflict?'<p class="trace-suspected-warning">Cette capture peut correspondre à une dépense étrangère déjà estimée. Compare le débit réel avec le montant enregistré ; aucune correction automatique.</p>':
+   status.status==='possible'?'<p class="trace-suspected-warning">Doublon possible : contrôle l’opération avant de la sélectionner.</p>':'')+
   (status.matchName?'<div class="trace-smart-match">'+(status.status==='already'?'Déjà enregistrée : ':'À comparer avec : ')+esc(status.matchName)+' ('+esc(status.matchDate)+')</div>':'')+
+  (status.amountConflict&&status.matchId?
+   '<div class="trace-smart-match"><small>Estimation enregistrée : '+esc(Number(status.matchAmount).toFixed(2).replace('.',','))+' CAD · débit sur la capture : '+esc(Number(r.amount).toFixed(2).replace('.',','))+' CAD</small>'+
+   '<button type="button" class="secondary trace-open-existing-debit" data-open-estimated="'+esc(status.matchId)+'">Ouvrir la dépense existante</button></div>':'')+
   '<div class="trace-doc-nature"><label>Nature du mouvement<select class="input docNature">'+
    U.options(U.kindsFor(bankKind,dir),nature)+'</select></label>'+
    '<p class="trace-doc-nature-help" aria-live="polite">'+esc(def?.help||'Choisis la nature du mouvement, pas seulement son mode de paiement.')+'</p>'+
@@ -206,6 +210,12 @@ function renderCandidateRows(file,data){
  '<div class="trace-smart-empty">'+(scoped&&otherDates.length?'Aucune opération du '+esc(formatBankDay(preferredDate))+' dans cette capture. Les journées visibles ('+esc(otherDates.map(formatBankDay).join(', '))+') ne seront pas importées.':'Aucune opération'+(scoped?' du '+esc(formatBankDay(preferredDate)):'')+' reconnue. Réessaie avec une capture plus nette ou corrige le texte dans les options avancées.')+'</div>')+
  '<button type="button" class="secondary full trace-smart-skip" id="docSkip">'+(pendingFiles.length?'Passer à la capture suivante':'Fermer cet import')+'</button>'+
  '<div class="trace-feedback" id="docError" role="status"></div></div>';
+ node.querySelectorAll('[data-open-estimated]').forEach(button=>{
+  button.addEventListener('click',()=>{
+   const id=button.dataset.openEstimated;
+   if(id)bridge.openTransaction(id);
+  });
+ });
  node.querySelectorAll('[data-record]').forEach(line=>{
    const who=line.querySelector('.docWho'),fields=line.querySelector('.trace-custom-row');
    const update=()=>{
