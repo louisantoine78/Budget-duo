@@ -1928,7 +1928,12 @@ function openManualTransaction(preferredKind='expense'){
   estimate.textContent='';
   const quoteConsent=$m('manualFxConfirmWrap'),editBank=$m('manualEditBankAmount'),
    fxPublished=$m('manualFxPublished');
-  $m('traceManualFxSummary').hidden=!(originalMoney>0) && !(amount>0);
+  // A same-currency operation has no conversion to explain. Keep the dated
+  // quote and the optional real bank debit for genuinely foreign purchases.
+  const foreignCurrency=Boolean(purchaseCurrency&&purchaseCurrency!==fromCurrency);
+  $m('manualPurchaseHint').hidden=!foreignCurrency;
+  $m('traceManualFxSummary').hidden=!foreignCurrency||
+   (!(originalMoney>0)&&!(amount>0));
   fxPublished.textContent='';
   quoteConsent.hidden=true;
   editBank.hidden=true;

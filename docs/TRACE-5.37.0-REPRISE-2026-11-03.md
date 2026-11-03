@@ -40,3 +40,10 @@
 5. Continuer l'harmonisation Accueil / Budget / Activité / Patrimoine sans casser les comportements financiers ; pas de bascule production sans GO explicite.
 
 **Statut : version candidate en validation — production NO-GO.**
+
+## Finition du parcours de saisie du 3 novembre — devise identique / devise différente
+- Correction UX minimale sur le formulaire manuel : lorsqu'une opération est dans la devise du compte (ex. 50 CAD sur compte CAD), masquer le bloc de conversion 1:1 et l'explication répétitive. Garder le montant, la date, la catégorie et les cadres.
+- Si l'opération est étrangère (ex. 50 EUR sur compte CAD), conserver la contre-valeur estimée, le taux d'observation daté, sa source, la confirmation du montant estimé et la correction du débit réellement appliqué.
+- Aucun calcul, ni écriture, ni modèle bancaire, ni flux FX n'a été modifié : seul le critère de visibilité des deux zones de pédagogie est ajusté.
+- Tests Chromium ajoutés aux scénarios de saisie native et USD → CAD : masquage des détails pour une même devise et maintien des détails pour la devise étrangère.
+- Les assertions statiques et la compilation JS ne remplacent pas l'exécution réelle des tests navigateur. Le protocole de validation sur le vrai iPhone reste ouvert.

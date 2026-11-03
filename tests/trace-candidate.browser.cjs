@@ -647,6 +647,10 @@ let base;
   assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),false);
   assert.equal(await page.locator('#manualTxAmount').isVisible(),false,
    'no second bank-amount input when source and account currencies match');
+  assert.equal(await page.locator('#traceManualFxSummary').isVisible(),false,
+   'a same-currency transaction needs no 1:1 FX summary');
+  assert.equal(await page.locator('#manualPurchaseHint').isVisible(),false,
+   'an unnecessary conversion explanation must not clutter a native purchase');
   await page.locator('#cancelManualTx').click();
   assert.equal(await text('homeBalance'),balance);
  });
@@ -664,6 +668,10 @@ let base;
   const bank=Number(await page.locator('#manualTxAmount').inputValue());
   assert.ok(bank>0&&bank!==10,'USD to CAD must have a positive non-identity dated quote');
   assert.match(await text('manualPurchaseEstimate'),/CAD|\$/);
+  assert.equal(await page.locator('#traceManualFxSummary').isVisible(),true,
+   'dated FX detail remains visible for a foreign purchase');
+  assert.equal(await page.locator('#manualPurchaseHint').isVisible(),true,
+   'the foreign-currency explanation remains available');
   const note=await page.locator('#manualFxPublished').innerText();
   assert.match(note,/1 USD = .* CAD/);
   assert.match(note,/fictif de démonstration/,'private preview may not claim a real downloaded rate');
