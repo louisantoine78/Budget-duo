@@ -225,61 +225,44 @@ async function main(){
      assert.equal(await page.locator('#sheetBackdrop').evaluate(el=>el.classList.contains('open')),true);
      assert.ok(await page.locator('#manualTxAmount').evaluate(el=>parseFloat(getComputedStyle(el).fontSize))>=16,
       'iPhone inputs below 16px trigger Safari focus zoom');
-     // Compact manual-operation choices: no native dropdown interaction and
-     // no persistence until the real Save button is explicitly confirmed.
-     for(const id of ['manualTxAccount','manualPurchaseCurrency','manualTxBeneficiary']){
+     // Native, full-width iPhone selectors are the sole accessible finance inputs.
+     // Retained legacy chips must be hidden to avoid duplicate VoiceOver controls.
+     assert.equal(await page.locator('#sheetBody').getAttribute('data-trace-manual-selectors'),'native');
+     for(const id of ['manualTxAccount','manualPurchaseCurrency','manualTxBeneficiary','manualTxCategory']){
       const style=await page.locator('#'+id).evaluate(el=>({
        hidden:el.getAttribute('aria-hidden'),tab:el.tabIndex,
-       clip:getComputedStyle(el).clipPath,pointer:getComputedStyle(el).pointerEvents
+       clip:getComputedStyle(el).clipPath,pointer:getComputedStyle(el).pointerEvents,
+       height:el.getBoundingClientRect().height
       }));
-      assert.equal(style.hidden,'true',id+' must not be read twice by VoiceOver');
-      assert.equal(style.tab,-1,id+' native selector must not trap focus');
-      assert.equal(style.clip,'inset(50%)',id+' native selector must be clipped');
-      assert.equal(style.pointer,'none',id+' native selector must not intercept touch');
-      const choices=page.locator('#'+id+'Chips [data-trace-choice]');
-      assert.ok(await choices.count()>=(id==='manualTxAccount'?3:4),
-       'Pill group missing: '+id);
-      assert.ok((await choices.evaluateAll(buttons=>
-       buttons.map(b=>b.getBoundingClientRect().height))).every(h=>h>=44),
-       'At least 44px touch height required for '+id);
+      assert.equal(style.hidden,null,id+' native select must be VoiceOver accessible');
+      assert.ok(style.tab>=0,id+' native select must accept keyboard focus');
+      assert.equal(style.clip,'none',id+' native select must not be clipped');
+      assert.notEqual(style.pointer,'none',id+' native select must accept touch');
+      assert.ok(style.height>=44,id+' native touch target must be at least 44px');
+      assert.equal(await page.locator('#'+id+'Chips').isVisible(),false,
+       id+' duplicate chips must remain hidden for screen readers and touch');
      }
      const initialBank=await page.locator('#manualTxAccount').inputValue();
-     await activate(page.locator('#manualTxAccountChips [data-trace-choice="demo-fr-current"]'));
+     await page.locator('#manualTxAccount').selectOption('demo-fr-current');
      assert.equal(await page.locator('#manualTxAccount').inputValue(),'demo-fr-current');
      assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'EUR',
-      'Selecting a French account must reset the purchase currency to EUR');
-     assert.equal(await page.locator('#manualTxAccountChips [data-trace-choice="demo-fr-current"]').getAttribute('aria-pressed'),'true');
-     await activate(page.locator('#manualTxAccountChips [data-trace-choice="'+initialBank+'"]'));
-     assert.equal(await page.locator('#manualTxAccount').inputValue(),initialBank);
+      'Selecting a French bank must reset the purchase currency to EUR');
+     await page.locator('#manualTxAccount').selectOption(initialBank);
      assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'CAD');
      assert.equal(await page.locator('#manualTxAccountSearch').count(),0,
-      'Small account collections must not waste space on an unnecessary search');
-     await activate(page.locator('#manualPurchaseCurrencyChips [data-trace-choice="USD"]'));
+      'Small account collections must not waste space on unnecessary search');
+     await page.locator('#manualPurchaseCurrency').selectOption('USD');
      assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'USD');
-     assert.equal(await page.locator('#manualPurchaseCurrencyChips [data-trace-choice="USD"]').getAttribute('aria-pressed'),'true');
-     await activate(page.locator('#manualPurchaseCurrencyChips [data-trace-choice="CAD"]'));
-     assert.equal(await page.locator('#manualPurchaseCurrency').inputValue(),'CAD');
-     await activate(page.locator('#manualTxBeneficiaryChips [data-trace-choice="custom"]'));
+     await page.locator('#manualPurchaseCurrency').selectOption('CAD');
+     await page.locator('#manualTxBeneficiary').selectOption('custom');
      assert.equal(await page.locator('#manualTxBeneficiary').inputValue(),'custom');
      assert.equal(await page.locator('#manualFriendsGroup').evaluate(el=>el.classList.contains('hidden')),false);
-     await activate(page.locator('#manualTxBeneficiaryChips button').first());
+     await page.locator('#manualTxBeneficiary').selectOption('la');
      assert.equal(await page.locator('#manualFriendsGroup').evaluate(el=>el.classList.contains('hidden')),true);
-     // Only eligible, active expense categories. Selection is user-owned.
-     const nativeCategory=await page.locator('#manualTxCategory').evaluate(el=>({
-      hidden:el.getAttribute('aria-hidden'),tab:el.tabIndex,
-      clip:getComputedStyle(el).clipPath,pointer:getComputedStyle(el).pointerEvents
-     }));
-     assert.equal(nativeCategory.hidden,'true');
-     assert.equal(nativeCategory.tab,-1);
-     assert.equal(nativeCategory.clip,'inset(50%)');
-     assert.equal(nativeCategory.pointer,'none');
-     assert.equal(await page.locator('#manualTxCategoryChips button').count(),3);
+     // Category selection remains user-owned and excludes ineligible entries.
      assert.equal(await page.locator('#manualTxCategorySearch').isVisible(),false);
-     assert.ok((await page.locator('#manualTxCategoryChips button').evaluateAll(nodes=>
-      nodes.map(n=>n.getBoundingClientRect().height))).every(h=>h>=44));
-     await activate(page.locator('#manualTxCategoryChips [data-trace-choice="groceries"]'));
+     await page.locator('#manualTxCategory').selectOption('groceries');
      assert.equal(await page.locator('#manualTxCategory').inputValue(),'groceries');
-     assert.equal(await page.locator('#manualTxCategoryChips [data-trace-choice="groceries"]').getAttribute('aria-pressed'),'true');
      await page.locator('#manualTxName').fill('Voyage à Paris');
      assert.equal(await page.locator('#manualTxCategory').inputValue(),'groceries',
       'Merchant/category suggestion must not replace an explicit category');
@@ -288,7 +271,7 @@ async function main(){
      const options=await page.locator('#manualTxAccount option').evaluateAll(els=>els.map(el=>el.value));
      assert.ok(options.includes('demo-fr-deferred-card'),'French deferred card should be visible for read-only context');
      await page.locator('#manualTxAccount').selectOption('demo-fr-deferred-card');
-     await page.locator('#manualTxAmount').fill('24.50');
+     await page.locator('#manualPurchaseAmount').fill('24.50');
      const category=page.locator('#manualTxCategory');
      if(await category.locator('option').count()>1)await category.selectOption({index:1});
      await page.locator('#saveManualTx').click();

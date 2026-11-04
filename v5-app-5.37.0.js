@@ -2201,6 +2201,17 @@ function openManualTransaction(preferredKind='expense'){
    targetId=$m('manualTarget').value,investmentId=$m('manualSavings').value,
    budget=def.budget!=='none',categoryId=budget?$m('manualTxCategory').value:'',
    beneficiary=budget&&def.budget!=='income'?$m('manualTxBeneficiary').value:me;
+  // Deferred accounts are still read-only. Reject before FX lookup or any
+  // asynchronous work, including attempted settlement *to* such a card.
+  // The central persistence guard remains the final defense in depth.
+  try{
+   traceRefuseUnqualifiedDeferredWrite('transactions',{accountId,
+    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{})});
+  }catch(e){
+   error.textContent='Carte à débit différé : écritures non activées. ' +
+    'Utilise la simulation en lecture seule ; aucune opération enregistrée.';
+   return;
+  }
   if(!(amount>0)||!Number.isFinite(amount)||!date||!accountId||!bankAccount||budget&&!categoryId){error.textContent='Vérifie le montant au centime, le compte et la catégorie éventuelle.';return;}
   const sourceAmount=window.TraceInternational.exactMoney($m('manualPurchaseAmount').value),
    nativeCurrency=window.TraceInternational.currency(bankAccount),
@@ -2212,17 +2223,6 @@ function openManualTransaction(preferredKind='expense'){
    if(!$m('manualFxConfirm').checked){
     error.textContent='Confirme le montant estimé en '+nativeCurrency+' ou renseigne le débit réellement appliqué par ta banque.';return;
    }
-  }
-  // Deferred accounts are still read-only. Reject before FX lookup or any
-  // asynchronous work, including attempted settlement *to* such a card.
-  // The central persistence guard remains the final defense in depth.
-  try{
-   traceRefuseUnqualifiedDeferredWrite('transactions',{accountId,
-    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{})});
-  }catch(e){
-   error.textContent='Carte à débit différé : écritures non activées. ' +
-    'Utilise la simulation en lecture seule ; aucune opération enregistrée.';
-   return;
   }
   if(def.legacyOnly||!Guide.allowed(kind,accountType(bankAccount),def.direction===1?'in':'out')){
    error.textContent='Cette nature ne correspond pas au compte bancaire choisi.';return;

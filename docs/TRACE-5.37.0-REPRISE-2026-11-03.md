@@ -118,3 +118,9 @@
 - Seule la prévisualisation 5.37 charge le nouveau nom. La page `index.html` reste inchangée et continue de référencer `trace-bank-ui-2.8.1.js`.
 - Le test de rapprochement utilise le fichier versionné 5.37 et vérifie les deux chemins de chargement. Le SW du labo sera régénéré pendant le build, sans toucher au SW stable.
 - La suite native complète du commit précédent `46335a62` avait déjà passé 119 suites, 1 841 scénarios, 62 fichiers syntaxiques. Requalifier **ce nouveau commit**, car ces résultats ne valent pas automatiquement pour lui.
+
+## 3 novembre — navigateur réel : test périmé et refus différé visible
+- Exécution dans un sandbox isolé du commit 37226053, code source exact, base et montants fictifs : 4 suites PostgreSQL/PGlite en succès.
+- Premier navigateur Chromium : ancienne suite `scripts/trace-browser-537-qa.cjs` attendait les pastilles cachées et le champ interne CAD ; la candidate utilise intentionnellement des **select natifs iPhone** accessibles, les pastilles sont masquées et la saisie est `manualPurchaseAmount`. Mise à jour de la recette pour observer le DOM et tester les éléments actifs.
+- Le formulaire de carte française à débit différé était correctement non enregistrable, mais pouvait afficher la validation générique du montant avant le véritable avertissement. Déplacement sans modification de logique du contrôle `traceRefuseUnqualifiedDeferredWrite` avant la validation du montant pour retourner immédiatement « écritures non activées ».
+- Les contrôles restent bloquants, aucune écriture réelle, aucune configuration de production ni migration.
