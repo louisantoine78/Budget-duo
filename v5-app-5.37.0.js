@@ -23,6 +23,25 @@ let traceSettingsRevision=null,traceWritesBlocked=false;
 let tracePendingWrites=0,traceBatchHadFailure=false;
 // A different successful save must not erase an outstanding local edit warning.
 const traceUnsavedWriteKeys=new Set();
+// TRACE 2.0: real READ-ONLY signals for the future update coordinator.
+// Fail closed: the complete mutation inventory, hosted durability and import
+// state are not signed off. A zero counter is never a release authorization.
+function trace20FinancialSafetyRead(){
+ const status=String(document.querySelector('#syncPill')?.dataset?.status||'unknown');
+ const sheet=document.querySelector('#sheetBackdrop');
+ const pendingWrites=Math.max(tracePendingWrites,traceWriteQueues.size);
+ const unsavedDrafts=Number(Boolean(sheet?.classList?.contains('open')||
+  document.body?.classList?.contains('sheet-open')));
+ const pendingSync=traceUnsavedWriteKeys.size+Number(Boolean(
+  traceWritesBlocked||traceBatchHadFailure||status!=='synced'));
+ // Some imports and household mutations run outside the CAS document queue.
+ // Unknown is null, not a falsely reassuring zero. Even accidentally
+ // changing verified/durable cannot bypass the integer-safety contract.
+ const pendingImports=null;
+ return Object.freeze({verified:false,durable:false,pendingWrites,pendingSync,
+  pendingImports,unsavedDrafts,coverageIncomplete:true,source:'TRACE-5.37.0'});
+}
+window.Trace20FinancialSafety=Object.freeze({read:trace20FinancialSafetyRead});
 function traceSyncConfirmed(){
  if(traceUnsavedWriteKeys.size)sync('error','Modifications récentes non enregistrées — enregistre à nouveau');
  else if(traceBatchHadFailure)sync('error','Certaines écritures n’ont pas été enregistrées');

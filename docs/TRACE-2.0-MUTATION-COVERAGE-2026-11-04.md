@@ -63,3 +63,34 @@ Ses tests contrôlent cette détection ainsi que les chemins CAS déjà protég�
 
 Ne pas modifier main, sw.js, la base Supabase réelle ou les
 écritures différées pour effectuer cet examen.
+
+## Étape suivante : lecture directe du moteur candidat 5.37.0
+
+Un lecteur sans effet secondaire a été intégré à la candidate dans
+v5-app-5.37.0.js et exposé sur
+window.Trace20FinancialSafety.read().
+
+Il observe directement :
+- tracePendingWrites et traceWriteQueues pour les documents en cours ;
+- traceUnsavedWriteKeys et les conflits/échecs de sauvegarde CAS ;
+- la pastille de synchronisation et les formulaires ouverts.
+
+Le retour est figé et ne contient que des indicateurs : il n'exporte
+ni opérations, ni comptes, ni données d'authentification.
+
+Pour éviter une autorisation accidentelle :
+- verified = false et durable = false dans toutes les circonstances ;
+- pendingImports = null (état inconnu) et non 0 ;
+- coverageIncomplete = true tant que les autres chemins d'écriture
+  recensés ne sont pas instrumentés ;
+- l'adaptateur d'activation refuse cet état sans afficher un consentement.
+
+Les essais utilisent le code exact du lecteur candidat, des états d'écriture
+simulés, et les deux vrais moteurs Chromium et WebKit sur une prévisualisation
+fictive. Ils couvrent notamment les sauvegardes non confirmées, le formulaire
+ouvert et les états de synchronisation anormaux.
+
+**Limite :** le lecteur n'est pas une preuve de durabilité hébergée.
+Il faudra instrumenter le reste des opérations du foyer, vérifier les
+imports, puis mettre en place un contrôle de bout en bout sur une base
+de test indépendante, avant la moindre activation publique.
