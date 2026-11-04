@@ -81,11 +81,11 @@ async function respond(confirm){
    say('Vérification de ton mot de passe…');
    const email=session?.user?.email;
    if(!email)throw Error('Session expirée. Reconnecte-toi.');
-   const {error}=await client.auth.signInWithPassword({email,password:$('#traceChangePassword').value});
+   const {error}=await window.Trace20MutationTracker.run('session:change-verify',()=>client.auth.signInWithPassword({email,password:$('#traceChangePassword').value}));
    if(error)throw Error('Mot de passe incorrect ou session expirée.');
   }
   say(confirm?'Confirmation en cours…':'Annulation en cours…');
-  const {data,error}=await client.rpc('trace_household_change_respond',{p_action:action,p_confirm:confirm});
+  const {data,error}=await window.Trace20MutationTracker.run('household:change',()=>client.rpc('trace_household_change_respond',{p_action:action,p_confirm:confirm}));
   if(error)throw error;
   if($('#traceChangePassword'))$('#traceChangePassword').value='';
   if(data?.state==='completed'){

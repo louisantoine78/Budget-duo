@@ -36,7 +36,8 @@ test('direct non-queued writes in actual candidate block release',()=>{
   assert.ok(x.blocked.some(p=>p.file===file&&p.id===id&&p.kind===kind&&
     (!fn||p.function===fn)),file+':'+id);
  }
- assert.equal(x.blocked.length,x.untracked);
+ assert.equal(x.blocked.length,x.requiresReview);
+ assert.ok(x.observed>=8,'Expected observed but still unverified paths');
 });
 test('known read-only RPC names cannot silently authorize new writes',()=>{
  const q=scanScript('fake.js',[
@@ -84,4 +85,20 @@ test('strict release gate returns NO-GO without mutating user data',()=>{
  assert.equal(report.staticAuditOnly,true);
  assert.ok(report.blocked.length>0);
  assert.doesNotMatch(p.stdout,/Bearer |supabasePublishableKey|BEGIN PRIVATE KEY/);
+});
+
+test('monitored auxiliary RPCs are observed but are NOT qualified as durable',()=>{
+ const x=audit();
+ for(const id of ['rotate_household_invite','trace_separation_respond',
+ 'trace_household_change_respond','create_household','join_household',
+ 'trace_delete_my_solo_space']){
+  assert.ok(x.blocked.some(p=>p.id===id&&p.coverage==='observed-only'),id);
+ }
+ assert.equal(x.decision,'NO-GO');
+ assert.equal(x.completeCoverage,false);
+ assert.ok(x.requiresReview>=x.observed);
+});
+test('inventoried unwrapped RPC remains unreviewed, not auto-approved',()=>{
+ const x=scanScript('fake.js',"async function bad(){await client.rpc('trace_unknown_write');}");
+ assert.equal(x[0].coverage,'unreviewed');
 });

@@ -55,6 +55,11 @@ function scanScript(file,src){
    coverage='unreviewed';
   else if(type==='write'&&!ALWAYS_BLOCK.has(id+':'+method))
    coverage='unreviewed';
+  // Observability is not durability: monitored calls stay release blockers.
+  const prefix=src.slice(src.lastIndexOf('\n',index)+1,index);
+  if(!['guarded','read-only'].includes(coverage)&&
+    /(?:trace20TrackAux|Trace20MutationTracker\.run)\s*\(\s*['"][a-z][a-z0-9:-]{2,70}['"]\s*,\s*\(\)\s*=>\s*$/.test(prefix))
+    coverage='observed-only';
   const entry={file,line:lineNumber(src,index),kind:type,id,
    function:fn||'unresolved',coverage};
   if(method)entry.method=method;
@@ -64,10 +69,8 @@ function scanScript(file,src){
  for(const m of src.matchAll(rpc))add('rpc',m[1],m.index);
  const write=/\b(?:current\.)?client\s*\.\s*from\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\.\s*(insert|update|upsert|delete)\s*\(/g;
  for(const m of src.matchAll(write))add('write',m[1],m.index,m[2]);
- const auth=/\b(?:current\.)?client\s*\.\s*auth\s*\.\s*(signInWithPassword|signOut|updateUser)\s*\(/g;
- for(const m of src.matchAll(auth))
-  found.push({file,line:lineNumber(src,m.index),kind:'session',id:m[1],
-   function:functionAt(src,m.index)||'unresolved',coverage:'untracked'});
+ const auth=/\b(?:current\.)?client\s*\.\s*auth\s*\.\s*(signInWithPassword|signOut|signUp|updateUser)\s*\(/g;
+ for(const m of src.matchAll(auth))add('session',m[1],m.index);
  return found.sort((a,b)=>a.line-b.line);
 }
 function audit({html,load}={}){
@@ -84,13 +87,16 @@ function audit({html,load}={}){
  }
  const blocked=paths.filter(x=>x.coverage!=='guarded'&&x.coverage!=='read-only');
  const guarded=paths.filter(x=>x.coverage==='guarded');
+ const observed=paths.filter(x=>x.coverage==='observed-only');
+ const untracked=paths.filter(x=>['untracked','unreviewed'].includes(x.coverage));
  // Even perfect static coverage never proves hosted durability/synchronization.
  return Object.freeze({
   schema:'trace-20-remote-mutation-inventory-v1',
   decision:'NO-GO',
   staticAuditOnly:true,completeCoverage:false,
   scripts:scripts.length,sourceFingerprint:evidence.digest('hex'),
-  scanned:paths.length,guarded:guarded.length,untracked:blocked.length,
+  scanned:paths.length,guarded:guarded.length,observed:observed.length,
+  untracked:untracked.length,requiresReview:blocked.length,
   missingRealEvidence:[
    'All non-CAS and lifecycle write paths must expose a shared in-flight tracker',
    'Persisted success and errors must be independently confirmed by hosted Auth/RLS/CAS',

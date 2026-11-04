@@ -20,26 +20,46 @@ let traceSettingsRevision=null,traceWritesBlocked=false;
 // Multiple distinct financial documents can save concurrently. A successful
 // request cannot report the entire workspace synchronized while another
 // write still awaits confirmation.
-let tracePendingWrites=0,traceBatchHadFailure=false;
+let tracePendingWrites=0,traceBatchHadFailure=false,trace20PendingImportWrites=0;
 // A different successful save must not erase an outstanding local edit warning.
 const traceUnsavedWriteKeys=new Set();
+// Candidate-only secondary tracker: never authorizes updates or modifies RPC
+// responses. Direct profile/household/auth mutations do not use the CAS queue.
+const trace20AuxPending=new Map(),trace20AuxFailures=new Set();
+function trace20TrackAux(label,operation){
+ if(!/^[a-z][a-z0-9:-]{2,70}$/.test(String(label))||typeof operation!=='function')
+  return Promise.reject(Error('TRACE_AUX_TRACKER_INVALID_OPERATION'));
+ trace20AuxPending.set(label,(trace20AuxPending.get(label)||0)+1);
+ return Promise.resolve().then(operation).then(result=>{
+  if(result&&result.error)trace20AuxFailures.add(label);
+  return result;
+ },error=>{trace20AuxFailures.add(label);throw error;}).finally(()=>{
+  const next=(trace20AuxPending.get(label)||1)-1;
+  if(next>0)trace20AuxPending.set(label,next);
+  else trace20AuxPending.delete(label);
+ });
+}
+window.Trace20MutationTracker=Object.freeze({run:trace20TrackAux});
+
 // TRACE 2.0: real READ-ONLY signals for the future update coordinator.
 // Fail closed: the complete mutation inventory, hosted durability and import
 // state are not signed off. A zero counter is never a release authorization.
 function trace20FinancialSafetyRead(){
  const status=String(document.querySelector('#syncPill')?.dataset?.status||'unknown');
  const sheet=document.querySelector('#sheetBackdrop');
- const pendingWrites=Math.max(tracePendingWrites,traceWriteQueues.size);
+ const pendingWrites=Math.max(tracePendingWrites,traceWriteQueues.size)+
+  [...trace20AuxPending.values()].reduce((a,b)=>a+b,0);
  const unsavedDrafts=Number(Boolean(sheet?.classList?.contains('open')||
   document.body?.classList?.contains('sheet-open')));
  const pendingSync=traceUnsavedWriteKeys.size+Number(Boolean(
-  traceWritesBlocked||traceBatchHadFailure||status!=='synced'));
+  traceWritesBlocked||traceBatchHadFailure||status!=='synced'))+trace20AuxFailures.size;
  // Some imports and household mutations run outside the CAS document queue.
  // Unknown is null, not a falsely reassuring zero. Even accidentally
  // changing verified/durable cannot bypass the integer-safety contract.
  const pendingImports=null;
  return Object.freeze({verified:false,durable:false,pendingWrites,pendingSync,
-  pendingImports,unsavedDrafts,coverageIncomplete:true,source:'TRACE-5.37.0'});
+  pendingImports,knownImportWrites:trace20PendingImportWrites,unsavedDrafts,
+  coverageIncomplete:true,source:'TRACE-5.37.0'});
 }
 window.Trace20FinancialSafety=Object.freeze({read:trace20FinancialSafetyRead});
 function traceSyncConfirmed(){
@@ -109,6 +129,8 @@ function traceRevision(value){
 }
 async function traceSerialWrite(key,task){
  if(tracePendingWrites===0)traceBatchHadFailure=false;
+ const trace20ImportWrite=/^\["(?:imports|import_days|reconciliations)",/.test(key);
+ if(trace20ImportWrite)trace20PendingImportWrites++;
  tracePendingWrites++;
  const prior=traceWriteQueues.get(key)||Promise.resolve();
  const next=prior.catch(()=>{}).then(task);
@@ -123,6 +145,7 @@ async function traceSerialWrite(key,task){
  }finally{
   if(traceWriteQueues.get(key)===next)traceWriteQueues.delete(key);
   tracePendingWrites--;
+  if(trace20ImportWrite)trace20PendingImportWrites--;
  }
 }
 function traceConflictNotice(){
@@ -6012,7 +6035,7 @@ function profile(){
   $('#settingsData').onclick=openDataSettings;
   $('#logout').onclick=internationalPreviewMode()?()=>{
    closeSheet();$('#syncLabel').textContent='Démo locale · aucune connexion réelle';
- }:async()=>{await client.auth.signOut();location.reload();};
+ }:async()=>{await trace20TrackAux('session:signout',()=>client.auth.signOut());location.reload();};
 }
 function openProfileSettings(){
   openSheet('Mon profil',
@@ -6033,7 +6056,7 @@ function openProfileSettings(){
     try{
       if(name!==member(me).name){
         sync('saving');
-        const{error}=await client.from('household_members').update({display_name:name}).eq('household_id',household.id).eq('user_id',session.user.id);
+        const{error}=await trace20TrackAux('profile:name',()=>client.from('household_members').update({display_name:name}).eq('household_id',household.id).eq('user_id',session.user.id));
         if(error)throw error;
         const m=(state.household.members||[]).find(x=>x.id===me);
         if(m){m.name=name;m.initials=initials(name);}
@@ -6114,7 +6137,7 @@ function openCoupleSettings(){
   if(!owner||full||!household?.id)return;
   const btn=$('#rotateInviteConfirmButton');btn.disabled=true;
   try{
-   const {data,error}=await client.rpc('rotate_household_invite',{p_household_id:household.id});
+   const {data,error}=await trace20TrackAux('household:invitation',()=>client.rpc('rotate_household_invite',{p_household_id:household.id}));
    if(error)throw error;
    if(typeof data!=='string'||!data.trim())throw Error('Nouveau code indisponible');
    state.household.inviteCode=data;household.invite_code=data;
@@ -6166,9 +6189,9 @@ async function seedNewHouseholdCategories(hid){
  }
  for(const doc of starterCategoryDocs(hid,session.user.id)){
   if(seen.has(doc.item_id))continue;
-  const {data:revision,error}=await client.rpc('trace_cas_save_document',{
+  const {data:revision,error}=await trace20TrackAux('household:seed',()=>client.rpc('trace_cas_save_document',{
    p_household_id:hid,p_collection:'categories',p_item_id:doc.item_id,
-   p_data:doc.data,p_expected_revision:null});
+   p_data:doc.data,p_expected_revision:null}));
   if(error){
    if(!/TRACE_WRITE_CONFLICT/.test(String(error.message||'')))throw traceSaveFailure(error);
    // Another member may have created the same starter key concurrently.
@@ -6768,14 +6791,14 @@ function openTraceSoloDeletion(){
    try{
     const address=session?.user?.email;
     if(!address)throw Error('Session introuvable.');
-    const auth=await client.auth.signInWithPassword({email:address,password:password.value});
+    const auth=await trace20TrackAux('session:verify-delete',()=>client.auth.signInWithPassword({email:address,password:password.value}));
     if(auth.error||!auth.data?.session)throw Error('Mot de passe incorrect ou session expirée.');
     // Backend RPC independently verifies auth.uid() and sole membership, in one DB transaction.
-    const result=await client.rpc('trace_delete_my_solo_space');
+    const result=await trace20TrackAux('household:delete',()=>client.rpc('trace_delete_my_solo_space'));
     if(result.error)throw result.error;
     if(result.data?.deleted!==true)throw Error('Aucun espace TRACE n’a été supprimé.');
     household=null;
-    try{await client.auth.signOut();}catch(e){console.warn('TRACE: déconnexion après suppression',e);}
+    try{await trace20TrackAux('session:signout',()=>client.auth.signOut());}catch(e){console.warn('TRACE: déconnexion après suppression',e);}
     window.location.replace('./trace-launch-v2.html');
    }catch(e){
     console.error('TRACE: suppression non effectuée',e);
@@ -6949,12 +6972,12 @@ function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=
   if(/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month||'')))activityMonth=month;
   navigate('activity');renderActivity();showTab('transactions');
  }
-});document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value});if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{emailRedirectTo:new URL('./index.html',window.location.href).href,data:{display_name:$('#cloudSignupName').value.trim()}}});if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{
+});document.querySelectorAll('[data-password-target]').forEach(btn=>btn.onclick=()=>{const input=$('#'+btn.dataset.passwordTarget);if(!input)return;const reveal=input.type==='password';input.type=reveal?'text':'password';btn.classList.toggle('active',reveal);btn.setAttribute('aria-pressed',String(reveal));btn.setAttribute('aria-label',reveal?'Masquer le mot de passe':'Afficher le mot de passe');});document.querySelectorAll('[data-auth-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.authTab;$$('[data-auth-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#cloudLoginForm').classList.toggle('hidden',t!=='login');$('#cloudSignupForm').classList.toggle('hidden',t!=='signup');});$('#cloudLoginForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');$('#cloudAuthMessage').textContent='Connexion…';if(btn){btn.disabled=true;btn.textContent='Connexion…';}try{const{data,error}=await trace20TrackAux('session:login',()=>client.auth.signInWithPassword({email:$('#cloudLoginEmail').value.trim(),password:$('#cloudLoginPassword').value}));if(error)throw error;if(!data?.session)throw new Error('Session non créée');session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Se connecter';}}};$('#cloudSignupForm').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type="submit"]');if(btn){btn.disabled=true;btn.textContent='Création…';}try{const{data,error}=await trace20TrackAux('session:signup',()=>client.auth.signUp({email:$('#cloudSignupEmail').value.trim(),password:$('#cloudSignupPassword').value,options:{emailRedirectTo:new URL('./index.html',window.location.href).href,data:{display_name:$('#cloudSignupName').value.trim()}}}));if(error)throw error;if(data?.session){session=data.session;household=null;await ensureWorkspace(data.session);$('#cloudAuthMessage').textContent='';}else{$('#cloudAuthMessage').textContent='Compte créé. Vérifie ton courriel pour confirmer ton adresse.';}}catch(err){console.error(err);$('#cloudAuthMessage').textContent=authErrorText(err);}finally{if(btn){btn.disabled=false;btn.textContent='Créer mon compte';}}};$$('[data-workspace-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.workspaceTab;$('#cloudCreateHouseholdForm').classList.toggle('hidden',t!=='create');$('#cloudJoinHouseholdForm').classList.toggle('hidden',t!=='join');});$('#cloudCreateHouseholdForm').onsubmit=async e=>{
  e.preventDefault();
  const button=e.currentTarget.querySelector('button[type="submit"]');
  if(button)button.disabled=true;
  try{
-  const {data,error}=await client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()});
+  const {data,error}=await trace20TrackAux('household:create',()=>client.rpc('create_household',{p_name:$('#cloudHouseholdName').value.trim(),p_display_name:$('#cloudCreatorName').value.trim()}));
   if(error)throw error;
   const created=Array.isArray(data)?data[0]:data;
   if(!created?.household_id)throw Error('Foyer créé, mais identifiant indisponible. Recharge TRACE.');
@@ -6963,7 +6986,7 @@ function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=
   await loadWorkspace();
  }catch(err){$('#cloudWorkspaceMessage').textContent=String(err.message||err);}
  finally{if(button)button.disabled=false;}
-};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()});if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
+};$('#cloudJoinHouseholdForm').onsubmit=async e=>{e.preventDefault();const{error}=await trace20TrackAux('household:join',()=>client.rpc('join_household',{p_invite_code:$('#cloudInviteCode').value.trim().toUpperCase(),p_display_name:$('#cloudJoinName').value.trim()}));if(error)$('#cloudWorkspaceMessage').textContent=error.message;else loadWorkspace();};}
 
 let versionCheckBusy=false;
 let checkingHousehold=false;

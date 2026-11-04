@@ -10,7 +10,7 @@ if(start<0||end<0||candidate.indexOf(last,end+1)>=0)
  throw Error('Candidate bridge is missing or ambiguous');
 const actualBridge=candidate.slice(start,end+last.length);
 function actual({status='synced',pending=0,queues=0,unsaved=0,batchFailure=false,
- blocked=false,sheet=false,bodySheet=false}={}){
+ blocked=false,sheet=false,bodySheet=false,aux=0,auxFailures=0,knownImports=0}={}){
  const window={};const document={
   querySelector(selector){
    if(selector==='#syncPill')return{dataset:{status}};
@@ -28,6 +28,11 @@ function actual({status='synced',pending=0,queues=0,unsaved=0,batchFailure=false
    Array.from({length:unsaved},(_,i)=>'failed'+i))+');',
   'let traceBatchHadFailure='+JSON.stringify(batchFailure)+';',
   'let traceWritesBlocked='+JSON.stringify(blocked)+';',
+  'const trace20AuxPending=new Map('+JSON.stringify(
+   Array.from({length:aux},(_,i)=>['aux'+i,1]))+');',
+  'const trace20AuxFailures=new Set('+JSON.stringify(
+   Array.from({length:auxFailures},(_,i)=>'failed'+i))+');',
+  'const trace20PendingImportWrites='+JSON.stringify(knownImports)+';',
   actualBridge
  ].join('\n'),context);
  return window.Trace20FinancialSafety.read();
@@ -41,6 +46,7 @@ test('actual 5.37.0 app exposes a read-only financial safety surface',()=>{
  assert.equal(r.pendingWrites,0);
  assert.equal(r.pendingSync,0);
  assert.equal(r.pendingImports,null);
+ assert.equal(r.knownImportWrites,0);
  assert.equal(r.unsavedDrafts,0);
  assert.equal(r.verified,false);
  assert.equal(r.durable,false);
@@ -82,6 +88,17 @@ test('the real app bridge can NEVER authorize upgrade before full coverage revie
 test('no sensitive client objects or financial account data are exported',()=>{
  assert.deepEqual(Object.keys(actual()).sort(),[
   'coverageIncomplete','durable','pendingImports','pendingSync',
-  'pendingWrites','source','unsavedDrafts','verified'].sort());
+  'pendingWrites','knownImportWrites','source','unsavedDrafts','verified'].sort());
  assert.doesNotMatch(actualBridge,/client\.(?:from|rpc)|session\?\.|household\?\.|JSON\.stringify\(state/);
+});
+
+test('auxiliary mutations, failures and known import writes are exposed without authorizing activation',()=>{
+ const running=actual({aux:2,knownImports:1});
+ assert.equal(running.pendingWrites,2);
+ assert.equal(running.knownImportWrites,1);
+ assert.equal(running.pendingImports,null);
+ assert.equal(verifiedIdle(running),false);
+ const failed=actual({auxFailures:1});
+ assert.ok(failed.pendingSync>=1);
+ assert.equal(verifiedIdle(failed),false);
 });

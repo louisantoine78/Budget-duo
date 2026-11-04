@@ -47,6 +47,7 @@ async function check(name,engine,opts){
   assert.equal(state.verified,false);
   assert.equal(state.durable,false);
   assert.equal(state.pendingImports,null);
+  assert.equal(state.knownImportWrites,0);
   assert.ok(state.pendingWrites>=0);
   assert.equal(state.coverageIncomplete,true);
   await page.evaluate(()=>{
@@ -63,9 +64,30 @@ async function check(name,engine,opts){
   state=await page.evaluate(()=>window.Trace20FinancialSafety.read());
   assert.ok(state.pendingSync>=1);
   assert.equal(state.verified,false);
+  // Real candidate code, fictional Promise only: no cloud account, no RPC.
+  await page.evaluate(()=>{
+   window.__TRACE20_QA_FINISH__=null;
+   window.__TRACE20_QA_PROMISE__=window.Trace20MutationTracker.run(
+    'profile:name',()=>new Promise(resolve=>window.__TRACE20_QA_FINISH__=resolve));
+  });
+  await page.waitForFunction(()=>typeof window.__TRACE20_QA_FINISH__==='function');
+  state=await page.evaluate(()=>window.Trace20FinancialSafety.read());
+  assert.ok(state.pendingWrites>=1,'running auxiliary save not reflected');
+  await page.evaluate(async()=>{
+   window.__TRACE20_QA_FINISH__({data:{id:'fictional'},error:null});
+   await window.__TRACE20_QA_PROMISE__;
+  });
+  state=await page.evaluate(()=>window.Trace20FinancialSafety.read());
+  assert.equal(state.pendingWrites,0,'auxiliary counter must drain');
+  await page.evaluate(()=>window.Trace20MutationTracker.run('household:invitation',
+   async()=>({data:null,error:{message:'fictional rejection'}})));
+  state=await page.evaluate(()=>window.Trace20FinancialSafety.read());
+  assert.ok(state.pendingSync>=1,'remote rejection must latch');
+  assert.equal(state.verified,false);
   assert.deepEqual(errors,[]);
   assert.deepEqual(external,[]);
-  return{name,passed:true,liveCandidateBridge:true,fictional:true,
+  return{name,passed:true,liveCandidateBridge:true,auxiliaryCountVerified:true,
+   remoteErrorLatched:true,fictional:true,
    newExternalRequests:0,realIphone:false,productionReady:false};
  }finally{await context.close();await browser.close()}
 }
