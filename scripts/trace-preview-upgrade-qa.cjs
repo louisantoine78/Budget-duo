@@ -50,6 +50,7 @@ const server=http.createServer((request,response)=>{
    caches:(await caches.keys()).filter(x=>x.startsWith('trace-lab-537:'))};
  });
  await page.locator('#quickAdd').click();
+ await page.locator('#traceAddManual').click();
  await page.locator('#manualTxName').fill('Brouillon pendant mise à jour');
  assert.equal(await page.locator('#manualTxName').inputValue(),'Brouillon pendant mise à jour');
  revision='b';
