@@ -45,12 +45,15 @@ function fixture({existing=[],failure=null,race=null}={}){
  let renders=0,conflicts=0;
  const build=new Function('session','household','client','state',
   'starterCategoryDocs','traceDocRevisions','traceWriteKey','traceRevision',
-  'traceSaveFailure','renderAll',source+
+  'traceSaveFailure','renderAll','trace20TrackAux',source+
   'return {seedNewHouseholdCategories,restoreStarterCategories};');
  const api=build({user:{id:'fake-member'}},{id:'fake-house'},client,state,
   ()=>starter,revs,(c,id)=>JSON.stringify([c,id]),
   n=>{assert.ok(Number.isSafeInteger(Number(n))&&Number(n)>=0);return Number(n);},
-  e=>{conflicts++;return new Error(e.message)},()=>{renders++;});
+  e=>{conflicts++;return new Error(e.message)},()=>{renders++;},
+  // The bootstrap fixture isolates this function. The real mutation tracker
+  // is tested independently in trace-20-auxiliary-mutations.test.cjs.
+  (_label,work)=>Promise.resolve().then(work));
  return{api,rows,calls,revs,state,get renders(){return renders;},
   get conflicts(){return conflicts;}};
 }
