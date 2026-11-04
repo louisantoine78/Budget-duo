@@ -89,14 +89,17 @@ test('strict release gate returns NO-GO without mutating user data',()=>{
 
 test('monitored auxiliary RPCs are observed but are NOT qualified as durable',()=>{
  const x=audit();
- for(const id of ['rotate_household_invite','trace_separation_respond',
- 'trace_household_change_respond','create_household','join_household',
+ for(const id of ['rotate_household_invite','create_household','join_household',
  'trace_delete_my_solo_space']){
   assert.ok(x.blocked.some(p=>p.id===id&&p.coverage==='observed-only'),id);
  }
  assert.equal(x.decision,'NO-GO');
  assert.equal(x.completeCoverage,false);
  assert.ok(x.requiresReview>=x.observed);
+ for(const id of ['trace_separation_respond','trace_household_change_respond']){
+  assert.ok(x.blocked.some(p=>p.id===id&&p.coverage==='untracked'),
+   'Protected legacy flow must remain explicitly untracked: '+id);
+ }
 });
 test('inventoried unwrapped RPC remains unreviewed, not auto-approved',()=>{
  const x=scanScript('fake.js',"async function bad(){await client.rpc('trace_unknown_write');}");

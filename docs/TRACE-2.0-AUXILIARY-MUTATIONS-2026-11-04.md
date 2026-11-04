@@ -9,14 +9,19 @@ Le moteur CAS 5.37.0 suit déjà la sauvegarde des documents et leurs
 conflits. Mais plusieurs mutations de foyer, de profil et d'authentification
 ne passent pas par traceSerialWrite.
 
-Le candidat ajoute trace20TrackAux (et l'interface
-Trace20MutationTracker.run pour les modules de séparation) autour de :
+Le candidat ajoute trace20TrackAux uniquement au moteur candidat,
+sans modification des modules historiques protégés, autour de :
 - changement du nom de profil dans household_members ;
 - rotation du code d'invitation ;
 - création/rattachement de foyer et création initiale des catégories CAS ;
 - suppression d'un foyer personnel ;
-- consentements de séparation et de changement de foyer ;
-- changement de session : connexion, inscription, vérification, déconnexion.
+- changement de session du moteur : connexion, inscription,
+  vérification de suppression et déconnexion.
+
+Les consentements de séparation et de changement de foyer demeurent
+hors de cette instrumentation : leurs fichiers historiques sont
+protégés par le contrôle de qualification. Aucune exception au contrôle
+de protection n'est introduite.
 
 Le wrapper restitue les résultats d'origine sans altérer le contenu
 des RPC ni leurs règles RLS/CAS. Il conserve le nombre d'appels encore
@@ -44,9 +49,10 @@ retourne NO-GO (code 2), comme prévu.
 
 Dans l'HTML candidat, 38 scripts locaux sont inventoriés.
 Le scan relève 24 points RPC, écriture directe ou session, dont
-3 protégés par la file CAS, 5 lectures seules et 16 autres points
-désormais *observed-only*. Les 16 restent tous soumis à une revue
-et à une preuve de durabilité hébergée : observé ne signifie
+3 protégés par la file CAS, 5 lectures seules, 11 autres points
+*observed-only* et 5 points non instrumentés des modules protégés.
+Les 16 restent tous soumis à une revue et à une preuve de durabilité
+hébergée : observé ne signifie
 ni validé ni autorisé. Le scanner ne remplace pas une analyse
 statique approfondie ni un test de requêtes dynamiques.
 

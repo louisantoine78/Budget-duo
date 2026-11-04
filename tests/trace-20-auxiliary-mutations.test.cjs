@@ -63,9 +63,7 @@ test('actual candidate marks all high-risk profile, household, session and lifec
   'v5-app-5.37.0.js':[
    'profile:name','household:invitation','household:seed','household:delete',
    'household:create','household:join','session:signout','session:verify-delete',
-   'session:login','session:signup'],
-  'trace-separation-1.1.0.js':['household:separation','session:separation-verify'],
-  'trace-household-change-1.0.0.js':['household:change','session:change-verify']
+   'session:login','session:signup']
  };
  for(const [file,labels] of Object.entries(required)){
   const code=fs.readFileSync(path.join(root,file),'utf8');
@@ -111,4 +109,13 @@ test('real import CAS queue counts queued and in-flight import writes, even for 
  assert.equal(ctx.window.snapshot().imports,0);
  normal.resolve(true);await z;
  assert.equal(ctx.window.snapshot().imports,0);
+});
+
+test('protected separation and household-change modules retain their mission-base bytes',()=>{
+ const cp=require('node:child_process');
+ const immutable='6eb6c17e5c9eba2d3727ebea404cce5fec0424c6';
+ for(const file of ['trace-separation-1.1.0.js','trace-household-change-1.0.0.js']){
+  const baseline=cp.execFileSync('git',['show',immutable+':'+file],{cwd:root,encoding:'utf8'});
+  assert.equal(fs.readFileSync(path.join(root,file),'utf8'),baseline,file);
+ }
 });

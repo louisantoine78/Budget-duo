@@ -50,10 +50,10 @@
   try{
    const email=current.session?.user?.email;
    if(!email)throw Error('Session expirée.');
-   const auth=await window.Trace20MutationTracker.run('session:separation-verify',()=>current.client.auth.signInWithPassword({email,password}));
+   const auth=await current.client.auth.signInWithPassword({email,password});
    if(auth.error||!auth.data?.session)throw Error('Mot de passe incorrect.');
    feedback('Enregistrement de ton accord…');
-   const {data,error}=await window.Trace20MutationTracker.run('household:separation',()=>current.client.rpc('trace_separation_respond',{p_confirm:true}));
+   const {data,error}=await current.client.rpc('trace_separation_respond',{p_confirm:true});
    if(error)throw error;
    $('#traceSeparationPassword').value='';
    if(data?.state==='completed'){
@@ -77,7 +77,7 @@
   if(!current||busy)return;
   setBusy(true);feedback('Annulation en cours…');
   try{
-   const {data,error}=await window.Trace20MutationTracker.run('household:separation',()=>current.client.rpc('trace_separation_respond',{p_confirm:false}));
+   const {data,error}=await current.client.rpc('trace_separation_respond',{p_confirm:false});
    if(error)throw error;
    $('#traceSeparationWord').value='';
    $('#traceSeparationPassword').value='';
