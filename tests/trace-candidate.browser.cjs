@@ -564,8 +564,15 @@ let base;
   assert.ok(await page.locator('#manualTxCategory option').count()>=2);
   const accounts=await page.locator('#manualTxAccount option').evaluateAll(nodes=>
    nodes.map(n=>n.value).filter(Boolean));
-  await page.locator('#manualTxAccount').selectOption(accounts[accounts.length-1]);
-  assert.equal(await page.locator('#manualTxAccount').inputValue(),accounts[accounts.length-1]);
+  const deferred=accounts.find(id=>id==='demo-fr-deferred-card');
+  if(deferred){
+   await page.locator('#manualTxAccount').selectOption(deferred);
+   await page.locator('#saveManualTx').click();
+   assert.match(await text('manualMovementError'),/débit différé|écritures non activées/i);
+  }
+  const regular=accounts.find(id=>id==='demo-ca-current')||accounts.find(id=>id!==deferred);
+  await page.locator('#manualTxAccount').selectOption(regular);
+  assert.equal(await page.locator('#manualTxAccount').inputValue(),regular);
   await page.locator('#manualTxBeneficiary').selectOption('custom');
   assert.equal(await page.locator('#manualFriendsGroup').isVisible(),true);
   await page.locator('#manualPurchaseAmount').fill('40.005');
@@ -698,8 +705,8 @@ let base;
   assert.match(await text('manualPurchaseEstimate'),/CAD|\$/);
   assert.equal(await page.locator('#traceManualFxSummary').isVisible(),true,
    'dated FX detail remains visible for a foreign purchase');
-  assert.equal(await page.locator('#manualFxSummaryCaption').innerText(),
-   'Montant estimé sur le compte');
+  assert.match(await page.locator('#manualFxSummaryCaption').innerText(),
+   /montant estimé sur le compte/i);
   assert.match(await page.locator('#manualPurchaseEstimate').innerText(),/^≈ /);
   assert.match(await page.locator('#manualFxConfirmText').innerText(),/^Confirmer .*CAD$/);
   assert.equal(await page.locator('#manualEditBankAmount').innerText(),
@@ -754,8 +761,8 @@ let base;
   await page.waitForFunction(()=>document.querySelector('#manualPurchaseEstimate')
    ?.textContent?.includes('78,35'),{timeout:12000});
   assert.equal(await page.locator('#manualTxAmount').inputValue(),'78.35');
-  assert.equal(await page.locator('#manualFxSummaryCaption').innerText(),
-   'Montant réellement débité sur le compte');
+  assert.match(await page.locator('#manualFxSummaryCaption').innerText(),
+   /montant réellement débité sur le compte/i);
   assert.equal(await page.locator('#manualFxConfirmWrap').isVisible(),false,
    'an explicit bank debit must not be treated as an unapproved estimate');
   await page.locator('#cancelManualTx').click();

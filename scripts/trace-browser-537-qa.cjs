@@ -336,28 +336,26 @@ async function main(){
       await manyPage.goto(entry,{waitUntil:'load',timeout:25000});
       await manyPage.locator('#quickAdd').click();
       await manyPage.locator('#traceAddManual').click();
-      const search=manyPage.locator('#manualTxAccountSearch');
-      assert.equal(await search.count(),1,'Seven accounts must expose search');
-      await search.fill('Compte fictif 5');
-      assert.equal(await manyPage.locator('#manualTxAccountChips [data-trace-choice]:visible').count(),1);
-      await manyPage.locator('#manualTxAccountChips [data-trace-choice="qa-bank-5"]').click();
+      // A larger bank/category list still uses the accessible native selector.
+      // Hidden legacy chips/search may not be counted as live controls.
+      assert.equal(await manyPage.locator('#sheetBody').getAttribute('data-trace-manual-selectors'),'native');
+      assert.equal(await manyPage.locator('#manualTxAccountSearch').isVisible(),false);
+      assert.equal(await manyPage.locator('#manualTxAccountChips').isVisible(),false);
+      const accountChoices=await manyPage.locator('#manualTxAccount option').evaluateAll(
+       options=>options.map(x=>x.value));
+      assert.ok(accountChoices.includes('qa-bank-5'),'All seven accounts must remain selectable');
+      await manyPage.locator('#manualTxAccount').selectOption('qa-bank-5');
       assert.equal(await manyPage.locator('#manualTxAccount').inputValue(),'qa-bank-5');
-      await search.fill('aucun compte ne correspond');
-      assert.equal(await manyPage.locator('#manualTxAccountChips [data-trace-choice]:visible').count(),0);
-      assert.equal(await manyPage.locator('#manualTxAccountNoResults').isVisible(),true);
-      const categorySearch=manyPage.locator('#manualTxCategorySearch');
-      assert.equal(await categorySearch.isVisible(),true,'Long list requires category search');
-      assert.equal(await manyPage.locator('#manualTxCategoryChips [data-trace-choice="qa-archived"]').count(),0,
-       'Archived categories must not be offered');
-      await categorySearch.fill('epicerie');
-      assert.equal(await manyPage.locator('#manualTxCategoryChips [data-trace-choice]:visible').count(),1);
-      await manyPage.locator('#manualTxCategoryChips [data-trace-choice="groceries"]').click();
+      assert.equal(await manyPage.locator('#manualTxCategorySearch').isVisible(),false);
+      assert.equal(await manyPage.locator('#manualTxCategoryChips').isVisible(),false);
+      const categoryOptions=await manyPage.locator('#manualTxCategory option').evaluateAll(
+       options=>options.map(x=>x.value));
+      assert.ok(categoryOptions.includes('groceries'));
+      assert.ok(!categoryOptions.includes('qa-archived'),'Archived category must be excluded');
+      await manyPage.locator('#manualTxCategory').selectOption('groceries');
       assert.equal(await manyPage.locator('#manualTxCategory').inputValue(),'groceries');
       await manyPage.locator('#manualTxName').fill('Voyages fictifs');
       assert.equal(await manyPage.locator('#manualTxCategory').inputValue(),'groceries');
-      await categorySearch.fill('aucune catégorie');
-      assert.equal(await manyPage.locator('#manualTxCategoryChips [data-trace-choice]:visible').count(),0);
-      assert.equal(await manyPage.locator('#manualTxCategoryNoResults').isVisible(),true);
       await manyPage.locator('#cancelManualTx').click();
       await manyPage.close();
       // A brand-new household with zero budget categories must have a real
