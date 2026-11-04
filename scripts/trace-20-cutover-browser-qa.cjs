@@ -59,9 +59,40 @@ async function verify(engine,name,launchOptions={}){
  assert.equal(before.waiting,true);assert.equal(before.draft,'FICTITIOUS 50 EUR not submitted');
  for(const k of ['trace-shell-v5.36.5','unrelated-app-cache','trace-lab-537:unrelated',candidate.cache])
   assert.ok(before.keys.includes(k),'missing before consent: '+k);
- await page.evaluate((cache)=>{const r=navigator.serviceWorker;
-  return r.getRegistration('/').then(reg=>reg.waiting.postMessage({type:'TRACE_2_0_ACTIVATE',cache}));
- },candidate.cache);
+ // Another live 5.36.5 tab must prevent a user from forcing activation.
+ const second=await ctx.newPage();
+ await second.goto(base+'/index.html',{waitUntil:'load'});
+ await second.evaluate(()=>localStorage.setItem('qa-second-tab','FICTITIOUS unsaved edit'));
+ // A candidate browser-side adapter checks persisted state before allowing
+ // an explicit user action to contact the waiting worker.
+ await page.addScriptTag({path:path.resolve(root,'scripts/trace-20-upgrade-consent.cjs')});
+ const askUpgrade=async({pendingWrites=0,unsavedDrafts=0,consent=true,durable=true,
+   secondCheckBusy=false}={})=>page.evaluate(async({cache,pendingWrites,unsavedDrafts,consent,durable,secondCheckBusy})=>{
+  const reg=await navigator.serviceWorker.getRegistration('/');
+  let reads=0;
+  return Trace20UpgradeConsent.requestActivation({
+   registration:reg,cache,MessageChannelCtor:MessageChannel,isOnline:()=>true,
+   readSafety:async()=>({verified:true,durable,pendingWrites:
+     secondCheckBusy&&++reads>1?1:pendingWrites,pendingSync:0,pendingImports:0,unsavedDrafts}),
+   askConsent:async()=>consent});
+ },{cache:candidate.cache,pendingWrites,unsavedDrafts,consent,durable,secondCheckBusy});
+ const unsaved=await askUpgrade({unsavedDrafts:1});
+ assert.deepEqual(unsaved,{status:'blocked',reason:'writes-or-drafts-pending'});
+ const writing=await askUpgrade({pendingWrites:1});
+ assert.deepEqual(writing,{status:'blocked',reason:'writes-or-drafts-pending'});
+ const notDurable=await askUpgrade({durable:false});
+ assert.deepEqual(notDurable,{status:'blocked',reason:'writes-or-drafts-pending'});
+ const declined=await askUpgrade({consent:false});
+ assert.equal(declined.status,'declined');
+ const race=await askUpgrade({secondCheckBusy:true});
+ assert.equal(race.reason,'state-changed-after-consent');
+ const refused=await askUpgrade();
+ assert.equal(refused.status,'blocked');
+ assert.equal(refused.reason,'multiple-tabs');
+ assert.equal((await page.evaluate(async()=>(await navigator.serviceWorker.getRegistration('/')).waiting!==null)),true);
+ await second.close();
+ const accepted=await askUpgrade();
+ assert.equal(accepted.status,'activation-requested');
  await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration('/');
   const expiry=Date.now()+12000;
   while((!r.active||r.waiting)&&Date.now()<expiry)await new Promise(resolve=>setTimeout(resolve,80));
@@ -93,7 +124,9 @@ async function verify(engine,name,launchOptions={}){
   'FICTITIOUS 50 EUR not submitted','offline cycle must preserve local draft');
  if(errorLogs.length)throw Error('Browser JS errors: '+JSON.stringify(errorLogs));
  return{name,passed:true,stableRetained:true,unrelatedRetained:true,
-  optInRequired:true,syntheticDraftRetained:true,afterReload:true,
+  optInRequired:true,multiTabBlocked:true,unsafeDraftBlocked:true,
+  pendingWritesBlocked:true,userDeclineBlocked:true,postConsentRaceBlocked:true,
+  syntheticDraftRetained:true,afterReload:true,
   offlineFailsClosed:true,cachedStaticCount:resources.staticAssets,
   workerRequests:hits,pageErrors:0};
  }finally{await ctx.close();await browser.close()}

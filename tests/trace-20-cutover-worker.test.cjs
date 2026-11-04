@@ -2,22 +2,25 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const vm=require('node:vm'),cp=require('node:child_process');
 const {buildCutoverWorker,validate,STATIC}=require('../scripts/trace-20-cutover-worker.cjs');
-function harness({offline=false}={}){
+function harness({offline=false,windows=1}={}){
  const b=buildCutoverWorker(),handlers={},deleted=[],added=[];
- let activation=0,claims=0,fetches=0;
+ let activation=0,claims=0,fetches=0;const responses=[];
  const cache={addAll:async items=>{added.push(...items.map(x=>x.url))},match:async()=>null};
  const caches={open:async k=>{assert.equal(k,b.cache);return cache},
   keys:async()=>['trace-shell-v5.36.5','trace-shell-v5.37.0:old',
    'trace-lab-537:old','other-app'],delete:async k=>(deleted.push(k),true)};
  const self={location:{href:'https://trace.example.test/sw.js'},registration:{waiting:null},
   addEventListener:(name,fn)=>handlers[name]=fn,
-  skipWaiting:async()=>{activation++},clients:{claim:async()=>{claims++}}};
+  skipWaiting:async()=>{activation++},clients:{claim:async()=>{claims++},
+   matchAll:async()=>Array.from({length:windows},(_,i)=>({id:i?'tab-two':'tab-one'}))}};
  const fetch=async()=>{fetches++;if(offline)throw Error('offline');return{ok:true}};
  const Request=class {constructor(url,options={}){this.url=String(url);this.cache=options.cache}};
  const Response=class {constructor(body,options){this.body=body;this.status=options.status;this.headers=options.headers}};
  vm.runInNewContext(b.source,{self,caches,fetch,URL,Request,Response,Promise,Set});
- const event=()=>{let task=Promise.resolve();return{waitUntil:p=>task=Promise.resolve(p),done:()=>task}};
- return{built:b,handlers,self,deleted,added,event,stats:()=>({activation,claims,fetches})};
+ const event=()=>{let task=Promise.resolve();return{source:{id:'tab-one'},
+  ports:[{postMessage:msg=>responses.push(msg)}],
+  waitUntil:p=>task=Promise.resolve(p),done:()=>task}};
+ return{built:b,handlers,self,deleted,added,event,responses,stats:()=>({activation,claims,fetches})};
 }
 const req=(path,method='GET',mode='cors',auth=false)=>({url:'https://trace.example.test/'+path,
  method,mode,headers:{get:key=>auth&&key==='authorization'?'Bearer fake':null}});
@@ -48,12 +51,32 @@ test('activate preserves older shell and unrelated names with no clients.claim',
  assert.deepEqual(h.deleted,[]);
  assert.equal(h.stats().claims,0);
 });
-test('only exact opt-in message and current cache can initiate skipWaiting',async()=>{
+test('only exact explicit consent and matching cache can initiate skipWaiting',async()=>{
  const h=harness();
- let e=h.event();h.handlers.message({...e,data:{type:'SKIP_WAITING',cache:h.built.cache}});await e.done();
- e=h.event();h.handlers.message({...e,data:{type:'TRACE_2_0_ACTIVATE',cache:'wrong'}});await e.done();
- e=h.event();h.handlers.message({...e,data:{type:'TRACE_2_0_ACTIVATE',cache:h.built.cache}});await e.done();
+ for(const data of [{type:'SKIP_WAITING',cache:h.built.cache},
+  {type:'TRACE_2_0_ACTIVATE',cache:'wrong',userConfirmed:true},
+  {type:'TRACE_2_0_ACTIVATE',cache:h.built.cache},
+  {type:'TRACE_2_0_ACTIVATE',cache:h.built.cache,userConfirmed:false}]){
+  const e=h.event();h.handlers.message({...e,data});await e.done();
+ }
+ assert.equal(h.stats().activation,0);
+ const e=h.event();h.handlers.message({...e,data:{
+  type:'TRACE_2_0_ACTIVATE',cache:h.built.cache,userConfirmed:true}});await e.done();
  assert.equal(h.stats().activation,1);
+ assert.equal(h.responses.at(-1).type,'TRACE_2_0_ACCEPTED');
+});
+test('multi-tab activation is blocked by the waiting worker, even with consent',async()=>{
+ const h=harness({windows:2}),e=h.event();
+ h.handlers.message({...e,data:{type:'TRACE_2_0_ACTIVATE',
+  cache:h.built.cache,userConfirmed:true}});await e.done();
+ assert.equal(h.stats().activation,0);
+ assert.equal(h.responses.at(-1).reason,'multiple-tabs');
+});
+test('missing source identity blocks activation without affecting unrelated caches',async()=>{
+ const h=harness(),e=h.event();
+ h.handlers.message({...e,source:null,data:{type:'TRACE_2_0_ACTIVATE',
+  cache:h.built.cache,userConfirmed:true}});await e.done();
+ assert.equal(h.stats().activation,0);assert.deepEqual(h.deleted,[]);
 });
 test('financial, authenticated, external, POST, and query requests bypass this worker',()=>{
  const h=harness();

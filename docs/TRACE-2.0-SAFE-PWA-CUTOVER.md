@@ -60,3 +60,39 @@ ni ce fichier stable ni la production.
 
 **Interdit à ce stade :** remplacer sw.js, fusionner dans main, déployer en
 production, modifier Supabase réel ou activer le débit différé.
+
+## Qualification complémentaire multi-onglets et consentement — 4 novembre
+
+Une seconde passe a renforcé le candidat **sans intégrer de code dans la
+PWA de production**.
+
+- Le worker refuse désormais un message incomplet : version de cache erronée,
+  absence de confirmation explicite ou absence d'identifiant de client.
+- Avant l'activation, le worker interroge la liste de ses clients navigateur,
+  y compris ceux encore contrôlés par l'ancien worker 5.36.5, et exige
+  une seule fenêtre présente. Avec deux onglets, il renvoie
+  TRACE_2_0_BLOCKED et ne s'active pas.
+- Un adaptateur de consentement dans
+  scripts/trace-20-upgrade-consent.cjs est préparé pour l'intégration future.
+  Il exige des lectures de sécurité vérifiées et durables :
+  0 écriture, 0 synchronisation, 0 import, 0 brouillon non sauvegardé ;
+  la connexion réseau disponible et un consentement utilisateur explicite.
+  Tous ces critères sont revérifiés après confirmation.
+- L'adaptateur doit recevoir les vrais compteurs du moteur financier
+  **après** une revue dédiée. Les tests emploient des compteurs fictifs :
+  ils n'attestent pas l'absence d'écritures réelles.
+- La réponse activation-requested ne constitue PAS un succès de migration ;
+  seul le navigateur constate ensuite le worker actif après rechargement.
+- Sur deux vrais moteurs de navigateur (Chromium et WebKit Linux),
+  l'ouverture d'un deuxième onglet empêche l'activation.
+  Après fermeture de cet onglet et consentement valide, la transition
+  fonctionne avec brouillon fictif intact, cache 5.36.5 préservé et
+  réponse 503 hors ligne. Erreurs JavaScript : zéro.
+- Les essais supplémentaires couvrent les refus d'utilisateur, les
+  brouillons non sauvegardés, les écritures en cours et le changement
+  des écritures pendant que la confirmation est affichée.
+
+**Limites inchangées :** la gestion réelle des sauvegardes et des queues
+d'écriture du moteur TRACE reste à brancher ; l'interaction premium de
+consentement et l'acceptation physique sur Safari iPhone restent à faire.
+Cette QA ne donne pas GO production.
