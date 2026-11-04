@@ -78,9 +78,9 @@ const banner=[
 '<!doctype html>',
 '<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
 '<meta name="robots" content="noindex,nofollow"><meta http-equiv="Content-Security-Policy" content="default-src '+ "'none'"+'; style-src '+ "'unsafe-inline'"+'">',
-'<title>TRACE 5.37 — Laboratoire fictif</title>',
+'<title>TRACE 2.0 — Laboratoire fictif</title>',
 '<style>body{font-family:system-ui;background:#f7f5ef;color:#143e31;max-width:42rem;margin:9vh auto;padding:1rem;line-height:1.6}a{color:#126044;font-weight:700}</style>',
-'</head><body><h1>TRACE 5.37 — Laboratoire fictif</h1><p>Cette version sert uniquement à tester l’installation et l’ergonomie. Les montants sont fictifs et les modifications sont perdues au rechargement. Aucune connexion à votre budget réel.</p>',
+'</head><body><h1>TRACE 2.0 — Laboratoire fictif</h1><p>Cette version sert uniquement à tester l’installation et l’ergonomie. Les montants sont fictifs et les modifications sont perdues au rechargement. Aucune connexion à votre budget réel.</p>',
 '<p><a href="./'+entry+'">Ouvrir le laboratoire TRACE</a></p></body></html>'
 ].join('\n')+'\n';
 await writeFile(resolve(dest,'index.html'),banner,'utf8');

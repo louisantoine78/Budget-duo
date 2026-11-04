@@ -1,7 +1,7 @@
 {
   "id": "./trace-international-preview.html",
-  "name": "TRACE International — Laboratoire fictif",
-  "short_name": "TRACE Lab",
+  "name": "TRACE 2.0 — Laboratoire fictif",
+  "short_name": "TRACE 2.0 Lab",
   "description": "Préversion isolée, données fictives et modifications perdues au rechargement.",
   "start_url": "./trace-international-preview.html",
   "scope": "./trace-international-preview.html",

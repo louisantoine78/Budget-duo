@@ -25,7 +25,7 @@ const replace=(needle,next)=>{
 replace('content="5.37.0-lab"','content="5.37.0-auth-candidate"');
 replace('<meta http-equiv="Content-Security-Policy" content="default-src \'self\' data: blob:; connect-src \'none\'; script-src \'self\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' data: blob:; font-src \'self\'; object-src \'none\'; worker-src \'self\'; form-action \'none\'; base-uri \'self\';">',
  '<meta name="trace-release-status" content="NO-GO: isolated auth rehearsal only; not deployable">');
-replace('<title>TRACE International 5.37.0 | Laboratoire fictif</title>',
+replace('<title>TRACE 2.0 | Laboratoire fictif</title>',
  '<title>TRACE 5.37.0 — Candidat de connexion isolé</title>');
 replace('<link rel="manifest" href="trace-international-preview.webmanifest">','');
 const banner=html.match(/  <aside id="tracePreviewStatus"[\s\S]*?<\/aside>\n/);
