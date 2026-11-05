@@ -103,6 +103,23 @@ function rehearsal(){
  assert.equal(officialPassed,17,'Official gate count is not 17');
  assert.ok(official.includes('Automated: PASS; Production: NO-GO'));
  report.tests.official={passed:true,checks:officialPassed};
+ // Full binary PGDATA dump/restore in a new PGlite instance, all fictional.
+ // This never connects to Supabase hosted or proves a production backup.
+ const recovered=run(process.execPath,['tests/trace-20-fictional-backup-restore.integration.cjs'],
+  {name:'Independent fictional PostgreSQL backup/restore and RLS rehearsal',
+   timeout:90000,env:{TRACE_PGLITE_MODULE:process.env.TRACE_PGLITE_MODULE}});
+ const summary=JSON.parse(recovered.trim().split('\n').at(-1));
+ assert.equal(summary.passed,true);
+ assert.equal(summary.checks,10);
+ assert.equal(summary.restoreRowsIdentical,true);
+ assert.equal(summary.originalDataUsed,false);
+ assert.equal(summary.networkWrites,0);
+ assert.equal(summary.hostedSupabase,false);
+ assert.equal(summary.productionReady,false);
+ assert.match(summary.pgSnapshotSha256,/^[0-9a-f]{64}$/);
+ report.tests.backupRestore={passed:true,checks:summary.checks,
+  sha256Verified:true,rowsIdentical:true,rlsValidatedLocally:true,
+  historicalRevisionContinuity:true,fictional:true,hosted:false};
  const site=path.join(output,'fictional-preview');
  run(process.execPath,['scripts/export-trace-537-preview.mjs','--out',site],
   {name:'Static-only export',timeout:90000});
