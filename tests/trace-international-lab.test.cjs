@@ -57,7 +57,7 @@ test('lab boot returns before real authentication and before version redirects',
  assert.match(boot,/id:'trace-laboratory-fixture'/);
  assert.match(boot,/me='la';partner='partner';client=null/);
  assert.match(boot,/window\.__TRACE_PREVIEW_STATUS__/);
- assert.match(app,/if\(internationalPreviewMode\(\)\|\|versionCheckBusy\)return/);
+ assert.match(app,/if\(internationalPreviewMode\(\)\|\|\s*location\.pathname\.endsWith\('\/trace-2-0-beta\.html'\)\|\|\s*versionCheckBusy\)return/);
  assert.match(app,/if\(internationalPreviewMode\(\)\)return;.*The laboratory never requests/);
 });
 test('lab data can never be stored by ordinary Supabase helpers',()=>{
