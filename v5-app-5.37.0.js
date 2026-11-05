@@ -6162,7 +6162,9 @@ function openCoupleSettings(){
   catch(e){feedback('Le code est affiché : sélectionne-le pour le copier.');}
  });
  $('#copyTraceLink')?.addEventListener('click',async()=>{
-  const link='https://louisantoine78.github.io/Budget-duo/trace-launch-v2.html';
+  const link=location.pathname.endsWith('/trace-2-0-beta.html')
+  ?new URL('./trace-2-0-beta.html',location.href).href
+  :'https://louisantoine78.github.io/Budget-duo/trace-launch-v2.html';
   try{await navigator.clipboard.writeText(link);$('#copyTraceLink').textContent='Lien copié';}
   catch(e){feedback('Lien de TRACE : '+link);}
  });
@@ -7042,7 +7044,9 @@ async function verifyActiveHousehold(){
  finally{checkingHousehold=false;}
 }
 async function checkCurrentBuild(){
- if(internationalPreviewMode()||versionCheckBusy)return;versionCheckBusy=true;
+ if(internationalPreviewMode()||
+    location.pathname.endsWith('/trace-2-0-beta.html')||
+    versionCheckBusy)return;versionCheckBusy=true;
  try{
   const response=await fetch('./trace-version.json?check='+Date.now(),{cache:'no-store'});
   if(!response.ok)return;
