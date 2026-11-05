@@ -72,7 +72,8 @@ begin
       using errcode = '22023';
   end if;
   if p_collection in ('accounts','investment_accounts')
-    and p_data->>'owner' is distinct from actor_slot then
+    and p_data->>'owner' is distinct from actor_slot
+    and not (p_collection='accounts' and p_data->>'owner'='household') then
     raise exception 'TRACE_WRITE_FORBIDDEN: account owner mismatch'
       using errcode = '42501';
   end if;
@@ -125,7 +126,8 @@ begin
       and d.collection = p_collection and d.item_id = p_item_id
       and d.revision = p_expected_revision
       and (p_collection not in ('accounts','investment_accounts')
-           or d.data->>'owner' = actor_slot)
+           or d.data->>'owner' = actor_slot
+           or (p_collection='accounts' and d.data->>'owner'='household'))
       and (p_collection <> 'investment_operations' or exists (
         select 1 from public.documents original_portfolio
         where original_portfolio.household_id = p_household_id

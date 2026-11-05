@@ -125,6 +125,17 @@ async function run(){
    await assert.rejects(rpcDelete(1,'accounts','partner',0),/TRACE_WRITE_FORBIDDEN/);
    assert.equal((await readDoc('accounts','partner')).data.owner,'partner');
   });
+  await check('historical shared account survives CAS without exposing private ownership',async()=>{
+   const shared={id:'legacy-shared',owner:'household',type:'other',
+    currency:'CAD',name:'Fictional shared legacy'};
+   assert.equal((await rpcSave(1,'accounts',shared.id,shared,null)).rows[0].revision,0);
+   assert.equal((await rpcSave(2,'accounts',shared.id,{...shared,name:'Shared updated'},0)).rows[0].revision,1);
+   await assert.rejects(rpcSave(1,'accounts',shared.id,{...shared,owner:'la'},1),/TRACE_ACCOUNT_OWNER_IMMUTABLE/);
+   await assert.rejects(rpcSave(2,'accounts',shared.id,{...shared,owner:'partner'},1),/TRACE_ACCOUNT_OWNER_IMMUTABLE/);
+   await assert.rejects(rpcSave(3,'accounts',shared.id,{...shared,name:'forged'},1),/TRACE_WRITE_FORBIDDEN/);
+   assert.equal((await readDoc('accounts',shared.id)).data.owner,'household');
+   assert.equal((await readDoc('accounts',shared.id)).revision,1);
+  });
   await check('investment operations require native portfolio and banking ownership',async()=>{
    const ownPortfolio={id:'pea-la',owner:'la',type:'broker',currency:'EUR'};
    const otherPortfolio={id:'pea-partner',owner:'partner',type:'broker',currency:'EUR'};

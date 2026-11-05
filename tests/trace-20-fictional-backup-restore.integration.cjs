@@ -74,6 +74,11 @@ async function run(){
   await ok('CAS records distinct native CAD/EUR bank accounts and pending import evidence',async()=>{
    assert.equal((await save(source,1,familyA,'accounts',cad.id,cad,null)).rows[0].revision,0);
    assert.equal((await save(source,2,familyA,'accounts',eur.id,eur,null)).rows[0].revision,0);
+   const legacyShared={id:'legacy-shared',owner:'household',type:'other',
+    currency:'CAD',name:'Shared fictional legacy'};
+   assert.equal((await save(source,1,familyA,'accounts',legacyShared.id,legacyShared,null)).rows[0].revision,0);
+   assert.equal((await save(source,2,familyA,'accounts',legacyShared.id,
+    {...legacyShared,name:'Shared reviewed'},0)).rows[0].revision,1);
    assert.equal((await save(source,2,familyA,'transactions',trans.id,trans,null)).rows[0].revision,0);
    const updated={...trans,note:'Verified fictional review'};
    assert.equal((await save(source,2,familyA,'transactions',trans.id,updated,0)).rows[0].revision,1);
@@ -117,6 +122,8 @@ async function run(){
    assert.equal((await read(target,4,familyA,'transactions',trans.id)).rows.length,0);
    assert.equal((await read(target,1,familyB,'transactions','house-b-only')).rows.length,0);
    assert.equal((await read(target,2,familyA,'transactions',trans.id)).rows.length,1);
+   assert.equal((await read(target,1,familyA,'accounts','legacy-shared')).rows[0].revision,1);
+   assert.equal((await read(target,2,familyA,'accounts','legacy-shared')).rows[0].data.owner,'household');
   });
   await ok('the restored pending EUR transaction preserves native value and latest revision',async()=>{
    const doc=(await read(target,2,familyA,'transactions',trans.id)).rows[0];

@@ -15,7 +15,10 @@ const CHECKS=[
  ['revision_columns',f=>f.documentRevision===true&&f.settingsRevision===true,'Required CAS revision columns absent'],
  ['cas_rpc',f=>f.casSave===true&&f.casDelete===true&&f.casHousehold===true,'Required CAS functions absent'],
  ['privacy_guard',f=>f.csvGuard===true,'CSV evidence protection unavailable'],
- ['household_accounts',f=>Number.isSafeInteger(f.sharedAccountOwners)&&f.sharedAccountOwners===0,'Household-owned account needs reviewed compatible migration'],
+ ['household_accounts',f=>Number.isSafeInteger(f.sharedAccountOwners)&&
+   (f.sharedAccountOwners===0||(f.sharedAccountPolicyVerified===true&&
+    f.sharedOwnerImmutable===true&&f.sharedCasVerified===true)),
+   'Household-owned account requires verified shared-owner policy, immutable ownership and CAS'],
  ['document_inventory',f=>Number.isSafeInteger(f.documentCount)&&f.documentCount>=0,'Missing document inventory'],
  ['backup_present',f=>f.backupVerifiedIndependent===true,'No independent verified current production backup'],
  ['backup_current',f=>!!Date.parse(f.latestDocumentWrite)&&!!Date.parse(f.backupTakenAt)&&

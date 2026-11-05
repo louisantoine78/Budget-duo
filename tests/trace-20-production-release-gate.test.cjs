@@ -31,7 +31,9 @@ test('passing all sanitized metadata checks still cannot autonomously release fi
   if(id==='revision_columns'){f.documentRevision=true;f.settingsRevision=true}
   else if(id==='cas_rpc'){f.casSave=true;f.casDelete=true;f.casHousehold=true}
   else if(id==='privacy_guard')f.csvGuard=true;
-  else if(id==='household_accounts')f.sharedAccountOwners=0;
+  else if(id==='household_accounts'){f.sharedAccountOwners=1;
+   f.sharedAccountPolicyVerified=true;f.sharedOwnerImmutable=true;
+   f.sharedCasVerified=true;}
   else if(id==='backup_present')f.backupVerifiedIndependent=true;
   else if(id==='backup_current')f.backupTakenAt='2026-11-05T04:28:00Z';
   else if(id==='live_entry'){f.realAuthEntrypoint=true;f.fictionalPreview=false}
@@ -54,4 +56,12 @@ test('null, partial or invented schemas reject',()=>{
 test('the release gate performs no database, network, git or deployment action',()=>{
  const file=fs.readFileSync(path.resolve(__dirname,'../scripts/trace-20-production-release-gate.cjs'),'utf8');
  assert.doesNotMatch(file,/fetch\(|https:|child_process|execFile|spawn\(|apply_migration|create_deployment|createClient\(/);
+});
+
+test('legacy shared account requires all three live-server proofs',()=>{
+ for(const key of ['sharedAccountPolicyVerified','sharedOwnerImmutable','sharedCasVerified']){
+  const f={...facts,sharedAccountPolicyVerified:true,
+   sharedOwnerImmutable:true,sharedCasVerified:true,[key]:false};
+  assert.ok(evalFacts(f).blockers.some(b=>b.id==='household_accounts'),key);
+ }
 });
