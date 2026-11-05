@@ -62,7 +62,7 @@ function trace20TrackImportRead(kind,task){
 }
 // The original bank-document reader is a protected module. Observe only its
 // public asynchronous extraction method after all scripts are loaded.
-window.addEventListener('DOMContentLoaded',()=>{
+if(typeof window.addEventListener==='function')window.addEventListener('DOMContentLoaded',()=>{
  const bank=window.TraceBankDocuments;
  if(!bank||typeof bank.extract!=='function')return;
  const original=bank.extract;
