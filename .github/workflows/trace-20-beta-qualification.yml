@@ -1,0 +1,50 @@
+name: TRACE 2.0 beta - isolated qualification
+
+on:
+  push:
+    branches:
+      - trace-5.37.0-international-accounts-fx
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  beta-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout candidate branch only
+        uses: actions/checkout@11bd71901bbe5b1630ceea73b27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify beta and accounting JavaScript parses
+        run: |
+          node --check v5-app-5.37.0.js
+          node --check trace-international-1.0.0.js
+          node --check trace-international-ui-1.0.0.js
+          node --check trace-smart-inbox-3.5.0.js
+          node --check trace-deferred-write-plan-1.0.0.js
+          node --check trace-bank-ui-5.37.0.js
+          node --check trace-operation-ui-5.37.0.js
+      - name: Run isolated beta and write-safety tests (no Supabase credentials)
+        run: |
+          node --test \
+            tests/trace-20-live-beta-entry.test.cjs \
+            tests/trace-20-production-release-gate.test.cjs \
+            tests/trace-20-real-safety-bridge.test.cjs \
+            tests/trace-20-auxiliary-mutations.test.cjs \
+            tests/trace-20-upgrade-consent.test.cjs \
+            tests/trace-20-write-inventory.test.cjs \
+            tests/trace-20-cutover-worker.test.cjs \
+            tests/trace-cas-client.test.cjs \
+            tests/trace-cas-category-bootstrap.test.cjs \
+            tests/trace-cas-investment-ownership-static.test.cjs \
+            tests/trace-cas-exclusive-cutover-contract.test.cjs \
+            tests/trace-deferred-client-quarantine.test.cjs \
+            tests/trace-international-lab.test.cjs \
+            tests/trace-international-preview-boot.test.cjs
