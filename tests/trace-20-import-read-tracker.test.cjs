@@ -68,6 +68,8 @@ test('invalid import labels do not create an in-flight operation',()=>{
 test('actual reader handlers account for success, errors, abort and synchronous failures',()=>{
  const a=app.slice(app.indexOf('function importFile(file){'),app.indexOf('/* Merchant suggestions never silently validate',app.indexOf('function importFile(file){')));
  assert.match(a,/trace20BeginImportRead\('csv'\)/);
+ assert.ok(app.indexOf('function trace20BeginImportRead(')<app.indexOf('function importFile('),
+  'The real candidate includes the actual import monitor before CSV ingestion');
  assert.match(a,/reader\.onerror=\(\)=>\{finishRead\(true\)/);
  assert.match(a,/reader\.onabort=\(\)=>\{finishRead\(true\)/);
  assert.match(a,/finally\{finishRead\(false\);\}/);

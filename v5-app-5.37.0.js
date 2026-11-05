@@ -4073,7 +4073,10 @@ function importFile(file){
  if(file.size>2e6){box.textContent='Fichier trop volumineux (limite 2 Mo).';return;}
  box.textContent='Lecture du CSV…';
  const reader=new FileReader();
- const finishRead=trace20BeginImportRead('csv');
+ // Isolated historical CSV fixtures evaluate importFile without its outer
+ // candidate module. The actual 5.37 app always has the tracker above.
+ const finishRead=typeof trace20BeginImportRead==='function'?
+  trace20BeginImportRead('csv'):()=>{};
  reader.onerror=()=>{finishRead(true);box.textContent='Impossible de lire le fichier.';};
  reader.onabort=()=>{finishRead(true);box.textContent='Lecture du fichier interrompue.';};
  reader.onload=()=>{
