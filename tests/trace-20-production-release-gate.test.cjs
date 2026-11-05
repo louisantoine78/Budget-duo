@@ -13,8 +13,10 @@ test('real read-only production inventory remains NO-GO and never authorizes dep
  assert.equal(r.manualReviewMandatory,true);
  assert.ok(r.blockers.length>=9);
  for(const id of ['revision_columns','cas_rpc','household_accounts','backup_present',
-  'backup_current','live_entry','pwa_upgrade','compatibility','rollback'])
+  'live_entry','pwa_upgrade','compatibility','rollback'])
   assert.ok(r.blockers.some(b=>b.id===id),id);
+ assert.ok(!r.blockers.some(b=>b.id==='backup_current'),
+  'The same-database snapshot is recent but it is NOT independently backed up');
 });
 test('missing or stale inventory fails closed',()=>{
  const r=evalFacts({...facts,checkedAt:'2026-11-01T04:24:00Z'});
