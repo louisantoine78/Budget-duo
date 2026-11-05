@@ -48,8 +48,44 @@ async function check(name,engine,opts){
   assert.equal(state.durable,false);
   assert.equal(state.pendingImports,null);
   assert.equal(state.knownImportWrites,0);
+  assert.equal(state.knownImportReads,0);
   assert.ok(state.pendingWrites>=0);
   assert.equal(state.coverageIncomplete,true);
+  // This invokes the actual bank reader with a deliberately unsupported
+  // fictional file. It must fail locally without any external request.
+  const preImportSync=state.pendingSync;
+  const pdfRejected=await page.evaluate(async()=>{
+   try{await window.TraceBankDocuments.extract({
+    name:'fictional.unsupported',type:'text/plain',size:5
+   });return false}catch(e){return /Format non pris en charge/.test(String(e.message))}
+  });
+  assert.equal(pdfRejected,true);
+  state=await page.evaluate(()=>window.Trace20FinancialSafety.read());
+  assert.equal(state.knownImportReads,0);
+  assert.ok(state.pendingSync>=preImportSync+1,'PDF/OCR error must be latched');
+
+  // A paused FileReader in the actual UI proves CSV activity is counted
+  // while a browser read is pending, then cleared and flagged on abort.
+  await page.waitForFunction(()=>typeof document.querySelector('#importFile')?.onchange==='function');
+  await page.evaluate(()=>{
+   window.__qaOriginalFileReader=window.FileReader;
+   window.FileReader=class{
+    readAsText(){window.__qaCsvReader=this}
+   };
+   const input=document.querySelector('#importFile');
+   input.onchange({target:{files:[{
+    name:'fictional.csv',type:'text/csv',size:24
+   }],value:'fictional.csv'}});
+  });
+  state=await page.evaluate(()=>window.Trace20FinancialSafety.read());
+  assert.equal(state.knownImportReads,1,'CSV FileReader not counted');
+  await page.evaluate(()=>{
+   window.__qaCsvReader.onabort();
+   window.FileReader=window.__qaOriginalFileReader;
+  });
+  state=await page.evaluate(()=>window.Trace20FinancialSafety.read());
+  assert.equal(state.knownImportReads,0);
+  assert.ok(state.pendingSync>=preImportSync+2,'aborted CSV must latch');
   await page.evaluate(()=>{
    document.querySelector('#sheetBackdrop').classList.add('open');
    document.body.classList.add('sheet-open');
@@ -87,8 +123,8 @@ async function check(name,engine,opts){
   assert.deepEqual(errors,[]);
   assert.deepEqual(external,[]);
   return{name,passed:true,liveCandidateBridge:true,auxiliaryCountVerified:true,
-   remoteErrorLatched:true,fictional:true,
-   newExternalRequests:0,realIphone:false,productionReady:false};
+   remoteErrorLatched:true,ocrFailureLatched:true,csvReadAbortTracked:true,
+   fictional:true,newExternalRequests:0,realIphone:false,productionReady:false};
  }finally{await context.close();await browser.close()}
 }
 (async()=>{try{

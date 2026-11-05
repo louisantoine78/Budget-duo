@@ -10,7 +10,7 @@ if(start<0||end<0||candidate.indexOf(last,end+1)>=0)
  throw Error('Candidate bridge is missing or ambiguous');
 const actualBridge=candidate.slice(start,end+last.length);
 function actual({status='synced',pending=0,queues=0,unsaved=0,batchFailure=false,
- blocked=false,sheet=false,bodySheet=false,aux=0,auxFailures=0,knownImports=0}={}){
+ blocked=false,sheet=false,bodySheet=false,aux=0,auxFailures=0,knownImports=0,reads=0,readFailures=0}={}){
  const window={};const document={
   querySelector(selector){
    if(selector==='#syncPill')return{dataset:{status}};
@@ -33,6 +33,9 @@ function actual({status='synced',pending=0,queues=0,unsaved=0,batchFailure=false
   'const trace20AuxFailures=new Set('+JSON.stringify(
    Array.from({length:auxFailures},(_,i)=>'failed'+i))+');',
   'const trace20PendingImportWrites='+JSON.stringify(knownImports)+';',
+  'let trace20ImportInFlight='+JSON.stringify(reads)+';',
+  'const trace20ImportReadFailures=new Set('+JSON.stringify(
+   Array.from({length:readFailures},(_,i)=>'failed'+i))+');',
   actualBridge
  ].join('\n'),context);
  return window.Trace20FinancialSafety.read();
@@ -47,6 +50,7 @@ test('actual 5.37.0 app exposes a read-only financial safety surface',()=>{
  assert.equal(r.pendingSync,0);
  assert.equal(r.pendingImports,null);
  assert.equal(r.knownImportWrites,0);
+ assert.equal(r.knownImportReads,0);
  assert.equal(r.unsavedDrafts,0);
  assert.equal(r.verified,false);
  assert.equal(r.durable,false);
@@ -88,7 +92,7 @@ test('the real app bridge can NEVER authorize upgrade before full coverage revie
 test('no sensitive client objects or financial account data are exported',()=>{
  assert.deepEqual(Object.keys(actual()).sort(),[
   'coverageIncomplete','durable','pendingImports','pendingSync',
-  'pendingWrites','knownImportWrites','source','unsavedDrafts','verified'].sort());
+  'pendingWrites','knownImportWrites','knownImportReads','source','unsavedDrafts','verified'].sort());
  assert.doesNotMatch(actualBridge,/client\.(?:from|rpc)|session\?\.|household\?\.|JSON\.stringify\(state/);
 });
 
@@ -101,4 +105,14 @@ test('auxiliary mutations, failures and known import writes are exposed without 
  const failed=actual({auxFailures:1});
  assert.ok(failed.pendingSync>=1);
  assert.equal(verifiedIdle(failed),false);
+});
+
+test('real extraction and CSV read counters are visible but never authorize upgrade',()=>{
+ const busy=actual({reads:2});
+ assert.equal(busy.knownImportReads,2);
+ assert.equal(busy.pendingImports,null);
+ assert.equal(verifiedIdle(busy),false);
+ const failed=actual({readFailures:1});
+ assert.ok(failed.pendingSync>=1);
+ assert.equal(failed.verified,false);
 });

@@ -40,6 +40,36 @@ function trace20TrackAux(label,operation){
  });
 }
 window.Trace20MutationTracker=Object.freeze({run:trace20TrackAux});
+// Candidate import-processing observability, never a durability or release proof.
+let trace20ImportInFlight=0;
+const trace20ImportReadFailures=new Set();
+function trace20BeginImportRead(kind){
+ if(!['csv','pdf-ocr'].includes(kind))throw Error('TRACE_IMPORT_KIND_UNKNOWN');
+ trace20ImportInFlight++;
+ let closed=false;
+ return(error)=>{
+  if(closed)return;
+  closed=true;
+  if(error)trace20ImportReadFailures.add(kind);
+  trace20ImportInFlight=Math.max(0,trace20ImportInFlight-1);
+ };
+}
+function trace20TrackImportRead(kind,task){
+ const finish=trace20BeginImportRead(kind);
+ return Promise.resolve().then(task).then(value=>{
+  finish(false);return value;
+ },error=>{finish(true);throw error;});
+}
+// The original bank-document reader is a protected module. Observe only its
+// public asynchronous extraction method after all scripts are loaded.
+window.addEventListener('DOMContentLoaded',()=>{
+ const bank=window.TraceBankDocuments;
+ if(!bank||typeof bank.extract!=='function')return;
+ const original=bank.extract;
+ bank.extract=function(...args){
+  return trace20TrackImportRead('pdf-ocr',()=>original.apply(this,args));
+ };
+},{once:true});
 
 // TRACE 2.0: real READ-ONLY signals for the future update coordinator.
 // Fail closed: the complete mutation inventory, hosted durability and import
@@ -52,13 +82,15 @@ function trace20FinancialSafetyRead(){
  const unsavedDrafts=Number(Boolean(sheet?.classList?.contains('open')||
   document.body?.classList?.contains('sheet-open')));
  const pendingSync=traceUnsavedWriteKeys.size+Number(Boolean(
-  traceWritesBlocked||traceBatchHadFailure||status!=='synced'))+trace20AuxFailures.size;
+  traceWritesBlocked||traceBatchHadFailure||status!=='synced'))+
+  trace20AuxFailures.size+trace20ImportReadFailures.size;
  // Some imports and household mutations run outside the CAS document queue.
  // Unknown is null, not a falsely reassuring zero. Even accidentally
  // changing verified/durable cannot bypass the integer-safety contract.
  const pendingImports=null;
  return Object.freeze({verified:false,durable:false,pendingWrites,pendingSync,
-  pendingImports,knownImportWrites:trace20PendingImportWrites,unsavedDrafts,
+  pendingImports,knownImportWrites:trace20PendingImportWrites,
+  knownImportReads:trace20ImportInFlight,unsavedDrafts,
   coverageIncomplete:true,source:'TRACE-5.37.0'});
 }
 window.Trace20FinancialSafety=Object.freeze({read:trace20FinancialSafetyRead});
@@ -4041,7 +4073,9 @@ function importFile(file){
  if(file.size>2e6){box.textContent='Fichier trop volumineux (limite 2 Mo).';return;}
  box.textContent='Lecture du CSV…';
  const reader=new FileReader();
- reader.onerror=()=>box.textContent='Impossible de lire le fichier.';
+ const finishRead=trace20BeginImportRead('csv');
+ reader.onerror=()=>{finishRead(true);box.textContent='Impossible de lire le fichier.';};
+ reader.onabort=()=>{finishRead(true);box.textContent='Lecture du fichier interrompue.';};
  reader.onload=()=>{
   try{
    const raw=String(reader.result||'').replace(/^\uFEFF/,'');
@@ -4235,9 +4269,11 @@ function importFile(file){
      };
     }catch(e){$('#csvPreviewResult').textContent=e.message;}
    };
-  }catch(e){box.textContent=e.message;}
+  }catch(e){finishRead(true);box.textContent=e.message;}
+  finally{finishRead(false);}
  };
- reader.readAsText(file,'UTF-8');
+ try{reader.readAsText(file,'UTF-8');}
+ catch(e){finishRead(true);box.textContent='Impossible de lire le fichier.';}
 }
 /* Merchant suggestions never silently validate a budget transaction. */
 function suggestImportCategory(t){
