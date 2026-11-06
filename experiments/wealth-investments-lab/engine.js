@@ -140,7 +140,15 @@
   if(![...p.positions,...(p.catalog||[])].some(s=>s.id===securityId))throw Error('Titre inconnu');
   if(!quote||!Number.isSafeInteger(quote.priceUnits)||quote.priceUnits<=0||!dateValid(quote.date)||!String(quote.source||'').trim())throw Error('Cours, date et source obligatoires');
   if(quote.kind&&!['manuel','clôture','différé','direct'].includes(quote.kind))throw Error('Type de cotation inconnu');
-  const next={...p,quotes:{...(p.quotes||{}),[securityId]:{...quote,source:String(quote.source).trim()}}};
+  const saved={...quote,source:String(quote.source).trim()};
+  // Keep manual quote evidence by date, not just the latest display price.
+  const prior=p.quoteHistory?.[securityId]||
+   (p.quotes?.[securityId]?[p.quotes[securityId]]:[]);
+  const byDate=new Map(prior.map(item=>[item.date,item]));
+  byDate.set(saved.date,saved); // an explicit same-day correction replaces one observation
+  const series=[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  const next={...p,quoteHistory:{...(p.quoteHistory||{}),[securityId]:series},
+   quotes:{...(p.quotes||{}),[securityId]:series.at(-1)}};
   evaluate(next);return next;
  }
  function setOpeningPosition(p,securityId,costBasisCents,meta={}){
@@ -148,6 +156,31 @@
   const next={...p,positions:p.positions.map(s=>s.id===securityId?{...s,...meta,costBasisCents}:s)};
   if(next.positions.every((s,i)=>s===p.positions[i]))throw Error('Position introuvable');
   evaluate(next);return next;
+ }
+ // Replay the historical journal and only use quotes known on or before the snapshot day.
+ // This is a simulated snapshot based on last available manual quotations, never a
+ // claim that each quote was observed on the snapshot date.
+ function snapshotAt(p,onDate){
+  assertDate(onDate);
+  if(onDate<p.openingDate)throw Error('Valorisation antérieure à la reprise du portefeuille.');
+  const history=p.quoteHistory||{},asOf={};
+  const ids=new Set([...p.positions.map(x=>x.id),...(p.catalog||[]).map(x=>x.id)]);
+  for(const id of ids){
+   const series=history[id]||
+    (p.quotes?.[id]?[p.quotes[id]]:[]);
+   const eligible=series.filter(q=>dateValid(q.date)&&q.date<=onDate)
+    .slice().sort((a,b)=>a.date.localeCompare(b.date));
+   if(eligible.length)asOf[id]=eligible.at(-1);
+  }
+  const pastOperations=p.operations.filter(o=>o.date<=onDate);
+  const result=evaluate({...p,operations:pastOperations,quotes:asOf});
+  if(result.valueCents===null)
+   throw Error('Cours datés manquants pour une ou plusieurs positions à cette date.');
+  const evidence=result.positions.map(s=>({securityId:s.id,quoteDate:s.quote.date,source:s.quote.source,
+   kind:s.quote.kind||'manuel'}));
+  return{date:onDate,valueCents:result.valueCents,
+   source:'Calcul basé sur les derniers cours connus à cette date',
+   estimated:evidence.some(x=>x.quoteDate!==onDate),evidence};
  }
  function periodPerformance(p,months){
   const points=(p.snapshots||[]).filter(s=>dateValid(s.date)&&Number.isSafeInteger(s.valueCents))
@@ -194,5 +227,5 @@
    selectedId:'pea-demo'};
  }
  return Object.freeze({SUPPORTED,cents,quantity,price,tradeCents,dateValid,evaluate,appendOperation,setQuote,
-  setOpeningPosition,periodPerformance,demo,Q_SCALE,PRICE_SCALE});
+  setOpeningPosition,snapshotAt,periodPerformance,demo,Q_SCALE,PRICE_SCALE});
 });
