@@ -179,7 +179,58 @@ function position(p,id){
  '<p class="wl-muted-small">Aucun seuil déclenché. Les alertes ne placent jamais d’ordre.</p>')+'</div>',
  action('Configurer','strategy',id,'wl-btn-light'));
 }
-function analytics(p,range){
+function interactiveTrend(p,period,metric='value',focusedDate=''){
+ const series=E.chartSeries(p,period);
+ const metricChoices=[['value','Valeur totale'],['flows','Hors apports']];
+ const tabs='<div class="wl-trend-tabs" role="group" aria-label="Type de courbe">'+
+  metricChoices.map(([id,label])=>'<button type="button" class="wl-trend-tab" data-act="trendMetric" data-id="'+id+
+  '" aria-pressed="'+(metric===id)+'">'+label+'</button>').join('')+'</div>';
+ if(!series.ready)return tabs+
+  placeholder('Deux valorisations réellement datées sont nécessaires dans la période pour tracer une courbe. Aucun cours ni historique n’est inventé.')+
+  '<p class="wl-trend-disclaimer">Une seule valorisation de référence ne permet pas de calculer le rendement.</p>';
+ const values=series.points.map(s=>metric==='flows'?s.flowAdjustedCents:s.valueCents);
+ const min=Math.min(...values),max=Math.max(...values),spread=Math.max(1,max-min);
+ const startMs=Date.parse(series.from),endMs=Date.parse(series.to),timeSpan=Math.max(1,endMs-startMs);
+ const plotted=series.points.map((point,i)=>({
+  point,v:values[i],
+  x:30+Math.round((Date.parse(point.date)-startMs)/timeSpan*425),
+  y:127-Math.round((values[i]-min)/spread*94)
+ }));
+ const focused=plotted.find(x=>x.point.date===focusedDate)||plotted.at(-1);
+ const coordinates=plotted.map((q,i)=>(i?'L':'M')+q.x+' '+q.y).join(' ');
+ const baseline=plotted.map(x=>x.x+' '+x.y).join(' L');
+ const gradient='<defs><linearGradient id="wl-performance-fill" x1="0" x2="0" y1="0" y2="1">'+
+  '<stop offset="0%" stop-color="#59a783" stop-opacity=".22"/>'+
+  '<stop offset="100%" stop-color="#59a783" stop-opacity="0"/></linearGradient></defs>';
+ const chart='<svg class="wl-svg wl-mini-chart wl-trend-chart" viewBox="0 0 485 164" role="img" aria-label="'+
+  e(metric==='flows'?'Évolution du portefeuille hors flux externes':'Évolution de la valeur du portefeuille')+'">'+
+  gradient+
+  '<path d="M30 139H455" stroke="#dce9df" stroke-width="1"/>'+
+  '<path d="M'+plotted[0].x+' 139 L'+baseline+' L'+plotted.at(-1).x+' 139Z" fill="url(#wl-performance-fill)"/>'+
+  '<path d="'+coordinates+'" fill="none" stroke="#236b4e" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>'+
+  plotted.map(q=>'<circle cx="'+q.x+'" cy="'+q.y+'" r="'+(q.point.date===focused.point.date?'5':'3.2')+
+  '" fill="'+(q.point.date===focused.point.date?'#174e38':'#65a886')+'" stroke="#fffdfa" stroke-width="1.5"><title>'+
+  e(date(q.point.date)+' : '+fmt(q.v,p.currency))+'</title></circle>').join('')+
+  '<text x="30" y="156" font-size="10" fill="#789183">'+e(date(series.from))+'</text>'+
+  '<text x="455" y="156" text-anchor="end" font-size="10" fill="#789183">'+e(date(series.to))+'</text></svg>';
+ const compact=series.points.length>9?
+   [...series.points.slice(0,1),...series.points.slice(-8)]:series.points;
+ const controls='<div class="wl-trend-points" role="group" aria-label="Examiner une date">'+compact.map(q=>
+  '<button type="button" class="wl-trend-point" data-act="trendPoint" data-id="'+e(q.date)+'" aria-pressed="'+
+  (focused.point.date===q.date)+'">'+e(date(q.date))+'</button>').join('')+'</div>';
+ return tabs+
+  '<div class="wl-trend-selected"><div><small>'+e(date(focused.point.date))+'</small><strong>'+
+   fmt(focused.v,p.currency)+'</strong></div><span class="wl-trend-quality">'+
+   (focused.point.reference?'Référence fournie':focused.point.estimated?'Cours reportés':'Valorisation datée')+
+   '</span></div>'+
+  chart+controls+
+  '<p class="wl-trend-disclaimer">'+(metric==='flows'?
+   'Les versements et retraits intervenus depuis le premier relevé sont retirés des montants. Ce n’est pas un indice de rendement, ni un TWR.':
+   'Valeurs enregistrées, non reconstituées. Les versements peuvent faire varier cette courbe sans constituer une performance.')+
+  '</p><p class="wl-trend-source">Source du point sélectionné : '+e(focused.point.source)+
+  ' · '+e(series.from)+' → '+e(series.to)+'</p>';
+}
+function analytics(p,range,metric='value',focusedDate=''){
  const v=E.evaluate(p),perf=E.periodPerformance(p,range),filters=[['1','1 mois'],['3','3 mois'],['6','6 mois'],['12','1 an'],['all','Origine']];
  const assetReady=v.priced&&v.positions.every(s=>s.assetType);
  const byAsset={};if(assetReady)for(const s of v.positions)byAsset[s.assetType]=(byAsset[s.assetType]||0)+s.marketValueCents;
@@ -190,8 +241,9 @@ function analytics(p,range){
  return heading('ANALYSE','Comprendre mes placements','Des graphiques alimentés par vos propres valorisations, pas par des prix inventés.')+
  section('Évolution et rendement','<div class="wl-split">'+filters.map(([id,text])=>
  '<button class="wl-pill" aria-pressed="'+(range===id)+'" data-act="range" data-id="'+id+'">'+text+'</button>').join('')+'</div>'+
- '<div class="wl-card wl-analytics">'+curve(p,range)+
- '<p class="wl-note">'+(perf?'Variation hors apports : '+fmt(perf.gainCents,p.currency)+' · rendement estimé : '+(perf.percent===null?'Non calculable':perf.percent.toFixed(2)+' %')+' · '+e(perf.method):
+ '<div class="wl-card wl-analytics">'+interactiveTrend(p,range,metric,focusedDate)+
+ '<p class="wl-note">'+(perf?'Gain sur les relevés de la période, hors apports : '+fmt(perf.gainCents,p.currency)+' · rendement estimé (Dietz modifiée) : '+(perf.percent===null?'Non calculable':perf.percent.toFixed(2)+' %')+
+  ' · observations du '+e(date(perf.from))+' au '+e(date(perf.to))+'.':
  'Une seconde valorisation datée est nécessaire pour séparer performance et apports.')+'</p></div>')+
  section('Répartition par position','<div class="wl-card wl-analytics">'+donut(v)+'</div>')+
  section('Actions, ETF et autres','<div class="wl-card wl-analytics">'+(assetReady?
@@ -213,5 +265,5 @@ function analytics(p,range){
  '<p class="wl-empty">Aucun relevé enregistré</p>')+'</div>')+
  section('Indice de référence',placeholder('Comparaison indisponible sans historique de l’indice, devise et méthodologie cohérentes.'));
 }
-window.TraceWealthLabUI=Object.freeze({e,fmt,qty,date,action,overview,portfolio,position,analytics,ref});
+window.TraceWealthLabUI=Object.freeze({e,fmt,qty,date,action,overview,portfolio,position,analytics,interactiveTrend,ref});
 })();
