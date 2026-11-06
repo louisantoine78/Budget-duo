@@ -146,6 +146,8 @@ function position(p,id){
 }
 function analytics(p,range){
  const v=E.evaluate(p),perf=E.periodPerformance(p,range),filters=[['1','1 mois'],['3','3 mois'],['6','6 mois'],['12','1 an'],['all','Origine']];
+ const assetReady=v.priced&&v.positions.every(s=>s.assetType);
+ const byAsset={};if(assetReady)for(const s of v.positions)byAsset[s.assetType]=(byAsset[s.assetType]||0)+s.marketValueCents;
  const sectorReady=v.priced&&v.positions.every(s=>s.sector);
  const bySector={};if(sectorReady)for(const s of v.positions)bySector[s.sector]=(bySector[s.sector]||0)+s.marketValueCents;
  const geographyReady=v.priced&&v.positions.every(s=>s.geography);
@@ -157,6 +159,9 @@ function analytics(p,range){
  '<p class="wl-note">'+(perf?'Variation hors apports : '+fmt(perf.gainCents,p.currency)+' · rendement estimé : '+(perf.percent===null?'Non calculable':perf.percent.toFixed(2)+' %')+' · '+e(perf.method):
  'Une seconde valorisation datée est nécessaire pour séparer performance et apports.')+'</p></div>')+
  section('Répartition par position','<div class="wl-card wl-analytics">'+donut(v)+'</div>')+
+ section('Actions, ETF et autres','<div class="wl-card wl-analytics">'+(assetReady?
+ Object.entries(byAsset).map(([type,n])=>'<div class="wl-history-row"><b>'+e(type)+'</b><b>'+percent(n/v.securitiesCents)+'</b></div>').join(''):
+ placeholder('Les poids par classe nécessitent une valorisation complète.'))+'</div>')+
  section('Secteurs et géographie','<div class="wl-card wl-analytics">'+(sectorReady?
  Object.entries(bySector).map(([s,n])=>'<div class="wl-history-row"><b>'+e(s)+'</b><b>'+percent(n/v.securitiesCents)+'</b></div>').join(''):
  placeholder('Classe les titres et ajoute leurs cours pour une allocation fiable.'))+'</div>')+
