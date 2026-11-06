@@ -258,17 +258,10 @@
    method:'valeur hors flux externes depuis le premier relevé, en montants absolus — pas de TWR'};
  }
  function periodPerformance(p,months){
-  const points=(p.snapshots||[]).filter(s=>dateValid(s.date)&&Number.isSafeInteger(s.valueCents))
-   .slice().sort((a,b)=>a.date.localeCompare(b.date));
-  const latest=points.at(-1);
-  if(!latest)return null;
-  const startDate=months==='all'?null:(()=>{
-   const [y,m,d]=latest.date.split('-').map(Number),dt=new Date(Date.UTC(y,m-1,d));
-   dt.setUTCMonth(dt.getUTCMonth()-Number(months));return dt.toISOString().slice(0,10);
-  })();
-  const possible=points.filter(s=>!startDate||s.date>=startDate);
-  if(possible.length<2)return null;
-  const first=possible[0],last=possible.at(-1);
+  // Share the exact selection window with the graph (including end-of-month clipping).
+  const series=chartSeries(p,months);
+  if(!series.ready)return null;
+  const first=series.points[0],last=series.points.at(-1);
   const span=(Date.parse(last.date)-Date.parse(first.date))/86400000;
   if(span<=0)return null;
   let net=0,weighted=0;
@@ -277,9 +270,10 @@
    const signed=op.type==='deposit'?op.amountCents:-op.amountCents;
    net+=signed;weighted+=signed*(Date.parse(last.date)-Date.parse(op.date))/(span*86400000);
   }
-  const gain=last.valueCents-first.valueCents-net,denominator=first.valueCents+weighted;
+  const gain=last.valueCents-first.valueCents-net;
+  const denominator=first.valueCents+weighted;
   return{gainCents:gain,percent:denominator>0?gain/denominator*100:null,
-   method:'Dietz modifiée, approximation',from:first.date,to:last.date,points:possible.length};
+   method:'Dietz modifiée, approximation',from:first.date,to:last.date,points:series.points.length};
  }
  function demo(){
   const raw=[
