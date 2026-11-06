@@ -181,3 +181,12 @@ test('chart controls use the same persisted-in-memory state as analysis navigati
  assert.match(app,/a==='trendPoint'/);
  assert.match(app,/U.analytics\(p,range,chartMetric,chartFocus\)/);
 });
+
+test('four-decimal stock and ETF quotes remain visible without rounding to cents',()=>{
+ const native=U.fmtPrice(E.price('19.7085'),'EUR');
+ assert.match(native,/19,7085/);
+ const basis=U.fmtPrice(E.price('1.1234'),'EUR');
+ assert.match(basis,/1,1234/);
+ const userQuote={...p,quotes:{dsy:{priceUnits:E.price('19.7085'),date:'2026-11-05',source:'Manuel',kind:'manuel'}}};
+ assert.match(U.position(userQuote,'dsy'),/19,7085/);
+});
