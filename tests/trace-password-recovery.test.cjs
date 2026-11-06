@@ -58,7 +58,7 @@ test('recovery callback stops workspace bootstrap and accepts only matching pass
  const f=fixture('#access_token=placeholder&type=recovery');
  assert.equal(f.window.TracePasswordRecovery.holdWorkspace(),true);
  assert.ok(f.gates.includes('cloudAuthPanel'));
- assert.equal(f.window.TracePasswordRecovery.onAuthEvent('PASSWORD_RECOVERY',{user:{id:'test'}}),true);
+ assert.equal(f.window.TracePasswordRecovery.onAuthEvent('PASSWORD_RECOVERY',{user:{id:'test'},access_token:'test-token'}),true);
  f.nodes.traceNewPassword.value='a-strong-new-password';
  f.nodes.traceConfirmNewPassword.value='not-the-same';
  await f.nodes.traceResetConfirmForm.fire('submit');
@@ -92,4 +92,13 @@ test('actual installed 2.0 page contains accessible recovery UI and loads helper
  assert.match(app,/TracePasswordRecovery\?\.onAuthEvent/);
  assert.match(app,/TracePasswordRecovery\?\.holdWorkspace/);
  assert.ok(html.includes('content="5.37.0"'));
+});
+
+test('a forged recovery URL cannot update a password without a Supabase recovery event',async()=>{
+ const f=fixture('#type=recovery');
+ f.nodes.traceNewPassword.value='a-long-new-password';
+ f.nodes.traceConfirmNewPassword.value='a-long-new-password';
+ await f.nodes.traceResetConfirmForm.fire('submit');
+ assert.equal(f.updates.length,0);
+ assert.match(f.nodes.cloudAuthMessage.textContent,/lien de réinitialisation valide/);
 });
