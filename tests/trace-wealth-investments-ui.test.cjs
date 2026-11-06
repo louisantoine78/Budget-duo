@@ -16,7 +16,7 @@ test('premium lab renders the eight exact demo positions without synthetic perfo
  assert.match(detail,/Dassault Systèmes/);
  assert.match(detail,/Sanofi/);
  assert.match(detail,/Liquidités/);
- assert.match(detail,/PRU à compléter/);
+ assert.match(detail,/Prix de revient/);
  assert.match(detail,/Aucune opération saisie/);
  assert.ok(!detail.includes('19,708'));
 });
