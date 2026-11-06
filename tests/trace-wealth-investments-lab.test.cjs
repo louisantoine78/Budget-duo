@@ -189,3 +189,43 @@ test('ISO 6166 ISIN check-digit and exchange MIC validation avoid mistyped ident
  p.positions[1].isin='FR0000120074';
  assert.throws(()=>E.evaluate(p),/ISIN invalide/);
 });
+
+
+test('operation preview calculates gross fees and after-cash without mutating portfolio',()=>{
+ const p=blank();
+ const before=JSON.stringify(p);
+ const buy=op('preview1','buy','2026-11-06',{
+  securityId:'X',quantityMicro:E.quantity(5),unitPriceUnits:E.price('10'),feeCents:120
+ });
+ const preview=E.previewOperation(p,buy);
+ assert.equal(preview.cashBeforeCents,100000);
+ assert.equal(preview.cashAfterCents,94880);
+ assert.equal(preview.deltaCashCents,-5120);
+ assert.equal(preview.quantityAfterMicro,E.quantity(5));
+ assert.equal(preview.deltaFlowCents,0);
+ assert.equal(preview.candidate.operations.length,1);
+ assert.equal(JSON.stringify(p),before);
+ assert.throws(()=>E.previewOperation(p,op('overdrawn','withdrawal','2026-11-06',{amountCents:200000})),/Retrait supérieur/);
+});
+test('edit preview shows net correction impact without creating a second transaction',()=>{
+ const p=E.appendOperation(blank(),op('a','withdrawal','2026-11-06',{amountCents:12000}));
+ const revised=op('a','withdrawal','2026-11-06',{amountCents:4000});
+ const preview=E.previewOperation(p,revised,'a');
+ assert.equal(preview.cashBeforeCents,88000);
+ assert.equal(preview.cashAfterCents,96000);
+ assert.equal(preview.deltaCashCents,8000);
+ assert.equal(preview.deltaFlowCents,8000);
+ assert.equal(preview.candidate.operations.length,1);
+ assert.equal(E.evaluate(p).cashCents,88000);
+});
+test('partial sell preview refuses unknown opening PRU but passes once supplied',()=>{
+ let p=E.demo().portfolios[0];
+ const sale=op('s','sell','2026-11-07',{securityId:'dsy',quantityMicro:E.quantity(1),unitPriceUnits:E.price('20')});
+ assert.throws(()=>E.previewOperation(p,sale),/PRU initial manquant/);
+ p=E.setOpeningPosition(p,'dsy',E.tradeCents(E.quantity(40),E.price('19.70')));
+ const result=E.previewOperation(p,sale);
+ assert.equal(result.quantityAfterMicro,E.quantity(39));
+ assert.equal(result.deltaRealizedCents,30);
+ assert.equal(result.cashAfterCents,15829);
+ assert.equal(p.operations.length,0);
+});
