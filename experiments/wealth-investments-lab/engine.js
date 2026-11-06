@@ -221,6 +221,42 @@
    source:'Calcul basé sur les derniers cours connus à cette date',
    estimated:evidence.some(x=>x.quoteDate!==onDate),evidence};
  }
+ // Historical chart uses ONLY dated ledger snapshots, not synthesized market prices.
+ // Values adjusted for net external flows are an absolute-value comparison, NOT TWR.
+ function chartSeries(p,months='all'){
+  if(months!=='all'&&(!Number.isInteger(Number(months))||Number(months)<1||Number(months)>120))
+   throw Error('Période de graphique invalide.');
+  const all=(p.snapshots||[]).filter(x=>dateValid(x.date)&&Number.isSafeInteger(x.valueCents)&&x.valueCents>=0)
+   .slice().sort((a,b)=>a.date.localeCompare(b.date));
+  for(let i=1;i<all.length;i++)if(all[i].date===all[i-1].date)
+   throw Error('Deux valorisations portent la même date.');
+  const last=all.at(-1);
+  if(!last)return{points:[],ready:false,from:null,to:null,method:'points vérifiés seulement'};
+  let cutoff=null;
+  if(months!=='all'){
+   const [year,month,day]=last.date.split('-').map(Number);
+   const origin=new Date(Date.UTC(year,month-1,1));
+   origin.setUTCMonth(origin.getUTCMonth()-Number(months));
+   const lastDay=new Date(Date.UTC(origin.getUTCFullYear(),origin.getUTCMonth()+1,0)).getUTCDate();
+   origin.setUTCDate(Math.min(day,lastDay));
+   cutoff=origin.toISOString().slice(0,10);
+  }
+  const points=all.filter(x=>!cutoff||x.date>=cutoff);
+  if(!points.length)return{points:[],ready:false,from:null,to:null,method:'points vérifiés seulement'};
+  const from=points[0].date,to=points.at(-1).date;
+  const flows=p.operations.filter(o=>['deposit','withdrawal'].includes(o.type)&&o.date>from&&o.date<=to);
+  const rows=points.map(snap=>{
+   const netExternalCents=flows.filter(o=>o.date<=snap.date)
+    .reduce((sum,o)=>sum+(o.type==='deposit'?o.amountCents:-o.amountCents),0);
+   const flowAdjustedCents=snap.valueCents-netExternalCents;
+   if(!Number.isSafeInteger(flowAdjustedCents))throw Error('Graphique : flux hors limites.');
+   return{date:snap.date,valueCents:snap.valueCents,flowAdjustedCents,
+    netExternalCents,source:snap.source||'Source non renseignée',
+    estimated:Boolean(snap.estimated),reference:!Array.isArray(snap.evidence)};
+  });
+  return{points:rows,ready:rows.length>=2,from,to,
+   method:'valeur hors flux externes depuis le premier relevé, en montants absolus — pas de TWR'};
+ }
  function periodPerformance(p,months){
   const points=(p.snapshots||[]).filter(s=>dateValid(s.date)&&Number.isSafeInteger(s.valueCents))
    .slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -266,5 +302,5 @@
    selectedId:'pea-demo'};
  }
  return Object.freeze({SUPPORTED,cents,quantity,price,tradeCents,dateValid,isinValid,micValid,evaluate,appendOperation,previewOperation,setQuote,
-  setOpeningPosition,snapshotAt,periodPerformance,demo,Q_SCALE,PRICE_SCALE});
+  setOpeningPosition,snapshotAt,chartSeries,periodPerformance,demo,Q_SCALE,PRICE_SCALE});
 });
