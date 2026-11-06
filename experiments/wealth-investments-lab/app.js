@@ -68,8 +68,12 @@ function operationPreview(form,old){
 }
 function replacePortfolio(p){E.evaluate(p);model.portfolios=model.portfolios.map(x=>x.id===p.id?p:x);}
 function breadcrumb(){
- if(route==='overview')return '<button data-act="home">Patrimoine</button><span>/</span><b>Investissements</b>';
- const p=current();const base='<button data-act="home">Patrimoine</button><span>/</span><button data-act="home">Investissements</button><span>/</span>';
+ const embedded=document.documentElement?.classList?.contains('wl-embedded')===true;
+ if(route==='overview')return embedded?'<b>Investissements</b>':
+  '<button data-act="home">Patrimoine</button><span>/</span><b>Investissements</b>';
+ const p=current(),base=embedded?
+  '<button data-act="home">Investissements</button><span>/</span>':
+  '<button data-act="home">Patrimoine</button><span>/</span><button data-act="home">Investissements</button><span>/</span>';
  if(route==='portfolio')return base+'<b>'+U.e(p.name)+'</b>';
  const sub='<button data-act="portfolio" data-id="'+U.e(p.id)+'">'+U.e(p.name)+'</button><span>/</span>';
  return base+sub+'<b>'+(route==='position'?U.e(catalog(securityId)?.name||'Position'):'Analyse')+'</b>';
