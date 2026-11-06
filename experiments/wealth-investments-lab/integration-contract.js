@@ -24,7 +24,7 @@
    if(!a||typeof a.id!=='string'||!a.id||IDs.has(a.id))throw Error('Identifiant de compte invalide ou répété');
    IDs.add(a.id);
    if(!eligible(a))continue;
-   const ops=operations.filter(x=>x&&x.accountId===a.id&&x.status!=='draft');
+   const ops=operations.filter(x=>x&&x.accountId===a.id&&(!x.status||x.status==='confirmed'));
    const symbols=[...new Set(ops.filter(x=>['buy','sell','quote'].includes(x.type))
     .map(x=>String(x.symbol||'').trim().toUpperCase()).filter(Boolean))];
    const issues=[];
