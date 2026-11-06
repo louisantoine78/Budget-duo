@@ -16,7 +16,7 @@ test('premium lab renders the eight exact demo positions without synthetic perfo
  assert.match(detail,/Dassault Systèmes/);
  assert.match(detail,/Sanofi/);
  assert.match(detail,/Liquidités/);
- assert.match(detail,/PRU à renseigner/);
+ assert.match(detail,/PRU à compléter/);
  assert.match(detail,/Aucune opération saisie/);
  assert.ok(!detail.includes('19,708'));
 });
@@ -105,4 +105,31 @@ test('quote-backed valuation unlocks only facts supported by the entered prices'
  assert.doesNotMatch(html,/Renseigner un cours/);
  assert.match(U.position(known,'dsy'),/Place de cotation à renseigner/);
  assert.match(U.analytics(known,'all'),/Actions, ETF et autres/);
+});
+
+test('contextual buy/sell and simplified glance are available directly in a position',()=>{
+ const screen=U.position(p,'dsy'),list=U.portfolio(p),home=U.overview(demo);
+ assert.match(screen,/data-act="quickBuy" data-id="dsy"/);
+ assert.match(screen,/data-act="quickSell" data-id="dsy"/);
+ assert.match(screen,/Saisir un cours/);
+ assert.match(screen,/Modifier la fiche/);
+ assert.match(list,/8 lignes/);
+ assert.match(list,/6 actions/);
+ assert.match(list,/2 ETF/);
+ assert.match(list,/Cours à compléter/);
+ assert.match(home,/Analyses/);
+ assert.doesNotMatch(home,/Vue rapide/);
+ assert.doesNotMatch(list,/<h2>Gains latents<\/h2>/);
+});
+test('transaction form includes segmented operation types and non-mutating financial preview',()=>{
+ const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
+ assert.match(js,/data-op-kind/);
+ assert.match(js,/aria-pressed/);
+ assert.match(js,/function operationPreview/);
+ assert.match(js,/previewOperation\(current\(\),op/);
+ assert.match(js,/data-act="quickBuy"|a==='quickBuy'/);
+ assert.match(js,/Simulation locale uniquement/);
+ assert.match(css,/\.wl-op-kinds/);
+ assert.match(css,/\.wl-op-preview/);
 });
