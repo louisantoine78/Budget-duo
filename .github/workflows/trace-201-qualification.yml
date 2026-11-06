@@ -1,0 +1,45 @@
+name: TRACE 2.0.1 Patrimoine Investments release qualification
+on:
+  push:
+    branches:
+      - release/trace-2.0.1-patrimoine-investissements
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  investments201:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check of release code
+        run: |
+          node --check trace-wealth-201-engine.js
+          node --check trace-wealth-201.js
+          node --check v5-app-5.37.0.js
+          node --check sw.js
+      - name: TRACE 2.0.1 accounting, usability and preservation
+        run: node --test tests/trace-201-investments.test.cjs
+      - name: Existing TRACE banking and foreign exchange regression
+        run: |
+          node --test tests/trace-international-bank-investment.test.cjs
+          node --test tests/trace-cas-investment-ownership-static.test.cjs
+      - name: Ensure only authorized Patrimoine and version files changed
+        run: |
+          set -eu
+          git fetch origin main
+          for file in config.js sw.js manifest.webmanifest vercel.json;
+          do
+            git diff --exit-code origin/main HEAD -- "$file"
+          done
+          changed="$(git diff --name-only origin/main HEAD)"
+          echo "$changed"
+          if echo "$changed" | grep -Ev '^(trace-wealth-201-engine.js$|trace-wealth-201.js$|trace-wealth-201.css$|index.html$|v5-app-5.37.0.js$|trace-version.json$|tests/trace-201-investments.test.cjs$|\.github/workflows/trace-201-qualification.yml$|docs/TRACE-2.0.1-PATRIMOINE-RELEASE.md$)' | grep -q .; then
+            echo 'Unexpected file outside TRACE 2.0.1 scope.'
+            exit 1
+          fi
