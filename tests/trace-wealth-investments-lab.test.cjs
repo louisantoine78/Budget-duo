@@ -314,3 +314,18 @@ test('market quote contract refuses mismatched symbols, FX, unlicensed feeds and
  assert.throws(()=>market.acceptQuote({...good,price:'32.12345'},security,now),/décimales/);
  assert.throws(()=>market.acceptQuote(good,{...security,isin:''},now),/ISIN/);
 });
+
+test('end-of-month performance uses the same clipped month window as the chart',()=>{
+ const p={...blank(),snapshots:[
+  {date:'2026-02-28',valueCents:100000},
+  {date:'2026-03-30',valueCents:101000},
+  {date:'2026-03-31',valueCents:102000}
+ ]};
+ const data=E.chartSeries(p,1);
+ assert.equal(data.points[0].date,'2026-02-28');
+ assert.equal(data.points.at(-1).date,'2026-03-31');
+ const performance=E.periodPerformance(p,1);
+ assert.equal(performance.from,data.from);
+ assert.equal(performance.to,data.to);
+ assert.equal(performance.gainCents,2000);
+});
