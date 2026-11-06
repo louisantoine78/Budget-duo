@@ -119,3 +119,13 @@ dialog{border:0;padding:0;border-radius:24px 24px 0 0;box-shadow:0 -20px 70px rg
 .wl-trend-disclaimer{color:#657b6d;font-size:10px;line-height:1.58;margin:8px 0 4px}
 .wl-trend-source{color:#809489;font-size:10px;line-height:1.5;margin:7px 0 0}
 .wl-trend-tab:focus-visible,.wl-trend-point:focus-visible{outline:2px solid #1f6b50;outline-offset:2px}
+
+/* Embedded only inside the optional Patrimoine detail surface; standalone preview unchanged. */
+.wl-embedded body{background:#fafcf9}
+.wl-embedded .wl-app{max-width:none;min-height:100%;box-shadow:none}
+.wl-embedded .wl-header,.wl-embedded .wl-bottom,.wl-embedded .wl-warning{display:none!important}
+.wl-embedded .wl-container{padding:17px 18px 28px}
+.wl-embedded .wl-crumb{margin-bottom:11px}
+.wl-embedded .wl-footer-note{margin-top:16px}
+.wl-embedded dialog{z-index:9}
+@media(max-width:430px){.wl-embedded .wl-container{padding:15px 16px 30px}}
