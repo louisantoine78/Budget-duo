@@ -1,0 +1,114 @@
+{
+  "source": "Bank of Canada Valet public HTTPS API",
+  "financialData": "No bank, household or transaction data; public historical quotes only",
+  "realHTTP": true,
+  "browserCORS": false,
+  "currentMarketQuote": false,
+  "results": [
+    {
+      "name": "EUR 2025-06-20",
+      "passed": true,
+      "quote": {
+        "currency": "EUR",
+        "cadPerUnit": 1.5819,
+        "date": "2025-06-20",
+        "requestedDate": "2025-06-20",
+        "kind": "exact",
+        "source": "Banque du Canada · Valet",
+        "url": "https://www.bankofcanada.ca/valet/observations/FXEURCAD?start_date=2025-06-12&end_date=2025-06-20"
+      }
+    },
+    {
+      "name": "USD 2025-06-20",
+      "passed": true,
+      "quote": {
+        "currency": "USD",
+        "cadPerUnit": 1.3728,
+        "date": "2025-06-20",
+        "requestedDate": "2025-06-20",
+        "kind": "exact",
+        "source": "Banque du Canada · Valet",
+        "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD?start_date=2025-06-12&end_date=2025-06-20"
+      }
+    },
+    {
+      "name": "GBP 2025-06-20",
+      "passed": true,
+      "quote": {
+        "currency": "GBP",
+        "cadPerUnit": 1.8499,
+        "date": "2025-06-20",
+        "requestedDate": "2025-06-20",
+        "kind": "exact",
+        "source": "Banque du Canada · Valet",
+        "url": "https://www.bankofcanada.ca/valet/observations/FXGBPCAD?start_date=2025-06-12&end_date=2025-06-20"
+      }
+    },
+    {
+      "name": "CHF 2025-06-20",
+      "passed": true,
+      "quote": {
+        "currency": "CHF",
+        "cadPerUnit": 1.6799,
+        "date": "2025-06-20",
+        "requestedDate": "2025-06-20",
+        "kind": "exact",
+        "source": "Banque du Canada · Valet",
+        "url": "https://www.bankofcanada.ca/valet/observations/FXCHFCAD?start_date=2025-06-12&end_date=2025-06-20"
+      }
+    },
+    {
+      "name": "EUR 2025-06-21",
+      "passed": true,
+      "quote": {
+        "currency": "EUR",
+        "cadPerUnit": 1.5819,
+        "date": "2025-06-20",
+        "requestedDate": "2025-06-21",
+        "kind": "previous_business_day",
+        "source": "Banque du Canada · Valet",
+        "url": "https://www.bankofcanada.ca/valet/observations/FXEURCAD?start_date=2025-06-13&end_date=2025-06-21"
+      }
+    },
+    {
+      "name": "USD 2025-06-21",
+      "passed": true,
+      "quote": {
+        "currency": "USD",
+        "cadPerUnit": 1.3728,
+        "date": "2025-06-20",
+        "requestedDate": "2025-06-21",
+        "kind": "previous_business_day",
+        "source": "Banque du Canada · Valet",
+        "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD?start_date=2025-06-13&end_date=2025-06-21"
+      }
+    },
+    {
+      "name": "GBP 2025-06-21",
+      "passed": true,
+      "quote": {
+        "currency": "GBP",
+        "cadPerUnit": 1.8499,
+        "date": "2025-06-20",
+        "requestedDate": "2025-06-21",
+        "kind": "previous_business_day",
+        "source": "Banque du Canada · Valet",
+        "url": "https://www.bankofcanada.ca/valet/observations/FXGBPCAD?start_date=2025-06-13&end_date=2025-06-21"
+      }
+    },
+    {
+      "name": "CHF 2025-06-21",
+      "passed": true,
+      "quote": {
+        "currency": "CHF",
+        "cadPerUnit": 1.6799,
+        "date": "2025-06-20",
+        "requestedDate": "2025-06-21",
+        "kind": "previous_business_day",
+        "source": "Banque du Canada · Valet",
+        "url": "https://www.bankofcanada.ca/valet/observations/FXCHFCAD?start_date=2025-06-13&end_date=2025-06-21"
+      }
+    }
+  ],
+  "passed": true
+}

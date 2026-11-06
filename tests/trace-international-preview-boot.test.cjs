@@ -1,0 +1,127 @@
+'use strict';
+/* TRACE International fixture boot + navigation smoke.
+   The real 5.37 app/bootstrap, FX engine, account UI, movement and import
+   modules run against a synthetic DOM. This is NOT a Safari or browser test. */
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),read=n=>fs.readFileSync(path.join(root,n),'utf8');
+const scripts=[
+ 'trace-international-preview-fixtures-1.0.0.js','trace-international-1.0.0.js',
+ 'trace-international-ui-1.0.0.js','trace-movement-5.36.0.js',
+ 'trace-import-guide-1.2.1.js','trace-operation-ui-5.37.0.js'
+];
+const handlers={},els=new Map(),buttons=new Map(),logs=[];
+function element(selector){
+ if(els.has(selector))return els.get(selector);
+ const o={id:selector,value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,style:{},
+  dataset:{},checked:false,files:[],classList:{add(){},remove(){},toggle(){},contains(){return false}},
+  addEventListener(name,fn){this['on'+name]=fn;},setAttribute(){},removeAttribute(){},
+  querySelector:s=>element(s),querySelectorAll:()=>[],closest:s=>element(s),
+  appendChild(){},append(){},getAttribute(){return null},focus(){},click(){},replaceChildren(){}
+ };
+ els.set(selector,o);return o;
+}
+function queryAll(selector){
+ if(selector==='#homeScope .seg'){
+  if(!buttons.has(selector))buttons.set(selector,[{dataset:{scope:'mine'},classList:{toggle(){}},onclick:null},
+   {dataset:{scope:'couple'},classList:{toggle(){}},onclick:null}]);
+  return buttons.get(selector);
+ }
+ return [];
+}
+const document={readyState:'loading',hidden:false,body:element('body'),
+ documentElement:element('documentElement'),querySelector:element,querySelectorAll:queryAll,
+ getElementById:id=>element('#'+id),createElement:name=>element('create-'+name),
+ addEventListener:(name,fn)=>{handlers[name]=fn;}
+};
+const location={pathname:'/trace-international-preview.html',
+ href:'https://lab.invalid/trace-international-preview.html',search:'',hash:''};
+const window={document,location,innerWidth:390,
+ __TRACE_INTERNATIONAL_PREVIEW__:true,scrollTo(){},addEventListener(){}};
+const fakeConsole={error:(...a)=>logs.push(a.join(' ')),warn(){},log(){},info(){}};
+for(const name of scripts)new Function('window','document','location','console',read(name))(window,document,location,fakeConsole);
+window.TraceInsights={renderCategories(){},renderTrend(){},renderAnnual(){},renderWealth(){}};
+window.TraceReminders={refresh(){}};
+window.TraceImportCalendar={render(){},selectedAccount(){return 'demo-ca-current';}};
+const URLSearchParamsFake=class {get(){return null;}};
+const URLFake=class{constructor(href){this.href=href;this.searchParams={set(){},delete(){}};}
+ toString(){return this.href;}};
+let externalRequests=0;
+const forbidFetch=()=>{externalRequests++;throw Error('Unexpected network request')};
+new Function('window','document','location','navigator','setTimeout','console','URLSearchParams','URL','Date','Intl','fetch',
+ read('v5-app-5.37.0.js'))(window,document,location,{},()=>{},fakeConsole,URLSearchParamsFake,URLFake,Date,Intl,forbidFetch);
+assert.equal(typeof handlers.DOMContentLoaded,'function');
+handlers.DOMContentLoaded();
+let total=0;async function test(name,fn){await fn();total++;console.log('PASS '+name);}
+async function main(){
+ await test('fixture mode enters real 5.37 bootstrap without auth or network',()=>{
+  assert.equal(window.__TRACE_PREVIEW_STATUS__.boot,'ok');
+  assert.equal(window.__TRACE_PREVIEW_STATUS__.build,'5.37.0');
+  assert.equal(window.__TRACE_PREVIEW_STATUS__.fixtureCount,9);
+  const data=window.TraceInternationalPreviewFixtures.create();
+  assert.equal(data.household.accountOpeningBalances['demo-fr-deferred-card'],0);
+  assert.equal(data.transactions.find(t=>t.id==='demo-ca-eur-transfer').toBankCurrency,'EUR');
+  const last=data.transactions.find(t=>t.id==='demo-previous-eur-pending');
+  assert.equal(last.status,'pending');
+  assert.equal(last.bankCurrency,'EUR');
+  assert.notEqual(last.date.slice(0,7),data.transactions.find(t=>t.id==='demo-eur-pending').date.slice(0,7));
+  assert.match(element('#importPendingTransactions').innerHTML,/demo-previous-eur-pending/);
+  assert.equal(window.__TRACE_PREVIEW_STATUS__.noSupabase,true);
+  assert.equal(externalRequests,0);assert.deepEqual(logs,[]);
+ });
+ await test('account summary calculates CAD credit-card debt only once',()=>{
+  assert.match(element('#homeBalance').textContent,/3[\s\u00a0\u202f]?670/);
+  assert.match(element('#homeCard').textContent,/430/);
+  assert.match(element('#traceIntlHome').innerHTML,/trace-intl-chip-star/);
+  assert.match(element('#traceIntlHome').innerHTML,/France/);
+  assert.ok(element('#transactionList').innerHTML.includes('demo-fr-purchase'));
+  assert.ok(element('#assetGrid').innerHTML.length>30);
+ });
+ await test('Home account choices are read-only; principal selection remains in Profile',async()=>{
+  const before=element('#homeBalance').textContent;
+  assert.match(element('#traceIntlHome').innerHTML,/data-trace-view-account/);
+  assert.doesNotMatch(element('#traceIntlHome').innerHTML,/id="traceIntlPrimary"/);
+  assert.doesNotMatch(element('#traceIntlHome').innerHTML,/data-trace-primary-account/);
+  assert.match(read('v5-app-5.37.0.js'),/data-primary-bank/);
+  assert.equal(element('#homeBalance').textContent,before);
+  assert.equal(externalRequests,0);
+ });
+ await test('Couple scope computes combined CAD liquidity and separate account list',()=>{
+  const couple=buttons.get('#homeScope .seg')[1];assert.equal(typeof couple.onclick,'function');
+  couple.onclick();
+  assert.match(element('#homeBalance').textContent,/8[\s\u00a0\u202f]?904/);
+  assert.match(element('#traceIntlHome').innerHTML,/Voir les comptes du foyer/);
+  assert.match(element('#traceIntlHome').innerHTML,/Élise/);
+ });
+ await test('foreign transfers use only visibly fictitious dated rates in the laboratory',async()=>{
+  const rate=await window.TraceInternational.getRate('EUR','2026-10-12');
+  assert.equal(rate.currency,'EUR');
+  assert.equal(rate.cadPerUnit,1.6);
+  assert.equal(rate.date,'2026-10-12');
+  assert.match(rate.source,/TAUX FICTIF/);
+  await assert.rejects(window.TraceInternational.getRate('JPY','2026-10-12'),/Taux de démonstration/);
+  assert.equal(externalRequests,0);
+ });
+ await test('add a fictional French bank account without contacting Supabase',async()=>{
+  element('#profileBtn').onclick();
+  assert.equal(typeof element('#settingsAccounts').onclick,'function');
+  element('#settingsAccounts').onclick();
+  element('#traceAddBankAccount').onclick();
+  element('#traceNewBankCountry').value='FR';
+  element('#traceNewBankCountry').onchange();
+  element('#traceNewBankName').value='Nouvelle banque EUR fictive';
+  element('#traceNewBankAmount').value='200';
+  element('#traceNewBankDate').value='2026-10-01';
+  element('#traceNewBankMode').value='start';
+  await element('#traceSaveNewBank').onclick();
+  assert.match(element('#traceIntlHome').innerHTML,/Nouvelle banque EUR fictive/);
+  assert.equal(externalRequests,0);
+ });
+ await test('lab remains explicit and does not attempt version redirect',()=>{
+  assert.match(element('#syncLabel').textContent,/Démo fictive|Démo locale/);
+  assert.match(element('#brandSubtitle').textContent,/LABORATOIRE/);
+  assert.equal(externalRequests,0);
+ });
+ console.log(total+' synthetic full-bootstrap laboratory scenarios passed');
+}
+main().catch(e=>{console.error('FAIL',e);process.exitCode=1;});

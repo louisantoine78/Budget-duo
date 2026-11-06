@@ -1,0 +1,201 @@
+'use strict';
+/* Native Node fake-DOM financial display tests. No Supabase, no real accounts. */
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'..','trace-international-ui-1.0.0.js'),'utf8');
+function harness({accounts,estimates,mainId='ca'}={}){
+ const events={writes:0,primaryChanges:[],rates:[]};
+ const I={
+  currency:a=>a?.currency||'CAD',money:(v,cur)=>Number(v).toFixed(2)+' '+cur,
+  snapshot({accounts,owner,mainId,estimates}){
+   const active=accounts.filter(a=>!a.archived&&(!owner||a.owner===owner));
+   const main=active.find(a=>a.id===mainId&&a.type==='checking')||active.find(a=>a.type==='checking');
+   const cards=active.filter(a=>a.type==='card'&&a.settlementAccountId===main?.id);
+   const sameCurrencyChecking=active.filter(a=>a.type==='checking'&&a.currency===main?.currency);
+   const ambiguous=active.filter(a=>a.type==='card'&&!a.settlementAccountId&&
+    a.currency===main?.currency&&sameCurrencyChecking.length>1);
+   const mixed=cards.filter(a=>a.currency!==main?.currency);
+   const unknown=[main,...cards].some(a=>estimates[a?.id]==null);
+   const creditReview=cards.filter(a=>Number(estimates[a.id])>0);
+   const checking=unknown?null:Number(estimates[main.id]);
+   const card=unknown||creditReview.length||mixed.length||ambiguous.length?
+    null:cards.reduce((s,a)=>s+Number(estimates[a.id]),0);
+   return{main,currency:main.currency,checking,card,
+    net:checking==null||card==null?null:checking+card,
+    cardsToReview:creditReview,ambiguousCards:ambiguous,mixedLinkedCurrencies:mixed,
+    balances:active.map(a=>({id:a.id,name:a.name,balance:estimates[a.id]??null,
+     nativeCurrency:a.currency,cad:a.currency==='CAD'?estimates[a.id]:null})),
+    complete:active.every(a=>a.currency==='CAD'&&estimates[a.id]!=null)&&!creditReview.length,
+    globalCAD:active.reduce((s,a)=>s+Number(estimates[a.id]||0),0)};
+  }
+ };
+ const window={TraceInternational:I};
+ vm.runInNewContext(source,{window});
+ const nodes={balance:{textContent:''},checking:{textContent:''},card:{textContent:''},
+  warning:{textContent:'',hidden:true},badge:{textContent:'Rapproché'}};
+ const host={innerHTML:'',onclick:null,buttons:{},primaryButtons:{},select:null,
+  querySelector(q){return q==='#traceIntlPrimary'?this.select:null},
+  querySelectorAll(q){return q==='[data-trace-view-account]'?Object.values(this.buttons):
+   q==='[data-trace-primary-account]'?Object.values(this.primaryButtons):[]},
+  prepare(){
+   this.buttons={};this.primaryButtons={};
+   for(const m of this.innerHTML.matchAll(/data-trace-primary-account="([^"]+)"/g))
+    this.primaryButtons[m[1]]={dataset:{tracePrimaryAccount:m[1]},onclick:null};
+   for(const m of this.innerHTML.matchAll(/data-trace-view-account="([^"]+)"/g))
+    this.buttons[m[1]]={dataset:{traceViewAccount:m[1]},onclick:null};
+   this.select={value:mainId,onchange:null};
+  }};
+ let html='';Object.defineProperty(host,'innerHTML',{get(){return html},set(v){html=v;host.prepare()}});
+ const args={host,accounts,owner:'la',mainId,estimates,rates:{},balanceNode:nodes.balance,
+  checkingNode:nodes.checking,cardNode:nodes.card,warningNode:nodes.warning,
+  badgeNode:nodes.badge,onSelect:id=>events.primaryChanges.push(id),
+  requestRate:cs=>events.rates.push(cs)};
+ const render=()=>window.TraceInternationalUI.render(args);
+ const click=id=>host.buttons[id].onclick({stopPropagation(){}});
+ return{events,nodes,host,render,click,args};
+}
+const accounts=[{id:'ca',name:'Courant CA',owner:'la',type:'checking',currency:'CAD'},
+ {id:'fr',name:'Courant FR',owner:'la',type:'checking',currency:'EUR'},
+ {id:'card',name:'Visa',owner:'la',type:'card',currency:'CAD',settlementAccountId:'ca'}];
+test('chips switch read-only display in native currency without changing primary',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();assert.equal(h.nodes.balance.textContent,'400.00 CAD');
+ h.click('fr');assert.equal(h.nodes.balance.textContent,'900.00 EUR');
+ assert.equal(h.nodes.card.textContent,'0.00 EUR');
+ assert.equal(h.events.primaryChanges.length,0);assert.equal(h.events.writes,0);
+ assert.match(h.host.innerHTML,/data-trace-view-account="fr" aria-pressed="true"/);
+});
+test('switching back restores original balance and status badge',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();h.click('fr');assert.equal(h.nodes.badge.textContent,'Consultation · compte secondaire');
+ h.click('ca');assert.equal(h.nodes.balance.textContent,'400.00 CAD');
+ assert.equal(h.nodes.badge.textContent,'Rapproché');
+});
+test('primary selection delegates to existing explicit confirmation',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();h.host.select.value='fr';h.host.select.onchange();
+ assert.deepEqual(h.events.primaryChanges,['fr']);
+ assert.equal(h.nodes.balance.textContent,'400.00 CAD');
+});
+test('Home hides the native selector and primary pills require confirmation',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();
+ assert.match(h.host.innerHTML,/class="input trace-intl-primary-native"/);
+ assert.match(h.host.innerHTML,/id="traceIntlPrimary" tabindex="-1" aria-hidden="true"/);
+ assert.match(h.host.innerHTML,/data-trace-primary-account="ca" aria-pressed="true"/);
+ h.host.primaryButtons.ca.onclick({stopPropagation(){}});
+ assert.deepEqual(h.events.primaryChanges,[]);
+ h.host.primaryButtons.fr.onclick({stopPropagation(){}});
+ assert.deepEqual(h.events.primaryChanges,['fr']);
+ assert.equal(h.nodes.balance.textContent,'400.00 CAD');
+ assert.equal(h.events.writes,0);
+});
+test('missing native balance is never fabricated as zero',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:null,card:-100}});
+ h.render();h.click('fr');assert.equal(h.nodes.balance.textContent,'À configurer');
+ assert.notEqual(h.nodes.balance.textContent,'0.00 EUR');
+});
+test('a credit card is subtracted only from its linked checking account',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();assert.equal(h.nodes.card.textContent,'100.00 CAD de dette');
+ h.click('fr');assert.equal(h.nodes.card.textContent,'0.00 EUR');
+});
+test('positive linked card balance is flagged and never counted as cash',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:20}});
+ h.render();assert.equal(h.nodes.balance.textContent,'À vérifier');
+ assert.equal(h.nodes.warning.hidden,false);
+ h.click('fr');assert.equal(h.nodes.warning.hidden,true);
+ h.click('ca');assert.equal(h.nodes.balance.textContent,'À vérifier');
+ assert.equal(h.nodes.warning.hidden,false);
+});
+test('one checking account needs no chip strip',()=>{
+ const h=harness({accounts:[accounts[0]],estimates:{ca:60}});
+ h.render();assert.doesNotMatch(h.host.innerHTML,/data-trace-view-account/);
+ assert.equal(h.nodes.balance.textContent,'60.00 CAD');
+});
+test('user-provided account labels are escaped before HTML insertion',()=>{
+ const a=[accounts[0],{...accounts[1],name:'<img src=x onerror=alert(1)>'}];
+ const h=harness({accounts:a,estimates:{ca:40,fr:20}});
+ h.render();assert.doesNotMatch(h.host.innerHTML,/<img/);
+ assert.match(h.host.innerHTML,/&lt;img/);
+});
+test('new primary selection resets the ephemeral view',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();h.click('fr');h.args.mainId='fr';h.render();
+ assert.equal(h.nodes.balance.textContent,'900.00 EUR');
+ assert.equal(h.events.primaryChanges.length,0);
+});
+
+test('archiving the last checking account clears stale cash and restores the status badge',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:-100}});
+ h.render();h.click('fr');
+ assert.equal(h.nodes.balance.textContent,'900.00 EUR');
+ assert.equal(h.nodes.badge.textContent,'Consultation · compte secondaire');
+ h.args.accounts=h.args.accounts.map(a=>a.type==='checking'?{...a,archived:true}:a);
+ h.render();
+ assert.equal(h.host.innerHTML,'');
+ assert.equal(h.nodes.balance.textContent,'À configurer');
+ assert.equal(h.nodes.checking.textContent,'—');
+ assert.equal(h.nodes.card.textContent,'—');
+ assert.equal(h.nodes.warning.hidden,true);
+ assert.equal(h.nodes.badge.textContent,'Rapproché');
+ assert.equal(h.events.primaryChanges.length,0);
+ assert.equal(h.events.writes,0);
+});
+test('account removal clears a previous positive-card warning without reusing old cash',()=>{
+ const h=harness({accounts,estimates:{ca:500,fr:900,card:20}});
+ h.render();
+ assert.equal(h.nodes.warning.hidden,false);
+ h.args.accounts=h.args.accounts.filter(a=>a.type==='card');
+ h.render();
+ assert.equal(h.nodes.warning.hidden,true);
+ assert.equal(h.nodes.warning.textContent,'');
+ assert.equal(h.nodes.balance.textContent,'À configurer');
+ assert.equal(h.nodes.checking.textContent,'—');
+ assert.equal(h.nodes.card.textContent,'—');
+});
+
+
+test('mixed-currency legacy card linkage explains why net cash is blocked',()=>{
+ const badCard={...accounts[2],currency:'EUR'};
+ const h=harness({accounts:[accounts[0],badCard],estimates:{ca:500,card:-100}});
+ h.render();
+ assert.equal(h.nodes.balance.textContent,'À vérifier');
+ assert.equal(h.nodes.warning.hidden,false);
+ assert.match(h.nodes.warning.textContent,/autre devise/);
+ assert.match(h.nodes.warning.textContent,/compte de règlement/);
+ assert.equal(h.events.writes,0);
+});
+test('unlinked card across two candidate current accounts requires mapping explanation',()=>{
+ const another={...accounts[0],id:'ca2',name:'Second courant CA'};
+ const unlinked={...accounts[2],settlementAccountId:null};
+ const h=harness({accounts:[accounts[0],another,unlinked],
+  estimates:{ca:500,ca2:200,card:-100}});
+ h.render();
+ assert.equal(h.nodes.balance.textContent,'À vérifier');
+ assert.equal(h.nodes.warning.hidden,false);
+ assert.match(h.nodes.warning.textContent,/sans compte de règlement/);
+ assert.equal(h.events.writes,0);
+});
+
+test('Home short labels remove redundant generic account wording without changing names',()=>{
+ const window={};vm.runInNewContext(source,{window});
+ const f=window.TraceInternationalUI.homeAccountShortLabel;
+ const checking=[
+  {id:'ca',name:'Compte Canada · compte courant CAD',currency:'CAD'},
+  {id:'fr',name:'France · compte EUR',currency:'EUR'},
+  {id:'ds',name:'Desjardins · courant',currency:'CAD'}
+ ];
+ assert.equal(f(checking[0],checking),'Canada');
+ assert.equal(f(checking[1],checking),'France');
+ assert.equal(f(checking[2],checking),'Desjardins');
+ assert.equal(checking[0].name,'Compte Canada · compte courant CAD');
+ const similar=[
+  {id:'a',name:'Canada · Desjardins',currency:'CAD'},
+  {id:'b',name:'Canada · RBC',currency:'CAD'}
+ ];
+ assert.equal(f(similar[0],similar),'Canada · Desjardins');
+ assert.equal(f(similar[1],similar),'Canada · RBC');
+ assert.notEqual(f(similar[0],similar),f(similar[1],similar));
+});

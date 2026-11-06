@@ -1,0 +1,684 @@
+'use strict';
+// TRACE CAS candidate 09 — actual PostgreSQL, fictional users and documents.
+// Explicit run only: TRACE_PGLITE_MODULE=... node tests/trace-cas-writes.integration.cjs
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const path=require('node:path');
+const {PGlite}=require(process.env.TRACE_PGLITE_MODULE||'@electric-sql/pglite');
+const uid=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
+const root=path.resolve(__dirname,'..');
+async function run(){
+ const db=new PGlite();let passed=0;
+ const check=async(label,fn)=>{await fn();passed++;console.log('PASS '+label);};
+ const acting=(n,fn)=>db.transaction(async tx=>{
+  await tx.exec('set local role authenticated');
+  await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[uid(n)]);
+  return fn(tx);
+ });
+ try{
+  await db.exec(`create role anon;create role authenticated;
+   create schema auth;create table auth.users(id uuid primary key);
+   create function auth.uid() returns uuid language sql stable as
+   $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   grant usage on schema auth to authenticated;
+   insert into auth.users(id) values ('${uid(1)}'),('${uid(2)}'),('${uid(3)}');`);
+  await db.exec((await fs.readFile(path.join(root,'supabase-schema.sql'),'utf8'))
+   .replace('create extension if not exists pgcrypto;',''));
+  const h=(await acting(1,tx=>tx.query("select * from public.create_household('Fake','A')"))).rows[0];
+  await acting(2,tx=>tx.query('select * from public.join_household($1,$2)',[h.invite_code,'B']));
+  const hid=h.household_id;
+  // Fourth fictional user and separate household preserve a legacy deferred
+  // card through the candidate migrations to detect household-erasure deadlocks.
+  await db.query('insert into auth.users(id) values ($1)',[uid(4)]);
+  const deferredHouse=(await acting(4,tx=>tx.query(
+   "select * from public.create_household('Archive fictive','D')"))).rows[0];
+  const deferredHouseId=deferredHouse.household_id;
+  for(const file of ['05-trace-v5-foundation.sql','06-trace-import-day-states.sql',
+    '07-trace-account-owner-write-guard.sql','08-trace-personal-settings-owner-guard.sql',
+    '09-trace-cas-versioned-writes.sql'])
+   await db.exec(await fs.readFile(path.join(root,'migrations',file),'utf8'));
+  // Fictional legacy rows created before quarantine to exercise old-client
+  // update/delete attempts without ever using real bank data.
+  await db.query('insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [hid,'accounts','legacy-deferred-card',JSON.stringify({
+    id:'legacy-deferred-card',type:'card',paymentMode:'deferred',owner:'la',
+    country:'FR',currency:'EUR',settlementAccountId:'la'}),uid(1)]);
+  await db.query('insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [hid,'transactions','legacy-deferred-purchase',JSON.stringify({
+    id:'legacy-deferred-purchase',type:'expense',status:'pending',
+    deferredKind:'purchase',accountId:'legacy-deferred-card',bankAmount:40}),uid(1)]);
+  // 5.36.x legacy card documents could omit 'type'; type/name inference
+  // must not weaken SQL quarantine when migrated.
+  await db.query('insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [hid,'accounts','legacy-typeless-deferred',JSON.stringify({
+    id:'legacy-typeless-deferred',name:'Ancienne Mastercard',
+    paymentMode:'deferred',owner:'la',currency:'EUR'}),uid(1)]);
+  await db.query(
+   'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [deferredHouseId,'accounts','historical-deferred',JSON.stringify({
+    id:'historical-deferred',owner:'la',type:'card',paymentMode:'deferred',
+    currency:'EUR',country:'FR'}),uid(4)]);
+  await db.query(
+   'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+   [deferredHouseId,'transactions','historical-purchase',JSON.stringify({
+    id:'historical-purchase',accountId:'historical-deferred',
+    deferredKind:'purchase',status:'pending',bankAmount:19.95}),uid(4)]);
+  await db.exec(await fs.readFile(path.join(root,'migrations/10-trace-deferred-write-quarantine.sql'),'utf8'));
+  await db.exec(await fs.readFile(path.join(root,'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
+  // Complete the fourth fixture AFTER 11 using the same CAS RPC as a client:
+  // an ordinary checking account plus a private CSV evidence record.
+  // The later administrative cascade must clear both quarantined deferred
+  // records and bank evidence, without opening individual-delete paths.
+  const otherChecking={id:'archive-checking',owner:'la',type:'checking',
+   country:'FR',currency:'EUR'};
+  const otherEvidence={id:'archive-csv-source',kind:'csv_unparsed',
+   owner:'la',accountId:'archive-checking',status:'pending_review',
+   source:'csv',sourceFileName:'fictional-archive.csv',sourceIndex:2,
+   rawText:'2026-10-25 | Fictional line requiring review'};
+  for(const [collection,data] of [
+   ['accounts',otherChecking],['imports',otherEvidence]
+  ]) await acting(4,tx=>tx.query(
+   'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+   [deferredHouseId,collection,data.id,JSON.stringify(data),null]));
+  const rpcSave=(n,collection,id,data,rev)=>acting(n,tx=>tx.query(
+   'select public.trace_cas_save_document($1,$2,$3,$4,$5) as revision',
+   [hid,collection,id,JSON.stringify(data),rev]));
+  const rpcDelete=(n,collection,id,rev)=>acting(n,tx=>tx.query(
+   'select public.trace_cas_delete_document($1,$2,$3,$4) as ok',
+   [hid,collection,id,rev]));
+  const rpcHouse=(n,settings,rev)=>acting(n,tx=>tx.query(
+   'select public.trace_cas_save_household_settings($1,$2,$3) as revision',
+   [hid,JSON.stringify(settings),rev]));
+  const readDoc=async(collection,id)=> (await db.query(
+   'select data,revision from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+   [hid,collection,id])).rows[0];
+  await check('create only uses null revision; existing ID cannot be recreated',async()=>{
+   const value={id:'t1',type:'expense',amountCAD:40,status:'pending'};
+   assert.equal((await rpcSave(1,'transactions','t1',value,null)).rows[0].revision,0);
+   await assert.rejects(rpcSave(1,'transactions','t1',{...value,amountCAD:999},null),/TRACE_WRITE_CONFLICT/);
+   assert.equal((await readDoc('transactions','t1')).data.amountCAD,40);
+  });
+  await check('two stale revisions never overwrite first confirmed write',async()=>{
+   const original=(await readDoc('transactions','t1')).data;
+   assert.equal((await rpcSave(1,'transactions','t1',{...original,amountCAD:42},0)).rows[0].revision,1);
+   await assert.rejects(rpcSave(2,'transactions','t1',{...original,amountCAD:12},0),/TRACE_WRITE_CONFLICT/);
+   assert.equal((await readDoc('transactions','t1')).data.amountCAD,42);
+   assert.equal((await rpcSave(2,'transactions','t1',{...original,amountCAD:43},1)).rows[0].revision,2);
+  });
+  await check('stale deletion fails; correct deletion succeeds',async()=>{
+   await assert.rejects(rpcDelete(1,'transactions','t1',0),/TRACE_WRITE_CONFLICT/);
+   assert.equal((await readDoc('transactions','t1')).data.amountCAD,43);
+   assert.equal((await rpcDelete(1,'transactions','t1',2)).rows[0].ok,true);
+   assert.equal(await readDoc('transactions','t1'),undefined);
+  });
+  await check('outsider cannot create, change or delete household documents',async()=>{
+   await assert.rejects(rpcSave(3,'transactions','hacker',{id:'hacker',amountCAD:1},null),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcDelete(3,'transactions','t1',0),/TRACE_WRITE_FORBIDDEN/);
+  });
+  await check('account owner cannot be forged via SECURITY DEFINER',async()=>{
+   const mine={id:'la',owner:'la',type:'checking',currency:'CAD'};
+   const other={id:'partner',owner:'partner',type:'checking',currency:'EUR'};
+   await rpcSave(1,'accounts','la',mine,null);
+   await rpcSave(2,'accounts','partner',other,null);
+   await assert.rejects(rpcSave(1,'accounts','forge',{...other,id:'forge'},null),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'accounts','partner',{...other,name:'forged'},0),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcDelete(1,'accounts','partner',0),/TRACE_WRITE_FORBIDDEN/);
+   assert.equal((await readDoc('accounts','partner')).data.owner,'partner');
+  });
+  await check('historical shared account survives CAS without exposing private ownership',async()=>{
+   const shared={id:'legacy-shared',owner:'household',type:'other',
+    currency:'CAD',name:'Fictional shared legacy'};
+   assert.equal((await rpcSave(1,'accounts',shared.id,shared,null)).rows[0].revision,0);
+   assert.equal((await rpcSave(2,'accounts',shared.id,{...shared,name:'Shared updated'},0)).rows[0].revision,1);
+   await assert.rejects(rpcSave(1,'accounts',shared.id,{...shared,owner:'la'},1),/TRACE_ACCOUNT_OWNER_IMMUTABLE/);
+   await assert.rejects(rpcSave(2,'accounts',shared.id,{...shared,owner:'partner'},1),/TRACE_ACCOUNT_OWNER_IMMUTABLE/);
+   await assert.rejects(rpcSave(3,'accounts',shared.id,{...shared,name:'forged'},1),/TRACE_WRITE_FORBIDDEN/);
+   assert.equal((await readDoc('accounts',shared.id)).data.owner,'household');
+   assert.equal((await readDoc('accounts',shared.id)).revision,1);
+  });
+  await check('investment operations require native portfolio and banking ownership',async()=>{
+   const ownPortfolio={id:'pea-la',owner:'la',type:'broker',currency:'EUR'};
+   const otherPortfolio={id:'pea-partner',owner:'partner',type:'broker',currency:'EUR'};
+   await rpcSave(1,'investment_accounts','pea-la',ownPortfolio,null);
+   await rpcSave(2,'investment_accounts','pea-partner',otherPortfolio,null);
+   const ownOperation={id:'op-la',accountId:'pea-la',type:'deposit',
+    bankAccountId:'la',bankAmount:40,bankCurrency:'CAD',status:'confirmed'};
+   const otherOperation={id:'op-partner',accountId:'pea-partner',type:'deposit',
+    bankAccountId:'partner',bankAmount:20,bankCurrency:'EUR',status:'confirmed'};
+   assert.equal((await rpcSave(1,'investment_operations','op-la',ownOperation,null)).rows[0].revision,0);
+   assert.equal((await rpcSave(2,'investment_operations','op-partner',otherOperation,null)).rows[0].revision,0);
+   await assert.rejects(rpcSave(2,'investment_operations','forged', {
+    ...ownOperation,id:'forged'},null),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'investment_operations','foreign-bank',{
+    ...ownOperation,id:'foreign-bank',bankAccountId:'partner'},null),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'investment_operations','ghost',{
+    ...ownOperation,id:'ghost',accountId:'nonexistent'},null),/TRACE_WRITE_FORBIDDEN/);
+   // Changing the destination of an existing operation must not steal it.
+   await assert.rejects(rpcSave(2,'investment_operations','op-la',{
+    ...ownOperation,accountId:'pea-partner'},0),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcDelete(2,'investment_operations','op-la',0),/TRACE_WRITE_CONFLICT/);
+   assert.equal((await readDoc('investment_operations','op-la')).data.accountId,'pea-la');
+   assert.equal((await rpcSave(1,'investment_operations','op-la',{
+    ...ownOperation,bankAmount:41},0)).rows[0].revision,1);
+   assert.equal((await rpcDelete(1,'investment_operations','op-la',1)).rows[0].ok,true);
+   assert.equal(await readDoc('investment_operations','op-la'),undefined);
+  });
+  await check('new investment bank leg cannot use an archived checking account',async()=>{
+   const archived={id:'archived-invest-bank',owner:'la',type:'checking',
+    currency:'CAD',archived:true};
+   assert.equal((await rpcSave(1,'accounts',archived.id,archived,null)).rows[0].revision,0);
+   const bad={id:'archive-invest-op',accountId:'pea-la',type:'deposit',
+    bankAccountId:archived.id,bankAmount:40,bankCurrency:'CAD',status:'pending'};
+   await assert.rejects(rpcSave(1,'investment_operations',bad.id,bad,null),
+    /TRACE_WRITE_FORBIDDEN/);
+   assert.equal(await readDoc('investment_operations',bad.id),undefined,
+    'Forbidden archived bank leg must not produce a financial movement');
+   // An active account belonging to the same member remains accepted.
+   const good={...bad,id:'active-invest-op',bankAccountId:'la'};
+   assert.equal((await rpcSave(1,'investment_operations',good.id,good,null)).rows[0].revision,0);
+   await rpcDelete(1,'investment_operations',good.id,0);
+  });
+  await check('CAS cannot launder historical investment bank legs owned by another member',async()=>{
+   // Reproduce a legacy write predating the ownership guard: this historical
+   // operation belongs to la's portfolio, yet debits the partner's checking
+   // account. Security-definer edits/deletes must NOT bypass that old leg.
+   const legacy={id:'legacy-investment-foreign-bank',accountId:'pea-la',
+    bankAccountId:'partner',type:'deposit',bankAmount:45,
+    bankCurrency:'EUR',status:'confirmed'};
+   await db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'investment_operations',legacy.id,JSON.stringify(legacy),uid(1)]);
+   const original=await readDoc('investment_operations',legacy.id);
+   assert.equal(original.revision,0);
+   await assert.rejects(rpcSave(1,'investment_operations',legacy.id,{
+    ...legacy,bankAccountId:'la',bankAmount:50},0),/TRACE_WRITE_CONFLICT/);
+   await assert.rejects(rpcDelete(1,'investment_operations',legacy.id,0),
+    /TRACE_WRITE_CONFLICT/);
+   const remaining=await readDoc('investment_operations',legacy.id);
+   assert.deepEqual(remaining.data,legacy);
+   assert.equal(remaining.revision,0,'rejected edits must not increment revision');
+   // A missing historic bank account must also fail closed, not silently
+   // become removable via a rewritten valid bank reference.
+   const missing={...legacy,id:'legacy-investment-missing-bank',
+    bankAccountId:'deleted-checking'};
+   await db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'investment_operations',missing.id,JSON.stringify(missing),uid(1)]);
+   await assert.rejects(rpcSave(1,'investment_operations',missing.id,{
+    ...missing,bankAccountId:'la'},0),/TRACE_WRITE_CONFLICT/);
+   await assert.rejects(rpcDelete(1,'investment_operations',missing.id,0),
+    /TRACE_WRITE_CONFLICT/);
+  });
+  await check('arbitrary collections cannot be written by privileged RPC',async()=>{
+   await assert.rejects(rpcSave(1,'unknown_settings','intruder',
+    {id:'intruder',amountCAD:9000},null),/TRACE_WRITE_INVALID/);
+   const rows=(await db.query("select count(*)::integer as count from public.documents where collection='unknown_settings'")).rows;
+   assert.equal(rows[0].count,0);
+  });
+  await check('bank and investment accounts cannot be physically deleted',async()=>{
+   await assert.rejects(rpcDelete(1,'accounts','la',0),/TRACE_WRITE_FORBIDDEN/);
+   await assert.rejects(rpcDelete(2,'accounts','partner',0),/TRACE_WRITE_FORBIDDEN/);
+   assert.equal((await readDoc('accounts','la')).data.owner,'la');
+   assert.equal((await readDoc('accounts','partner')).data.owner,'partner');
+  });
+  await check('shared transactions remain editable by either authenticated member',async()=>{
+   const data={id:'shared',amountCAD:10,type:'transfer',status:'pending'};
+   await rpcSave(1,'transactions','shared',data,null);
+   await rpcSave(2,'transactions','shared',{...data,status:'confirmed'},0);
+   assert.equal((await readDoc('transactions','shared')).data.status,'confirmed');
+  });
+  await check('stale settings write rejected; shared settings allowed when fresh',async()=>{
+   const state0=(await db.query('select settings,settings_revision from public.households where id=$1',[hid])).rows[0];
+   const new1={...state0.settings,defaultSplit:{la:60,partner:40}};
+   assert.equal((await rpcHouse(1,new1,0)).rows[0].revision,1);
+   await assert.rejects(rpcHouse(2,{...state0.settings,defaultSplit:{la:40,partner:60}},0),/TRACE_WRITE_CONFLICT/);
+   assert.equal((await rpcHouse(2,{...new1,defaultSplit:{la:50,partner:50}},1)).rows[0].revision,2);
+  });
+  await check('SECURITY DEFINER settings RPC still enforces partner ownership',async()=>{
+   const settings=(await db.query('select settings from public.households where id=$1',[hid])).rows[0].settings;
+   await rpcHouse(2,{...settings,accountOpeningBalances:{partner:250}},2);
+   const latest=(await db.query('select settings from public.households where id=$1',[hid])).rows[0].settings;
+   await assert.rejects(rpcHouse(1,{...latest,accountOpeningBalances:{partner:999}},3),/TRACE_SETTINGS_FORBIDDEN/);
+   assert.equal((await db.query('select settings from public.households where id=$1',[hid])).rows[0].settings.accountOpeningBalances.partner,250);
+  });
+  await check('server quarantines deferred cards through CAS and direct document insert',async()=>{
+   const disabled={id:'deferred-fr',owner:'la',type:'card',paymentMode:'deferred',
+    country:'FR',currency:'EUR',settlementAccountId:'la'};
+   await assert.rejects(rpcSave(1,'accounts','deferred-fr',disabled,null),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal(await readDoc('accounts','deferred-fr'),undefined);
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'accounts','deferred-direct',JSON.stringify({...disabled,id:'deferred-direct'}),uid(1)]
+   ),/TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal(await readDoc('accounts','deferred-direct'),undefined);
+  });
+  await check('deferred calendar aliases cannot be posted as ordinary cards',async()=>{
+   const fields={deferredDebitDay:28,deferredClosingDay:20,
+    deferredScheduleVersions:[{effectiveDate:'2026-11-01',debitDay:28,closingDay:20}]};
+   for(const [key,value] of Object.entries(fields)){
+    for(const mode of ['credit',null]){
+     const id='forged-'+key+'-'+(mode||'missing');
+     const doc={id,owner:'la',type:'card',country:'FR',currency:'EUR',
+      settlementAccountId:'la',...(mode?{paymentMode:mode}:{}),[key]:value};
+     await assert.rejects(rpcSave(1,'accounts',id,doc,null),/TRACE_DEFERRED_NOT_RELEASED/);
+     assert.equal(await readDoc('accounts',id),undefined);
+    }
+   }
+   const direct={id:'forged-calendar-direct',owner:'la',type:'card',
+    paymentMode:'credit',country:'FR',currency:'EUR',
+    deferredScheduleVersions:[{effectiveDate:'2026-11-01',debitDay:28,closingDay:20}]};
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'accounts',direct.id,JSON.stringify(direct),uid(1)]),/TRACE_DEFERRED_NOT_RELEASED/);
+   const canadian={id:'control-canadian-card',owner:'la',type:'card',
+    paymentMode:'credit',country:'CA',currency:'CAD',settlementAccountId:'la'};
+   assert.equal((await rpcSave(1,'accounts',canadian.id,canadian,null)).rows[0].revision,0);
+  });
+  await check('deferred due-date aliases do not masquerade as ordinary transfers',async()=>{
+   for(const key of ['scheduledDueDate','allocationDueDate']){
+    const doc={id:'forged-'+key,type:'transfer',accountId:'la',
+     status:'pending',[key]:'2026-11-05'};
+    await assert.rejects(rpcSave(1,'transactions',doc.id,doc,null),
+     /TRACE_DEFERRED_NOT_RELEASED/);
+    assert.equal(await readDoc('transactions',doc.id),undefined);
+   }
+  });
+  await check('type-free legacy deferred cards remain quarantined',async()=>{
+   const card=await readDoc('accounts','legacy-typeless-deferred');
+   assert.equal(card.data.paymentMode,'deferred');
+   await assert.rejects(rpcSave(1,'accounts','legacy-typeless-deferred',{
+    ...card.data,paymentMode:'credit',type:'card'},card.revision),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(rpcSave(1,'transactions','legacy-typeless-charge',{
+    id:'legacy-typeless-charge',accountId:'legacy-typeless-deferred',
+    type:'expense',status:'pending'},null),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(rpcSave(1,'accounts','new-typeless-deferred',{
+    id:'new-typeless-deferred',name:'Visa',paymentMode:'deferred',owner:'la'},
+    null),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'accounts','legacy-typeless-deferred']),/TRACE_DEFERRED_NOT_RELEASED/);
+  });
+  await check('pending, confirmed and direct deferred settlement writes are blocked',async()=>{
+   for(const status of ['pending','confirmed']){
+    const item={id:'purchase-'+status,type:'expense',status,
+     accountId:'la',bankCurrency:'EUR',bankAmount:40,
+     deferredKind:'purchase'};
+    await assert.rejects(rpcSave(1,'transactions',item.id,item,null),
+     /TRACE_DEFERRED_NOT_RELEASED/);
+   }
+   const settlement={id:'payment-df',type:'transfer',status:'confirmed',
+    accountId:'la',toAccountId:'partner',transferPurpose:'deferred_settlement',
+    purchaseIds:['p1'],settlementMode:'partial'};
+   await assert.rejects(rpcSave(1,'transactions',settlement.id,settlement,null),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'transactions','direct-deferred',JSON.stringify({...settlement,id:'direct-deferred'}),uid(1)]
+   ),/TRACE_DEFERRED_NOT_RELEASED/);
+  });
+  await check('legacy deferred records cannot be modified, laundered or deleted',async()=>{
+   const oldCard=await readDoc('accounts','legacy-deferred-card');
+   const oldPurchase=await readDoc('transactions','legacy-deferred-purchase');
+   await assert.rejects(rpcSave(1,'transactions','legacy-deferred-purchase',{
+    id:'legacy-deferred-purchase',type:'expense',status:'confirmed',
+    accountId:'la',amountCAD:1},oldPurchase.revision),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(rpcSave(1,'accounts','legacy-deferred-card',{
+    ...oldCard.data,paymentMode:'credit'},oldCard.revision),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(rpcDelete(1,'transactions','legacy-deferred-purchase',
+    oldPurchase.revision),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'transactions','legacy-deferred-purchase']),/TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'accounts','legacy-deferred-card']),/TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal((await readDoc('transactions','legacy-deferred-purchase')).data.status,'pending');
+  });
+  await check('untagged transactions and imports linked to an old deferred card fail server guard',async()=>{
+   for(const collection of ['transactions','imports','import_days','reconciliations']){
+    const id='deferred-reference-'+collection;
+    await assert.rejects(rpcSave(1,collection,id,{
+     id,accountId:'legacy-deferred-card',status:'pending'
+    },null),collection==='imports'?/TRACE_DEFERRED_NOT_RELEASED|TRACE_CSV_EVIDENCE_FORBIDDEN/:/TRACE_DEFERRED_NOT_RELEASED/);
+    assert.equal(await readDoc(collection,id),undefined);
+   }
+   // A foreign-card transfer leg is also forbidden, even if its spending
+   // classification and primary checking account look ordinary.
+   const transfer={id:'hidden-deferred-leg',type:'transfer',
+    accountId:'la',toAccountId:'legacy-deferred-card',status:'confirmed'};
+   await assert.rejects(rpcSave(1,'transactions',transfer.id,transfer,null),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+  });
+  await check('deferred bank account cannot enter investment operations through direct table write',async()=>{
+   const item={id:'investment-card-bypass',type:'deposit',status:'pending',
+    accountId:'pea-la',bankAccountId:'legacy-deferred-card'};
+   await assert.rejects(rpcSave(1,'investment_operations',item.id,item,null),
+    /TRACE_WRITE_FORBIDDEN|TRACE_DEFERRED_NOT_RELEASED/);
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'investment_operations','direct-investment-card-bypass',
+      JSON.stringify({...item,id:'direct-investment-card-bypass'}),uid(1)]
+   ),/TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal(await readDoc('investment_operations','direct-investment-card-bypass'),undefined);
+  });
+  await check('unlinked deferred allocation fields are quarantined by SQL',async()=>{
+   const reserved={deferredPurchaseId:'purchase-x',deferredPurchaseIds:['purchase-x'],
+    deferredFeeIds:['fee-x'],deferredSettlementMode:'partial',
+    deferredDueDate:'2026-11-01',deferredBankEvidence:{},
+    deferredBankEvidenceReviewed:false};
+   for(const [field,value] of Object.entries(reserved)){
+    const item={id:'server-deferred-'+field,type:'expense',status:'pending',
+     accountId:'la',[field]:value};
+    await assert.rejects(rpcSave(1,'transactions',item.id,item,null),
+     /TRACE_DEFERRED_NOT_RELEASED/);
+    assert.equal(await readDoc('transactions',item.id),undefined);
+   }
+   const direct={id:'direct-deferred-alias',type:'transfer',accountId:'la',
+    deferredPurchaseIds:['purchase-x']};
+   await assert.rejects(db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'transactions',direct.id,JSON.stringify(direct),uid(1)]
+   ),/TRACE_DEFERRED_NOT_RELEASED/);
+  });
+  await check('ordinary pending transactions and credit cards still work',async()=>{
+   const credit={id:'credit-fake',owner:'la',type:'card',
+    country:'CA',currency:'CAD',paymentMode:'credit',settlementAccountId:'la'};
+   assert.equal((await rpcSave(1,'accounts','credit-fake',credit,null)).rows[0].revision,0);
+   const item={id:'normal-pending',type:'expense',accountId:'credit-fake',
+    amountCAD:12.5,status:'pending'};
+   assert.equal((await rpcSave(1,'transactions',item.id,item,null)).rows[0].revision,0);
+   assert.equal((await rpcSave(2,'transactions',item.id,{
+    ...item,status:'confirmed'},0)).rows[0].revision,1);
+  });
+  await check('quarantine migration is repeatable without modifying existing rows',async()=>{
+   const before=(await db.query('select collection,item_id,data,revision from public.documents order by collection,item_id')).rows;
+   await db.exec(await fs.readFile(path.join(root,
+    'migrations/10-trace-deferred-write-quarantine.sql'),'utf8'));
+   const after=(await db.query('select collection,item_id,data,revision from public.documents order by collection,item_id')).rows;
+   assert.deepEqual(after,before);
+  });
+  await check('legacy direct writes bump server revision but remain a cutover blocker',async()=>{
+   const old=(await readDoc('transactions','shared')).revision;
+   await acting(1,tx=>tx.query("update public.documents set data=data||'{\"memo\":\"legacy\"}'::jsonb, updated_by=$1 where household_id=$2 and collection='transactions' and item_id='shared'",[uid(1),hid]));
+   assert.equal((await readDoc('transactions','shared')).revision,old+1);
+   await assert.rejects(rpcSave(1,'transactions','shared',{id:'shared',amountCAD:1},old),/TRACE_WRITE_CONFLICT/);
+  });
+
+  await check('CSV privacy-readiness RPC returns true only with active policy and trigger',async()=>{
+   const ready=await acting(1,tx=>tx.query('select public.trace_csv_evidence_guard_ready() as ready'));
+   assert.equal(ready.rows[0].ready,true);
+   const grant=(await db.query(
+    "select has_function_privilege('anon','public.trace_csv_evidence_guard_ready()','EXECUTE') as allowed")).rows[0];
+   assert.equal(grant.allowed,false);
+  });
+  await check('owner CSV evidence is private on authenticated SELECT but shared imports remain unchanged',async()=>{
+   const item={id:'csv_unparsed_own',kind:'csv_unparsed',
+    status:'pending_review',owner:'la',accountId:'la',
+    source:'csv',sourceFileName:'octobre.csv',sourceIndex:4,
+    rawText:'2026-10-20 | Achats | non lisible',createdAt:'2026-10-25T12:00:00Z'};
+   assert.equal((await rpcSave(1,'imports',item.id,item,null)).rows[0].revision,0);
+   const mine=await acting(1,tx=>tx.query(
+    "select item_id from public.documents where household_id=$1 and collection='imports' and item_id=$2",
+    [hid,item.id]));
+   const partnerView=await acting(2,tx=>tx.query(
+    "select item_id from public.documents where household_id=$1 and collection='imports' and item_id=$2",
+    [hid,item.id]));
+   assert.equal(mine.rows.length,1);
+   assert.equal(partnerView.rows.length,0);
+   assert.equal((await readDoc('imports',item.id)).data.rawText,item.rawText);
+   const shared={id:'old-shared-draft',kind:'smart_draft',status:'pending'};
+   await rpcSave(1,'imports',shared.id,shared,null);
+   const oldView=await acting(2,tx=>tx.query(
+    "select item_id from public.documents where household_id=$1 and collection='imports' and item_id=$2",
+    [hid,shared.id]));
+   assert.equal(oldView.rows.length,1);
+  });
+  await check('server unique index rejects a forged second ID for the same CSV source line',async()=>{
+   const original=(await readDoc('imports','csv_unparsed_own')).data;
+   const duplicate={...original,id:'csv-forged-alias-id',rawText:'different bank wording'};
+   await assert.rejects(rpcSave(1,'imports',duplicate.id,duplicate,null),
+    /trace_csv_unparsed_source_unique|duplicate key|23505/i);
+   assert.equal(await readDoc('imports',duplicate.id),undefined);
+   // PostgreSQL must compare the actual row ordinal, not differently
+   // formatted JSON sourceIndex strings such as "0004" versus 4.
+   const padded={...original,id:'csv-forged-padded-index',sourceIndex:'0004'};
+   await assert.rejects(rpcSave(1,'imports',padded.id,padded,null),
+    /trace_csv_unparsed_source_unique|duplicate key|23505/i);
+   assert.equal(await readDoc('imports',padded.id),undefined);
+   assert.equal((await readDoc('imports',original.id)).data.rawText,original.rawText);
+   // A genuinely distinct row of the same file must remain separately
+   // auditable without inventing a transaction or modifying the old source.
+   const next={...original,id:'csv-distinct-row-5',sourceIndex:5};
+   assert.equal((await rpcSave(1,'imports',next.id,next,null)).rows[0].revision,0);
+   assert.equal((await readDoc('imports',next.id)).data.sourceIndex,5);
+   await assert.rejects(acting(1,tx=>tx.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'imports','csv-direct-forged-duplicate',
+     JSON.stringify({...original,id:'csv-direct-forged-duplicate'}),uid(1)])),
+    /trace_csv_unparsed_source_unique|duplicate key|23505/i);
+   // A separate partner-owned checking account has its own statement source,
+   // even with the same exact CSV filename and physical row number.
+   const partnerSource={...original,id:'partner-own-same-row',owner:'partner',
+    accountId:'partner',rawText:'Different account, same row number'};
+   assert.equal((await rpcSave(2,'imports',partnerSource.id,partnerSource,null)).rows[0].revision,0);
+   const ownerView=(await acting(1,tx=>tx.query(
+    'select item_id from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'imports',partnerSource.id]))).rows;
+   assert.equal(ownerView.length,0,'partner source may not leak to first member');
+  });
+  await check('partner cannot forge owner or linked bank account in private CSV evidence',async()=>{
+   const forged={id:'forged-source',kind:'csv_unparsed',status:'pending_review',
+    owner:'la',accountId:'la',source:'csv',sourceFileName:'octobre.csv',
+    sourceIndex:5,rawText:'bank line',createdAt:'2026-10-25T12:00:00Z'};
+   await assert.rejects(rpcSave(2,'imports',forged.id,forged,null),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(2,'imports','forged-account',
+    {...forged,id:'forged-account',owner:'partner',accountId:'la'},null),
+    /TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(acting(2,tx=>tx.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'imports','direct-forged',JSON.stringify({...forged,id:'direct-forged'}),uid(2)])),
+    /TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   assert.equal(await readDoc('imports','forged-source'),undefined);
+  });
+  await check('private CSV original cannot be changed or reassigned after insert',async()=>{
+   const item=(await readDoc('imports','csv_unparsed_own')).data;
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,rawText:'different bank line'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,kind:'smart_draft'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,accountId:'partner',owner:'partner'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(2,'imports',item.id,
+    {...item,status:'reviewed',reviewedBy:'partner'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   assert.equal((await readDoc('imports',item.id)).revision,0);
+  });
+  await check('CSV rejects oversized sources and preserves non-cryptographic fingerprint metadata',async()=>{
+   const existing=(await readDoc('imports','csv_unparsed_own')).data;
+   const invalid=(name,changes)=>rpcSave(1,'imports',name,{
+    ...existing,id:name,sourceIndex:8,...changes
+   },null);
+   await assert.rejects(invalid('oversize-name',{
+    sourceFileName:'x'.repeat(111)}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(invalid('oversize-account-id',{
+    accountId:'a'.repeat(241)}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(invalid('oversize-row',{
+    rawText:'x'.repeat(651)}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(invalid('bad-row-index',{
+    sourceIndex:'2e3'}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(invalid('out-of-range-index',{
+    sourceIndex:1002}),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   const reviewed=(await readDoc('imports','csv_unparsed_own'));
+   await assert.rejects(rpcSave(1,'imports',existing.id,{
+    ...existing,rawFingerprint:'fnv1a64:modified'},reviewed.revision),
+    /TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcSave(1,'imports',existing.id,{
+    ...existing,rawTruncated:true},reviewed.revision),
+    /TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   assert.equal((await readDoc('imports',existing.id)).revision,reviewed.revision);
+  });
+  await check('manual review is the only permitted state change; deletions blocked',async()=>{
+   const item=(await readDoc('imports','csv_unparsed_own')).data;
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,status:'reviewed',reviewedBy:'partner',
+      reviewedAt:'2026-10-25T13:00:00Z'},0),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   const next={...item,status:'reviewed',reviewedBy:'la',
+    reviewedAt:'2026-10-25T13:00:00Z'};
+   assert.equal((await rpcSave(1,'imports',item.id,next,0)).rows[0].revision,1);
+   await assert.rejects(rpcSave(1,'imports',item.id,
+    {...item,status:'pending_review'},1),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(acting(1,tx=>tx.query(
+    'delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'imports',item.id])),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   await assert.rejects(rpcDelete(1,'imports',item.id,1),/TRACE_WRITE_FORBIDDEN/);
+   assert.equal((await readDoc('imports',item.id)).data.status,'reviewed');
+  });
+  await check('privileged maintenance can restore a CSV snapshot without user JWT',async()=>{
+   // Only the actual PostgreSQL administrator can use this path. No user
+   // token, no set role authenticated and no SECURITY DEFINER user RPC.
+   const restored={id:'csv-unparsed-maintenance',kind:'csv_unparsed',
+    status:'pending_review',owner:'la',accountId:'la',source:'csv',
+    sourceFileName:'archive.csv',sourceIndex:2,rawText:'old statement line'};
+   const adminRole=(await db.query('select current_user as actor, session_user as login')).rows[0];
+   assert.equal(adminRole.actor,adminRole.login);
+   assert.equal(adminRole.actor,'postgres');
+   await db.query(
+    'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+    [hid,'imports',restored.id,JSON.stringify(restored),uid(1)]);
+   assert.equal((await readDoc('imports',restored.id)).data.rawText,'old statement line');
+   await db.query('delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+    [hid,'imports',restored.id]);
+   assert.equal(await readDoc('imports',restored.id),undefined);
+  });
+  await check('missing-JWT authenticated user cannot exploit admin maintenance path',async()=>{
+   // Even without an injected uid, the session role remains authenticated.
+   await assert.rejects(db.transaction(async tx=>{
+    await tx.exec('set local role authenticated');
+    return tx.query(
+     'insert into public.documents(household_id,collection,item_id,data,updated_by) values($1,$2,$3,$4,$5)',
+     [hid,'imports','no-jwt',JSON.stringify({
+      id:'no-jwt',kind:'csv_unparsed',status:'pending_review',owner:'la',
+      accountId:'la',source:'csv',sourceFileName:'test.csv',sourceIndex:3,
+      rawText:'bad client line'}),uid(1)]);
+   }),/TRACE_CSV_EVIDENCE_FORBIDDEN/);
+   assert.equal(await readDoc('imports','no-jwt'),undefined);
+  });
+  await check('readiness must fail if policy or trigger is disabled, and recover on reapply',async()=>{
+   const probe=async()=> (await acting(1,tx=>tx.query(
+    'select public.trace_csv_evidence_guard_ready() as ready'))).rows[0].ready;
+   assert.equal(await probe(),true);
+   await db.exec('alter table public.documents disable trigger trace_csv_unparsed_evidence_guard');
+   assert.equal(await probe(),false);
+   await db.exec('alter table public.documents enable trigger trace_csv_unparsed_evidence_guard');
+   assert.equal(await probe(),true);
+   await db.exec('drop policy trace_csv_unparsed_private_select on public.documents');
+   assert.equal(await probe(),false);
+   await db.exec(await fs.readFile(path.join(root,
+     'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
+   assert.equal(await probe(),true);
+   await db.exec('drop index public.trace_csv_unparsed_source_unique');
+   assert.equal(await probe(),false,'missing uniqueness index must close evidence intake');
+   await db.exec(await fs.readFile(path.join(root,
+    'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
+   assert.equal(await probe(),true,'reapplying 11 must restore unique source protection');
+   assert.equal((await readDoc('imports','csv_unparsed_own')).data.status,'reviewed');
+  });
+  await check('CSV audit evidence remains private across two separate fictitious households',async()=>{
+   const other=(await acting(3,tx=>tx.query(
+    "select * from public.create_household('Other fictional foyer','Third')"))).rows[0];
+   const otherId=other.household_id;
+   const checking={id:'other-bank',owner:'la',type:'checking',country:'FR',currency:'EUR'};
+   await acting(3,tx=>tx.query(
+    'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+    [otherId,'accounts',checking.id,JSON.stringify(checking),null]));
+   const line={id:'csv_unparsed_other',kind:'csv_unparsed',status:'pending_review',
+    owner:'la',accountId:'other-bank',source:'csv',sourceFileName:'fictional.csv',
+    sourceIndex:2,rawText:'Other fictitious EUR movement',createdAt:'2026-10-25T12:00:00Z'};
+   await acting(3,tx=>tx.query(
+    'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+    [otherId,'imports',line.id,JSON.stringify(line),null]));
+   const query='select data from public.documents where household_id=$1 and collection=$2 and item_id=$3';
+   const own=(await acting(3,tx=>tx.query(query,[otherId,'imports',line.id]))).rows;
+   assert.equal(own.length,1);
+   for(const n of [1,2]){
+    const foreign=(await acting(n,tx=>tx.query(query,[otherId,'imports',line.id]))).rows;
+    assert.equal(foreign.length,0,'a different household cannot see CSV source');
+    await assert.rejects(acting(n,tx=>tx.query(
+     'select public.trace_cas_save_document($1,$2,$3,$4,$5)',
+     [otherId,'imports','cross-foyer',JSON.stringify({...line,id:'cross-foyer'}),null])),
+     /TRACE_WRITE_FORBIDDEN/);
+   }
+   // A controlled ADMINISTRATIVE household deletion cascades through the
+   // evidence row. The user-facing DELETE RPC still refuses direct deletes.
+   // This is an isolated third household with no real banking data.
+   const admin=(await db.query('select current_user as actor, session_user as login')).rows[0];
+   assert.equal(admin.actor,'postgres');assert.equal(admin.login,'postgres');
+   await db.query('delete from public.households where id=$1',[otherId]);
+   const remaining=(await db.query(query,[otherId,'imports',line.id])).rows;
+   assert.equal(remaining.length,0);
+  });
+  await check('deferred card cannot be directly deleted by administrator without household deletion',async()=>{
+   const before=(await readDoc('accounts','legacy-deferred-card')).data;
+   const admin=(await db.query('select current_user as actor, session_user as login')).rows[0];
+   assert.equal(admin.actor,'postgres');assert.equal(admin.login,'postgres');
+   await assert.rejects(
+    db.query('delete from public.documents where household_id=$1 and collection=$2 and item_id=$3',
+     [hid,'accounts','legacy-deferred-card']),
+    /TRACE_DEFERRED_NOT_RELEASED/);
+   assert.deepEqual((await readDoc('accounts','legacy-deferred-card')).data,before);
+  });
+  await check('household member cannot delete the entire deferred household directly',async()=>{
+   await assert.rejects(acting(4,tx=>tx.query(
+    'delete from public.households where id=$1',[deferredHouseId])),
+    /permission denied/i);
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.households where id=$1',
+    [deferredHouseId])).rows[0].n,1);
+  });
+  await check('admin connection carrying a JWT may not erase a historical deferred household',async()=>{
+   await assert.rejects(db.transaction(async tx=>{
+    await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[uid(4)]);
+    return tx.query('delete from public.households where id=$1',[deferredHouseId]);
+   }),/TRACE_DEFERRED_NOT_RELEASED/);
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.households where id=$1',
+    [deferredHouseId])).rows[0].n,1);
+   assert.equal((await db.query(
+    'select count(*)::integer as n from public.documents where household_id=$1',
+    [deferredHouseId])).rows[0].n,4);
+  });
+  await check('administrative household erasure cascades through historical deferred records',async()=>{
+   // The admin role alone may erase this separate fictional household.
+   // Normal deferred edits/deletes still fail. A member-level erasure RPC
+   // would require its own authentication and authorization qualification.
+   const before=(await db.query(
+    'select count(*)::integer as n from public.documents where household_id=$1',
+    [deferredHouseId])).rows[0].n;
+   assert.equal(before,4);
+   const admin=(await db.query('select current_user as actor, session_user as login, auth.uid() as uid')).rows[0];
+   assert.equal(admin.actor,'postgres');assert.equal(admin.login,'postgres');
+   assert.equal(admin.uid,null);
+   await db.query('delete from public.households where id=$1',[deferredHouseId]);
+   for(const table of ['households','household_members','documents','trace_v5_backups']){
+    const key=table==='households'?'id':'household_id';
+    const left=(await db.query('select count(*)::integer as n from public.'+table+
+      ' where '+key+'=$1',[deferredHouseId])).rows[0].n;
+    assert.equal(left,0,table+' was not fully erased in administrative cascade');
+   }
+  });
+  await check('CSV privacy migration can be reapplied without rewriting evidence',async()=>{
+   const before=(await readDoc('imports','csv_unparsed_own')).data;
+   await db.exec(await fs.readFile(path.join(root,
+     'migrations/11-trace-csv-unparsed-owner-privacy.sql'),'utf8'));
+   assert.deepEqual((await readDoc('imports','csv_unparsed_own')).data,before);
+  });
+  await check('reapplying migration leaves documents and revisions unchanged',async()=>{
+   const before=(await db.query('select collection,item_id,data,revision from public.documents order by collection,item_id')).rows;
+   await db.exec(await fs.readFile(path.join(root,'migrations/09-trace-cas-versioned-writes.sql'),'utf8'));
+   assert.deepEqual((await db.query('select collection,item_id,data,revision from public.documents order by collection,item_id')).rows,before);
+  });
+  console.log(passed+' candidate CAS integration checks passed on fictitious PostgreSQL');
+ }finally{await db.close();}
+}
+run().catch(e=>{console.error(e);process.exitCode=1;});

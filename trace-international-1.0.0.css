@@ -1,0 +1,1956 @@
+/* TRACE 5.37 — international account and currency form controls */
+.trace-intl-top{display:grid;gap:5px;margin:13px 0 4px;padding:12px;border:1px solid #dfece4;border-radius:14px;background:#f5faf7}
+.trace-intl-top label{font-size:12px;font-weight:700;color:#41665c}
+.trace-intl-top .input{min-width:0;width:100%;min-height:44px;border-radius:10px!important;background:#fff;color:#20483a;font-size:16px}
+.trace-intl-primary-explain,.trace-intl-help{font-size:12px;line-height:1.55;color:#536e60;margin:6px 0 10px;overflow-wrap:anywhere}
+.trace-intl-primary-control{border-top:1px solid #dfe9e1;margin-top:6px}
+.trace-intl-primary-control>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;cursor:pointer;list-style:none;font-size:12px;font-weight:750;color:#285947}
+.trace-intl-primary-control>summary::-webkit-details-marker{display:none}
+.trace-intl-primary-control>summary small{font-size:11px;font-weight:650;color:#536e60}
+.trace-intl-primary-control>summary:focus-visible{outline:3px solid #6eb093;outline-offset:2px;border-radius:8px}
+.trace-intl-details{border-top:1px solid #e5eee7;padding:12px 2px 0;margin-top:9px}
+.trace-intl-details summary{cursor:pointer;font-size:13px;font-weight:700;color:#235c4d;min-height:29px}
+.trace-intl-accounts{display:grid;gap:0;margin-top:12px}
+.trace-intl-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 0;border-bottom:1px solid #e5eee7;font-size:13px}
+.trace-intl-row span{overflow-wrap:anywhere;min-width:0}
+.trace-intl-account-label{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 5px;flex:1}
+.trace-intl-account-conversion{display:block;flex-basis:100%;font-weight:500!important;white-space:normal!important;color:#627f74!important;line-height:1.45;font-size:11px}
+.trace-intl-row b{text-align:right;flex-shrink:0}
+.trace-intl-row small{color:#718479;font-size:11px;white-space:nowrap}
+.trace-intl-row b{font-weight:800;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.trace-intl-grand{font-size:13px;font-weight:800;color:#1d5548;padding:13px 3px 5px}
+.trace-intl-foot{font-size:11px;line-height:1.5;color:#788980;margin:4px 0}
+.trace-intl-transaction,.trace-intl-import{padding:12px;border-radius:13px;border:1px solid #e5eee8;background:#f8faf8;margin:10px 0;display:grid;gap:9px;min-width:0}
+.trace-intl-transaction .formrow,.trace-intl-import .trace-smart-grid{min-width:0}
+.trace-intl-transaction input,.trace-intl-transaction select,.trace-intl-import input,.trace-intl-import select{min-width:0;width:100%}
+.trace-intl-set-primary{background:#e9f4eb;color:#20644e;border:1px solid #d4e5d8;padding:9px 12px;border-radius:11px;font-size:12px;font-weight:700;margin:6px 0 10px}
+.trace-intl-import [hidden],.trace-intl-transaction [hidden],#manualDestAmountWrap[hidden]{display:none!important}
+@media(max-width:420px){.trace-intl-transaction,.trace-intl-import{padding:10px}.trace-intl-row{font-size:12px}.trace-intl-row b{font-size:12px}}
+
+/* This banner exists only on the isolated demo page, not in production. */
+#tracePreviewStatus.trace-intl-lab-banner{
+ display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;
+ border:1px solid #b6d8cb;background:#e7f5ed;color:#1d5646;
+ padding:10px 14px;margin:10px 0 12px;border-radius:14px;
+ font-size:12px;line-height:1.45;overflow-wrap:anywhere;
+}
+#tracePreviewStatus.trace-intl-lab-banner strong{font-weight:850;letter-spacing:.015em}
+#tracePreviewStatus.trace-intl-lab-banner span{font-size:11px;color:#456f60}
+@media(max-width:420px){
+ #tracePreviewStatus.trace-intl-lab-banner{padding:9px 11px;gap:3px}
+ #tracePreviewStatus.trace-intl-lab-banner strong{font-size:12px}
+}
+
+
+/* TRACE 5.37 — iPhone-sized, progressive multi-person friend share editor */
+.trace-friend-debtors{margin:12px 0 6px;min-width:0;display:grid;gap:9px}
+.trace-debtor-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;color:#1d5548;font-size:13px}
+.trace-debtor-add,.trace-debtor-remove{min-height:44px;padding:9px 12px;border-radius:11px;font-size:13px;font-weight:700;touch-action:manipulation}
+.trace-debtor-list{display:grid;gap:9px;min-width:0}
+.trace-debtor-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:9px;padding:12px;border:1px solid #dceae2;border-radius:13px;background:#f8fbf9;min-width:0}
+.trace-debtor-row label{display:grid;gap:5px;min-width:0;color:#49665b;font-size:12px;font-weight:700}
+.trace-debtor-row .input{min-width:0;width:100%;min-height:44px;font-size:16px!important;border-radius:10px}
+.trace-debtor-balance{font-size:12px;line-height:1.5;color:#506f63;margin:0;padding:9px 11px;border:1px solid #e0eae3;border-radius:10px}
+.trace-debtor-complete{background:#edf8ef;border-color:#ccebd3;color:#256044}
+.trace-debtor-warning{background:#fff6ed;border-color:#f0d8bd;color:#8a5b2e}
+.trace-debtor-hint{font-size:12px;line-height:1.55;color:#6f8278;margin:0}
+@media(max-width:480px){.trace-debtor-row{grid-template-columns:1fr 1fr;gap:10px;padding:10px}.trace-debtor-row .trace-debtor-remove{grid-column:1/-1;justify-self:end;min-width:100px}.trace-debtor-heading{align-items:flex-start}.trace-debtor-add{max-width:100%}}
+@media(max-width:350px){.trace-debtor-row{grid-template-columns:minmax(0,1fr)}.trace-debtor-row .trace-debtor-remove{grid-column:1}}
+
+
+/* TRACE International 5.37 — approved premium home and wealth hierarchy. */
+.trace-home-priority{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:13px}
+.trace-home-priority>*{min-width:0}
+.trace-home-priority #balanceCard{position:relative;overflow:hidden;background:linear-gradient(145deg,#fffdf9 5%,#eef7f0 100%);border:1px solid rgba(34,93,69,.14);border-radius:21px;box-shadow:0 10px 30px rgba(20,69,53,.08),0 2px 5px rgba(20,69,53,.025);padding:20px 18px}
+.trace-home-priority #balanceCard .money{color:#123f38;font-size:clamp(30px,7.4vw,44px);line-height:1.1;letter-spacing:-.035em;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.trace-home-priority #balanceCard .eyebrow{color:#55796a;font-weight:750;letter-spacing:.06em}
+.trace-home-priority .trace-home-available{min-height:unset;border-radius:19px;border:1px solid rgba(24,82,59,.08);background:linear-gradient(140deg,#113f38 0%,#1f6659 100%);box-shadow:0 6px 19px rgba(21,66,50,.08)}
+.trace-home-priority .trace-home-available .big{font-variant-numeric:tabular-nums;letter-spacing:-.027em}
+.trace-home-month-head{margin-top:19px!important}
+.trace-home-month-head h2,.trace-wealth-section-head h2{font-weight:800;letter-spacing:-.02em}
+.trace-wealth-section{min-width:0;margin-top:17px}
+.trace-wealth-section+.trace-wealth-section{margin-top:11px}
+.trace-wealth-section-head{margin-top:0}
+.trace-wealth-grid{min-width:0;margin-bottom:5px}
+.trace-wealth-grid .asset-card{min-width:0;border-radius:17px;border:1px solid rgba(20,80,54,.1);box-shadow:0 4px 16px rgba(20,66,50,.035);transition:transform .15s ease,box-shadow .15s ease}
+.trace-wealth-grid .asset-card:focus-visible{outline:3px solid #418e73;outline-offset:2px}
+.trace-wealth-grid .asset-card:hover{box-shadow:0 7px 23px rgba(20,66,50,.075)}
+.trace-wealth-empty{border:1px dashed #c7d9cf;background:linear-gradient(140deg,#fbfdfa,#f4f9f5);border-radius:17px;color:#537363;font-size:13px;line-height:1.55;padding:16px}
+.trace-wealth-net-section{margin-top:22px;padding-top:4px}
+.trace-wealth-net-card{border:1px solid rgba(24,77,56,.1);background:linear-gradient(145deg,#f4f9f3,#ffffff);border-radius:20px;box-shadow:0 9px 25px rgba(18,61,48,.05)}
+.trace-wealth-net-card .big{font-variant-numeric:tabular-nums;letter-spacing:-.03em;color:#12483a}
+.trace-wealth-note{font-size:12px;color:#6b8276;line-height:1.5;margin:10px 0 0}
+.navbtn>span:last-child{white-space:nowrap;overflow-wrap:normal;word-break:normal;max-width:100%;font-size:clamp(8px,2.35vw,10px);letter-spacing:-.01em}
+@media(max-width:420px){.trace-home-priority{gap:12px}.trace-home-priority #balanceCard{padding:19px 15px}.trace-wealth-section{margin-top:15px}.trace-wealth-net-section{margin-top:19px}}
+@media(prefers-reduced-motion:reduce){.trace-wealth-grid .asset-card{transition:none}}
+
+
+/* TRACE 5.37 premium account sheet — readable native currency, no fake FX. */
+.trace-account-home-button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:11px 13px;margin:13px 0 4px;border:1px solid #d0e3d8;border-radius:13px;background:rgba(255,255,255,.86);color:#215b49;font-size:13px;font-weight:800;text-align:left}
+.trace-account-home-button:hover,.trace-account-home-button:focus-visible{background:#e8f5ec;outline-color:#418e73}
+.trace-account-overview{display:grid;gap:10px;margin:15px 0}
+.trace-account-overview-row{width:100%;min-height:76px;border:1px solid #dfebe2;border-radius:16px;background:#fcfefa;padding:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;color:#1b4639;box-shadow:0 5px 15px rgba(15,57,43,.035)}
+.trace-account-overview-row>span{min-width:0;display:grid;gap:5px}
+.trace-account-overview-row b{font-size:14px;overflow-wrap:anywhere}
+.trace-account-overview-row small{font-size:11px;color:#638274;line-height:1.4;overflow-wrap:anywhere}
+.trace-account-overview-values{text-align:right}
+.trace-account-overview-values strong{font-size:14px;white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.trace-account-detail-hero{display:grid;gap:8px;border-radius:18px;padding:19px 16px;background:linear-gradient(138deg,#f4faf5,#fff);border:1px solid #d9e7dd}
+.trace-account-detail-kicker{color:#4a7866;text-transform:uppercase;letter-spacing:.06em;font-weight:750;font-size:10px}
+.trace-account-detail-hero strong{font-size:clamp(24px,6vw,34px);color:#16493a;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.trace-account-detail-hero small{color:#658073;font-size:12px;line-height:1.45}
+.trace-account-detail-info{display:grid;gap:0;margin:15px 0;border-top:1px solid #e3eee8}
+.trace-account-detail-info>div{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding:11px 0;border-bottom:1px solid #e3eee8}
+.trace-account-detail-info span{color:#688273;font-size:12px;flex:0 0 38%}
+.trace-account-detail-info b{font-size:12px;color:#244b3d;text-align:right;overflow-wrap:anywhere}
+.trace-account-last{display:grid;gap:7px}
+.trace-account-last-line{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border:1px solid #e5eee7;border-radius:13px;background:#fcfefd;padding:12px}
+.trace-account-last-line span{min-width:0;display:grid;gap:5px}
+.trace-account-last-line b{font-size:13px;color:#234f40;overflow-wrap:anywhere}
+.trace-account-last-line small{font-size:11px;color:#75877d}
+.trace-account-last-line strong{font-size:12px;color:#205540;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.trace-account-activity-filter{display:grid;gap:6px;margin:9px 0 14px;color:#416957;font-weight:750;font-size:12px}
+.trace-account-activity-filter .input{min-height:44px;font-size:16px!important}
+.trace-account-primary-intro{font-size:16px;line-height:1.55;color:#235342}
+@media(max-width:390px){.trace-account-overview-row{align-items:flex-start;flex-direction:column}.trace-account-overview-values{text-align:left}.trace-account-detail-info>div{gap:8px}}
+@media(prefers-reduced-motion:reduce){.trace-account-overview-row,.trace-account-home-button{transition:none}}
+
+
+/* TRACE International 5.37: journal by day & carefully scoped view filters */
+.trace-activity-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0 10px}
+.trace-activity-filters label{min-width:0;display:grid;align-content:start;gap:5px;color:#476a5a;font-size:11px;font-weight:760;letter-spacing:.01em}
+.trace-activity-filters .input{width:100%;min-width:0;min-height:44px;padding:9px 10px;background:#fffefb;font-size:16px!important;border-radius:12px;border:1px solid #dfeae3;overflow:hidden;text-overflow:ellipsis}
+.trace-activity-filter-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.trace-activity-filters .input:focus-visible{outline:3px solid #63ad8e;outline-offset:2px}
+.trace-activity-day{display:grid;gap:1px;min-width:0;padding:7px 0 11px}
+.trace-activity-day+.trace-activity-day{border-top:1px solid #e5eee8;margin-top:4px}
+.trace-activity-day-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 3px 8px}
+.trace-activity-day-heading h3{font-size:13px;font-weight:850;color:#245442;letter-spacing:-.005em;margin:0;text-transform:capitalize;line-height:1.35}
+.trace-activity-day-heading small{font-size:11px;color:#819286;white-space:nowrap}
+.trace-activity-day .tx{min-width:0}
+.trace-activity-pending{border-left:3px solid #dcaa54;background:linear-gradient(90deg,#fffaf0,#fffefb)}
+.trace-activity-pending .tx-amt{font-size:12px;white-space:normal;overflow-wrap:anywhere;max-width:40%;text-align:right}
+@media(max-width:350px){.trace-activity-filters{grid-template-columns:1fr}.trace-activity-day-heading h3{font-size:12px}}
+
+
+/* TRACE 5.37 — premium Couple & Proches inside Activité, no sixth main tab. */
+.trace-activity-four-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.trace-activity-four-tabs .tab{min-width:0;white-space:nowrap;font-size:clamp(10px,2.65vw,13px);padding:11px 3px;min-height:44px}
+.trace-activity-four-tabs .tab[aria-selected="true"]{font-weight:850}
+.trace-activity-review-intro{padding:15px 3px 11px}
+.trace-activity-review-intro h2{margin:0 0 5px;font-size:17px;color:#174b3c}
+.trace-activity-review-intro p{margin:0;color:#516b60;font-size:13px;line-height:1.5}
+#activityReview{min-width:0;padding-bottom:22px}
+.trace-review-account-label{display:flex;flex-direction:column;gap:6px;margin:4px 0 12px;color:#365c4e;font-size:12px;font-weight:750;min-width:0}
+.trace-review-account-label .input{display:block;width:100%;min-height:44px;border-radius:13px;border:1px solid #c9dbd1;background:#fffefa;padding:10px 12px;color:#174b3c;font:inherit;font-size:14px;max-width:100%;text-overflow:ellipsis}
+.trace-review-account-label .input:focus-visible{outline:3px solid #2d8062;outline-offset:2px}
+#activityReview .trace-unconfirmed-row{min-height:55px}
+.trace-review-more{display:block;width:100%;margin:13px 0 4px;padding:12px 14px;min-height:44px;border:1px solid #bad8c8;border-radius:14px;background:#f4faf6;color:#164a3b;font:inherit;font-size:13px;font-weight:750;text-align:center;cursor:pointer}
+.trace-review-more:focus-visible{outline:3px solid #2d8062;outline-offset:2px}
+.trace-review-more:active{background:#e8f3eb}
+@media(prefers-reduced-motion:no-preference){.trace-review-more{transition:background .14s ease}}
+@media(max-width:350px){.trace-activity-four-tabs{gap:3px}.trace-activity-four-tabs .tab{font-size:10px;padding:10px 2px}}
+#activitySharing{min-width:0;padding-bottom:8px}
+.trace-share-group{display:grid;gap:11px;min-width:0;margin-top:17px}
+.trace-share-group+.trace-share-group{border-top:1px solid #dfeae3;padding-top:17px;margin-top:20px}
+.trace-share-group>.section-head{margin-top:0}
+.trace-share-group .section-head h3{font-size:14px;color:#234c3f;margin:0}
+.trace-share-hero{border:1px solid #e1ece4;background:linear-gradient(148deg,#f4faf5,#fffefa);border-radius:20px;padding:17px 16px;box-shadow:0 7px 20px rgba(20,64,49,.045)}
+.trace-share-hero .eyebrow{color:#688879;letter-spacing:.055em;font-size:10px;font-weight:750}
+.trace-share-hero>strong{display:block;font-size:clamp(19px,5.3vw,29px);font-weight:850;color:#184c3d;line-height:1.2;letter-spacing:-.023em;margin:8px 0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.trace-share-hero p,.trace-share-disclaimer{font-size:12px;color:#718577;line-height:1.5;margin:6px 0 12px}
+.trace-share-actions{display:flex;gap:9px;align-items:stretch;flex-wrap:wrap;margin-top:14px}
+.trace-share-actions button{flex:1 1 150px;min-height:44px;font-size:12px;padding:10px}
+.trace-share-opening{font-size:11px;color:#698373;margin-top:12px}
+.trace-share-history-row,.trace-share-advance-row{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:12px 10px;border:1px solid #e5eee8;background:#fffefa;border-radius:12px;min-width:0}
+.trace-share-history-row>span,.trace-share-advance-row>span{display:grid;gap:5px;min-width:0;flex:1}
+.trace-share-history-row b,.trace-share-advance-row b{color:#254c40;font-size:12px;overflow-wrap:anywhere}
+.trace-share-history-row small,.trace-share-advance-row small{color:#7c9082;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.trace-share-history-row strong{font-size:12px;color:#27614b;white-space:nowrap;font-variant-numeric:tabular-nums}
+.trace-share-friends-hero{background:linear-gradient(145deg,#f8fbf8,#fff)}
+.trace-share-friend{border:1px solid #e1ece5;border-radius:15px;min-width:0;background:#fffefa;overflow:hidden}
+.trace-share-friend>summary{cursor:pointer;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:52px;list-style:none}
+.trace-share-friend>summary::-webkit-details-marker{display:none}
+.trace-share-friend>summary span{min-width:0;display:grid;gap:4px;flex:1}
+.trace-share-friend>summary b{font-size:13px;color:#285341;overflow-wrap:anywhere}
+.trace-share-friend>summary small{font-size:11px;color:#829389;line-height:1.4}
+.trace-share-friend>summary strong{font-size:12px;color:#1c5843;white-space:normal;text-align:right;font-variant-numeric:tabular-nums}
+.trace-share-friend-detail{display:grid;gap:7px;padding:0 12px 12px}
+.trace-share-friend-detail>p{font-size:12px;color:#667d70;margin:0 0 5px}
+.trace-share-advance-row{border-color:#edf2ed;background:#fbfdfb}
+.trace-share-advance-row>small{max-width:44%;text-align:right}
+.trace-share-empty{font-size:12px;color:#809286;line-height:1.6;padding:13px 14px;border:1px dashed #d5e5d9;border-radius:14px}
+.trace-share-disclaimer{padding:4px 2px}
+@media(max-width:375px){.trace-share-history-row strong{white-space:normal;text-align:right}.trace-share-friend>summary{padding:11px}.trace-share-hero{padding:14px}.trace-share-advance-row{flex-direction:column}.trace-share-advance-row>small{max-width:100%;text-align:left}}
+@media(prefers-reduced-motion:reduce){.trace-share-friend,.trace-share-hero{scroll-behavior:auto}}
+
+
+/* TRACE 5.37 premium one-tap account viewing, Safari-friendly and read-only. */
+.trace-intl-view-group{display:grid;gap:7px;min-width:0;margin:13px 0 8px}
+.trace-intl-view-label{font-size:11px;font-weight:800;color:#285c49;letter-spacing:.025em}
+.trace-intl-switch{display:flex;gap:7px;min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:2px 1px 6px;-webkit-overflow-scrolling:touch}
+.trace-intl-chip{flex:0 0 auto;min-height:44px;max-width:190px;padding:9px 13px;background:#fff;color:#365b4b;border:1px solid #d6e6dc;border-radius:999px;box-shadow:0 2px 8px rgba(26,73,49,.045);font-size:12px;font-weight:770;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;touch-action:manipulation;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}
+.trace-intl-chip.is-active,.trace-intl-chip[aria-pressed="true"]{background:#205742;border-color:#205742;color:#fff;box-shadow:0 5px 13px rgba(24,76,52,.16)}
+.trace-intl-chip:focus-visible{outline:3px solid #6eb093;outline-offset:2px}
+.trace-intl-view-note{font-size:11px;line-height:1.4;color:#536e60;margin:0}
+@media(max-width:390px){.trace-intl-chip{max-width:148px;font-size:11px;padding:9px 11px}}
+@media(prefers-reduced-motion:reduce){.trace-intl-chip{transition:none}}
+
+/* Home — direct account chips; choosing a primary stays a separate,
+ * explicit-confirmation action rather than a native dropdown. */
+.trace-intl-chip{display:inline-flex;align-items:center;gap:5px;text-align:left}
+.trace-intl-chip-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.trace-intl-chip-star{font-size:13px;color:#bd9554;flex-shrink:0}
+.trace-intl-chip.is-active .trace-intl-chip-star{color:#f9df9d}
+.trace-intl-chip-currency{font-size:10px;font-weight:800;opacity:.8;flex-shrink:0}
+.trace-intl-primary-heading{font-size:12px;font-weight:760;color:#285947}
+.trace-intl-primary-pills{display:flex;gap:7px;min-width:0;max-width:100%;
+ overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+ scrollbar-width:none;padding:2px 1px 6px}
+.trace-intl-primary-pills::-webkit-scrollbar{display:none}
+.trace-intl-primary-pill{flex:0 0 auto;max-width:205px;min-height:44px;padding:9px 12px;
+ border-radius:999px;border:1px solid #d5e6da;background:#fff;color:#285d4b;
+ box-shadow:0 2px 8px rgba(31,76,53,.045);font-size:12px;font-weight:750;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;touch-action:manipulation}
+.trace-intl-primary-pill small{font-size:10px;opacity:.75}
+.trace-intl-primary-pill.is-primary{background:#e9f4eb;border-color:#b7d8c4;color:#1b5742}
+.trace-intl-primary-pill:focus-visible{outline:3px solid #69b08c;outline-offset:2px}
+.trace-intl-primary-help{font-size:11px;line-height:1.45;color:#536e60;margin:0}
+.trace-intl-primary-native{position:absolute!important;width:1px!important;height:1px!important;
+ min-height:0!important;opacity:0!important;clip-path:inset(50%)!important;
+ pointer-events:none!important;padding:0!important;overflow:hidden!important}
+@media(max-width:390px){
+ .trace-intl-chip{max-width:170px}
+ .trace-intl-primary-pill{max-width:170px}
+}
+
+/* Budget overview: the ring and each category use the same confirmed totals. */
+.trace-budget-snapshot{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;gap:15px;margin:15px 0;padding:15px 12px;background:#f3f8f3;border:1px solid #e0ebe1;border-radius:16px}
+.trace-budget-ring{width:76px;height:76px;position:relative;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#286d58 var(--trace-budget-pct),#dce8df 0)}
+.trace-budget-ring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:#f3f8f3}
+.trace-budget-ring b{z-index:1;font-size:17px;line-height:1;color:#184f40;font-variant-numeric:tabular-nums}
+.trace-budget-snapshot>div:last-child{display:grid;gap:5px;min-width:0}
+.trace-budget-snapshot strong{font-size:14px;color:#184f40}
+.trace-budget-snapshot span{font-size:12px;color:#365e4f}
+.trace-budget-snapshot small{font-size:11px;line-height:1.4;color:#526c5b}
+.trace-insight-category[data-budget-state="near"] .trace-insight-category-track i{background:#c6944b}
+.trace-insight-category[data-budget-state="over"] .trace-insight-category-track i{background:#b56a60}
+.trace-insight-category[data-budget-state="over"] .trace-insight-category-main small:first-of-type{color:#9d5148}
+.trace-insight-spending-share{opacity:.8}
+.trace-trend-summary{display:grid;gap:5px;margin:10px 0 16px}
+.trace-trend-summary>span{color:#527466;font-size:12px;text-transform:capitalize}
+.trace-trend-summary>strong{font-size:25px;color:#194d3f;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.trace-trend-summary>strong small{font-size:12px;font-weight:550;letter-spacing:normal;color:#527466}
+.trace-trend-summary>p{margin:0;color:#526c5b;font-size:11px;line-height:1.5}
+.trace-trend-columns{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;min-width:0}
+.trace-trend-col{display:grid;gap:6px;min-width:0;text-align:center}
+.trace-trend-bars{height:80px;display:flex;align-items:flex-end;justify-content:center;gap:3px;border-bottom:1px solid #dce8df}
+.trace-trend-bars>i{display:block;width:10px;border-radius:4px 4px 0 0;min-height:0}
+.trace-trend-bars .is-planned{background:#cfdfd4}
+.trace-trend-bars .is-spent{background:#367b65}
+.trace-trend-bars>span{align-self:center;color:#819188;font-size:14px}
+.trace-trend-col>small{font-size:10px;text-transform:capitalize;color:#526c5b}
+.trace-trend-col>b{font-size:10px;font-weight:650;color:#214d3e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trace-account-settings-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.trace-account-settings-actions button,.trace-archived-account button{min-height:44px;font-size:12px}
+.trace-archived-accounts{margin-top:16px;border:1px solid #dce8df;border-radius:14px;padding:10px 12px;background:#f7faf6}
+.trace-archived-accounts>summary{min-height:44px;display:list-item;font-size:13px;font-weight:750;color:#295b47;cursor:pointer}
+.trace-archived-account{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 0;border-top:1px solid #e1e9e2}
+.trace-archived-account>span{display:grid;gap:4px;flex:1 1 130px;min-width:0;font-size:13px;overflow-wrap:anywhere}
+.trace-archived-account small{font-size:11px;color:#536e60}
+/* Review every CSV row without treating a possible match as a deletion. */
+.trace-csv-preview-row{border:1px solid #e5e9e4;border-radius:14px;margin:9px 0;background:#fff;overflow:hidden}
+.trace-csv-preview-row>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 12px;min-height:48px;cursor:pointer;color:#123f38;font-size:13px}
+.trace-csv-preview-row>summary>span{min-width:0;overflow-wrap:anywhere}
+.trace-csv-preview-row>summary>b{white-space:nowrap;font-variant-numeric:tabular-nums;font-size:14px}
+.trace-csv-preview-row>summary small{display:block;margin-top:5px;color:#65766b;font-size:11px}
+.trace-csv-preview-row[data-has-match]>summary{background:#faf4e6}
+.trace-csv-preview-row>p{padding:0 12px}
+.trace-csv-comparison{display:grid;gap:6px;background:#f5f7f2;border-radius:10px;margin:9px 12px;padding:12px;font-size:13px;overflow-wrap:anywhere}
+.trace-csv-comparison>small{color:#65766b;line-height:1.5}
+.trace-csv-invalid{border:1px solid #ead3bd;border-radius:12px;padding:12px;margin-top:12px;font-size:13px}
+
+
+/* Candidate 5.37 — actionable, accessible write-conflict notice. */
+.trace-conflict-alert {
+  position: fixed;
+  z-index: 1400;
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  max-width: 520px;
+  margin-inline: auto;
+  padding: 17px 18px;
+  border: 1px solid #b77d4f;
+  border-radius: 19px;
+  background: #fffaf1;
+  box-shadow: 0 12px 36px rgba(28, 42, 33, .18);
+  color: #24372e;
+}
+.trace-conflict-alert strong { display: block; font-size: 15px; line-height: 1.35; }
+.trace-conflict-alert p { margin: 8px 0 14px; font-size: 13px; line-height: 1.5; }
+.trace-conflict-alert .primary { width: 100%; min-height: 44px; }
+@media (max-width: 350px) {
+ .trace-conflict-alert { left: 8px; right: 8px; padding: 13px; }
+ .trace-conflict-alert strong { font-size: 14px; }
+}
+
+/* Candidate-only read-only debit differe report; no controls or bank writes. */
+.trace-deferred-account{margin:14px 0;padding:15px;border:1px solid #d4e5da;border-radius:16px;background:#f6faf7;color:#26493d}
+.trace-deferred-account h3{font-size:14px;margin:0 0 8px;color:#205e4a}
+.trace-deferred-account p{font-size:12px;line-height:1.5;margin:6px 0}
+.trace-deferred-account small{display:block;font-size:11px;line-height:1.5;margin-top:11px;color:#5c786b}
+.trace-deferred-summary{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:7px 0;border-bottom:1px solid #e0eae3;font-size:12px}
+.trace-deferred-summary b{font-size:14px;font-variant-numeric:tabular-nums}
+.trace-deferred-batches{margin-top:9px;display:grid;gap:8px}
+.trace-deferred-batches>div{border:1px solid #e0eae3;border-radius:11px;padding:9px;background:#fff;display:flex;gap:5px 8px;align-items:center;flex-wrap:wrap;font-size:12px}
+.trace-deferred-batches span{color:#507563}
+.trace-deferred-batches b{margin-left:auto;font-size:12px;overflow-wrap:anywhere}
+
+/* Deferred debit: candidate-only, read-only hypothetical purchase preview. */
+.trace-deferred-forecast{border:1px solid #d9e9dd;border-radius:16px;background:#f9fcfa;padding:14px;margin:13px 0;color:#254f41}
+.trace-deferred-forecast h3{font-size:14px;color:#215c49;margin:0 0 8px}
+.trace-deferred-forecast p,.trace-deferred-forecast small{font-size:12px;line-height:1.5}
+.trace-deferred-forecast small{display:block;margin-top:9px;color:#628071}
+.trace-deferred-forecast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.trace-deferred-forecast-grid label{min-width:0;display:grid;gap:5px;font-size:12px;font-weight:700}
+.trace-deferred-forecast-grid input{width:100%;min-width:0;max-width:100%;border:1px solid #cddfd5;border-radius:10px;padding:11px 8px;font-size:16px;color:#254f41;background:#fff}
+.trace-deferred-forecast-result{margin-top:10px;background:#eef5ef;border:1px solid #d8e9dc;border-radius:12px;padding:10px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.trace-deferred-forecast-result p{margin:7px 0}
+@media(max-width:420px){.trace-deferred-forecast-grid{grid-template-columns:1fr}.trace-deferred-forecast{padding:12px}}
+
+/* TRACE 5.37 — compact premium Home action shortcuts (preview candidate).
+   Read-only entry points to existing imports, reconciliation, reminders. */
+.trace-home-next-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 6px}
+.trace-home-next-action{display:flex;align-items:center;gap:9px;min-width:0;min-height:56px;padding:10px 9px;border:1px solid #d8e7dd;border-radius:15px;background:linear-gradient(145deg,#fcfefb,#f5faf6);color:#215644;text-align:left;box-shadow:0 3px 12px rgba(17,65,46,.035);cursor:pointer}
+.trace-home-next-action>span:first-child{flex:0 0 27px;display:grid;place-items:center;width:27px;height:27px;border-radius:9px;background:#e5f2e9;color:#23644d;font-size:16px;font-weight:750}
+.trace-home-next-action>span:last-child{display:grid;gap:3px;min-width:0}
+.trace-home-next-action strong{font-size:12px;font-weight:800;white-space:nowrap}
+.trace-home-next-action small{font-size:10px;line-height:1.25;color:#658273;overflow-wrap:anywhere}
+.trace-home-next-action:focus-visible{outline:3px solid #27836a;outline-offset:2px}
+@media(max-width:380px){.trace-home-next-actions{gap:6px}.trace-home-next-action{display:grid;justify-items:center;align-content:center;gap:6px;min-height:70px;padding:8px 3px;text-align:center}.trace-home-next-action>span:last-child{justify-items:center}.trace-home-next-action strong{font-size:11px}.trace-home-next-action small{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.trace-home-next-action{transition:none}}
+
+/* Non-financial CSV evidence inbox in Activity > Imports. */
+.trace-csv-review-queue{margin:14px 0;padding:14px;border:1px solid #dce5d9;border-radius:16px;background:#f9fcfa}
+.trace-csv-review-queue>h3{font-size:14px;margin:0 0 5px;color:#1f5945}
+.trace-csv-review-queue>p{font-size:12px;color:#59796b;margin:0 0 10px;line-height:1.5}
+.trace-csv-review-entry{display:flex;width:100%;min-height:52px;gap:9px;align-items:center;justify-content:space-between;margin:7px 0;padding:10px;border:1px solid #dce9df;border-radius:12px;background:#fff;color:#245743;text-align:left;cursor:pointer}
+.trace-csv-review-entry>span{display:grid;gap:3px;min-width:0}.trace-csv-review-entry small{color:#638276;font-size:11px;overflow-wrap:anywhere}
+.trace-csv-review-entry b{font-size:12px}.trace-csv-review-entry:focus-visible{outline:3px solid #27836a;outline-offset:2px}
+.trace-csv-review-original{padding:12px;background:#f6f9f6;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.trace-csv-review-confirm{display:flex;gap:9px;align-items:flex-start;font-size:13px;line-height:1.45;margin:12px 0}
+.trace-csv-review-confirm input{width:18px;height:18px;flex:0 0 18px}
+@media(max-width:380px){.trace-csv-review-queue{padding:10px}.trace-csv-review-entry{min-height:56px}}
+
+/* FX provenance review in bank-account details: read-only, safe on iPhone. */
+.trace-bank-proof-review{margin:14px 0;padding:14px 16px;border:1px solid #e3d5b1;
+ border-radius:16px;background:#fffaf0;color:#5c4b2c}
+.trace-bank-proof-review h3{margin:0 0 7px;font-size:14px;line-height:1.35;
+ color:#655021;font-weight:780}
+.trace-bank-proof-review p{margin:6px 0;font-size:12px;line-height:1.5;
+ overflow-wrap:anywhere}
+.trace-bank-proof-review ul{margin:9px 0;padding-left:18px;font-size:12px;
+ line-height:1.5;overflow-wrap:anywhere}
+.trace-bank-proof-review li+li{margin-top:4px}
+.trace-bank-proof-review small{display:block;margin-top:9px;font-size:11px;
+ line-height:1.45;color:#73674b}
+@media(max-width:380px){.trace-bank-proof-review{padding:12px;border-radius:13px}}
+
+.trace-bank-proof-review .trace-bank-proof-link{
+ display:block;width:100%;text-align:left;border:1px solid #e3d5b1;
+ border-radius:10px;background:#fffdf8;color:#5b4a25;
+ padding:10px 12px;font:inherit;font-size:12px;line-height:1.45;
+ overflow-wrap:anywhere;cursor:pointer;min-height:44px;
+}
+.trace-bank-proof-review .trace-bank-proof-link:focus-visible{
+ outline:2px solid #406b51;outline-offset:2px;
+}
+
+/* Activity history: bounded initial DOM, full access to all filtered months. */
+.trace-history-more{
+ display:block;width:100%;min-height:48px;margin:12px 0 0;padding:12px 16px;
+ border:1px solid #c7ded3;border-radius:13px;background:#f2f8f4;
+ color:#205c48;font:inherit;font-size:13px;font-weight:750;
+ line-height:1.4;text-align:center;cursor:pointer;
+}
+.trace-history-more:hover{background:#e9f4ee}
+.trace-history-more:focus-visible{outline:3px solid #26755f;outline-offset:3px}
+@media(max-width:380px){.trace-history-more{font-size:12px;padding-inline:10px}}
+
+/* TRACE 5.37 International — premium responsive readability (candidate only).
+ * Progressive enhancement; never changes stable 5.36.5 or financial logic.
+ */
+.trace-intl-transaction :is(input:not([type="checkbox"]),select,textarea),
+.trace-intl-import :is(input:not([type="checkbox"]),select,textarea){
+ min-width:0;max-width:100%;font-size:16px;min-height:44px;
+}
+.trace-intl-set-primary{min-height:44px;touch-action:manipulation}
+.trace-intl-details>summary{display:flex;align-items:center;min-height:44px}
+.trace-home-next-action small{font-size:11px;line-height:1.4;color:#486858}
+.trace-intl-row small,.trace-wealth-note,.trace-activity-day-heading small{color:#4d695a}
+.trace-intl-account-conversion{color:#4d695a!important}
+.trace-trend-bars .is-planned{background:linear-gradient(180deg,#d5e7da,#b9d4c3)}
+.trace-trend-bars .is-spent{background:linear-gradient(180deg,#378f77,#21634f)}
+.trace-activity-four-tabs .tab:focus-visible,
+.trace-home-next-action:focus-visible,
+.trace-intl-set-primary:focus-visible,
+.trace-intl-details>summary:focus-visible{
+ outline:3px solid #24765e;outline-offset:2px;
+}
+@media(max-width:420px){
+ .trace-trend-columns{grid-template-columns:repeat(6,minmax(48px,1fr));
+  overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;
+  scroll-snap-type:x proximity;padding:0 1px 10px}
+ .trace-trend-col{scroll-snap-align:start}
+ .trace-intl-row b{min-width:0;max-width:45vw;white-space:normal;overflow-wrap:anywhere}
+ .trace-intl-row small{white-space:normal}
+}
+@media(max-width:360px){
+ .trace-activity-four-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .trace-activity-four-tabs .tab{min-height:46px;font-size:12px;padding:10px 7px}
+ .trace-home-next-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .trace-home-next-action{min-height:56px;padding:10px 9px}
+ .trace-home-next-action:last-child{grid-column:1/-1;display:flex;text-align:left;
+  justify-items:stretch;justify-content:flex-start}
+ .trace-home-next-action:last-child>span:last-child{justify-items:start}
+ .trace-home-next-action strong{font-size:12px;white-space:normal;overflow-wrap:anywhere}
+ .trace-home-next-action small{font-size:11px;line-height:1.35}
+ .trace-budget-snapshot{grid-template-columns:60px minmax(0,1fr);gap:10px;padding:12px 10px}
+ .trace-budget-ring{width:60px;height:60px}
+ .trace-intl-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,auto);gap:8px}
+}
+@media(min-width:800px){
+ .trace-home-priority{grid-template-columns:minmax(0,1.25fr) minmax(0,.9fr);
+  align-items:start;gap:20px}
+ .trace-home-next-action small{font-size:12px}
+}
+
+/* TRACE 5.37 — accessibility polish for light premium surfaces, candidate only.
+ * A navigation label or financial explanation must remain readable at 320px.
+ */
+.navbtn:not(.active){color:#475f54}
+.navbtn>span:last-child{font-size:clamp(10px,2.65vw,11px);line-height:1.3}
+.trace-intl-foot,.trace-intl-row small,.trace-account-last-line small,
+.trace-share-opening,.trace-share-history-row small,.trace-share-advance-row small,
+.trace-share-friend>summary small,.trace-csv-review-entry small,
+.trace-trend-col>small{color:#4d695a}
+@media(max-width:360px){
+ .trace-activity-day-heading{flex-wrap:wrap;row-gap:4px}
+ .trace-activity-day-heading small{white-space:normal;max-width:100%}
+ .trace-csv-review-entry{min-width:0}
+ .trace-csv-review-entry>span{min-width:0;overflow-wrap:anywhere}
+}
+@media(prefers-reduced-motion:reduce){
+ .trace-trend-columns{scroll-behavior:auto;scroll-snap-type:none}
+ .trace-home-next-action,.trace-csv-review-entry{animation:none;transition:none}
+}
+
+/* International 5.37 — readable month data on small screens.
+ * The six-column trend stays horizontally scrollable rather than shrinking
+ * amounts to a 10px ellipsis on an iPhone SE-sized viewport.
+ */
+@media(max-width:420px){
+ .trace-trend-col>small{font-size:11px;line-height:1.4;font-weight:650}
+ .trace-trend-col>b{font-size:11px;line-height:1.35;font-weight:700;
+   white-space:normal;overflow:visible;overflow-wrap:anywhere}
+ .trace-trend-columns{gap:10px;padding-bottom:12px}
+ .trace-trend-bars{height:88px}
+ .trace-trend-bars>i{width:12px}
+}
+
+/* Pending foreign bank evidence: never imply a CAD valuation without dated FX. */
+.trace-unconfirmed-row .trace-unconfirmed-fx-pending{
+ display:block;color:#4d695a;font-size:11px;line-height:1.35;
+ font-weight:650;white-space:normal;text-align:right
+}
+
+/* 5.37 accessible horizontally scrollable financial trend. */
+.trace-trend-columns:focus-visible{outline:3px solid #2d8062;outline-offset:3px;border-radius:8px}
+
+/* TRACE 5.37 — readable premium accents on ivory/mint cards.
+ * The base 5.36 stylesheet and the production entry remain untouched.
+ * Secondary labels are information, not disabled controls: keep >=4.5:1.
+ */
+:root{--muted:#52685e;--teal:#21695e;--green:#216b52}
+.seg:not(.active){color:#50645a}
+.trace-home-review-info small{color:#4d695a}
+#reconcileBadge{color:#216b52}
+
+/* Insight data and reconciliation subtitles must remain readable on ivory
+ * even at 320px: never convey an actual financial value in washed-out grey.
+ */
+.trace-insights-head small,
+.trace-insight-category-main small,
+.trace-insight-category-value small,
+.trace-insight-statpair small,
+.trace-insight-yearname small,
+.trace-insight-yearfig small,
+.trace-insights-empty{color:#496458}
+.trace-insights-explain,.trace-insights-foot{color:#496458!important}
+.trace-insight-spending-share{color:#496458!important;opacity:1}
+.trace-kicker,.trace-cal-legend-help,
+.trace-premium-account-name small,.trace-premium-account-pending small,
+.trace-bank-setup-footer{color:#496458}
+.trace-intl-transaction .label2,.trace-edit-currency{color:#365a49}
+#traceStatementDrawer>summary small{color:#496458}
+
+/* Stronger panel specificity than legacy form surfaces, no global form changes. */
+#sheetBackdrop .trace-edit-currency,
+#sheetBackdrop label[for="manualPurchaseCurrency"],
+#sheetBackdrop label[for="manualPurchaseAmount"]{color:#365a49!important}
+
+
+/* Explicit SW upgrade warning inside an open financial form.
+ * Never hide the active draft or put an inaccessible reload action in a modal.
+ */
+#sheetBackdrop.open .sheet-head:has(#tracePreviewSheetUpdateNotice){flex-wrap:wrap}
+#tracePreviewSheetUpdateNotice{
+ order:3;flex:0 0 100%;display:block;margin-top:7px;
+ color:#365a49;background:#eff5ef;border-radius:9px;
+ padding:8px 10px;font-size:12px;font-weight:650;line-height:1.4
+}
+
+/* 5.37 laboratory mobile affordance: ensure the always-visible help control
+ * is at least 44px. The shared 5.36.5 stylesheet remains unchanged.
+ */
+@media(max-width:430px){
+ #helpBtn.help-btn{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:13px}
+}
+
+
+/* TRACE 5.37 premium filtering: native dropdowns remain invisible test
+ * state, replaced visually with direct, compact iPhone-friendly pill choices.
+ * Styling is limited to the 5.37 candidate, not the stable 5.36.5 shell. */
+.trace-activity-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 14px}
+.trace-activity-filter-field{display:grid;gap:7px;min-width:0;padding:10px 10px 7px;
+ border:1px solid #e2ece3;background:linear-gradient(145deg,#fffefb,#f8fbf7);
+ border-radius:16px;box-shadow:0 3px 13px rgba(22,77,54,.035)}
+.trace-activity-filter-title{font-size:11px;font-weight:800;letter-spacing:.012em;color:#365b4c}
+.trace-activity-filters .trace-activity-native-select{
+ position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;
+ padding:0!important;opacity:0!important;pointer-events:none!important;clip-path:inset(50%)!important;
+ overflow:hidden!important}
+.trace-activity-filter-chips{display:flex;gap:7px;overflow-x:auto;overscroll-behavior-x:contain;
+ -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 1px 5px;min-width:0}
+.trace-activity-filter-chips::-webkit-scrollbar{display:none}
+.trace-activity-filter-chip{flex:0 0 auto;max-width:210px;min-height:44px;padding:9px 13px;
+ color:#365d4c;background:#fff;border:1px solid #dce9df;border-radius:999px;
+ box-shadow:0 2px 7px rgba(32,87,66,.045);font-size:12px;font-weight:730;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;touch-action:manipulation;
+ transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.trace-activity-filter-chip.is-active,.trace-activity-filter-chip[aria-pressed="true"]{
+ color:#fff;background:#205742;border-color:#205742;box-shadow:0 4px 11px rgba(25,74,53,.17)}
+.trace-activity-filter-chip:focus-visible{outline:3px solid #65b094;outline-offset:2px}
+@media(max-width:600px){.trace-activity-filters{grid-template-columns:minmax(0,1fr);gap:8px}
+ .trace-activity-filter-field{padding:9px 10px 6px}}
+@media(prefers-reduced-motion:reduce){.trace-activity-filter-chip{transition:none}}
+
+
+/* 5.37 premium manual operation: limited beneficiary / FX currency choices
+ * are direct touch pills. The original selects remain hidden as a tested
+ * single source of truth; never alter the financial posting semantics. */
+#sheetBackdrop .trace-manual-choice-native{
+ position:absolute!important;width:1px!important;height:1px!important;
+ min-height:0!important;padding:0!important;border:0!important;opacity:0!important;
+ overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important
+}
+#sheetBackdrop .trace-manual-choice-pills{
+ display:flex;align-items:stretch;gap:7px;max-width:100%;min-width:0;
+ overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+ scrollbar-width:none;padding:4px 2px 7px
+}
+#sheetBackdrop .trace-manual-choice-pills::-webkit-scrollbar{display:none}
+#sheetBackdrop .trace-manual-choice-chip{
+ flex:0 0 auto;min-height:44px;max-width:185px;padding:10px 13px;
+ border:1px solid #d7e7db;border-radius:999px;background:#fffefc;
+ box-shadow:0 2px 8px rgba(30,79,56,.045);color:#315c48;
+ font-size:12px;font-weight:780;line-height:1.25;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis;touch-action:manipulation;
+ transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease
+}
+#sheetBackdrop .trace-manual-choice-chip[aria-pressed="true"],
+#sheetBackdrop .trace-manual-choice-chip.is-active{
+ background:#205742;border-color:#205742;color:#fff;
+ box-shadow:0 5px 12px rgba(24,75,52,.16)
+}
+#sheetBackdrop .trace-manual-choice-chip:focus-visible{
+ outline:3px solid #64ac8c;outline-offset:2px
+}
+@media(prefers-reduced-motion:reduce){
+ #sheetBackdrop .trace-manual-choice-chip{transition:none}
+}
+
+
+/* A short account collection is one-tap. Large collections get on-device
+ * search without changing the original source of financial values. */
+#sheetBackdrop .trace-manual-account-pills{margin-top:3px;margin-bottom:9px;padding-bottom:7px}
+#sheetBackdrop .trace-manual-account-pills .trace-manual-choice-chip{max-width:220px}
+#sheetBackdrop .trace-manual-account-pills .trace-manual-choice-chip[hidden]{display:none!important}
+#sheetBackdrop .trace-manual-account-search{
+ width:100%;min-height:44px;font-size:16px!important;margin:3px 0 7px;
+ background:#fffefc;border:1px solid #d6e6da;border-radius:13px;
+ padding:10px 12px;appearance:none
+}
+#sheetBackdrop .trace-manual-account-search:focus-visible{
+ outline:3px solid #65ab8d;outline-offset:2px
+}
+#sheetBackdrop .trace-manual-account-empty{margin:0 0 10px;color:#587463;font-size:12px}
+@media(max-width:390px){
+ #sheetBackdrop .trace-manual-account-pills .trace-manual-choice-chip{max-width:168px}
+}
+
+
+/* Category pickers in candidate-only manual operations. The value stays
+ * in the original financial select; there is no additional posting path. */
+#sheetBackdrop .trace-manual-category-pills{margin:4px 0 8px;padding-bottom:8px}
+#sheetBackdrop .trace-manual-category-pills .trace-manual-choice-chip{max-width:200px}
+#sheetBackdrop .trace-manual-category-pills .trace-manual-choice-chip[hidden]{display:none!important}
+#sheetBackdrop .trace-manual-category-search{
+ width:100%;min-height:44px;font-size:16px!important;margin:4px 0 8px;
+ background:#fffefc;border:1px solid #d6e6da;border-radius:13px;
+ padding:10px 12px;appearance:none
+}
+#sheetBackdrop .trace-manual-category-search[hidden]{display:none!important}
+#sheetBackdrop .trace-manual-category-search:focus-visible{outline:3px solid #65ab8d;outline-offset:2px}
+#sheetBackdrop .trace-manual-category-empty{font-size:12px;line-height:1.45;color:#526f60;margin:0 0 8px}
+@media(max-width:390px){
+ #sheetBackdrop .trace-manual-category-pills .trace-manual-choice-chip{max-width:164px}
+}
+
+
+/* 5.37 premium budget zero states — guidance and a real entry point, not
+ * financial placeholder numbers or decorative dead-end controls. */
+.trace-budget-empty{
+ display:flex;align-items:center;flex-wrap:wrap;gap:12px;
+ padding:15px 13px;background:linear-gradient(135deg,#fbfdf9,#f3f8f4);
+ border:1px dashed #cadfd1;border-radius:17px;
+}
+.trace-budget-empty-icon{
+ flex:0 0 40px;width:40px;height:40px;border:1px solid #cfe5d5;
+ background:#e7f1e9;border-radius:13px;display:grid;place-items:center;
+ color:#245c47;font-size:20px;font-weight:760;
+}
+.trace-budget-empty-copy{flex:1 1 178px;min-width:0}
+.trace-budget-empty-copy strong{display:block;color:#1e503d;font-size:13px;line-height:1.4}
+.trace-budget-empty-copy p{
+ color:#526e5f;margin:4px 0 0;font-size:11px;line-height:1.55;
+}
+.trace-budget-empty-action{
+ display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+ min-height:44px;max-width:100%;padding:9px 14px;border:1px solid #1f674e;
+ border-radius:999px;background:#205742;color:#fff;font-size:12px;
+ font-weight:780;line-height:1.35;touch-action:manipulation;
+}
+.trace-budget-empty-action:focus-visible,.trace-budget-setup-empty+button:focus-visible{
+ outline:3px solid #6eb093;outline-offset:3px;
+}
+.trace-budget-setup-empty{
+ display:grid;gap:9px;padding:18px 15px;margin:8px 0 15px;
+ border-radius:18px;border:1px dashed #c8ddce;
+ background:linear-gradient(140deg,#fbfdf9,#f1f8f2);
+}
+.trace-budget-setup-symbol{font-size:23px;font-weight:800;color:#245c47}
+.trace-budget-setup-empty strong{color:#1e503d;font-size:15px}
+.trace-budget-setup-empty p{color:#526e5f;font-size:12px;line-height:1.6;margin:0}
+@media(max-width:390px){
+ .trace-budget-empty{gap:10px;padding:12px}
+ .trace-budget-empty-action{width:100%}
+}
+
+/* 5.37 — progressive disclosure: compact Home and three-action Activity. */
+.trace-home-balance-breakdown{margin-top:9px;border-top:1px solid #dbe8df;padding-top:5px}
+.trace-home-balance-breakdown summary{min-height:44px;display:flex;align-items:center;font-weight:750;color:#426c58;font-size:12px;cursor:pointer}
+.trace-home-balance-breakdown .mini-account{padding:5px 0}
+.trace-intl-view-note{display:none}
+.trace-activity-main-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.trace-activity-main-tabs .tab{min-width:0;min-height:44px;white-space:nowrap;font-size:clamp(12px,3vw,14px);padding:11px 5px}
+.trace-activity-filter-drawer{border:1px solid #dce8df;border-radius:15px;background:#fffdf9;margin:12px 0}
+.trace-activity-filter-drawer>summary{min-height:48px;padding:12px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer;font-weight:750;color:#205841;list-style:none}
+.trace-activity-filter-drawer>summary::-webkit-details-marker{display:none}
+.trace-activity-filter-drawer>summary:after{content:'⌄';font-size:18px}
+.trace-activity-filter-drawer[open]>summary:after{content:'⌃'}
+.trace-filter-hint{font-size:11px;color:#71877a;font-weight:500;text-align:right}
+.trace-activity-filter-drawer .trace-activity-filters{margin:0 12px}
+.trace-activity-filter-drawer .trace-activity-filter-actions{margin:3px 12px 10px}
+.trace-add-choice-list{display:grid;gap:11px;margin:10px 0}
+.trace-add-choice{min-height:77px;width:100%;display:grid;grid-template-columns:1fr auto;gap:5px 13px;text-align:left;align-items:center;padding:15px 16px;border:1px solid #cfe3d6;border-radius:17px;background:#fafff9;color:#174634}
+.trace-add-choice strong{font-size:15px;grid-column:1}
+.trace-add-choice small{font-size:12px;color:#5d7768;grid-column:1;line-height:1.4}
+.trace-add-choice span{grid-column:2;grid-row:1 / span 2;font-size:20px}
+.trace-add-choice:focus-visible,.trace-import-workspace-modes button:focus-visible{outline:3px solid #66af8c;outline-offset:2px}
+.trace-import-workspace-header{padding:8px 0 4px}
+.trace-import-workspace-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:7px 0 16px}
+.trace-import-workspace-modes button{min-height:48px;border:1px solid #d4e4d7;border-radius:13px;background:#f9fcf8;color:#285a43;padding:9px 7px;font-weight:750;font-size:12px}
+.trace-import-workspace-modes button.is-active{background:#174f3f;color:white;border-color:#174f3f}
+.trace-import-account-selection{margin:0 0 15px}
+#activityImport[data-import-mode="daily"] #importDrop,#activityImport[data-import-mode="daily"] #traceStatementDrawer,#activityImport[data-import-mode="monthly"] #importCalendar{display:none}
+.trace-import-test-tools{margin:20px 0 10px}
+.trace-import-test-tools>summary{font-size:12px;color:#70877a;min-height:44px;padding:12px 0;cursor:pointer}
+#activityImport .trace-import-test-tools:not([open])>article{display:none}
+.trace-activity-filter-drawer:not([open]) .trace-activity-filters{display:none}
+@media(max-width:360px){.trace-filter-hint{font-size:10px}.trace-add-choice{padding:12px}}
+
+/* TRACE 5.37 — unified Home counter, without summing cash and monthly allowance. */
+.trace-home-priority.trace-home-unified{gap:0;overflow:hidden;border:1px solid rgba(34,93,69,.18);
+ border-radius:22px;background:#fffdf9;box-shadow:0 12px 28px rgba(20,69,53,.09),0 2px 6px rgba(20,69,53,.025)}
+.trace-home-priority.trace-home-unified #balanceCard{min-height:0;box-shadow:none;border:0;border-radius:0;
+ background:linear-gradient(145deg,#fffefb 5%,#edf7ef 100%);padding:17px 17px 13px}
+.trace-home-priority.trace-home-unified .trace-home-available{min-height:0;box-shadow:none;border:0;border-radius:0;
+ padding:16px 17px 17px;background:linear-gradient(137deg,#103e37 0%,#205e4c 100%)}
+.trace-home-unified .trace-home-panel-head{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:40px;margin-bottom:2px}
+.trace-home-unified #balanceCard .eyebrow{color:#527663;font-size:12px;line-height:1.3}
+.trace-home-unified .trace-home-panel-link{display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ min-height:44px;border:0;background:transparent;color:#225c49;font-size:12px;line-height:1.2;font-weight:750;
+ white-space:nowrap;border-radius:10px;padding:6px 5px;cursor:pointer}
+.trace-home-unified .trace-home-panel-link span{font-size:17px}
+.trace-home-unified .trace-home-panel-link:focus-visible{outline:3px solid #77c39f;outline-offset:2px}
+.trace-home-unified .trace-home-budget-link{color:#f0fbf0}
+.trace-home-unified .trace-home-budget-label{font-size:12px;color:#e4f3ea;font-weight:650;margin:0 0 1px}
+.trace-home-unified .trace-home-available .label{font-size:12px;font-weight:850}
+.trace-home-unified .trace-home-available .big{font-size:clamp(27px,6.8vw,40px);line-height:1.12;overflow-wrap:anywhere}
+.trace-home-unified .trace-home-available .sub{font-size:12px;line-height:1.4;margin-top:4px}
+.trace-home-unified .trace-home-available .progress{margin-top:13px}
+.trace-home-unified .trace-home-available .progress-row{font-size:11px}
+.trace-home-unified #balanceCard .money{font-size:clamp(29px,7.2vw,42px)}
+.trace-home-unified .trace-home-balance-breakdown{margin-top:6px}
+@media (min-width:800px){
+ .trace-home-priority.trace-home-unified{grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);align-items:stretch;gap:0}
+ .trace-home-priority.trace-home-unified #balanceCard{padding:21px 22px}
+ .trace-home-priority.trace-home-unified .trace-home-available{padding:19px 23px;display:flex;flex-direction:column;justify-content:center}
+}
+@media (max-width:360px){
+ .trace-home-unified .trace-home-panel-link{font-size:11px}
+ .trace-home-priority.trace-home-unified #balanceCard{padding:15px 13px 11px}
+ .trace-home-priority.trace-home-unified .trace-home-available{padding:14px 13px 16px}
+}
+
+/* Decorative hero halo must never intercept the new Budget shortcut. */
+.trace-home-unified .trace-home-available::before{pointer-events:none}
+
+/* 5.37 final Home density — clear financial values and smaller bank-account pills. */
+/* Home account shortcuts: visual chips ~30px tall inside 44px tap targets.
+ * Keep the values visually secondary to Solde estimé and Reste à dépenser.
+ * This is only Home: full bank-account views retain their normal density. */
+.trace-home-unified .trace-intl-view-group{margin:3px 0 0;gap:1px}
+.trace-home-unified .trace-intl-view-label{
+ font-size:9px;font-weight:650;color:#72887a;letter-spacing:.01em;
+}
+.trace-home-unified .trace-intl-switch{
+ gap:3px;padding:0;scrollbar-width:none;
+}
+.trace-home-unified .trace-intl-switch::-webkit-scrollbar{display:none}
+.trace-home-unified .trace-intl-chip{
+ position:relative;isolation:isolate;display:inline-flex;
+ align-items:center;justify-content:center;gap:3px;
+ min-height:44px;max-width:122px;padding:0 9px;
+ border:0;background:transparent;box-shadow:none;
+ color:#536e5c;font-size:10px;font-weight:660;line-height:1.1;
+ text-overflow:clip;white-space:nowrap;
+}
+.trace-home-unified .trace-intl-chip::before{
+ content:"";position:absolute;inset:7px 0;z-index:-1;
+ border:1px solid #e0e9e1;border-radius:999px;background:#f7faf6;
+}
+.trace-home-unified .trace-intl-chip:is(.is-active,[aria-pressed="true"]){
+ background:transparent;border-color:transparent;box-shadow:none;color:#195b42;
+}
+.trace-home-unified .trace-intl-chip:is(.is-active,[aria-pressed="true"])::before{
+ border-color:#adcfb8;background:#e9f4ec;
+}
+.trace-home-unified .trace-intl-chip-name{
+ min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.trace-home-unified .trace-intl-chip-star{font-size:9px;flex-shrink:0}
+.trace-home-unified .trace-intl-chip-currency{font-size:8px;flex-shrink:0}
+.trace-home-unified .trace-intl-view-note{
+ position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+ overflow:hidden;clip-path:inset(50%);white-space:nowrap;
+}
+@media(max-width:360px){
+ .trace-home-unified .trace-intl-chip{max-width:115px;padding-inline:8px}
+}
+.trace-home-unified .trace-home-available{justify-content:center}
+.trace-home-unified #homeBudgetSub,.trace-home-unified #homeBudgetTrack,.trace-home-unified .progress-row{display:none}
+.trace-home-import-coverage{width:100%;display:flex;align-items:center;gap:10px;min-height:57px;margin-top:11px;padding:9px 12px;border:1px solid #d9e6dc;border-radius:15px;background:#fafdFA;color:#285e49;text-align:left;cursor:pointer}
+.trace-home-import-coverage:focus-visible{outline:3px solid #77c39f;outline-offset:2px}
+.trace-home-import-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#edf5ec;font-size:19px}
+.trace-home-import-copy{display:grid;gap:2px;flex:1;min-width:0}
+.trace-home-import-copy strong{font-size:12px;line-height:1.2}
+.trace-home-import-copy small{font-size:11px;line-height:1.3;color:#5a7564}
+.trace-home-import-coverage>span:last-child{font-size:20px}
+
+/* Annual budget — overview of twelve months + one focused detail, not a long list. */
+.trace-budget-annual-card{padding:16px 14px}
+.trace-year-header{display:flex;align-items:center;justify-content:space-between}
+.trace-year-header strong{font-size:14px;color:#225641}
+.trace-year-header small{display:block;font-size:11px;color:#667d6c;margin-top:3px}
+.trace-year-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:14px 0 10px}
+.trace-year-totals>div{min-width:0;background:#f4f9f5;border-radius:12px;padding:10px 7px}
+.trace-year-totals small{display:block;color:#627968;font-size:10px}
+.trace-year-totals strong{display:block;color:#194d3a;font-size:clamp(12px,3.3vw,17px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;margin-top:4px}
+.trace-year-totals .trace-year-negative strong{color:#a04d37}
+.trace-year-legend{display:flex;gap:12px;justify-content:flex-end;margin:3px 0 9px;color:#617967;font-size:10px}
+.trace-year-legend span{display:inline-flex;gap:5px;align-items:center}
+.trace-year-key{display:inline-block;width:12px;height:5px;border-radius:2px}
+.trace-year-key.budget{background:#b8d7c3}.trace-year-key.real{background:#1c7759}
+.trace-year-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.trace-year-month{min-width:0;min-height:76px;text-align:left;border:1px solid #dce9df;border-radius:12px;padding:9px;background:#fffdf9;color:#245942;display:grid;gap:6px;align-content:start;cursor:pointer}
+.trace-year-month strong{font-size:12px;text-transform:capitalize}
+.trace-year-month small{font-size:10px;color:#6b8273;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trace-year-month.is-selected{border-color:#1e6a50;background:#f0f8f1;box-shadow:inset 0 0 0 1px #1e6a50}
+.trace-year-month.is-empty{background:#fcfcfb;color:#8d9a8f}
+.trace-year-month.is-over small{color:#aa5a42}
+.trace-year-month:focus-visible{outline:3px solid #73bf93;outline-offset:2px}
+.trace-year-bars{display:grid;gap:4px;width:100%}
+.trace-year-bar{display:block;height:5px;min-width:0;border-radius:2px}
+.trace-year-bar.budget{background:#b8d7c3}.trace-year-bar.real{background:#1c7759}
+.trace-year-selected{margin-top:14px;padding:12px;border:1px solid #d7e8dc;border-radius:14px;background:#f9fcf8}
+.trace-year-selected>strong{font-size:13px;color:#205841;text-transform:capitalize}
+.trace-year-selected>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:9px}
+.trace-year-selected span{font-size:10px;color:#6b7f70}
+.trace-year-selected b{display:block;color:#1b503b;font-size:12px;margin-top:5px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.trace-budget-annual-card .trace-insights-foot{font-size:10px;margin-top:12px;line-height:1.45;color:#6c8071}
+@media(min-width:600px){.trace-year-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+/* Only applied Activity filters appear outside the drawer, removable in one tap. */
+.trace-activity-applied-filters{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:9px 0 12px}
+.trace-activity-applied-filters[hidden]{display:none}
+.trace-activity-applied-chip{display:inline-flex;align-items:center;gap:7px;min-height:44px;max-width:100%;border-radius:999px;border:1px solid #bcd8c7;background:#f2f8f3;color:#245b45;font-size:11px;padding:7px 11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.trace-activity-applied-chip span{font-size:16px;flex-shrink:0}
+.trace-activity-applied-clear{min-height:44px;padding:7px 9px;border:0;background:transparent;color:#476c57;font-size:11px;font-weight:750;cursor:pointer}
+.trace-activity-applied-chip:focus-visible,.trace-activity-applied-clear:focus-visible{outline:3px solid #73bf93;outline-offset:2px}
+
+
+/* TRACE 5.37 editorial simplification: fewer competing cards / no lost actions.
+   Scope to the isolated candidate HTML; all IDs and financial totals remain. */
+.page[data-page="home"] .trace-home-month-head{margin-top:16px!important}
+.page[data-page="home"] .trace-home-month-kpis{
+ gap:0;overflow:hidden;margin-top:9px!important;
+ border:1px solid #e2e9e2;border-radius:17px;background:#fdfefb;
+ box-shadow:0 3px 12px rgba(15,57,37,.025);
+}
+.page[data-page="home"] .trace-home-month-kpis .card.kpi{
+ min-width:0;min-height:80px;padding:13px 9px 12px;
+ border:0!important;border-radius:0!important;background:transparent!important;
+ box-shadow:none!important;text-align:left;
+}
+.page[data-page="home"] .trace-home-month-kpis .card.kpi:not(:last-child){
+ border-right:1px solid #e5ece6!important;
+}
+.page[data-page="home"] .trace-home-month-kpis .k-label{
+ color:#638072;font-size:11px;letter-spacing:0;font-weight:650;
+}
+.page[data-page="home"] .trace-home-month-kpis .k-value{
+ color:#153f30;font-size:clamp(15px,4.3vw,22px);
+ line-height:1.18;letter-spacing:-.03em;font-weight:790;
+ margin-top:8px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;
+}
+.page[data-page="home"] .trace-home-month-kpis .k-note{
+ position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+ overflow:hidden;clip-path:inset(50%);white-space:nowrap;
+}
+.page[data-page="home"] .trace-home-month-kpis .card.kpi:focus-visible{
+ outline:3px solid #418d68;outline-offset:-3px;z-index:2;
+}
+.page[data-page="home"] .trace-home-more{
+ margin:18px 0 13px;border-top:1px solid #e0e9e2;
+ color:#2b5b47;
+}
+.page[data-page="home"] .trace-home-more>summary{
+ display:flex;align-items:center;justify-content:space-between;
+ min-height:48px;padding:10px 4px;list-style:none;cursor:pointer;
+ color:#516e5c;font-size:12px;font-weight:700;
+}
+.page[data-page="home"] .trace-home-more>summary::-webkit-details-marker{display:none}
+.page[data-page="home"] .trace-home-more>summary span{
+ font-size:16px;transition:transform .18s ease;
+}
+.page[data-page="home"] .trace-home-more[open]>summary span{transform:rotate(180deg)}
+.page[data-page="home"] .trace-home-more>summary:focus-visible{
+ outline:3px solid #448c6c;outline-offset:2px;border-radius:9px;
+}
+.page[data-page="home"] .trace-home-more .trace-home-import-coverage{
+ min-height:48px;margin-top:3px;background:#f9fbf8;
+ border-color:#e4ece5;box-shadow:none;
+}
+.page[data-page="home"] .trace-home-more .trace-home-import-mark{
+ width:28px;height:28px;font-size:15px;background:#f0f6ef;
+}
+.page[data-page="home"] .trace-home-more .section-head{
+ margin-top:15px;
+}
+.page[data-page="home"] .trace-home-more .share-card{
+ box-shadow:none;border:1px solid #e2ebe3!important;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer{
+ border-color:#e1e9e2;border-radius:13px;box-shadow:none;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer:not([open]) .trace-filter-hint{
+ position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+ overflow:hidden;clip-path:inset(50%);white-space:nowrap;
+}
+.page[data-page="activity"] .activity-stats{
+ gap:0;border-bottom:1px solid #e2eae2;margin:11px 0 14px;
+}
+.page[data-page="activity"] .activity-stats .statbox{
+ min-width:0;border:0;border-radius:0;background:transparent;
+ padding:9px 9px 13px;box-shadow:none;
+}
+.page[data-page="activity"] .activity-stats .statbox:not(:last-child){
+ border-right:1px solid #e3ebe4;
+}
+.page[data-page="activity"] .activity-stats .statbox span{
+ font-size:11px;font-weight:650;color:#688172;
+}
+.page[data-page="activity"] .activity-stats .statbox b{
+ color:#1b4936;font-variant-numeric:tabular-nums;
+ font-size:clamp(14px,3.8vw,20px);letter-spacing:-.02em;
+ overflow-wrap:anywhere;line-height:1.2;
+}
+@media(max-width:360px){
+ .page[data-page="home"] .trace-home-month-kpis .card.kpi{padding-inline:7px}
+ .page[data-page="home"] .trace-home-month-kpis .k-value{font-size:15px}
+ .page[data-page="activity"] .activity-stats .statbox{padding-inline:6px}
+}
+@media(prefers-reduced-motion:reduce){
+ .page[data-page="home"] .trace-home-more>summary span{transition:none}
+}
+
+
+/* TRACE 5.37 — Budget editorial pass (candidate only).
+   Two editable rows per family first; further rows stay accessible by native details. */
+.page[data-page="budget"] .budget-hero-card{
+ min-height:0;padding:18px 19px 17px;border-radius:18px;box-shadow:none;
+ background:#163f37;
+}
+.page[data-page="budget"] .budget-hero-card::before{display:none}
+.page[data-page="budget"] #budgetHeroTotal{
+ margin:9px 0 3px;font-size:clamp(29px,8vw,37px);
+ line-height:1.12;letter-spacing:-.04em;font-variant-numeric:tabular-nums;
+}
+.page[data-page="budget"] #budgetHeroSub{font-size:11px;line-height:1.4;color:#d5e7de}
+.page[data-page="budget"] .budget-hero-card .budget-copy-chip{position:relative;z-index:1}
+.page[data-page="budget"] .trace-budget-family-head{
+ display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+ gap:8px;align-items:center;margin:20px 2px 8px;
+}
+.page[data-page="budget"] .trace-budget-family-title{min-width:0}
+.page[data-page="budget"] .trace-budget-family-title h2{
+ margin:0;font-size:15px;letter-spacing:-.025em;color:#193f32;line-height:1.25;
+}
+.page[data-page="budget"] .trace-budget-family-title small{
+ display:block;margin-top:3px;font-size:11px;color:#65796c;font-weight:550;
+}
+.page[data-page="budget"] .trace-budget-family-total{
+ color:#1c503d;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+.page[data-page="budget"] .budget-add-link{
+ min-height:44px;padding:9px 4px 9px 8px;font-size:11px;white-space:nowrap;
+ cursor:pointer;
+}
+.page[data-page="budget"] .trace-budget-family{
+ padding:3px 15px;margin-bottom:3px;
+ border:1px solid #e4ebe4;border-radius:15px;box-shadow:none;background:#fffdfa;
+}
+.page[data-page="budget"] .trace-budget-family .budget-card{
+ width:100%;min-height:55px;display:flex;align-items:center;
+ padding:9px 1px;gap:11px;background:transparent;border:0;
+ border-bottom:1px solid #edf0ec;color:#1b4637;text-align:left;cursor:pointer;
+}
+.page[data-page="budget"] .trace-budget-family .budget-card:last-child{border-bottom:0}
+.page[data-page="budget"] .trace-budget-family .bicon{
+ width:32px;height:32px;flex:0 0 32px;border-radius:10px;font-size:13px;
+ background:#eff4ef;
+}
+.page[data-page="budget"] .trace-budget-family .bmain{min-width:0}
+.page[data-page="budget"] .trace-budget-family .bmain strong{
+ font-size:12px;line-height:1.3;overflow-wrap:anywhere;
+}
+.page[data-page="budget"] .trace-budget-family .bmain small{font-size:10px;line-height:1.4}
+.page[data-page="budget"] .trace-budget-family .bvalue strong{
+ color:#194a38;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.page[data-page="budget"] .trace-budget-more{border-top:1px solid #edf0ec}
+.page[data-page="budget"] .trace-budget-more>summary{
+ min-height:46px;display:flex;align-items:center;justify-content:space-between;
+ gap:8px;padding:8px 2px;color:#35654e;list-style:none;
+ cursor:pointer;font-size:12px;font-weight:720;
+}
+.page[data-page="budget"] .trace-budget-more>summary::-webkit-details-marker{display:none}
+.page[data-page="budget"] .trace-budget-chevron{
+ font-size:18px;line-height:1;transition:transform .18s ease;
+}
+.page[data-page="budget"] .trace-budget-more[open] .trace-budget-chevron{transform:rotate(180deg)}
+.page[data-page="budget"] .trace-budget-more-rows{border-top:1px solid #edf0ec}
+.page[data-page="budget"] .trace-budget-family .budget-card:focus-visible,
+.page[data-page="budget"] .trace-budget-more>summary:focus-visible,
+.page[data-page="budget"] .budget-add-link:focus-visible,
+.page[data-page="budget"] #manageBudgetCategories:focus-visible{
+ outline:3px solid #4d9b75;outline-offset:2px;border-radius:8px;
+}
+.page[data-page="budget"] .trace-budget-toolbar{
+ justify-content:flex-start;margin:6px 2px 2px;
+}
+.page[data-page="budget"] #manageBudgetCategories{
+ min-height:44px;padding:10px 4px;font-size:11px;font-weight:670;color:#507360;
+}
+.page[data-page="budget"] .trace-budget-family .trace-budget-empty{
+ margin:10px 0;border:0;box-shadow:none;background:#f5f8f4;
+}
+@media(max-width:360px){
+ .page[data-page="budget"] .trace-budget-family-head{gap:5px}
+ .page[data-page="budget"] .trace-budget-family-title h2{font-size:14px}
+ .page[data-page="budget"] .trace-budget-family-total{font-size:12px}
+ .page[data-page="budget"] .trace-budget-family{padding-inline:11px}
+ .page[data-page="budget"] .trace-budget-family .budget-card{gap:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ .page[data-page="budget"] .trace-budget-chevron{transition:none}
+}
+
+
+/* 5.37 editorial visibility pass — no hidden Home utilities, compact native
+   filtering, zero-activity budget categories disclosed without fabricated data. */
+.page[data-page="home"] .trace-home-more{
+ margin:14px 0 10px;border-top:1px solid #e5ebe5;padding-top:7px;
+}
+.page[data-page="home"] .trace-home-tools-head{
+ margin:7px 0 7px;
+}
+.page[data-page="home"] .trace-home-tools-head h2{
+ font-size:14px;font-weight:690;letter-spacing:-.015em;
+}
+.page[data-page="home"] .trace-home-more .trace-home-import-coverage{
+ margin-top:0;min-height:50px;padding-block:8px;border-radius:12px;
+}
+.page[data-page="home"] .trace-home-more .section-head{
+ margin-top:14px;margin-bottom:8px;
+}
+.page[data-page="home"] .trace-home-balance-breakdown{
+ display:grid;gap:2px;padding:9px 0 0;margin-top:9px;
+ border-top:1px solid rgba(203,221,207,.55);
+ color:inherit;
+}
+.page[data-page="home"] .trace-home-balance-breakdown .mini-account{
+ display:flex;align-items:center;justify-content:space-between;
+ min-height:24px;padding:1px 0;border:0;background:transparent;
+ gap:9px;font-size:11px;font-weight:520;
+}
+.page[data-page="home"] .trace-home-balance-breakdown .scope-label{
+ font-size:10px;line-height:1.35;margin:5px 0 0;opacity:.68;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer{
+ border:1px solid #e5ebe5;background:#fdfefa;border-radius:12px;
+ margin:9px 0 11px;box-shadow:none;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer>summary{
+ min-height:42px;padding:8px 12px;font-size:12px;font-weight:660;
+ color:#385c49;gap:8px;
+}
+.page[data-page="activity"] .trace-filter-hint{
+ font-size:10px;letter-spacing:0;color:#829187;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer .trace-activity-filters{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:9px 10px;margin:0 11px 8px;
+}
+.page[data-page="activity"] .trace-activity-filter-field{
+ min-width:0;display:grid;gap:5px;
+ padding:0!important;border:0!important;background:transparent!important;
+ box-shadow:none!important;border-radius:0!important;
+}
+.page[data-page="activity"] .trace-activity-filter-title{
+ font-size:10px;font-weight:630;color:#65786a;
+ letter-spacing:.01em;
+}
+.page[data-page="activity"] .trace-activity-filter-chips{
+ display:none!important;
+}
+.page[data-page="activity"] .trace-activity-filters .trace-activity-native-select{
+ display:block!important;position:relative!important;
+ width:100%!important;height:43px!important;min-height:43px!important;
+ max-width:100%!important;opacity:1!important;pointer-events:auto!important;
+ clip-path:none!important;overflow:hidden!important;
+ border:1px solid #e1e9e0!important;border-radius:10px!important;
+ background:#fff!important;color:#2c4637!important;
+ font-size:16px!important;font-weight:510!important;line-height:1.2!important;
+ padding:8px 8px!important;text-overflow:ellipsis;
+ -webkit-appearance:auto;appearance:auto;
+}
+.page[data-page="activity"] .trace-activity-filter-drawer .trace-activity-filter-actions{
+ margin:4px 12px 9px;
+}
+.page[data-page="activity"] #activityResetFilters{
+ min-height:38px;font-size:11px;font-weight:620;
+}
+.page[data-page="budget"] .trace-insight-inactive{
+ margin:12px 0 4px;border-top:1px solid #e8eee8;padding-top:11px;
+}
+.page[data-page="budget"] .trace-insight-inactive-title{
+ display:flex;justify-content:space-between;gap:7px;flex-wrap:wrap;
+ font-size:12px;font-weight:680;color:#456653;margin-bottom:8px;
+}
+.page[data-page="budget"] .trace-insight-inactive-title small{
+ font-size:10px;font-weight:460;color:#879489;
+}
+.page[data-page="budget"] .trace-insight-inactive-row{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;padding:9px 0;border-bottom:1px solid #f0f2ed;
+ font-size:12px;font-weight:550;color:#61796a;
+}
+.page[data-page="budget"] .trace-insight-inactive-row small{
+ font-size:11px;font-weight:500;color:#89968b;white-space:nowrap;
+}
+@media(max-width:350px){
+ .page[data-page="activity"] .trace-activity-filter-drawer .trace-activity-filters{
+  grid-template-columns:minmax(0,1fr);
+ }
+}
+
+
+/* TRACE 5.37 — Activity filters, tailored from physical iPhone feedback.
+ * A single quiet editorial panel; all native selectors remain keyboard- and
+ * VoiceOver-accessible, and existing filtering behaviour is untouched. */
+.page[data-page="activity"] #activityAdvancedFilters{
+ background:#fbfcf9;
+ border:1px solid #e9eee9;
+ border-radius:13px;
+ box-shadow:0 1px 2px rgba(25,57,37,.015);
+ margin:8px 0 9px;
+ overflow:clip;
+}
+.page[data-page="activity"] #activityAdvancedFilters>summary{
+ display:flex;align-items:center;
+ padding:9px 14px;
+ min-height:44px;
+ gap:9px;
+ background:transparent;
+ color:#2a4e3e;
+ font-size:12px;font-weight:680;letter-spacing:-.01em;
+}
+.page[data-page="activity"] #activityAdvancedFilters>summary .trace-filter-hint{
+ margin-left:auto;
+ color:#87978b;
+ font-weight:450;
+ font-size:10px;
+ letter-spacing:0;
+}
+.page[data-page="activity"] #activityAdvancedFilters>summary::after{
+ content:"";
+ display:block;
+ flex:0 0 15px;
+ width:15px;height:15px;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6.5 4 4 4-4' stroke='%235c7766' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+ background-position:center;background-size:15px;background-repeat:no-repeat;
+ transform:rotate(0deg);transition:transform .16s ease;
+}
+.page[data-page="activity"] #activityAdvancedFilters[open]>summary::after{
+ transform:rotate(180deg);
+}
+.page[data-page="activity"] #activityAdvancedFilters[open]>summary{
+ border-bottom:1px solid #ebf0e9;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:10px 12px;
+ margin:0;
+ padding:12px 13px 13px;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filter-field{
+ display:grid;
+ min-width:0;align-content:start;
+ gap:5px;
+ padding:0!important;
+ border:0!important;background:transparent!important;box-shadow:none!important;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filter-title{
+ color:#6f8373;
+ font-size:10px;
+ font-weight:575;
+ line-height:1.35;
+ letter-spacing:0;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters .trace-activity-native-select{
+ display:block!important;
+ width:100%!important;
+ min-width:0!important;
+ min-height:44px!important;
+ height:44px!important;
+ padding:8px 28px 8px 11px!important;
+ border:1px solid #e3eae2!important;
+ border-radius:10px!important;
+ background-color:#fff!important;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6.5 4 4 4-4' stroke='%23667c6e' stroke-width='1.45' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+ background-position:right 9px center!important;
+ background-size:15px!important;
+ background-repeat:no-repeat!important;
+ color:#244435!important;
+ font-size:16px!important;
+ font-weight:500!important;
+ letter-spacing:-.02em;
+ box-shadow:none!important;
+ -webkit-appearance:none!important;
+ appearance:none!important;
+ text-overflow:ellipsis;
+ touch-action:manipulation;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters .trace-activity-native-select:focus-visible{
+ outline:2px solid rgba(39,115,79,.4);
+ outline-offset:2px;
+ border-color:#6ba084!important;
+}
+.page[data-page="activity"] #activityAdvancedFilters .trace-activity-filter-actions{
+ display:flex;align-items:end;justify-content:flex-end;
+ min-width:0;
+ margin:0!important;padding:0;
+ gap:0;
+ background:transparent;
+}
+.page[data-page="activity"] #activityAdvancedFilters #activityResetFilters{
+ display:inline-flex;align-items:center;justify-content:center;
+ width:auto;max-width:100%;
+ min-height:44px;
+ margin:0 0 0 auto;
+ padding:0 8px;
+ border:0;
+ border-radius:9px;
+ background:transparent;
+ color:#567764;
+ font-size:11px;
+ font-weight:620;
+ text-decoration:none;
+ box-shadow:none;
+ letter-spacing:0;
+}
+.page[data-page="activity"] #activityAdvancedFilters #activityResetFilters:is(:hover,:focus-visible){
+ color:#195b3f;background:#eff4ee;
+}
+@media(max-width:350px){
+ .page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  column-gap:8px;padding-inline:10px;
+ }
+ .page[data-page="activity"] #activityAdvancedFilters .trace-activity-filters .trace-activity-native-select{
+  padding-left:9px!important;
+  padding-right:23px!important;
+  background-position:right 6px center!important;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .page[data-page="activity"] #activityAdvancedFilters>summary::after{transition:none}
+}
+
+
+/* TRACE 5.37.0 — Wealth editorial hierarchy.
+ * Summary first, then fully visible savings, investments and bank accounts.
+ * All financial amounts are supplied by the unchanged ledger/rendering model. */
+.page[data-page="wealth"] .hero-row{
+ margin-bottom:10px;align-items:center;gap:12px;
+}
+.page[data-page="wealth"] .hero-row .eyebrow{
+ font-size:10px;font-weight:650;color:#788a7d;letter-spacing:.06em;
+}
+.page[data-page="wealth"] .hero-row h1{
+ font-size:25px;line-height:1.15;font-weight:730;letter-spacing:-.04em;
+ color:#1d3f30;margin-top:3px;
+}
+.page[data-page="wealth"] .hero-row #wealthScope{
+ border:1px solid #e0e9df;background:#f4f7f2;box-shadow:none;
+ border-radius:12px;padding:3px;
+}
+.page[data-page="wealth"] .hero-row #wealthScope .seg{
+ font-size:12px;min-height:40px;padding:7px 12px;border-radius:9px;
+ font-weight:630;
+}
+.page[data-page="wealth"] .trace-wealth-overview{
+ margin:9px 0 21px;
+}
+.page[data-page="wealth"] .trace-wealth-net-card{
+ padding:21px 19px 18px;
+ border:1px solid #dfe8df;border-radius:19px;
+ background:#f8faf6;box-shadow:none;
+}
+.page[data-page="wealth"] .trace-wealth-net-card>.label{
+ font-size:11px;color:#6b806f;font-weight:650;
+ letter-spacing:.035em;
+}
+.page[data-page="wealth"] .trace-wealth-net-card>.big{
+ display:block;margin:9px 0 9px;
+ color:#193f2f;font-size:clamp(29px,7.5vw,39px);
+ font-weight:640;letter-spacing:-.05em;line-height:1.18;
+ font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-net-card>.sub{
+ color:#4e6b5a;font-size:12px;font-weight:550;line-height:1.45;
+}
+.page[data-page="wealth"] .trace-wealth-net-card>.trace-wealth-note{
+ margin:11px 0 0;padding-top:11px;border-top:1px solid #e3ece3;
+ color:#708577;font-size:10px;line-height:1.45;
+}
+.page[data-page="wealth"] .trace-wealth-section,
+.page[data-page="wealth"] .trace-wealth-net-section{
+ margin:17px 0 0;padding:0;
+}
+.page[data-page="wealth"] .trace-wealth-section-head{
+ margin:0 0 9px;min-height:38px;gap:12px;
+}
+.page[data-page="wealth"] .trace-wealth-section-head h2{
+ color:#294936;font-weight:720;font-size:16px;
+ letter-spacing:-.025em;
+}
+.page[data-page="wealth"] .trace-wealth-section-head .linkbtn{
+ min-height:44px;padding:8px 5px;
+ font-size:11px;font-weight:630;
+}
+.page[data-page="wealth"] .trace-wealth-grid{
+ display:grid;grid-template-columns:minmax(0,1fr);
+ gap:0;overflow:hidden;
+ border:1px solid #e5ece4;border-radius:15px;
+ background:#fffdfa;box-shadow:none;margin:0;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card{
+ display:grid;
+ grid-template-columns:32px minmax(0,1fr) minmax(72px,max-content);
+ grid-template-rows:auto auto;
+ align-items:center;
+ column-gap:11px;row-gap:3px;
+ min-height:69px;
+ width:100%;
+ padding:12px 13px;
+ margin:0;
+ border:0;
+ border-bottom:1px solid #edf1eb;
+ border-radius:0;
+ background:transparent;
+ box-shadow:none;
+ transition:background-color .14s ease;
+ color:#263f32;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card:last-child{
+ border-bottom:0;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card:is(:hover,:focus-visible){
+ background:#f5f8f3;box-shadow:none;transform:none;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>.a-icon{
+ grid-column:1;grid-row:1 / span 2;
+ display:grid;place-items:center;
+ width:32px;height:32px;margin:0;
+ color:#476e57;font-size:13px;font-weight:500;
+ background:#edf4ed;border-radius:9px;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>span:not(.a-icon){
+ grid-column:2;grid-row:1;
+ min-width:0;
+ color:#2d4d3d;font-size:12px;font-weight:650;line-height:1.35;
+ overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>b{
+ grid-column:3;grid-row:1;
+ min-width:0;max-width:132px;
+ margin:0;
+ color:#1b4230;text-align:right;
+ font-size:15px;font-weight:690;line-height:1.32;
+ letter-spacing:-.025em;font-variant-numeric:tabular-nums;
+ overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>small{
+ grid-column:2 / 4;grid-row:2;
+ margin:0;
+ color:#738576;font-size:10px;font-weight:480;line-height:1.35;
+ overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card-add{
+ border:0;background:#fafcf8;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card-add>b{
+ color:#46775b;font-size:11px;font-weight:620;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card-add>.a-icon{
+ background:#f0f5ef;color:#2d6b4d;
+}
+.page[data-page="wealth"] .trace-wealth-grid .trace-wealth-empty{
+ border:0;border-radius:0;
+ background:transparent;box-shadow:none;
+ margin:0;padding:15px;
+ color:#738779;font-size:11px;line-height:1.45;
+}
+.page[data-page="wealth"] #traceWealthDetail{
+ border-color:#e8ede7;box-shadow:none;
+}
+@media(max-width:359px){
+ .page[data-page="wealth"] .trace-wealth-grid .asset-card{
+  grid-template-columns:29px minmax(0,1fr) minmax(58px,max-content);
+  column-gap:8px;padding:11px 10px;
+ }
+ .page[data-page="wealth"] .trace-wealth-grid .asset-card>b{
+  font-size:13px;max-width:106px;
+ }
+ .page[data-page="wealth"] .trace-wealth-net-card{padding:19px 15px}
+}
+@media(min-width:761px){
+ .page[data-page="wealth"] .trace-wealth-grid{
+  grid-template-columns:minmax(0,1fr);
+  max-width:720px;
+ }
+ .page[data-page="wealth"] .trace-wealth-overview{max-width:720px}
+}
+@media(prefers-reduced-motion:reduce){
+ .page[data-page="wealth"] .trace-wealth-grid .asset-card{transition:none}
+}
+
+
+/* TRACE 5.37 — premium finish for Home and Activity. Visible essentials
+   remain accessible without hiding a feature or changing financial arithmetic. */
+.page[data-page="home"] .trace-home-unified #homeBudgetSub:not([hidden]){
+ display:block!important;font-size:11px;color:#cde3d4;line-height:1.4;
+ font-weight:480;margin:5px 0 0;
+}
+.page[data-page="home"] .trace-home-unified #homeBudgetTrack:not([hidden]){
+ display:block!important;
+ height:4px;border-radius:99px;overflow:hidden;
+ background:rgba(236,249,239,.22);
+ margin-top:12px;border:0;
+}
+.page[data-page="home"] .trace-home-unified #homeBudgetTrack:not([hidden])>i{
+ display:block;height:100%;border-radius:99px;
+ background:#b0ddbd;
+}
+.page[data-page="home"] .trace-home-unified #homeBudgetProgressDetails:not([hidden]){
+ display:flex!important;align-items:center;justify-content:space-between;
+ gap:10px;font-size:10px;font-weight:510;line-height:1.4;
+ color:#d4e6d9;margin-top:7px;
+}
+.page[data-page="home"] #homeBudgetProgressDetails>span:last-child{
+ text-align:right;
+}
+.page[data-page="home"] .trace-home-more{
+ padding-top:9px;margin-top:17px;border-top:1px solid #e5eae4;
+}
+.page[data-page="home"] .trace-home-more .trace-home-tools-head{
+ margin:0 0 10px;
+}
+.page[data-page="home"] .trace-home-more .trace-home-tools-head h2{
+ font-size:15px;font-weight:700;letter-spacing:-.025em;
+ color:#294b38;
+}
+.page[data-page="home"] .trace-home-more .trace-home-import-coverage{
+ display:flex;gap:11px;align-items:center;
+ padding:11px 12px;min-height:55px;margin:0;
+ border:1px solid #e6ece4;border-radius:13px;
+ background:#fcfdf9;box-shadow:none;
+}
+.page[data-page="home"] .trace-home-import-coverage .trace-home-import-mark{
+ width:31px;height:31px;border-radius:9px;
+ background:#eef4ee;color:#315f47;font-size:15px;
+}
+.page[data-page="home"] .trace-home-import-coverage .trace-home-import-copy strong{
+ font-size:12px;font-weight:670;color:#294b39;
+}
+.page[data-page="home"] .trace-home-import-coverage .trace-home-import-copy small{
+ color:#718575;font-size:10px;line-height:1.35;
+}
+.page[data-page="home"] .trace-home-more .trace-home-sharing-head{
+ min-height:34px;margin:10px 0 6px;
+}
+.page[data-page="home"] .trace-home-sharing-head h3{
+ font-size:11px;font-weight:650;color:#6c826f;
+ letter-spacing:0;margin:0;
+}
+.page[data-page="home"] .trace-home-sharing-head .linkbtn{
+ min-height:44px;font-size:11px;font-weight:610;
+ color:#42755c;padding-inline:4px;
+}
+.page[data-page="home"] .trace-home-more #shareCard{
+ min-height:69px;padding:12px;
+ border:1px solid #e5ebe4!important;
+ border-radius:13px;box-shadow:none;background:#fffdfa;
+ gap:10px;
+}
+.page[data-page="home"] #shareCard .share-avatar{
+ width:34px;height:34px;border-radius:10px;
+ font-size:14px;font-weight:690;background:#edf5ee;
+ color:#436f55;flex-shrink:0;
+}
+.page[data-page="home"] #shareCard .share-main{
+ min-width:0;display:grid;gap:3px;
+}
+.page[data-page="home"] #shareCard .share-main b{
+ font-size:11px;color:#5c7665;font-weight:630;line-height:1.25;
+}
+.page[data-page="home"] #shareCard .share-main strong{
+ font-size:17px;font-weight:680;letter-spacing:-.025em;line-height:1.2;
+ color:#234837;margin:0;font-variant-numeric:tabular-nums;
+ overflow-wrap:anywhere;
+}
+.page[data-page="home"] #shareCard .share-main small{
+ color:#87988a;font-size:10px;
+}
+.page[data-page="home"] #shareCard>.chev{
+ color:#7b9885;font-size:18px;
+}
+.page[data-page="activity"] .trace-activity-main-tabs{
+ gap:0;min-height:48px;
+ border-bottom:1px solid #e1eae1;
+ background:transparent;
+ margin:9px 0 10px;
+}
+.page[data-page="activity"] .trace-activity-main-tabs .tab{
+ position:relative;min-width:0;min-height:47px;
+ padding:10px 5px 11px;
+ border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ color:#728676;font-weight:580;
+ font-size:clamp(12px,3.3vw,14px);
+ letter-spacing:-.012em;
+}
+.page[data-page="activity"] .trace-activity-main-tabs .tab:is(.active,[aria-selected="true"]){
+ color:#20533c;font-weight:700;
+}
+.page[data-page="activity"] .trace-activity-main-tabs .tab:is(.active,[aria-selected="true"])::after{
+ content:"";position:absolute;bottom:-1px;
+ left:16%;width:68%;height:2px;border-radius:99px;
+ background:#276c50;
+}
+.page[data-page="activity"] .trace-activity-main-tabs .tab:focus-visible{
+ outline:2px solid #6aac86;outline-offset:-3px;border-radius:6px!important;
+}
+.page[data-page="activity"] .activity-stats{
+ gap:0;padding:0;margin:10px 0 14px;
+ border:1px solid #e9eee9;border-radius:12px;background:#fbfcf9;
+ overflow:hidden;
+}
+.page[data-page="activity"] .activity-stats .statbox{
+ min-height:65px;padding:11px 10px 10px;
+ border:0;background:transparent;border-radius:0;
+}
+.page[data-page="activity"] .activity-stats .statbox:not(:last-child){
+ border-right:1px solid #e9eee9;
+}
+.page[data-page="activity"] .activity-stats .statbox span{
+ display:block;color:#748878;
+ font-size:10px;font-weight:590;line-height:1.25;
+}
+.page[data-page="activity"] .activity-stats .statbox b{
+ display:block;margin-top:7px;
+ color:#214432;font-size:clamp(13px,3.7vw,18px);
+ font-weight:670;line-height:1.2;letter-spacing:-.025em;
+ font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+@media(max-width:359px){
+ .page[data-page="activity"] .activity-stats .statbox{
+  padding-inline:6px;
+ }
+ .page[data-page="activity"] .activity-stats .statbox b{
+  font-size:13px;
+ }
+}
+
+
+/* 5.37 editorial density: Budget categories and Activity journal.
+ * Keep all rows and transaction details visible and fully operable. */
+.page[data-page="budget"] #budgetCategoryImpact{
+ padding:16px 15px;
+ border:1px solid #e9eee8;
+ border-radius:17px;
+ background:#fffdfa;
+ box-shadow:none;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insights-head{
+ margin-bottom:5px;gap:9px;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insights-head strong{
+ color:#244735;font-size:16px;font-weight:690;
+ letter-spacing:-.026em;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insights-head>b{
+ color:#194431;font-size:18px;font-weight:650;
+ letter-spacing:-.035em;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insights-head small{
+ color:#738678;font-size:11px;line-height:1.4;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insights-explain{
+ font-size:10px!important;line-height:1.45!important;
+ color:#849286!important;margin:8px 0 13px!important;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category-list{
+ display:grid;gap:0;
+ border-top:1px solid #edf0eb;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(70px,max-content);
+ gap:9px 12px;
+ min-width:0;min-height:86px;
+ border:0;border-bottom:1px solid #edf0eb;
+ border-radius:0;
+ padding:13px 3px 12px;
+ margin:0;background:transparent;box-shadow:none;
+ text-align:left;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category:is(:hover,:focus-visible),
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-inactive-row:is(:hover,:focus-visible){
+ background:#f6f9f5;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category:focus-visible,
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-inactive-row:focus-visible{
+ outline:2px solid #68a786;
+ outline-offset:-2px;border-radius:8px;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category-main{
+ gap:4px;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category-main strong{
+ font-size:13px;font-weight:680;line-height:1.3;
+ color:#294837;letter-spacing:-.01em;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category-main small{
+ font-size:10px;line-height:1.4;color:#6e8172!important;
+ font-weight:480;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-spending-share{
+ color:#859689!important;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category-value{
+ color:#234736;font-size:15px;font-weight:670;
+ letter-spacing:-.025em;line-height:1.2;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category-value small{
+ font-size:10px;font-weight:480;line-height:1.35;
+ color:#8a988d!important;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category-track{
+ height:4px;border-radius:99px;background:#edf2ec;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category-track i{
+ background:#6aaf90;border-radius:99px;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category[data-budget-state="near"] .trace-insight-category-track i{
+ background:#b98b49;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-category[data-budget-state="over"] .trace-insight-category-track i{
+ background:#b36f64;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-inactive{
+ margin:14px 0 4px;padding-top:11px;border-top:1px solid #e7eee7;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-inactive-title{
+ margin-bottom:5px;color:#4c6e5a;
+ font-size:11px;font-weight:660;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-inactive-row{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;width:100%;min-height:44px;
+ padding:9px 4px;border:0;border-bottom:1px solid #eff2ee;
+ border-radius:0;background:transparent;box-shadow:none;
+ text-align:left;cursor:pointer;font:inherit;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-inactive-row span{
+ color:#607969;font-size:12px;font-weight:590;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insight-inactive-row small{
+ color:#899a8d;font-size:10px;font-weight:480;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insights-foot{
+ margin:10px 0 0!important;padding-top:10px;
+ color:#748678!important;font-size:10px!important;
+ line-height:1.5!important;border-top:1px solid #edf1ed;
+}
+.page[data-page="budget"] #budgetCategoryImpact .trace-insights-foot strong{
+ font-weight:660;color:#466a54;
+}
+.page[data-page="activity"] #transactionList{
+ padding:5px 13px 11px;border:1px solid #e8eee8;
+ border-radius:16px;background:#fffdfa;box-shadow:none;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day{
+ gap:0;padding:5px 0 9px;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day+.trace-activity-day{
+ border-top:1px solid #e8eee7;margin-top:3px;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day-heading{
+ padding:11px 1px 7px;gap:8px;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day-heading h3{
+ font-size:11px;line-height:1.4;font-weight:660;
+ letter-spacing:-.008em;color:#617b69;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day-heading small{
+ font-size:10px;font-weight:500;color:#93a295;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day .tx{
+ gap:10px;padding:10px 2px;
+ min-height:57px;border-bottom:1px solid #f0f3ee;
+ background:transparent;box-shadow:none;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day .tx:last-child{
+ border-bottom:0;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day .tx-icon{
+ width:32px;height:32px;min-width:32px;
+ border-radius:10px;background:#eff4ee;
+ color:#4d7258;font-size:14px;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day .tx-main b{
+ color:#263f33;font-size:12px;font-weight:640;
+ line-height:1.3;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day .tx-main small{
+ color:#819084;font-size:10px;line-height:1.4;
+ overflow-wrap:anywhere;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day .tx-amt{
+ color:#244735;font-size:12px;font-weight:680;
+ line-height:1.3;letter-spacing:-.01em;
+ white-space:normal;max-width:38%;
+ font-variant-numeric:tabular-nums;
+ overflow-wrap:anywhere;
+}
+.page[data-page="activity"] #transactionList .trace-activity-day .tx-amt.positive{
+ color:#317c54;
+}
+.page[data-page="activity"] #transactionList .trace-activity-pending{
+ background:#fffbf5;border-left:2px solid #d7a565;
+}
+@media(max-width:359px){
+ .page[data-page="budget"] #budgetCategoryImpact{padding:14px 12px}
+ .page[data-page="activity"] #transactionList{padding-inline:9px}
+ .page[data-page="activity"] #transactionList .trace-activity-day .tx{gap:7px}
+ .page[data-page="activity"] #transactionList .trace-activity-day .tx-amt{max-width:41%}
+}
+
+@media(max-width:359px){.page[data-page="activity"] .activity-stats .statbox b{font-size:14px}}
+
+
+/* TRACE 5.37 — Annual budget as an instant-read financial brief.
+   Separate confirmed flows from budget comparisons and unverified months. */
+.page[data-page="budget"] .trace-budget-annual-card{
+ padding:17px 15px 15px;
+ background:#fffdfa;border:1px solid #e6ece5;border-radius:17px;
+ box-shadow:none;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-header{
+ align-items:start;gap:10px;margin:0 0 15px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-header strong{
+ color:#294735;font-size:13px;font-weight:700;letter-spacing:-.014em;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-header small{
+ color:#849386;font-size:10px;line-height:1.4;margin-top:4px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-coverage{
+ flex:0 0 auto;align-self:start;
+ padding:6px 8px;border:1px solid #e7eee6;border-radius:8px;
+ font-size:10px;font-weight:640;white-space:nowrap;
+ color:#5d7b65;background:#f6f9f5;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result{
+ background:#f3f8f3;border:1px solid #e1eae0;
+ border-radius:14px;padding:17px 13px 12px;
+ margin:0 0 12px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result-main{
+ display:grid;gap:4px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result-main>small{
+ color:#66806c;font-size:11px;font-weight:650;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result-main>strong{
+ font-size:clamp(28px,7.3vw,38px);font-weight:640;
+ letter-spacing:-.05em;line-height:1.18;
+ font-variant-numeric:tabular-nums;color:#1e4f38;
+ overflow-wrap:anywhere;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result-main>strong.trace-year-result-negative{
+ color:#994e43;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result-main>span{
+ font-size:10px;line-height:1.45;color:#718777;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result .trace-year-totals{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:0;margin:14px 0 0;padding-top:12px;
+ border-top:1px solid #dce9dc;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result .trace-year-totals>div{
+ min-width:0;padding:0 8px;border-radius:0;background:transparent;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result .trace-year-totals>div:first-child{padding-left:0}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result .trace-year-totals>div:not(:last-child){
+ border-right:1px solid #e1ebe1;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result .trace-year-totals small{
+ font-size:10px;color:#678271;font-weight:580;line-height:1.3;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result .trace-year-totals strong{
+ font-size:clamp(12px,3.1vw,16px);
+ font-weight:700;letter-spacing:-.028em;line-height:1.25;
+ color:#224a36;overflow-wrap:anywhere;margin-top:6px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result .trace-year-totals .trace-year-negative strong{
+ color:#994e43;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-check{
+ padding:14px 13px 13px;
+ border:1px solid #e5ede3;border-radius:13px;
+ background:#fffefa;margin:0 0 12px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-top{
+ display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-top>div{display:grid;gap:4px;min-width:0}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-top strong{
+ font-size:12px;font-weight:700;color:#304f3e;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-top small{
+ font-size:10px;color:#788c7b;line-height:1.4;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-top>b{
+ font-size:16px;font-weight:710;letter-spacing:-.025em;
+ font-variant-numeric:tabular-nums;color:#28724c;
+ white-space:nowrap;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-top>b.trace-year-negative{color:#a25747}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-meter{
+ margin-top:14px;background:#e9efe7;border-radius:99px;height:6px;overflow:hidden;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-meter>i{
+ display:block;height:100%;background:#4e9975;border-radius:99px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-values{
+ margin-top:7px;display:flex;justify-content:space-between;gap:9px;
+ color:#718374;font-size:10px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-budget-empty{
+ font-size:11px;color:#708374;line-height:1.5;
+ padding:13px;border:1px solid #e7ede6;
+ border-radius:12px;background:#f9fbf8;margin-bottom:12px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-diagnosis{
+ padding:11px 13px 12px;
+ border-left:2px solid #8cad96;background:#fafbf8;
+ border-radius:0 10px 10px 0;margin:0 0 19px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-diagnosis>strong{
+ display:block;color:#3d6149;font-size:11px;font-weight:700;
+ margin:0 0 5px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-diagnosis p{
+ font-size:11px;line-height:1.45;color:#627968;
+ margin:4px 0;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month-head{
+ display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+ margin-bottom:9px;flex-wrap:wrap;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month-head>strong{
+ font-size:12px;color:#365642;font-weight:700;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month-head>small{
+ font-size:10px;color:#819083;line-height:1.3;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-legend{
+ margin:1px 0 9px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-grid{
+ gap:6px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month{
+ min-height:72px;padding:9px 8px;
+ border:1px solid #e4ece4;border-radius:10px;
+ background:#fffefa;box-shadow:none;gap:6px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month strong{
+ font-size:11px;font-weight:690;color:#45604c;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month small{
+ font-size:10px;color:#879689;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month.is-selected{
+ border-color:#619a76;background:#f2f8f2;
+ box-shadow:inset 0 0 0 1px rgba(68,132,88,.38);
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month.is-empty{
+ background:#fcfcfa;border-color:#edf0ec;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-bars{gap:4px}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-bar{height:4px;border-radius:99px}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected{
+ margin-top:14px;padding:13px;
+ border:1px solid #e3ebe1;border-radius:12px;
+ background:#fafcf9;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected>strong{
+ font-size:12px;font-weight:690;color:#345741;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected>div{gap:8px;margin-top:9px}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected span{
+ font-size:10px;line-height:1.3;color:#728574;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected b{
+ font-size:clamp(11px,3vw,14px);
+ font-weight:680;color:#274e39;
+}
+.page[data-page="budget"] .trace-budget-annual-card .trace-insights-foot{
+ margin:11px 0 0;padding-top:11px;
+ border-top:1px solid #e8eee7;
+ color:#7d8d80;font-size:10px;line-height:1.5;
+}
+@media(max-width:359px){
+ .page[data-page="budget"] .trace-budget-annual-card{padding:14px 11px}
+ :is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-header{flex-wrap:wrap}
+ :is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-coverage{padding:5px 7px}
+ :is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result{padding-inline:10px}
+ :is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-result .trace-year-totals>div{padding-inline:5px}
+}
+
+/* TRACE 5.37: annual interpretation refinement shared with the full detail. */
+#traceAnnualDetail{
+ padding:1px 1px 15px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-ratio-note{
+ margin:11px 0 0;
+ padding-top:9px;
+ border-top:1px solid #dfe9df;
+ color:#758a79;font-size:10px;line-height:1.45;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-diagnosis p{
+ display:flex;gap:7px;align-items:flex-start;margin:7px 0;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-diagnosis p::before{
+ content:"";display:block;flex:0 0 5px;height:5px;width:5px;
+ background:#85ae94;border-radius:99px;margin-top:6px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected>div{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected span{
+ min-width:0;
+}
+:is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected b{
+ color:#244834;font-size:clamp(12px,3.4vw,16px);
+}
+#traceAnnualDetail .trace-insights-foot{
+ margin-top:13px;padding-top:12px;border-top:1px solid #e4ebe3;
+ color:#788a7a;font-size:10px;line-height:1.5;
+}
+@media(min-width:380px) and (max-width:599px){
+ :is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+ }
+ :is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month{
+  min-height:72px;padding:8px 6px;
+ }
+ :is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-month small{
+  font-size:9px;
+ }
+}
+@media(min-width:700px){
+ :is(.page[data-page="budget"],#traceAnnualDetail) .trace-year-selected>div{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+ }
+}

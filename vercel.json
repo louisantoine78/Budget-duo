@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "trace-5.37.0-international-accounts-fx": false
+    }
+  }
+}

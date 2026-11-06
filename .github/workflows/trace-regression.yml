@@ -27,6 +27,11 @@ jobs:
           node --check trace-insights-1.0.0.js
           node --check trace-bank-ui-2.8.1.js
           node --check sw.js
+          # Candidate 5.37.0 modules (not used by the live index.html yet)
+          node --check trace-international-1.0.0.js
+          node --check trace-international-ui-1.0.0.js
+          node --check trace-smart-inbox-3.5.0.js
+          node --check v5-app-5.37.0.js
       - name: Run isolated accounting regressions
         run: |
           node tests/trace-regression.test.cjs
@@ -34,3 +39,31 @@ jobs:
           node tests/trace-ui-smoke.test.cjs
           node tests/trace-card-payment-detail.test.cjs
           node tests/trace-duplicate-compare.test.cjs
+          # No artifacts uploaded; real financial accounts are never queried.
+          node tests/trace-international.test.cjs
+          node tests/trace-international-wiring.test.cjs
+          node tests/trace-international-ui-smoke.test.cjs
+          node tests/trace-international-editor.test.cjs
+          node tests/trace-international-csv.test.cjs
+          node tests/trace-international-couple-home.test.cjs
+          node tests/trace-international-legacy-ledger.test.cjs
+          node tests/trace-international-financial-guards.test.cjs
+          node tests/trace-international-bank-investment.test.cjs
+          node tests/trace-international-native-flow.test.cjs
+          node tests/trace-international-friend-allocations.test.cjs
+          node tests/trace-international-manual-repayments.test.cjs
+          node tests/trace-international-imported-repayments.test.cjs
+          node tests/trace-international-friend-ledger-fx.test.cjs
+          node tests/trace-international-friend-sharing-ui.test.cjs
+          node tests/trace-international-multi-debtors.test.cjs
+          node tests/trace-international-friend-rows.test.cjs
+          node tests/trace-international-card-friend-cycle.test.cjs
+          node tests/trace-international-import-cents.test.cjs
+          node tests/trace-international-csv-bank-review.test.cjs
+          node tests/trace-international-csv-source-rows.test.cjs
+          node tests/trace-international-csv-column-safety.test.cjs
+          node tests/trace-international-statement-reconciliation.test.cjs
+          node tests/trace-international-statement-evidence.test.cjs
+          node tests/trace-international-deferred-debit.test.cjs
+          node tests/trace-international-lab.test.cjs
+          node tests/trace-international-preview-boot.test.cjs

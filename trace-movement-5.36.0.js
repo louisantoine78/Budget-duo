@@ -54,9 +54,102 @@ const total=cents(amount);if(!Number.isSafeInteger(total)||total<=0)throw Error(
 const share=def.budget==='none'?{la:0,partner:0,couple:0,friends:0}:amounts(amount,def.budget==='income'?mine:who,mine,defaultSplit,friend,other);
 const sign=def.budget==='refund'?-1:1;return{kind,bank:total/100*def.direction,budget:{la:share.la*sign,partner:share.partner*sign,couple:share.couple*sign},friends:share.friends,budgetType:def.budget};
 };
+
+// Optional multi-allocation on ONE incoming bank transaction.
+// Legacy relatedExpenseId remains readable; no migration or new bank transaction.
+const personKey=x=>String(x||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('fr');
+// Optional multi-debtor split, exclusively metadata of the friends budget share.
+const parseFriendShares=text=>String(text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(line=>{
+ const hit=/^(.+?)\s*:\s*(\d+(?:[.,]\d{1,2})?)\s*$/.exec(line);
+ if(!hit)throw Error('Indique un prénom et un montant par ligne : Camille : 25,00.');
+ return{name:hit[1].trim(),amountCAD:Number(hit[2].replace(',','.'))};
+});
+const friendShares=t=>{
+ if(Array.isArray(t?.friendDebtorShares)&&t.friendDebtorShares.length)
+  return t.friendDebtorShares.map(x=>({name:String(x.name||'').trim(),amountCAD:Number(x.amountCAD)}));
+ const name=String(t?.friendDebtorName||'').trim(),amount=Number(t?.splitAmounts?.friends);
+ return name&&Number.isFinite(amount)&&amount>0?[{name,amountCAD:amount}]:[];
+};
+const paidForDebtor=(transactions,expenseId,name,excluding='')=>(transactions||[])
+ .filter(t=>t.id!==excluding&&t.status==='confirmed'&&personKey(t.counterparty)===personKey(name))
+ .reduce((total,t)=>total+repaymentLines(t).filter(x=>x.expenseId===expenseId)
+  .reduce((n,line)=>n+cents(line.amountCAD),0),0);
+const validateFriendDebtorShares=(lines,friendsTotal,transactions=[],expenseId='')=>{
+ if(!Array.isArray(lines)||!lines.length||lines.length>13)
+  throw Error('Indique entre 1 et 13 proches pour cette part.');
+ const total=cents(friendsTotal),seen=new Set();let sum=0;
+ if(!Number.isSafeInteger(total)||total<=0)throw Error('La part des amis doit être positive.');
+ const normalized=lines.map(x=>{
+  const name=String(x?.name||'').trim().replace(/\s+/g,' '),key=personKey(name),
+   raw=Number(x?.amountCAD),amount=cents(raw);
+  if(!key||name.length>45||seen.has(key))throw Error('Prénom manquant, trop long ou en double.');
+  if(!Number.isFinite(raw)||!Number.isSafeInteger(amount)||amount<=0||Math.abs(raw*100-amount)>.0001)
+   throw Error('Montant de chaque proche invalide au centime.');
+  if(expenseId&&paidForDebtor(transactions,expenseId,name)>amount)
+   throw Error('Les remboursements confirmés dépassent la part de ce proche.');
+  seen.add(key);sum+=amount;return{name,amountCAD:amount/100};
+ });
+ if(sum!==total)throw Error('La somme des proches doit égaler exactement la part avancée aux amis.');
+ if(expenseId)for(const t of transactions||[]){
+  if(t.status!=='confirmed'||!repaymentLines(t).some(x=>x.expenseId===expenseId))continue;
+  if(!seen.has(personKey(t.counterparty)))
+   throw Error('Remboursement lié non attribué à un proche de cette dépense. Vérifie-le avant de modifier la répartition.');
+ }
+ return normalized;
+};
+const repaymentLines=t=>{
+ if(t?.type!=='external_refund'||t?.transferPurpose!=='friend_reimbursement')return[];
+ if(Array.isArray(t.repaymentAllocations)&&t.repaymentAllocations.length)
+  return t.repaymentAllocations.map(x=>({expenseId:String(x.expenseId||''),amountCAD:Number(x.amountCAD)}));
+ return t.relatedExpenseId?[{expenseId:String(t.relatedExpenseId),amountCAD:Number(t.amountCAD)}]:[];
+};
+const paidForExpense=(transactions,expenseId,excluding='')=>(transactions||[])
+ .filter(t=>t.id!==excluding&&t.status==='confirmed')
+ .reduce((total,t)=>{
+  const lines=repaymentLines(t).filter(line=>line.expenseId===expenseId);
+  if(lines.some(line=>!Number.isSafeInteger(cents(line.amountCAD))||cents(line.amountCAD)<=0))return Infinity;
+  return total+lines.reduce((amount,line)=>amount+cents(line.amountCAD),0);
+ },0);
+const validateRepaymentAllocations=(lines,expenses,transactions,owner,date,bankAmount,excluding='',counterparty='')=>{
+ if(!Array.isArray(lines)||!lines.length)throw Error('Choisis au moins une avance à rembourser.');
+ // Repayment associations must never silently round fractions of a cent.
+ const exactCents=value=>{
+  const raw=Number(value),rounded=cents(value);
+  return Number.isFinite(raw)&&Number.isSafeInteger(rounded)&&
+   Math.abs(raw*100-rounded)<1e-6?rounded:NaN;
+ };
+ const bankCents=exactCents(bankAmount);
+ if(!Number.isSafeInteger(bankCents)||bankCents<=0)throw Error('Montant bancaire du remboursement invalide.');
+ const seen=new Set(),normalized=[];
+ let allocated=0;
+ for(const line of lines){
+  const expenseId=String(line?.expenseId||''),amount=exactCents(line?.amountCAD);
+  if(!expenseId||seen.has(expenseId))throw Error('Chaque avance ne peut apparaître qu’une fois.');
+  if(!Number.isSafeInteger(amount)||amount<=0)throw Error('Montant affecté à une avance invalide.');
+  const source=(expenses||[]).find(t=>t.id===expenseId&&t.status==='confirmed'&&
+   ['expense','group_expense'].includes(t.type)&&t.payerId===owner&&t.beneficiary==='custom'&&
+   String(t.date||'')<=String(date||'')&&Number(t.splitAmounts?.friends)>0);
+  if(!source)throw Error('Dépense avancée introuvable, non confirmée ou postérieure au remboursement.');
+  const individual=friendShares(source);
+  if(individual.length>1){
+   const name=personKey(counterparty),matched=individual.find(x=>personKey(x.name)===name);
+   if(!name||!matched)throw Error('Choisis le proche concerné par ce remboursement.');
+   if(amount>cents(matched.amountCAD)-paidForDebtor(transactions,expenseId,matched.name,excluding))
+    throw Error('Le remboursement dépasse la part encore due par ce proche.');
+  }
+  const available=cents(source.splitAmounts.friends)-paidForExpense(transactions,expenseId,excluding);
+  if(!Number.isSafeInteger(available)||amount>available)throw Error('Le remboursement dépasse la part des amis encore due sur cette avance.');
+  seen.add(expenseId);allocated+=amount;
+  if(!Number.isSafeInteger(allocated)||allocated>bankCents)throw Error('Les associations dépassent le virement bancaire reçu.');
+  normalized.push({expenseId,amountCAD:amount/100});
+ }
+ if(allocated!==bankCents)throw Error('La somme des avances remboursées doit correspondre exactement au virement bancaire reçu.');
+ return normalized;
+};
+
 function linkable(expenses,transactions,owner,date,amount,excluding=''){
 return (expenses||[]).filter(t=>t.id!==excluding&&t.status==='confirmed'&&['expense','group_expense'].includes(t.type)&&t.payerId===owner&&t.beneficiary==='custom'&&String(t.date||'')<=String(date||'')&&Number(t.splitAmounts?.friends)>0).map(t=>{
-const paid=(transactions||[]).filter(x=>x.id!==excluding&&x.status==='confirmed'&&x.relatedExpenseId===t.id&&x.type==='external_refund'&&x.transferPurpose==='friend_reimbursement').reduce((n,x)=>n+cents(x.amountCAD),0);
+const paid=paidForExpense(transactions,t.id,excluding);
 const remaining=Math.max(0,cents(t.splitAmounts.friends)-paid);return{id:t.id,label:t.name||'Dépense avancée',date:t.date,remaining:remaining/100,allowed:remaining>=cents(amount)};
 }).filter(t=>t.remaining>0);
 }
@@ -66,5 +159,47 @@ const match=linkable(expenses,transactions,owner,date,amount,excluding).find(x=>
 if(!match||!match.allowed)throw Error('Le remboursement dépasse la part des amis disponible ou la dépense n’est pas admissible.');
 return id;
 }
-root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,linkable,validateLink});
+// Read-only friend receivables. Never infer a person from the label on a
+// bank receipt: historical expenses often have only an aggregate friends share.
+const friendReceivables=(transactions,owner)=>{
+ const groups=new Map();
+ const add=(name,t,advance,received,review=false)=>{
+  const key=personKey(name)||'__unassigned__';
+  if(!groups.has(key))groups.set(key,{owner,name:name||'À attribuer',unassigned:!name,
+   advancedCents:0,receivedCents:0,outstandingCents:0,unattributedCents:0,advances:[]});
+  const g=groups.get(key),due=Math.max(0,advance-received);
+  g.advancedCents+=advance;g.receivedCents+=received;g.outstandingCents+=due;
+  if(review)g.unattributedCents+=received;
+  g.advances.push({expenseId:t.id,label:t.name||'Dépense avancée',date:t.date,
+   advancedCAD:advance/100,receivedCAD:received/100,outstandingCAD:due/100,
+   overpaid:received>advance,reviewRequired:review});
+ };
+ for(const t of transactions||[]){
+  if(t.status!=='confirmed'||!['expense','group_expense'].includes(t.type)||
+     t.beneficiary!=='custom'||t.payerId!==owner)continue;
+  const advance=cents(t.splitAmounts?.friends);
+  if(!Number.isSafeInteger(advance)||advance<=0)continue;
+  const paid=paidForExpense(transactions,t.id);
+  if(!Number.isSafeInteger(paid)||paid<0)continue;
+  const shares=friendShares(t);
+  if(shares.length>1){
+   let attributable=0;
+   for(const x of shares){
+    const a=cents(x.amountCAD),repaid=paidForDebtor(transactions,t.id,x.name);
+    if(!Number.isSafeInteger(a)||a<=0||!Number.isSafeInteger(repaid))continue;
+    add(x.name,t,a,Math.min(a,repaid));attributable+=repaid;
+   }
+   if(paid>attributable)add('',t,0,Math.min(paid-attributable,advance),true);
+  }else add(shares[0]?.name||'',t,advance,Math.min(paid,advance),paid>advance);
+ }
+ return [...groups.values()].map(g=>({
+  owner:g.owner,name:g.name,unassigned:g.unassigned,
+  advancedCAD:g.advancedCents/100,receivedCAD:g.receivedCents/100,
+  outstandingCAD:g.outstandingCents/100,unattributedCAD:g.unattributedCents/100,
+  advances:g.advances
+ })).sort((a,b)=>Number(a.unassigned)-Number(b.unassigned)||
+   b.outstandingCAD-a.outstandingCAD||a.name.localeCompare(b.name,'fr'));
+};
+
+root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,repaymentLines,paidForExpense,validateRepaymentAllocations,linkable,validateLink,friendReceivables,friendShares,parseFriendShares,validateFriendDebtorShares,paidForDebtor});
 })(typeof window!=='undefined'?window:globalThis);
