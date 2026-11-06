@@ -190,3 +190,68 @@ test('four-decimal stock and ETF quotes remain visible without rounding to cents
  const userQuote={...p,quotes:{dsy:{priceUnits:E.price('19.7085'),date:'2026-11-05',source:'Manuel',kind:'manuel'}}};
  assert.match(U.position(userQuote,'dsy'),/19,7085/);
 });
+
+
+const integration=require(path.join(root,'integration-contract.js'));
+test('integration host preserves all actual Patrimoine sections and does not load production financial code',()=>{
+ const html=fs.readFileSync(path.join(root,'patrimoine-host.html'),'utf8');
+ const embedded=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
+ assert.match(html,/data-page="wealth"/);
+ for(const id of ['wealthTotal','wealthSavingsGrid','wealthInvestmentsGrid','assetGrid','wealthTrend'])
+  assert.match(html,new RegExp('id="'+id+'"'));
+ for(const label of ['Épargne','Placements','Trésorerie et comptes','Comprendre mon patrimoine'])
+  assert.ok(html.includes(label));
+ assert.match(html,/src="\.\/integration-contract\.js"/);
+ assert.match(html,/src="\.\/wealth-host\.js"/);
+ assert.match(html,/iframe[^>]*sandbox="allow-scripts allow-forms"/);
+ assert.match(html,/data-src="\.\/index\.html\?embedded=1"/);
+ assert.match(embedded,/get\("embedded"\)==="1"/);
+ assert.match(css,/\.wl-embedded \.wl-bottom/);
+ assert.ok(!/src="[^"]*(?:config\.js|v5-app-5\.37\.0\.js|supabase)/i.test(html));
+ assert.ok(!/\bfetch\s*\(|\blocalStorage\s*\.|\bsessionStorage\s*\./i.test(
+  fs.readFileSync(path.join(root,'wealth-host.js'),'utf8')+
+  fs.readFileSync(path.join(root,'integration-contract.js'),'utf8')));
+});
+test('Patrimoine mount is opt-in, idempotent, and can only append one link to Placements header',()=>{
+ let clicks=0;
+ const children=[],head={appendChild(node){children.push(node);node.parentNode=this;},
+  removeChild(node){const i=children.indexOf(node);if(i>=0)children.splice(i,1);node.parentNode=null;}};
+ const section={getAttribute:k=>k==='aria-label'?'Placements':null,
+  querySelector:s=>s==='.section-head'?head:null};
+ const grid={closest:s=>s==='section.trace-wealth-section'?section:null};
+ const nodes={wealthInvestmentsGrid:grid,wealthSavingsGrid:{},assetGrid:{},wealthTotal:{},wealthTrend:{}};
+ const doc={getElementById:id=>id==='traceWealthInvestmentDetailEntry'?
+  children.find(n=>n.id===id)||null:nodes[id]||null,
+  createElement:()=>({attrs:{},handlers:{},setAttribute(k,v){this.attrs[k]=v;},
+   addEventListener(e,cb){this.handlers[e]=cb;},
+   removeEventListener(e,cb){if(this.handlers[e]===cb)delete this.handlers[e];}})};
+ const original=Object.keys(nodes).join('|');
+ assert.equal(integration.mount(doc,{enabled:false,onOpen:()=>{}}).reason,'feature-disabled');
+ assert.equal(children.length,0);
+ assert.equal(integration.mount(doc,{enabled:true}).mounted,undefined); // invalid handler throws
+});
+test('existing investment accounts are mapped diagnostically without inventing opening positions or altering CELI savings',()=>{
+ const accounts=[
+  {id:'pea',type:'PEA',owner:'la',currency:'EUR'},
+  {id:'c1',type:'CELI',owner:'partner',currency:'CAD'},
+  {id:'c2',type:'CELI',owner:'partner',currency:'CAD',investmentTracking:'securities'},
+  {id:'savings',type:'Livret',owner:'la',currency:'EUR',savingsTracking:'linked'},
+  {id:'reer',type:'REER',owner:'la',currency:'CAD'}
+ ];
+ const ops=[{id:'q',accountId:'pea',type:'quote',symbol:'DSY'},
+  {id:'cash',accountId:'pea',type:'deposit',bankAccountId:'bank1',amount:200},
+  {id:'buy',accountId:'pea',type:'buy',symbol:'DSY',quantity:2,unitPrice:20}];
+ const original=JSON.stringify({accounts,ops});
+ const results=integration.auditAccountMapping(accounts,ops);
+ assert.deepEqual(results.map(x=>x.accountId),['pea','c2','reer']);
+ assert.deepEqual(results[0].knownSymbols,['DSY']);
+ assert.ok(results[0].issues.some(x=>x.includes('ISIN')));
+ assert.ok(results[0].issues.some(x=>x.includes('Virements')));
+ assert.ok(results[0].issues.some(x=>x.includes('provenance')));
+ assert.equal(results[0].mode,'read-only-diagnostic');
+ assert.equal(JSON.stringify({accounts,ops}),original);
+ assert.equal(integration.eligible(accounts[1]),false);
+ assert.equal(integration.eligible(accounts[2]),true);
+ assert.throws(()=>integration.auditAccountMapping([...accounts,accounts[0]],ops),/répété/);
+});
