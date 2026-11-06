@@ -65,9 +65,11 @@ function curve(p,period){
  '<text x="20" y="153" font-size="10" fill="#799284">'+e(date(filtered[0].date))+'</text>'+
  '<text x="465" y="153" text-anchor="end" font-size="10" fill="#799284">'+e(date(filtered.at(-1).date))+'</text></svg>';
 }
-function positionRows(p,v){
- if(!v.positions.length)return '<div class="wl-empty">Aucune position. Ajoute un titre pour commencer.</div>';
- return v.positions.map(s=>'<button type="button" class="wl-row" data-act="position" data-id="'+e(s.id)+'">'+
+function positionRows(p,v,filter='all'){
+ const positions=v.positions.filter(s=>filter==='all'||s.assetType===filter||
+  (filter==='other'&&!['Action','ETF'].includes(s.assetType)));
+ if(!positions.length)return '<div class="wl-empty">Aucune position pour cette sélection.</div>';
+ return positions.map(s=>'<button type="button" class="wl-row" data-act="position" data-id="'+e(s.id)+'">'+
  '<span class="wl-row-left"><span class="wl-row-icon">'+e(s.assetType==='ETF'?'ETF':s.assetType==='Fonds'?'F':'AC')+'</span>'+
  '<span class="wl-row-label"><b>'+e(s.name)+'</b><small>'+qty(s.quantityMicro)+' titres · '+e(s.assetType||'Titre')+
  (s.isin?' · '+e(s.isin):' · ISIN non renseigné')+'</small></span></span>'+
@@ -119,15 +121,22 @@ function overview(state){
  (v.priced?donut(v):'<p class="wl-muted-small">La répartition et la performance deviennent disponibles après la saisie de cours datés. Aucun cours n’est simulé.</p>')+
  '</div>',action('Explorer','analytics','','wl-btn-light'));
 }
-function portfolio(p){
+function portfolio(p,filter='all'){
  const v=E.evaluate(p);
- const byType=v.positions.reduce((out,s)=>(out[s.assetType||'Autre']=(out[s.assetType||'Autre']||0)+1,out),{});
- const split=Object.entries(byType).map(([type,count])=>count+' '+(type==='Action'?(count>1?'actions':'action'):type)).join(' · ');
+ const count=type=>v.positions.filter(s=>s.assetType===type).length;
+ const other=v.positions.length-count('Action')-count('ETF');
+ const choices=[['all','Tous',v.positions.length],['Action','Actions',count('Action')],
+  ['ETF','ETF',count('ETF')],['other','Autres',other]].filter(([type,label,n])=>type==='all'||n>0);
+ const filters=v.positions.length>3&&choices.length>2?
+  '<div class="wl-position-tabs" role="group" aria-label="Filtrer les positions">'+
+   choices.map(([type,label,n])=>'<button class="wl-position-filter" type="button" data-act="positionFilter" data-id="'+type+
+    '" aria-pressed="'+(filter===type)+'">'+label+' <b>'+n+'</b></button>').join('')+'</div>':
+  '<div class="wl-investment-glance"><span>'+v.positions.length+' lignes</span></div>';
  return heading('PORTEFEUILLE',p.name,'Positions, liquidités et journal dans sa devise native.')+hero(p,v)+
  '<div class="wl-actions">'+action('+ Opération','newOp','','')+action('Ajouter un titre','newSecurity')+action('Instantané','snapshot','','wl-btn-light')+'</div>'+
  readiness(p,v)+
- section('Positions','<div class="wl-investment-glance"><span>'+v.positions.length+' lignes</span><span>'+e(split)+'</span></div>'+
- '<div class="wl-card">'+positionRows(p,v)+'</div>',action('Analyser','analytics','','wl-btn-light'))+
+ section('Positions',filters+
+ '<div class="wl-card">'+positionRows(p,v,filter)+'</div>',action('Analyser','analytics','','wl-btn-light'))+
  section('Suivi','<div class="wl-two">'+stat('Liquidités',fmt(v.cashCents,p.currency))+stat('Apports nets',fmt(v.netFlowCents,p.currency))+
  (v.performanceComplete?stat('Gains réalisés',fmt(v.realizedCents,p.currency))+
  stat('Gains latents',fmt(v.unrealizedCents,p.currency)):'')+'</div>')+
