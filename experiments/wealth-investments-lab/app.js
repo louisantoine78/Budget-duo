@@ -91,7 +91,7 @@ function sheet(kind,id=''){
    note('Une alerte propose uniquement de réévaluer la position. Aucun ordre automatique.');
  }else if(kind==='snapshot'){
   heading='Valorisation datée';
-  body='<p class="wl-op-summary">Relevé calculé à partir des cours manuels. Il ne sera pas créé si un seul titre manque de cotation.</p>'+
+  body='<p class="wl-op-summary">La valorisation utilise uniquement les opérations effectuées et les cours datés disponibles à cette date. Un cours plus récent n’est jamais appliqué rétroactivement.</p>'+
    field('date','Date de valorisation',date(),'date','required');
  }else if(kind==='newOp'||kind==='editOp'){
   heading=old?'Corriger une opération':'Enregistrer une opération';
@@ -157,11 +157,11 @@ function save(kind,id,fd){
     catalog:p.catalog.map(s=>s.id===id?{...s,strategy}:s)};
    replacePortfolio(next);
   }else if(kind==='snapshot'){
-   const d=read('date'),v=E.evaluate(p);
+   const d=read('date');
    if(!E.dateValid(d)||d<p.openingDate)throw Error('Date de valorisation invalide');
-   if(v.valueCents===null)throw Error('Tous les titres doivent disposer d’un cours pour ce relevé');
    if(p.snapshots.some(s=>s.date===d))throw Error('Une valorisation existe déjà à cette date');
-   replacePortfolio({...p,snapshots:[...p.snapshots,{date:d,valueCents:v.valueCents,source:'Cours manuels'}]});
+   const snapshot=E.snapshotAt(p,d);
+   replacePortfolio({...p,snapshots:[...p.snapshots,snapshot]});
   }else if(kind==='newOp'||kind==='editOp'){
    const old=p.operations.find(x=>x.id===id),ty=read('type');
    const operation={id:old?.id||'o-'+(++serial)+'-'+Date.now(),date:read('date'),type:ty,
