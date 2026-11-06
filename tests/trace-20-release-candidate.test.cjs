@@ -24,3 +24,15 @@ test('candidate does not automatically publish or change version of live app',()
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  assert.ok(app.includes("window.__TRACE20_FRESH_START_REQUIRED__===true&&!freshDocs.active"));
 });
+
+test('every versioned CSS and JS referenced by the release candidate is present',()=>{
+ const refs=[...html.matchAll(/<(?:script|link)\\b[^>]*?(?:src|href)="([^"]+)"[^>]*>/g)]
+  .map(x=>x[1].split('?')[0])
+  .filter(x=>!x.startsWith('https:')&&!x.startsWith('#'));
+ for(const p of refs){
+  assert.match(p,/^[A-Za-z0-9_./-]+$/);
+  assert.ok(!p.includes('..'),'unsafe asset: '+p);
+  assert.ok(fs.existsSync(path.join(root,p)),'missing asset: '+p);
+ }
+ assert.ok(refs.length>=60);
+});
