@@ -229,3 +229,46 @@ test('partial sell preview refuses unknown opening PRU but passes once supplied'
  assert.equal(result.cashAfterCents,15829);
  assert.equal(p.operations.length,0);
 });
+
+
+test('real snapshot chart corrects external deposits without erasing investment gain',()=>{
+ const p={...blank(),snapshots:[
+  {date:'2026-11-04',valueCents:100000,source:'Opening'},
+  {date:'2026-11-12',valueCents:125000,source:'Broker extract'}
+ ],operations:[op('external','deposit','2026-11-09',{amountCents:10000})]};
+ const chart=E.chartSeries(p,'all');
+ assert.equal(chart.ready,true);
+ assert.equal(chart.points.length,2);
+ assert.equal(chart.points[0].valueCents,100000);
+ assert.equal(chart.points[1].valueCents,125000);
+ assert.equal(chart.points[1].netExternalCents,10000);
+ assert.equal(chart.points[1].flowAdjustedCents,115000);
+ assert.equal(chart.from,'2026-11-04');
+ assert.equal(chart.to,'2026-11-12');
+ assert.match(chart.method,/pas de TWR/);
+ assert.equal(E.periodPerformance(p,'all').gainCents,15000);
+ assert.equal(E.evaluate(p).cashCents,110000); // independent of observed snapshot
+});
+test('chart filters actual dated points only and rejects duplicated same-day observations',()=>{
+ const p={...blank(),snapshots:[
+  {date:'2026-08-01',valueCents:101000,source:'Relevé'},
+  {date:'2026-10-30',valueCents:110000,source:'Relevé'},
+  {date:'2026-11-04',valueCents:111000,source:'Relevé'}
+ ]};
+ const whole=E.chartSeries(p,'all');
+ const month=E.chartSeries(p,1);
+ assert.equal(whole.points.length,3);
+ assert.equal(month.points.length,2);
+ assert.equal(month.ready,true);
+ assert.equal(month.points[0].date,'2026-10-30');
+ assert.equal(E.chartSeries(p,0).ready===true,false);
+ assert.throws(()=>E.chartSeries({...p,snapshots:[...p.snapshots,{date:'2026-11-04',valueCents:115000}]},'all'),/même date/);
+});
+test('one reference snapshot remains a point, never a continuous chart or pretend return',()=>{
+ const p=E.demo().portfolios[0],series=E.chartSeries(p,'all');
+ assert.equal(series.points.length,1);
+ assert.equal(series.ready,false);
+ assert.equal(series.points[0].valueCents,378869);
+ assert.equal(series.points[0].reference,true);
+ assert.equal(series.points[0].flowAdjustedCents,378869);
+});
