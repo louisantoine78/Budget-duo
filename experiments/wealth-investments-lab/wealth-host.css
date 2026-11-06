@@ -44,3 +44,17 @@ html,body{margin:0;min-height:100%;background:#f7faf6;color:#1b4030}
 @media(min-width:796px){.wl-wealth-portal{left:calc(50% - 397.5px)}}
 @media(max-width:460px){.wl-wealth-host .topbar{padding:13px 16px}.wl-host-holding{padding:12px}.wl-host-amount{font-size:13px}.wl-wealth-portal{height:93dvh;max-height:93dvh}}
 @media(prefers-reduced-motion:reduce){.wl-wealth-portal{scroll-behavior:auto}}
+
+/* Optional bridge disclosure. Closed by default, never changes Patrimoine metrics. */
+.wl-host-compat{margin:11px 0 0;border-top:1px solid #e4ebe4;padding:2px 1px 0}
+.wl-host-compat summary{display:list-item;cursor:pointer;list-style:disclosure-closed inside;
+ padding:12px 2px;min-height:44px;color:#477257;font-size:11px;line-height:1.5;font-weight:735}
+.wl-host-compat[open] summary{list-style:disclosure-open inside}
+.wl-host-compat summary:focus-visible{outline:2px solid #367e5e;outline-offset:2px;border-radius:6px}
+.wl-host-compat-body{padding:13px 15px 14px;background:#f1f7f1;border:1px solid #deebe0;
+ border-radius:13px;margin:0 1px 10px;color:#496b54;font-size:11px;line-height:1.55}
+.wl-host-compat-body strong{display:block;color:#225239;font-size:12px}
+.wl-host-compat-body ul{margin:9px 0 0;padding-left:17px}
+.wl-host-compat-body li+li{margin-top:5px}
+.wl-host-compat-body p{margin:11px 0 0;padding-top:9px;border-top:1px solid #dce9de;
+ font-size:10px;color:#64806b;line-height:1.55}
