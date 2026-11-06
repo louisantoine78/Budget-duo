@@ -4,6 +4,7 @@
 const E=window.TraceWealthLabEngine;
 const e=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const fmt=(n,c='EUR')=>n===null||n===undefined?'—':new Intl.NumberFormat('fr-FR',{style:'currency',currency:c}).format(n/100);
+const fmtPrice=(units,c='EUR')=>units===null||units===undefined?'—':new Intl.NumberFormat('fr-FR',{style:'currency',currency:c,minimumFractionDigits:2,maximumFractionDigits:4}).format(units/10000);
 const qty=n=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:6}).format(n/1000000);
 const date=s=>s?new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(s+'T12:00:00Z')):'—';
 const percent=n=>Number.isFinite(n)?(n*100).toFixed(1).replace('.',',')+' %':'—';
@@ -42,28 +43,6 @@ function donut(v){
  '<span class="wl-donut-label">'+v.positions.length+' titres</span></div><div class="wl-donut-legend">'+
  v.positions.slice(0,5).map((s,i)=>'<div><span><i class="wl-color" style="background:'+palette[i%8]+'"></i>'+e(s.name)+'</span><b>'+percent(s.weight)+'</b></div>').join('')+
  (v.positions.length>5?'<div class="wl-muted-small">+ '+(v.positions.length-5)+' autres positions</div>':'')+'</div></div>';
-}
-function curve(p,period){
- const points=(p.snapshots||[]).filter(s=>E.dateValid(s.date)&&Number.isSafeInteger(s.valueCents)).slice().sort((a,b)=>a.date.localeCompare(b.date));
- const current=points.at(-1);
- if(!current)return placeholder('Aucun instantané de valorisation enregistré.');
- let filtered=points;
- if(period!=='all'){
-  const d=new Date(current.date+'T12:00:00Z');
-  d.setUTCMonth(d.getUTCMonth()-Number(period));
-  const cutoff=d.toISOString().slice(0,10);
-  filtered=points.filter(x=>x.date>=cutoff);
- }
- if(filtered.length<2)return placeholder('Une seule valeur historique est fournie au 4 novembre 2026. Ajoute des valorisations datées pour construire une vraie courbe.');
- const minimum=Math.min(...filtered.map(x=>x.valueCents)),maximum=Math.max(...filtered.map(x=>x.valueCents));
- const gap=Math.max(1,maximum-minimum);
- const xy=filtered.map((p,i)=>({x:20+i/(filtered.length-1)*445,y:128-(p.valueCents-minimum)/gap*102,v:p}));
- return '<svg class="wl-svg wl-mini-chart" viewBox="0 0 485 158" role="img" aria-label="Évolution basée sur les instantanés enregistrés">'+
- '<path d="M20 137H465" stroke="#dbe9df"/><path fill="none" stroke="#286c50" stroke-width="3" d="'+
- xy.map((x,i)=>(i?'L':'M')+x.x.toFixed(1)+' '+x.y.toFixed(1)).join(' ')+'"/>'+
- xy.map(x=>'<circle cx="'+x.x+'" cy="'+x.y+'" r="4" fill="#286c50"><title>'+e(date(x.v.date)+' · '+fmt(x.v.valueCents,p.currency))+'</title></circle>').join('')+
- '<text x="20" y="153" font-size="10" fill="#799284">'+e(date(filtered[0].date))+'</text>'+
- '<text x="465" y="153" text-anchor="end" font-size="10" fill="#799284">'+e(date(filtered.at(-1).date))+'</text></svg>';
 }
 function positionRows(p,v,filter='all'){
  const positions=v.positions.filter(s=>filter==='all'||s.assetType===filter||
@@ -161,13 +140,13 @@ function position(p,id){
  '<div class="wl-card wl-analytics"><span class="wl-kicker">VALORISATION</span><div class="wl-perf">'+
  (s.marketValueCents===null?'Cours manquant':fmt(s.marketValueCents,p.currency))+'</div>'+
  '<p class="wl-muted-small">Dernier cours : '+(s.quote?
- fmt(E.tradeCents(E.Q_SCALE,s.quote.priceUnits),p.currency)+' · '+date(s.quote.date)+' · '+e(s.quote.source)+' ('+e(s.quote.kind||'manuel')+')':
+ fmtPrice(s.quote.priceUnits,p.currency)+' · '+date(s.quote.date)+' · '+e(s.quote.source)+' ('+e(s.quote.kind||'manuel')+')':
  'À renseigner')+'</p></div>'+
  '<div class="wl-actions wl-position-actions">'+action('Acheter','quickBuy',id,'')+
  action('Vendre','quickSell',id,'wl-btn-alt')+action('Saisir un cours','quote',id,'wl-btn-light')+'</div>'+
  '<button type="button" class="wl-edit-position" data-act="opening" data-id="'+e(id)+'">Modifier la fiche, l’ISIN et le PRU <span aria-hidden="true">›</span></button>'+
  section('Ma position','<div class="wl-two">'+stat('Quantité',qty(s.quantityMicro))+
- stat('PRU moyen',s.averageCostUnits===null?'À renseigner':fmt(E.tradeCents(E.Q_SCALE,s.averageCostUnits),p.currency))+
+ stat('PRU moyen',s.averageCostUnits===null?'À renseigner':fmtPrice(s.averageCostUnits,p.currency))+
  stat('Gain latent',s.unrealizedCents===null?'Indisponible':fmt(s.unrealizedCents,p.currency))+
  stat('Poids',s.weight===null?'Indisponible':percent(s.weight))+'</div>')+
  section('Classification','<div class="wl-card wl-analytics wl-muted-small">'+e(s.sector||'Secteur inconnu')+' · '+e(s.geography||'Géographie inconnue')+
@@ -265,5 +244,5 @@ function analytics(p,range,metric='value',focusedDate=''){
  '<p class="wl-empty">Aucun relevé enregistré</p>')+'</div>')+
  section('Indice de référence',placeholder('Comparaison indisponible sans historique de l’indice, devise et méthodologie cohérentes.'));
 }
-window.TraceWealthLabUI=Object.freeze({e,fmt,qty,date,action,overview,portfolio,position,analytics,interactiveTrend,ref});
+window.TraceWealthLabUI=Object.freeze({e,fmt,fmtPrice,qty,date,action,overview,portfolio,position,analytics,interactiveTrend,ref});
 })();
