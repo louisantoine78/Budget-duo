@@ -36,14 +36,36 @@
  const dateValid=s=>typeof s==='string'&&/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/.test(s)&&
   !Number.isNaN(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;
  function assertDate(s){if(!dateValid(s))throw Error('Date au format AAAA-MM-JJ requise.')}
+ // ISO 6166: validate the 12-character ISIN and its Luhn check digit.
+ function isinValid(input){
+  const v=String(input??'').trim().toUpperCase();
+  if(!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(v))return false;
+  let digits='';
+  for(const ch of v)digits+=ch>='0'&&ch<='9'?ch:String(ch.charCodeAt(0)-55);
+  let sum=0,twice=false;
+  for(let i=digits.length-1;i>=0;i--){
+   let n=Number(digits[i]);
+   if(twice){n*=2;if(n>9)n-=9;}
+   sum+=n;twice=!twice;
+  }
+  return sum%10===0;
+ }
+ const micValid=input=>/^[A-Z0-9]{4}$/.test(String(input??'').trim().toUpperCase());
  function portfolioValid(p){
   if(!p||!SUPPORTED.includes(p.currency)||!['la','partner'].includes(p.owner)||!Array.isArray(p.positions)||!Array.isArray(p.operations))throw Error('Portefeuille invalide');
   assertDate(p.openingDate);
   safeInt(p.openingCashCents,'Liquidités initiales');
-  const ids=new Set();
+  const ids=new Set(),securityPairs=new Set();
   for(const s of p.positions){
    if(!s||typeof s.id!=='string'||!s.id||ids.has(s.id))throw Error('Position initiale dupliquée ou absente');
    ids.add(s.id);
+   if(s.isin&&!isinValid(s.isin))throw Error('ISIN invalide : vérifier les 12 caractères et la clé.');
+   if(s.marketMic&&!micValid(s.marketMic))throw Error('Place de cotation MIC invalide.');
+   if(s.isin){
+    const pair=String(s.isin).toUpperCase()+'|'+String(s.marketMic||'').toUpperCase();
+    if(securityPairs.has(pair))throw Error('Même ISIN et place déjà enregistrés.');
+    securityPairs.add(pair);
+   }
    safeInt(s.quantityMicro,'Quantité initiale');
    if(!s.quantityMicro)throw Error('Quantité initiale nulle');
    if(s.costBasisCents!==null)safeInt(s.costBasisCents,'PRU initial');
@@ -226,6 +248,6 @@
    snapshots:[{date:'2026-11-04',valueCents:378869,source:'Valeur totale fournie'}]}],
    selectedId:'pea-demo'};
  }
- return Object.freeze({SUPPORTED,cents,quantity,price,tradeCents,dateValid,evaluate,appendOperation,setQuote,
+ return Object.freeze({SUPPORTED,cents,quantity,price,tradeCents,dateValid,isinValid,micValid,evaluate,appendOperation,setQuote,
   setOpeningPosition,snapshotAt,periodPerformance,demo,Q_SCALE,PRICE_SCALE});
 });
