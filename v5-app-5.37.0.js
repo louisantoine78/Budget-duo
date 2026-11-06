@@ -6893,6 +6893,8 @@ async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Charg
  if(!freshStart||typeof freshStart.partition!=='function')
   throw Error('TRACE 2.0 : module de nouveau départ indisponible.');
  const freshDocs=freshStart.partition(docs,h.settings||{});
+ if(window.__TRACE20_FRESH_START_REQUIRED__===true&&!freshDocs.active)
+  throw Error('TRACE 2.0 : date du nouveau départ non configurée. La reprise de l’ancien historique est bloquée.');
  const visibleDocs=freshDocs.visible;
  trace20LegacyBankTransactions=freshDocs.archived.filter(d=>d.collection==='transactions').map(d=>d.data).filter(Boolean);
  trace20LegacyBankReconciliations=freshDocs.archived.filter(d=>d.collection==='reconciliations').map(d=>d.data).filter(Boolean);
