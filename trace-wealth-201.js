@@ -83,7 +83,7 @@
    }))};
  }
  // host is injected from authenticated original TRACE runtime.
- let host=null,accountId='',screen='home',selected='',error='',saving=false,filter='all';
+ let host=null,accountId='',screen='home',selected='',error='',saving=false,filter='all',chartMode='value';
  function context(){if(!host)throw Error('TRACE indisponible');const c=host.context();if(!c||!c.active)throw Error('Connecte-toi à TRACE pour accéder au Patrimoine');return c;}
  function accounts(){const c=context();return c.accounts.filter(a=>
   !a.archived&&a.savingsTracking!=='linked'&&!['CELI','Épargne','Livret','Savings'].includes(a.type));}
@@ -108,6 +108,21 @@
       '</small></span><span class="w201-account-status">'+status+' ›</span></button>';
     }).join('')+'</div>')+
    '<p class="w201-fine">Les données actuelles de Patrimoine restent inchangées jusqu’au rapprochement. Aucune position fictive n’est importée.</p>';
+ }
+ function lineChart(rows,cur,mode){
+  const pts=rows.map(x=>({date:x.date,value:mode==='flows'?x.flowAdjustedCents:x.valueCents,source:x.source}));
+  const first=Date.parse(pts[0].date),last=Date.parse(pts.at(-1).date),span=Math.max(1,last-first);
+  const min=Math.min(...pts.map(x=>x.value)),max=Math.max(...pts.map(x=>x.value)),range=Math.max(1,max-min);
+  const xy=pts.map(x=>({x:18+Math.round((Date.parse(x.date)-first)/span*282),
+   y:116-Math.round((x.value-min)/range*88),...x}));
+  const points=xy.map(x=>x.x+','+x.y).join(' ');
+  const elements=xy.map(x=>'<circle cx="'+x.x+'" cy="'+x.y+'" r="3.5" fill="#2c7954" stroke="#fff" stroke-width="1.4">'+
+   '<title>'+e(x.date)+' · '+e(fmt(x.value,cur))+' · '+e(x.source)+'</title></circle>').join('');
+  return '<svg class="w201-chart" viewBox="0 0 320 145" role="img" aria-label="Évolution datée '+e(mode==='flows'?'hors apports':'de la valeur')+'">'+
+   '<path d="M18 129H300" stroke="#dae7dd" stroke-width="1" />'+
+   '<polyline points="'+points+'" fill="none" stroke="#276f4c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>'+
+   elements+'<text x="18" y="142" font-size="9" fill="#789380">'+e(pts[0].date)+'</text>'+
+   '<text x="300" y="142" font-size="9" text-anchor="end" fill="#789380">'+e(pts.at(-1).date)+'</text></svg>';
  }
  function renderAccount(){
   const a=pick(),p=load(a),v=E.evaluate(p),legacy=isLegacy(a),owned=own(a);
@@ -145,10 +160,13 @@
     ' · Prix de revient : '+costs+'/'+count+'.</p></div>';
    const ts=E.chartSeries(p,'all');
    html+='<div class="w201-card"><b>Évolution datée</b>'+
-    (ts.ready?'<div class="w201-history">'+ts.points.map(x=>'<div><span>'+e(x.date)+'</span><strong>'+
-      fmt(x.valueCents,p.currency)+'</strong><small>'+e(x.source)+'</small></div>').join('')+'</div>'+
-      '<p class="w201-fine">Hors apports depuis le premier relevé : '+fmt(ts.points.at(-1).flowAdjustedCents-ts.points[0].flowAdjustedCents,p.currency)+
-      '. Ce n’est pas un rendement TWR.</p>':
+    (ts.ready?'<div class="w201-chart-controls">'+
+     btn('Valeur totale','metric','value',chartMode==='value'?'selected':'')+
+     btn('Hors apports','metric','flows',chartMode==='flows'?'selected':'')+'</div>'+
+     lineChart(ts.points,p.currency,chartMode)+
+     '<div class="w201-history">'+ts.points.map(x=>'<div><span>'+e(x.date)+'</span><strong>'+
+      fmt(chartMode==='flows'?x.flowAdjustedCents:x.valueCents,p.currency)+'</strong><small>'+e(x.source)+'</small></div>').join('')+'</div>'+
+      '<p class="w201-fine">Les écarts hors apports sont des montants absolus, pas un rendement TWR. Les relevés sont datés ; aucun cours historique n’est inventé.</p>':
       '<p>Deux valorisations datées sont nécessaires. Aucune courbe n’est inventée.</p>')+'</div>';
    if(edit)html+='<div class="w201-actionbar">'+btn('Enregistrer une valorisation','snapshot','','soft')+
      btn('Rapprocher au relevé courtier','reconcile','','primary')+'</div>';
@@ -247,8 +265,13 @@
     '<div class="w201-cash-fields">'+fld('Montant ('+p.currency+')','amount',original?.amountCents?String(original.amountCents/100):'','text','inputmode="decimal"')+'</div>'+
     '<div class="w201-impact" id="w201-impact" role="status" aria-live="polite">Saisis les montants pour voir leur effet sur les espèces.</div>';
   }else if(k==='snapshot'){
-   content=formHead('Valorisation datée','Calcul uniquement à partir des cours enregistrés avant cette date.')+
-    fld('Date de l’instantané','date',date,'date','required');
+   content=formHead('Valorisation datée','Enregistre un relevé réel ou calcule depuis les cours datés disponibles.')+
+    '<label class="w201-field">Origine de la valeur<select name="mode">'+
+    '<option value="broker">Valeur totale du relevé courtier</option>'+
+    '<option value="calculated">Calcul à partir des cours enregistrés</option></select></label>'+
+    fld('Date de l’instantané','date',date,'date','required')+
+    fld('Valeur totale du relevé ('+p.currency+')','value','','text','inputmode="decimal"')+
+    fld('Source / référence du relevé','source','','text','maxlength="100"');
   }else if(k==='reconcile'){
    content=formHead('Rapprocher au relevé','Cette étape contrôle la valeur totale du portefeuille. Les informations doivent venir du courtier.')+
     fld('Date du relevé','date',date,'date','required')+
@@ -385,7 +408,14 @@
   }else if(kind==='snapshot'){
    const date=get('date');
    if(!within(date,p.openingDate)||p.snapshots.some(x=>x.date===date))throw Error('Date unique obligatoire.');
-   next={...p,snapshots:[...p.snapshots,E.snapshotAt(p,date)]};
+   let snapshot;
+   if(get('mode')==='broker'){
+    const source=get('source');
+    if(!source)throw Error('La source du relevé est obligatoire.');
+    snapshot={date,valueCents:E.cents(get('value')),source:'Relevé courtier : '+source,estimated:false};
+   }else if(get('mode')==='calculated')snapshot=E.snapshotAt(p,date);
+   else throw Error('Type de valorisation invalide.');
+   next={...p,snapshots:[...p.snapshots,snapshot].sort((a,b)=>a.date.localeCompare(b.date))};
   }else if(kind==='reconcile'){
    if(fd.get('approved')!=='on')throw Error('Confirme la comparaison du relevé.');
    next=reconcile(p,{date:get('date'),value:get('value'),source:get('source')});
@@ -410,6 +440,7 @@
   if(action==='account'){accountId=id||accountId;screen='positions';selected='';draw();return;}
   if(action==='tab'){screen=id;selected='';draw();return;}
   if(action==='filter'){filter=id;draw();return;}
+  if(action==='metric'){chartMode=id==='flows'?'flows':'value';draw();return;}
   if(action==='position'){selected=id;screen='position';draw();return;}
   if(action==='cancel'){screen=selected?'position':'positions';draw();return;}
   const p=load(pick()),a=pick();
