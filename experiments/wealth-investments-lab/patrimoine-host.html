@@ -51,6 +51,12 @@
       <span class="a-icon" aria-hidden="true">＋</span><span>Ajouter un placement</span><b>Ajouter</b><small>PEA, CELI, REER…</small>
      </button>
     </div>
+    <details class="wl-host-compat" id="wlLegacyDemoToggle">
+     <summary>Comment mes placements seront-ils conservés ?</summary>
+     <div id="wlLegacyDemoReport" class="wl-host-compat-body" role="status" aria-live="polite">
+      Démonstration de compatibilité en lecture seule, sans accès à tes comptes.
+     </div>
+    </details>
    </section>
    <section class="trace-wealth-net-section" aria-label="Trésorerie et comptes">
     <div class="section-head trace-wealth-section-head"><h2>Trésorerie et comptes</h2></div>
@@ -80,6 +86,8 @@
  <iframe id="wlPortalFrame" title="Laboratoire Investissements" sandbox="allow-scripts allow-forms allow-modals" data-src="./index.html?embedded=1"></iframe>
 </dialog>
 <script src="./integration-contract.js"></script>
+<script src="./engine.js"></script>
+<script src="./legacy-bridge.js"></script>
 <script src="./wealth-host.js"></script>
 </body>
 </html>
