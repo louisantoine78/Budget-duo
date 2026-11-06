@@ -12,6 +12,9 @@
  function eligible(account){
   if(!account||typeof account!=='object'||account.archived===true)return false;
   if(account.savingsTracking==='linked'||LINKED_TYPES.has(account.type))return false;
+  // TRACE 5.37 currently lists every CELI among savings. Never silently change
+  // that legacy placement: only a future explicit opt-in can classify securities.
+  if(account.type==='CELI'&&account.investmentTracking!=='securities')return false;
   return ACCOUNT_TYPES.has(account.type);
  }
  function auditAccountMapping(accounts,operations){
