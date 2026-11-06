@@ -94,3 +94,43 @@ test('version, assets, original wealth sections, live host bridge and conservati
  assert.doesNotMatch(js,/createClient\(|\.rpc\(|\.from\(['"]transactions|localStorage|sessionStorage|window\.fetch\(/);
  assert.match(js,/n’aura|aucune position fictive|aucun achat fictif/i);
 });
+
+
+test('native TRACE 2.0.1 UI uses authenticated existing accounts, respects owner and does not preload sample holdings',()=>{
+ const a=acct(),partner={id:'partner-reer',name:'REER fictif',type:'REER',owner:'partner',currency:'CAD'};
+ let last='',lastTitle='';
+ const rootEl={querySelectorAll(){return[];},querySelector(){return null;}};
+ const prior=global.document;
+ global.document={querySelector(sel){if(sel==='#w201-root')return rootEl;return null;}};
+ try{
+  W.connect({
+   context(){return{active:true,viewer:'la',scope:'couple',accounts:[a,partner],operations:[]};},
+   openSheet(t,h){lastTitle=t;last=h;},
+   async save(){throw Error('No persistence during UI tests');}
+  });
+  W.open();
+  assert.match(lastTitle,/Investissements/);
+  assert.match(last,/PEA de test fictif/);
+  assert.match(last,/REER fictif/);
+  assert.doesNotMatch(last,/Dassault Systèmes|Air Liquide/);
+  W.open(a.id);
+  assert.match(last,/Aucune position initiale/);
+  assert.match(last,/Position initiale/);
+  W.open(partner.id);
+  assert.match(last,/REER fictif/);
+  assert.doesNotMatch(last,/data-w201="new-position"/);
+  assert.doesNotMatch(last,/data-w201="new-operation"/);
+ }finally{global.document=prior;}
+});
+test('portfolio edits and correction actions are structurally available but source-account writes are strictly scoped',()=>{
+ const code=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ assert.match(code,/data-w201="edit-operation"|btn\('Corriger','edit-operation'/);
+ assert.match(code,/E\.appendOperation\(p,op,old\?\.id\|\|null\)/);
+ assert.match(code,/E\.previewOperation\(p,op,original\?\.id\|\|null\)/);
+ assert.match(main,/account\.owner!==me/);
+ assert.match(main,/traceWritesBlocked/);
+ assert.match(main,/traceStrictWriteSnapshot\(portfolio\)/);
+ assert.match(main,/await saveDocument\('investment_accounts',next\)/);
+ assert.doesNotMatch(code,/\bSupabase\b.*createClient|localStorage\.setItem/);
+});
