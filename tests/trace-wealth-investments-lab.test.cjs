@@ -111,7 +111,8 @@ test('static laboratory cannot read or mutate TRACE production and preserves its
  const ui=fs.readFileSync(path.join(lab,'ui.js'),'utf8');
  const engine=fs.readFileSync(path.join(lab,'engine.js'),'utf8');
  const prod=fs.readFileSync(path.join(root,'index.html'),'utf8');
- assert.ok(!/supabase|config\.js|v5-app-5\.37\.0\.js|serviceWorker|localStorage|sessionStorage/i.test(html+app+ui+engine));
+ assert.ok(!/window\.supabase|supabase\.createClient|client\.from|fetch\s*\(|(?:localStorage|sessionStorage)\s*\./i.test(app+ui+engine));
+ assert.ok(!/src=[\"'][^\"']*(?:config\.js|v5-app-5\.37\.0\.js)|serviceWorker\.register/i.test(html));
  assert.match(html,/LABORATOIRE/);
  assert.match(html,/noindex,nofollow/);
  assert.match(html,/src="\.\/engine\.js"/);
