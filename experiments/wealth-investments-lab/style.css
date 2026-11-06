@@ -102,3 +102,20 @@ dialog{border:0;padding:0;border-radius:24px 24px 0 0;box-shadow:0 -20px 70px rg
 .wl-position-filter b{font-size:10px;color:inherit;font-variant-numeric:tabular-nums}
 .wl-position-filter[aria-pressed="true"]{background:#235f48;color:#fff;border-color:#235f48}
 .wl-position-filter:focus-visible{outline:2px solid #1f6b50;outline-offset:2px}
+
+/* Investment analysis: dated evidence, accessible touch selection and flow-normalized view. */
+.wl-trend-tabs{display:flex;align-items:center;gap:4px;padding:4px;margin-bottom:14px;background:#f0f6f0;border:1px solid #e0ebe1;border-radius:13px}
+.wl-trend-tab{flex:1;min-height:37px;display:grid;place-items:center;border:1px solid transparent;border-radius:10px;background:transparent;color:#597766;font-size:11px;font-weight:730;white-space:nowrap}
+.wl-trend-tab[aria-pressed="true"]{background:#fffdfa;border-color:#d3e3d8;color:#215e45;box-shadow:0 2px 7px rgba(18,54,38,.045)}
+.wl-trend-selected{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.wl-trend-selected small{display:block;font-size:11px;font-weight:720;color:#6a8072}
+.wl-trend-selected strong{font-size:24px;line-height:1.35;letter-spacing:-.04em;font-weight:790;color:#1b4c38;font-variant-numeric:tabular-nums}
+.wl-trend-quality{max-width:124px;text-align:right;font-size:10px;color:#587964;line-height:1.35}
+.wl-trend-chart{height:auto;max-height:174px;margin:5px 0 8px}
+.wl-trend-points{display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;padding:2px 0 9px}
+.wl-trend-points::-webkit-scrollbar{display:none}
+.wl-trend-point{flex:none;min-height:34px;padding:7px 10px;border:1px solid #dbe7dd;border-radius:10px;background:#fcfefa;color:#627d6e;font-size:10px;font-weight:725}
+.wl-trend-point[aria-pressed="true"]{background:#e7f4e9;border-color:#8fbea2;color:#155d40}
+.wl-trend-disclaimer{color:#657b6d;font-size:10px;line-height:1.58;margin:8px 0 4px}
+.wl-trend-source{color:#809489;font-size:10px;line-height:1.5;margin:7px 0 0}
+.wl-trend-tab:focus-visible,.wl-trend-point:focus-visible{outline:2px solid #1f6b50;outline-offset:2px}
