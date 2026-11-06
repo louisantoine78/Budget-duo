@@ -18,6 +18,50 @@ const note=s=>'<p class="wl-help">'+s+'</p>';
 const moneyInput=n=>n===null||n===undefined?'':String(n/100);
 const priceInput=n=>n===null||n===undefined?'':String(n/10000);
 const qtyInput=n=>n===null||n===undefined?'':String(n/1000000);
+function operationFrom(fd,old,final=false){
+ const read=k=>get(fd,k),type=read('type');
+ const operation={id:old?.id||(final?'o-'+(++serial)+'-'+Date.now():'lab-operation-preview'),
+  date:read('date'),type,amountCents:0,feeCents:0,quantityMicro:0,unitPriceUnits:0};
+ if(type==='buy'||type==='sell'){
+  operation.securityId=read('securityId');
+  operation.quantityMicro=E.quantity(read('quantity'));
+  operation.unitPriceUnits=E.price(read('unitPrice'));
+  operation.feeCents=E.cents(read('tradeFee')||'0');
+ }else if(['deposit','withdrawal','dividend','fee'].includes(type)){
+  operation.amountCents=E.cents(read('amount'));
+ }else throw Error('Sélectionne une opération valide.');
+ return operation;
+}
+function operationPreview(form,old){
+ const node=form.querySelector('#wl-operation-preview');if(!node)return;
+ const values=new FormData(form),type=get(values,'type');
+ const trade=type==='buy'||type==='sell';
+ const needed=trade?['securityId','quantity','unitPrice']:['amount'];
+ if(needed.some(k=>!get(values,k))){
+  node.innerHTML='<span class="wl-preview-overline">AVANT D’ENREGISTRER</span>'+
+   '<p class="wl-muted-small">Complète les champs pour voir l’incidence sur les liquidités et les positions.</p>';
+  node.removeAttribute('data-valid');return;
+ }
+ try{
+  const op=operationFrom(values,old),result=E.previewOperation(current(),op,old?.id||null),curr=current().currency;
+  const afterSign=result.deltaCashCents>0?'+':'';
+  const gross=trade?E.tradeCents(op.quantityMicro,op.unitPriceUnits):null;
+  node.innerHTML='<span class="wl-preview-overline">AVANT D’ENREGISTRER</span>'+
+   '<div class="wl-preview-grid"><div><small>Impact sur les espèces</small>'+
+    '<strong>'+afterSign+U.fmt(result.deltaCashCents,curr)+'</strong></div>'+
+   '<div><small>Espèces après l’opération</small><strong>'+U.fmt(result.cashAfterCents,curr)+'</strong></div></div>'+
+   (trade?'<div class="wl-preview-meta">Ordre : '+U.fmt(gross,curr)+' · Frais : '+
+    U.fmt(op.feeCents,curr)+' · Quantité détenue après : '+U.qty(result.quantityAfterMicro)+'</div>':
+    '<div class="wl-preview-meta">Apports nets après : '+U.fmt(E.evaluate(result.candidate).netFlowCents,curr)+'</div>')+
+   (old?'<p class="wl-muted-small">Prévisualisation de la correction du journal complet.</p>':'')+
+   '<span class="wl-preview-safe">Simulation locale uniquement · aucun ordre envoyé</span>';
+  node.setAttribute('data-valid','true');
+ }catch(error){
+  node.removeAttribute('data-valid');
+  node.innerHTML='<span class="wl-preview-overline">À VÉRIFIER</span>'+
+   '<p class="wl-preview-error">'+U.e(error.message||'Opération incohérente')+'</p>';
+ }
+}
 function replacePortfolio(p){E.evaluate(p);model.portfolios=model.portfolios.map(x=>x.id===p.id?p:x);}
 function breadcrumb(){
  if(route==='overview')return '<button data-act="home">Patrimoine</button><span>/</span><b>Investissements</b>';
@@ -37,7 +81,7 @@ function go(next,id=''){
  if(id&&model.portfolios.some(p=>p.id===id))portfolioId=id;
  route=next;render();window.scrollTo({top:0,behavior:'auto'});
 }
-function sheet(kind,id=''){
+function sheet(kind,id='',preset={}){
  const p=current(),s=catalog(id),old=p.operations.find(o=>o.id===id);
  let heading='',body='';
  if(kind==='viewSnapshot'){
@@ -117,15 +161,21 @@ function sheet(kind,id=''){
    field('date','Date de valorisation',date(),'date','required');
  }else if(kind==='newOp'||kind==='editOp'){
   heading=old?'Corriger une opération':'Enregistrer une opération';
-  const ty=old?.type||'deposit';
-  body=select('type','Nature',Object.entries({deposit:'Versement',withdrawal:'Retrait',buy:'Achat',sell:'Vente',dividend:'Dividende',fee:'Frais'}),ty)+
+  const ty=old?.type||preset.type||'deposit';
+  const choices=[['deposit','Versement'],['withdrawal','Retrait'],['buy','Achat'],['sell','Vente'],['dividend','Dividende'],['fee','Frais']];
+  body='<span class="wl-label">Type d’opération</span>'+
+   '<div class="wl-op-kinds" role="group" aria-label="Type d’opération">'+
+   choices.map(([value,label])=>'<button type="button" class="wl-op-kind" data-op-kind="'+value+
+    '" aria-pressed="'+(value===ty)+'">'+label+'</button>').join('')+'</div>'+
+   '<input name="type" type="hidden" value="'+ty+'">'+
    field('date','Date',old?.date||date(),'date','required')+
-   '<div class="wl-trade-fields">'+select('securityId','Titre',p.catalog.map(x=>[x.id,x.name]),old?.securityId||'')+
+   '<div class="wl-trade-fields">'+select('securityId','Titre',p.catalog.map(x=>[x.id,x.name]),old?.securityId||preset.securityId||'')+
    paired(field('quantity','Quantité',qtyInput(old?.quantityMicro),'text','inputmode="decimal"'),
     field('unitPrice','Prix unitaire',priceInput(old?.unitPriceUnits),'text','inputmode="decimal"'))+
    field('tradeFee','Frais de transaction',moneyInput(old?.feeCents)||'0','text','inputmode="decimal"')+'</div>'+
    '<div class="wl-cash-fields">'+field('amount','Montant',moneyInput(old?.amountCents),'text','inputmode="decimal"')+'</div>'+
-   note('Les frais d’achat sont inclus dans le coût de revient. Une correction recalculera le journal complet.');
+   '<div class="wl-op-preview" id="wl-operation-preview" role="status" aria-live="polite"></div>'+
+   note('Simulation locale. Les opérations corrigées sont entièrement recalculées et contrôlées avant l’enregistrement.');
  }else return;
  $('wl-dialog-title').textContent=heading;
  $('wl-dialog-body').innerHTML='<form class="wl-form" id="wl-form">'+body+
@@ -137,8 +187,16 @@ function sheet(kind,id=''){
   const sync=()=>{const ty=form.elements.namedItem('type').value;
    form.querySelector('.wl-trade-fields').hidden=!['buy','sell'].includes(ty);
    form.querySelector('.wl-cash-fields').hidden=['buy','sell'].includes(ty);
+   form.querySelectorAll('[data-op-kind]').forEach(button=>
+    button.setAttribute('aria-pressed',String(button.dataset.opKind===ty)));
+   operationPreview(form,old);
   };
-  form.elements.namedItem('type').addEventListener('change',sync);sync();
+  form.querySelectorAll('[data-op-kind]').forEach(button=>button.addEventListener('click',()=>{
+   form.elements.namedItem('type').value=button.dataset.opKind;
+   sync();
+  }));
+  form.addEventListener('input',()=>operationPreview(form,old));
+  form.addEventListener('change',sync);sync();
  }
  $('wl-dialog').showModal();
 }
@@ -192,15 +250,8 @@ function save(kind,id,fd){
    const snapshot=E.snapshotAt(p,d);
    replacePortfolio({...p,snapshots:[...p.snapshots,snapshot]});
   }else if(kind==='newOp'||kind==='editOp'){
-   const old=p.operations.find(x=>x.id===id),ty=read('type');
-   const operation={id:old?.id||'o-'+(++serial)+'-'+Date.now(),date:read('date'),type:ty,
-    amountCents:0,feeCents:0,quantityMicro:0,unitPriceUnits:0};
-   if(['buy','sell'].includes(ty)){
-    operation.securityId=read('securityId');
-    operation.quantityMicro=E.quantity(read('quantity'));
-    operation.unitPriceUnits=E.price(read('unitPrice'));
-    operation.feeCents=E.cents(read('tradeFee')||'0');
-   }else operation.amountCents=E.cents(read('amount'));
+   const old=p.operations.find(x=>x.id===id);
+   const operation=operationFrom(fd,old,true);
    replacePortfolio(E.appendOperation(p,operation,old?.id||null));
   }
   $('wl-dialog').close();notice='Modifié dans la démonstration uniquement.';render();
@@ -214,6 +265,9 @@ document.addEventListener('click',event=>{
  else if(a==='position'){securityId=id;go('position');}
  else if(a==='analytics')go('analytics');
  else if(a==='range'){range=id;render();}
+ else if(a==='quickBuy'||a==='quickSell'){
+  sheet('newOp','',{type:a==='quickBuy'?'buy':'sell',securityId:id});
+ }
  else if(['newPortfolio','newSecurity','opening','quote','strategy','snapshot','newOp','editOp','viewSnapshot'].includes(a))sheet(a,id);
 });
 $('wl-close').addEventListener('click',()=>$('wl-dialog').close());
