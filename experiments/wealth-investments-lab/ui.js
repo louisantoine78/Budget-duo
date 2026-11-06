@@ -90,20 +90,40 @@ function multiHero(state,p,v){
  '<div class="wl-hero-bottom"><div><strong>'+(cash===null?'Par devise':fmt(cash,p.currency))+'</strong><span>Liquidités</span></div>'+
  '<div><strong>'+(gain===null?'Indisponible':fmt(gain,p.currency))+'</strong><span>Gains hors apports</span></div></div></div>';
 }
+function readiness(p,v){
+ const total=v.positions.length;
+ if(!total)return '<div class="wl-readiness"><div class="wl-ready-title">Première étape</div><p>Ajoute un titre pour constituer ce portefeuille.</p></div>';
+ const quoted=total-v.missingQuote.length,basis=total-v.missingCost.length;
+ if(quoted===total&&basis===total)return '<div class="wl-readiness wl-readiness-done"><span class="wl-ready-dot">✓</span><span><b>Positions renseignées</b><small>Les cours et PRU de ce portefeuille sont disponibles.</small></span></div>';
+ const toQuote=v.positions.find(x=>v.missingQuote.includes(x.id));
+ const toCost=v.positions.find(x=>v.missingCost.includes(x.id));
+ return '<div class="wl-readiness"><div class="wl-readiness-head"><div><span class="wl-kicker">VOTRE REPRISE</span><h3>Compléter les données</h3></div>'+
+ '<span class="wl-progress-badge">'+(quoted+basis)+' / '+(total*2)+'</span></div>'+
+ '<p class="wl-ready-summary">Les positions sont déjà reprises. Il reste à renseigner les données qui permettent de mesurer leur performance.</p>'+
+ '<div class="wl-progress-row"><span>Cours enregistrés</span><strong>'+quoted+' / '+total+'</strong></div>'+
+ '<div class="wl-progress-track"><i style="width:'+(100*quoted/total).toFixed(0)+'%"></i></div>'+
+ '<div class="wl-progress-row"><span>Prix de revient</span><strong>'+basis+' / '+total+'</strong></div>'+
+ '<div class="wl-progress-track"><i style="width:'+(100*basis/total).toFixed(0)+'%"></i></div>'+
+ '<div class="wl-ready-actions">'+
+ (toQuote?'<button class="wl-ready-link" data-act="quote" data-id="'+e(toQuote.id)+'">+ Renseigner un cours</button>':'')+
+ (toCost?'<button class="wl-ready-link" data-act="opening" data-id="'+e(toCost.id)+'">+ Renseigner un PRU</button>':'')+'</div></div>';
+}
 function overview(state){
  const p=state.portfolios[0],v=E.evaluate(p);
  return heading('VOTRE PATRIMOINE','Investissements','Portefeuilles et positions au même endroit. Vos chiffres essentiels, sans complexité inutile.')+
  multiHero(state,p,v)+
  section('Mes portefeuilles','<div style="display:grid;gap:10px">'+state.portfolios.map(cardPortfolio).join('')+'</div>',action('+ Ajouter','newPortfolio','','wl-btn-light'))+
- section('Vue rapide','<div class="wl-two">'+stat('Plus-values latentes',v.unrealizedCents===null?'À renseigner':fmt(v.unrealizedCents,p.currency))+
- stat('Plus-values réalisées',fmt(v.realizedCents,p.currency),'Depuis le début de la simulation')+'</div>')+
- section('Répartition du portefeuille','<div class="wl-card wl-analytics">'+donut(v)+'</div>',action('Détails','portfolio',p.id,'wl-btn-light'))+
- section('Évolution dans le temps','<div class="wl-card wl-analytics">'+curve(p,'all')+'</div>',action('Explorer','analytics','','wl-btn-light'));
+ (v.performanceComplete?section('Performance','<div class="wl-two">'+stat('Plus-values latentes',fmt(v.unrealizedCents,p.currency))+
+ stat('Plus-values réalisées',fmt(v.realizedCents,p.currency))+'</div>'):'')+
+ section('Analyses','<div class="wl-card wl-analytics">'+
+ (v.priced?donut(v):'<p class="wl-muted-small">La répartition et la performance deviennent disponibles après la saisie de cours datés. Aucun cours n’est simulé.</p>')+
+ '</div>',action('Explorer','analytics','','wl-btn-light'));
 }
 function portfolio(p){
  const v=E.evaluate(p);
  return heading('PORTEFEUILLE',p.name,'Positions, liquidités et journal dans sa devise native.')+hero(p,v)+
  '<div class="wl-actions">'+action('+ Opération','newOp','','')+action('Ajouter un titre','newSecurity')+action('Instantané','snapshot','','wl-btn-light')+'</div>'+
+ readiness(p,v)+
  section('Positions','<div class="wl-card">'+positionRows(p,v)+'</div>',action('Analyser','analytics','','wl-btn-light'))+
  section('Suivi','<div class="wl-two">'+stat('Liquidités',fmt(v.cashCents,p.currency))+stat('Apports nets',fmt(v.netFlowCents,p.currency))+
  stat('Gains réalisés',fmt(v.realizedCents,p.currency))+stat('Gains latents',v.unrealizedCents===null?'À renseigner':fmt(v.unrealizedCents,p.currency))+'</div>')+
