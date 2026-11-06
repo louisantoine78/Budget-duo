@@ -56,7 +56,7 @@ let total=0;async function test(name,fn){await fn();total++;console.log('PASS '+
 async function main(){
  await test('fixture mode enters real 5.37 bootstrap without auth or network',()=>{
   assert.equal(window.__TRACE_PREVIEW_STATUS__.boot,'ok');
-  assert.equal(window.__TRACE_PREVIEW_STATUS__.build,'5.37.0');
+  assert.equal(window.__TRACE_PREVIEW_STATUS__.build,JSON.parse(read('trace-version.json')).build);
   assert.equal(window.__TRACE_PREVIEW_STATUS__.fixtureCount,9);
   const data=window.TraceInternationalPreviewFixtures.create();
   assert.equal(data.household.accountOpeningBalances['demo-fr-deferred-card'],0);
