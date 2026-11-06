@@ -71,8 +71,8 @@ function positionRows(p,v){
  '<span class="wl-row-left"><span class="wl-row-icon">'+e(s.assetType==='ETF'?'ETF':s.assetType==='Fonds'?'F':'AC')+'</span>'+
  '<span class="wl-row-label"><b>'+e(s.name)+'</b><small>'+qty(s.quantityMicro)+' titres · '+e(s.assetType||'Titre')+
  (s.isin?' · '+e(s.isin):' · ISIN non renseigné')+'</small></span></span>'+
- '<span class="wl-row-value"><b>'+(s.marketValueCents===null?'Cours manquant':fmt(s.marketValueCents,p.currency))+'</b>'+
- '<small>'+(s.unrealizedCents===null?'PRU à renseigner':fmt(s.unrealizedCents,p.currency)+' latent')+'</small></span></button>').join('');
+ '<span class="wl-row-value"><b>'+(s.marketValueCents===null?'—':fmt(s.marketValueCents,p.currency))+'</b>'+
+ '<small>'+(s.marketValueCents===null?'Cours à compléter':s.unrealizedCents===null?'PRU à compléter':fmt(s.unrealizedCents,p.currency)+' latent')+'</small></span></button>').join('');
 }
 function multiHero(state,p,v){
  if(state.portfolios.length===1)return hero(p,v);
@@ -121,12 +121,16 @@ function overview(state){
 }
 function portfolio(p){
  const v=E.evaluate(p);
+ const byType=v.positions.reduce((out,s)=>(out[s.assetType||'Autre']=(out[s.assetType||'Autre']||0)+1,out),{});
+ const split=Object.entries(byType).map(([type,count])=>count+' '+(type==='Action'?(count>1?'actions':'action'):type)).join(' · ');
  return heading('PORTEFEUILLE',p.name,'Positions, liquidités et journal dans sa devise native.')+hero(p,v)+
  '<div class="wl-actions">'+action('+ Opération','newOp','','')+action('Ajouter un titre','newSecurity')+action('Instantané','snapshot','','wl-btn-light')+'</div>'+
  readiness(p,v)+
- section('Positions','<div class="wl-card">'+positionRows(p,v)+'</div>',action('Analyser','analytics','','wl-btn-light'))+
+ section('Positions','<div class="wl-investment-glance"><span>'+v.positions.length+' lignes</span><span>'+e(split)+'</span></div>'+
+ '<div class="wl-card">'+positionRows(p,v)+'</div>',action('Analyser','analytics','','wl-btn-light'))+
  section('Suivi','<div class="wl-two">'+stat('Liquidités',fmt(v.cashCents,p.currency))+stat('Apports nets',fmt(v.netFlowCents,p.currency))+
- stat('Gains réalisés',fmt(v.realizedCents,p.currency))+stat('Gains latents',v.unrealizedCents===null?'À renseigner':fmt(v.unrealizedCents,p.currency))+'</div>')+
+ (v.performanceComplete?stat('Gains réalisés',fmt(v.realizedCents,p.currency))+
+ stat('Gains latents',fmt(v.unrealizedCents,p.currency)):'')+'</div>')+
  section('Historique des opérations','<div class="wl-card wl-timeline">'+(p.operations.length?
  p.operations.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(o=>
  '<div class="wl-history-row"><span><b>'+e(({buy:'Achat',sell:'Vente',deposit:'Versement',withdrawal:'Retrait',dividend:'Dividende',fee:'Frais'})[o.type])+'</b>'+
@@ -150,7 +154,9 @@ function position(p,id){
  '<p class="wl-muted-small">Dernier cours : '+(s.quote?
  fmt(E.tradeCents(E.Q_SCALE,s.quote.priceUnits),p.currency)+' · '+date(s.quote.date)+' · '+e(s.quote.source)+' ('+e(s.quote.kind||'manuel')+')':
  'À renseigner')+'</p></div>'+
- '<div class="wl-actions">'+action('Saisir un cours','quote',id,'')+action('Modifier le PRU / ISIN','opening',id)+'</div>'+
+ '<div class="wl-actions wl-position-actions">'+action('Acheter','quickBuy',id,'')+
+ action('Vendre','quickSell',id,'wl-btn-alt')+action('Saisir un cours','quote',id,'wl-btn-light')+'</div>'+
+ '<button type="button" class="wl-edit-position" data-act="opening" data-id="'+e(id)+'">Modifier la fiche, l’ISIN et le PRU <span aria-hidden="true">›</span></button>'+
  section('Ma position','<div class="wl-two">'+stat('Quantité',qty(s.quantityMicro))+
  stat('PRU moyen',s.averageCostUnits===null?'À renseigner':fmt(E.tradeCents(E.Q_SCALE,s.averageCostUnits),p.currency))+
  stat('Gain latent',s.unrealizedCents===null?'Indisponible':fmt(s.unrealizedCents,p.currency))+
