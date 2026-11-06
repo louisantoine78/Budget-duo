@@ -10,9 +10,11 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="TRACE — ton budget, ton activité et ton patrimoine au même endroit.">
-<meta name="trace-build" content="5.36.5">
+<meta name="trace-build" content="5.37.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; connect-src 'self' https://eiqvabddtgfonouyeavi.supabase.co wss://eiqvabddtgfonouyeavi.supabase.co https://www.bankofcanada.ca; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; worker-src 'self'; form-action 'self'; base-uri 'self';">
+<meta name="robots" content="noindex, nofollow">
 <title>TRACE</title>
-<link rel="manifest" href="manifest.webmanifest?v=5.31.2">
+<link rel="manifest" href="manifest.webmanifest?v=5.37.0">
 <link rel="icon" type="image/svg+xml" href="assets/trace-wallet-v1.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/trace-wallet-v1-180.png">
 <link rel="stylesheet" href="v5-5.31.17.css">
@@ -30,10 +32,14 @@
 <link rel="stylesheet" href="trace-card-balance-1.0.0.css">
 <link rel="stylesheet" href="trace-insights-1.0.0.css">
 <link rel="stylesheet" href="trace-card-payment-detail-1.0.0.css">
+<link rel="stylesheet" href="trace-international-1.0.0.css">
+<link rel="stylesheet" href="trace-statement-monthly-ui-1.0.0.css">
 <link rel="stylesheet" href="trace-duplicate-compare-1.0.0.css">
 <link rel="stylesheet" href="onboarding-2.0.0.css">
 <link rel="stylesheet" href="trace-install-1.1.0.css">
 <link rel="stylesheet" href="trace-email-confirmation-1.0.0.css">
+<link rel="stylesheet" href="trace-premium-panels-5.37.0.css">
+<link rel="stylesheet" href="trace-premium-system-5.37.0.css">
 </head>
 <body>
 <div id="cloudGate" class="cloud-gate">
@@ -103,7 +109,7 @@
 </div>
 
 <div id="app" class="app cloud-locked">
-  <header class="topbar">
+<header class="topbar">
     <div class="brand">
       <img src="assets/trace-wallet-v1-192.png" alt="">
       <div><strong>Trace</strong><small id="brandSubtitle">Simple. Clair. À jour.</small></div>
@@ -121,27 +127,27 @@
         <div><div class="eyebrow" id="homeMonthLabel">Novembre 2026</div><h1 class="title" id="homeGreeting">Bonjour</h1></div>
         <div class="segment" id="homeScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
       </div>
-      <div class="grid grid-2">
-        <article class="card hero-card">
-          <div class="label">Disponible sur le budget</div>
-          <div class="big" id="homeBudgetAvailable">—</div>
-          <div class="sub" id="homeBudgetSub">Chargement…</div>
-          <div class="progress"><i id="homeBudgetProgress" style="width:0%"></i></div>
-          <div class="progress-row"><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
-        </article>
-        <article class="card liquid clickable" id="balanceCard">
-          <div class="eyebrow">Solde estimé</div>
-          <div class="money" id="homeBalance">—</div>
+      <div class="trace-home-priority trace-home-unified" role="group" aria-label="Solde estimé et budget du mois"><article class="card liquid" id="balanceCard">
+          <div class="trace-home-panel-head"><div class="eyebrow">Solde estimé</div><button type="button" class="trace-home-panel-link" id="homeAccountsBtn" aria-label="Voir les comptes bancaires et leur trésorerie">Voir les comptes <span aria-hidden="true">›</span></button></div>
+          <div class="money" id="homeBalance" aria-live="polite" aria-atomic="true">—</div>
           <span class="badge" id="reconcileBadge">À rapprocher</span>
-          <div class="mini-account"><span>Compte courant</span><span id="homeChecking">—</span></div>
-          <div class="mini-account"><span>Dette de carte</span><span id="homeCard">—</span></div>
           <p id="homeCardWarning" class="trace-card-balance-warning" role="status" hidden></p>
-          <div class="mini-account trace-celi-monthly"><span>Versé aux CELI ce mois</span><span id="homeCELITransfers">—</span></div>
-          <div class="scope-label">Solde courant − dette carte · les CELI sont dans Patrimoine</div>
-        </article>
-      </div>
-
-      <div class="grid grid-3" style="margin-top:14px">
+          <div id="traceIntlHome" class="trace-intl-home" aria-label="Consulter le solde de mes comptes"></div>
+          <div class="trace-home-balance-breakdown" aria-label="Composition du solde estimé">
+            <div class="mini-account"><span>Compte courant</span><span id="homeChecking">—</span></div>
+            <div class="mini-account"><span>Dette de carte</span><span id="homeCard">—</span></div>
+            <p class="scope-label">Solde courant moins dette des cartes associées, hors épargne.</p>
+          </div>
+        </article><article class="card hero-card trace-home-available" aria-label="Budget du mois">
+          <div class="trace-home-panel-head"><div class="label">Budget</div><button type="button" class="trace-home-panel-link trace-home-budget-link" id="homeBudgetShortcut" aria-label="Ouvrir le budget détaillé">Voir le budget <span aria-hidden="true">›</span></button></div>
+          <div class="trace-home-budget-label">Reste à dépenser</div>
+          <div class="big" id="homeBudgetAvailable">—</div>
+          <div class="sub" id="homeBudgetSub" hidden>Chargement…</div>
+          <div class="progress" id="homeBudgetTrack" role="progressbar" aria-label="Budget consommé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><i id="homeBudgetProgress" style="width:0%"></i></div>
+          <div class="progress-row" id="homeBudgetProgressDetails" hidden><span id="homeBudgetPercent">0 % consommé</span><span id="homeBudgetSpent">0 $ dépensés</span></div>
+        </article></div>
+      <div class="section-head trace-home-month-head"><h2>Ce mois-ci</h2></div>
+      <div class="grid grid-3 trace-home-month-kpis" style="margin-top:14px">
         <button class="card kpi clickable" data-kpi="income"><div class="k-label">Revenus</div><div class="k-value" id="homeIncome">—</div><div class="k-note" id="homeIncomeNote">Voir le détail</div></button>
         <button class="card kpi clickable" data-kpi="spending"><div class="k-label">Dépenses</div><div class="k-value" id="homeSpending">—</div><div class="k-note" id="homeSpendingNote">Voir le détail</div></button>
         <button class="card kpi clickable" data-kpi="saving"><div class="k-label">Marge du mois</div><div class="k-value" id="homeSaving">—</div><div class="k-note" id="homeSavingNote">Revenus − dépenses (hors virements)</div></button>
@@ -154,9 +160,6 @@
       </button>
       <div id="homeReviewAccounts" class="trace-home-review-accounts" aria-label="Opérations à vérifier par compte bancaire"></div>
 
-      <div class="section-head"><h2>Budget en direct</h2><button class="linkbtn" data-go="budget">Voir le budget</button></div>
-      <article class="card" id="homeBudgetCategories"></article>
-
       <div class="section-head"><h2>Évolution</h2><button class="linkbtn" id="analysisBtn">Analyses</button></div>
       <article class="card clickable" id="homeTrendCard">
         <div class="eyebrow">Dépenses et marge · 6 mois</div>
@@ -164,12 +167,16 @@
         <div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div>
       </article>
 
-      <div class="section-head"><h2>Partage</h2><button class="linkbtn" id="shareOpen">Ouvrir</button></div>
+      <div class="trace-home-more" id="homeMoreDetails" aria-label="Outils et partage">
+        <div class="section-head trace-home-tools-head"><h2>Outils et partage</h2></div>
+      <button type="button" class="trace-home-import-coverage" id="homeImportCalendar" aria-label="Ouvrir le calendrier de vérification des imports"><span class="trace-home-import-mark" aria-hidden="true">▦</span><span class="trace-home-import-copy"><strong>Calendrier des imports</strong><small id="homeImportCoverage">Suivi de vérification à consulter</small></span><span aria-hidden="true">›</span></button>
+      <div class="section-head trace-home-sharing-head"><h3>Partage</h3><button class="linkbtn" id="shareOpen" aria-label="Ouvrir le détail du partage">Détails</button></div>
       <button class="card share-card" id="shareCard" style="width:100%;text-align:left;border:1px solid rgba(18,63,56,.06)">
         <span class="share-avatar" id="partnerAvatar">É</span>
         <span class="share-main"><b id="shareLabel">Solde avec votre partenaire</b><strong id="shareBalance">—</strong><small id="shareSmall">Solde continu</small></span>
         <span class="chev">›</span>
       </button>
+      </div>
     </section>
 
     <section class="page" data-page="budget">
@@ -193,10 +200,10 @@
         </div>
         <button class="budget-current-link hidden" id="budgetCurrentMonth" type="button">Ce mois</button>
       </div>
-      <article class="card hero-card budget-hero-card" style="min-height:150px">
+      <article class="card hero-card budget-hero-card">
         <div class="budget-hero-top">
           <div class="label" id="budgetHeroLabel">Budget mensuel</div>
-          <button class="budget-copy-chip" id="budgetCopyPrevious" type="button">
+          <button class="budget-copy-chip" id="budgetCopyPrevious" type="button" aria-label="Recopier le budget du mois précédent">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
             <span>Reprendre septembre</span>
           </button>
@@ -205,14 +212,20 @@
         <div class="sub" id="budgetHeroSub">—</div>
       </article>
       <div id="budgetSections"></div>
-      <div class="section-head"><h2>Mes dépenses réelles</h2><small>Voir où passe le budget</small></div>
-      <article class="card" id="budgetCategoryImpact"></article>
+      <article class="card" id="budgetCategoryImpact" aria-label="Où va mon argent ?"></article>
       <div class="section-head"><h2>Mon année en clair</h2><button class="linkbtn" id="annualBudgetDetails">Détails</button></div>
-      <article class="card clickable" id="annualBudgetCard"><div class="chart" id="annualBudgetChart"></div><div class="legend"><span><i class="dot light"></i>Budget</span><span><i class="dot dark"></i>Réel</span></div></article>
+      <article class="card trace-budget-annual-card" id="annualBudgetCard"><div class="chart" id="annualBudgetChart"></div></article>
     </section>
 
     <section class="page" data-page="activity">
-      <div class="hero-row"><div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title">Activité</h1></div></div>
+      <div class="hero-row trace-activity-heading">
+        <div><div class="eyebrow" id="activityMonthLabel">Mois</div><h1 class="title" id="activityPageTitle">Activité</h1></div>
+        <button type="button" class="trace-activity-calendar-access" id="activityImportCalendar" aria-label="Ouvrir le calendrier de suivi des imports">
+          <span class="trace-activity-calendar-symbol" aria-hidden="true">▦</span>
+          <span>Calendrier des imports</span>
+          <span class="trace-activity-calendar-chevron" aria-hidden="true">›</span>
+        </button>
+      </div>
       <div class="budget-context-row trace-activity-period" id="activityPeriodControl">
         <div class="budget-month-nav">
           <button type="button" id="activityPrevMonth" aria-label="Mois précédent" class="period-arrow">
@@ -229,11 +242,46 @@
         </div>
         <button type="button" id="activityCurrentMonth" class="budget-current-link hidden">Ce mois</button>
       </div>
-      <div class="tabs" id="activityTabs">
-        <button class="tab active" data-tab="transactions">Transactions</button>
-        <button class="tab" data-tab="import">Importer</button>
+      <div class="tabs trace-activity-main-tabs" id="activityTabs" role="tablist" aria-label="Rubriques de l’activité">
+        <button class="tab active" id="activityTabTransactions" data-tab="transactions" role="tab" aria-controls="activityTransactions" aria-selected="true" tabindex="0">Transactions</button>
+        <button class="tab" id="activityTabReview" data-tab="review" role="tab" aria-controls="activityReview" aria-selected="false" tabindex="-1">À valider</button>
+        <button class="tab" id="activityTabSharing" data-tab="sharing" role="tab" aria-controls="activitySharing" aria-selected="false" tabindex="-1">Partage</button>
       </div>
-      <div id="activityTransactions">
+      <div id="activityTransactions" aria-labelledby="activityTabTransactions" role="tabpanel" aria-label="Historique des opérations">
+        <details class="trace-activity-filter-drawer" id="activityAdvancedFilters">
+          <summary>Filtres <span class="trace-filter-hint" id="activityFilterHint">Compte, catégorie, nature, devise, statut</span></summary>
+        <div class="trace-activity-filters" aria-label="Filtres des transactions">
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityAccountFilterTitle">Compte</span>
+            <select class="input trace-activity-native-select" id="activityAccountFilter" aria-labelledby="activityAccountFilterTitle"><option value="all">Tous les comptes</option></select>
+            <div class="trace-activity-filter-chips" id="activityAccountFilterChips" role="group" aria-labelledby="activityAccountFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityCategoryFilterTitle">Catégorie</span>
+            <select class="input trace-activity-native-select" id="activityCategoryFilter" aria-labelledby="activityCategoryFilterTitle"><option value="all">Toutes les catégories</option></select>
+            <div class="trace-activity-filter-chips" id="activityCategoryFilterChips" role="group" aria-labelledby="activityCategoryFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityNatureFilterTitle">Nature</span>
+            <select class="input trace-activity-native-select" id="activityNatureFilter" aria-labelledby="activityNatureFilterTitle"><option value="all">Toutes les natures</option></select>
+            <div class="trace-activity-filter-chips" id="activityNatureFilterChips" role="group" aria-labelledby="activityNatureFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityCurrencyFilterTitle">Devise du compte</span>
+            <select class="input trace-activity-native-select" id="activityCurrencyFilter" aria-labelledby="activityCurrencyFilterTitle"><option value="all">Toutes les devises</option></select>
+            <div class="trace-activity-filter-chips" id="activityCurrencyFilterChips" role="group" aria-labelledby="activityCurrencyFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-field">
+            <span class="trace-activity-filter-title" id="activityStatusFilterTitle">Statut</span>
+            <select class="input trace-activity-native-select" id="activityStatusFilter" aria-labelledby="activityStatusFilterTitle"><option value="confirmed">Confirmées</option></select>
+            <div class="trace-activity-filter-chips" id="activityStatusFilterChips" role="group" aria-labelledby="activityStatusFilterTitle"></div>
+          </div>
+          <div class="trace-activity-filter-actions">
+            <button type="button" class="linkbtn" id="activityResetFilters" aria-label="Réinitialiser tous les filtres">Réinitialiser</button>
+          </div>
+        </div>
+        </details>
+        <div id="activityAppliedFilters" class="trace-activity-applied-filters" role="group" aria-label="Filtres actifs" hidden></div>
         <div class="activity-stats">
           <div class="statbox"><span>Dépenses</span><b id="activityExpenses">—</b></div>
           <div class="statbox"><span>Revenus</span><b id="activityIncome">—</b></div>
@@ -241,20 +289,41 @@
         </div>
         <article class="card" id="transactionList"></article>
       </div>
-      <div id="activityImport" class="hidden">
+      <div id="activityReview" aria-labelledby="activityTabReview" class="hidden" role="tabpanel" aria-label="Opérations à valider">
+        <div class="trace-activity-review-intro">
+          <h2>Opérations à vérifier</h2>
+          <p>Retrouve toutes tes opérations en attente, même celles des mois précédents. Les consulter ne crée aucun mouvement financier.</p>
+        </div>
+        <label class="trace-review-account-label" for="activityReviewAccountFilter">Compte bancaire<select id="activityReviewAccountFilter" class="input" aria-label="Filtrer les opérations à valider par compte"><option value="all">Tous mes comptes</option></select></label>
+        <div id="importPendingTransactions" aria-label="Transactions enregistrées à compléter"></div>
+      </div>
+      <div id="activityImport" class="hidden" role="region" aria-label="Importer des opérations" data-import-mode="daily">
+        <div class="trace-import-workspace-header"><button type="button" id="activityImportBack" class="linkbtn">‹ Retour aux transactions</button></div>
+        <div class="trace-import-workspace-modes" role="group" aria-label="Type d'import">
+          <button type="button" id="traceImportDaily" class="is-active" aria-pressed="true">Opérations quotidiennes</button>
+          <button type="button" id="traceImportMonthly" aria-pressed="false">Relevé mensuel</button>
+        </div>
+        <div id="traceImportAccountSelection" class="trace-import-account-selection" hidden></div>
         <input type="file" id="importFile" accept=".csv,.pdf,image/*,text/csv,application/pdf" multiple hidden>
-        <div id="importPendingTransactions" class="hidden" aria-label="Transactions enregistrées à compléter"></div>
         <div id="importCalendar" aria-label="Suivi des journées et imports"></div>
         <details class="trace-import-secondary" id="importDrop">
           <summary><span class="trace-import-secondary-icon">▤</span><span><strong>Contrôle mensuel ou import CSV</strong><small>Relevé PDF, CSV ou import sans journée prédéfinie</small></span><span class="trace-import-secondary-chevron">⌄</span></summary>
           <div class="trace-import-secondary-content">
-            <p>À la fin du mois, importe ton relevé bancaire pour repérer les opérations éventuellement manquantes. Les captures quotidiennes se font depuis le calendrier ci-dessus.</p>
+            <p>Les captures quotidiennes se font depuis le calendrier. Le bouton ci-dessous importe actuellement des fichiers CSV : la lecture automatique fiable des PDF n’est pas encore disponible.</p>
             
             <button class="secondary full" type="button" id="chooseImport">Choisir un document</button>
           </div>
         </details>
+        <details class="trace-import-secondary trace-statement-drawer" id="traceStatementDrawer">
+          <summary><span class="trace-import-secondary-icon">▤</span><span><strong>Contrôle mensuel PDF · revue manuelle sécurisée</strong><small>Compare les opérations sans modifier ton budget</small></span><span class="trace-import-secondary-chevron">⌄</span></summary>
+          <div class="trace-import-secondary-content">
+            <div id="traceStatementControl" aria-label="Revue de relevé PDF mensuel"></div>
+          </div>
+        </details>
         <div id="importResult" style="margin-top:14px"></div>
+
       </div>
+      <div id="activitySharing" aria-labelledby="activityTabSharing" class="hidden" role="tabpanel" aria-label="Partage du couple et des proches"></div>
     </section>
 
     <section class="page" data-page="wealth">
@@ -262,9 +331,26 @@
         <div><div class="eyebrow">Patrimoine</div><h1 class="title">Mes actifs</h1></div>
         <div class="segment" id="wealthScope"><button class="seg active" data-scope="mine">Moi</button><button class="seg" data-scope="couple">Couple</button></div>
       </div>
-      <article class="card hero-card" style="min-height:160px"><div class="label">Patrimoine suivi</div><div class="big" id="wealthTotal">—</div><div class="sub" id="wealthSub">Liquidités, épargne et investissements</div></article>
-      <div class="section-head"><h2>Comptes</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
-      <div class="portfolio-grid" id="assetGrid"></div>
+      <section class="trace-wealth-overview" aria-label="Patrimoine net estimé">
+        <article class="card hero-card trace-wealth-net-card">
+          <div class="label">Patrimoine net estimé</div>
+          <div class="big" id="wealthTotal">—</div>
+          <div class="sub" id="wealthSub">Liquidités, épargne, placements et dettes</div>
+          <p class="trace-wealth-note">Valorisation indicative : certains placements ne sont pas immédiatement disponibles. Tout solde ou taux manquant reste à vérifier.</p>
+        </article>
+      </section>
+      <section class="trace-wealth-section" aria-label="Épargne">
+        <div class="section-head trace-wealth-section-head"><h2>Épargne</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
+        <div class="portfolio-grid trace-wealth-grid" id="wealthSavingsGrid"></div>
+      </section>
+      <section class="trace-wealth-section" aria-label="Placements">
+        <div class="section-head trace-wealth-section-head"><h2>Placements</h2></div>
+        <div class="portfolio-grid trace-wealth-grid" id="wealthInvestmentsGrid"></div>
+      </section>
+      <section class="trace-wealth-net-section" aria-label="Trésorerie et comptes">
+        <div class="section-head trace-wealth-section-head"><h2>Trésorerie et comptes</h2></div>
+        <div class="portfolio-grid trace-wealth-grid" id="assetGrid"></div>
+      </section>
       <div class="section-head"><h2>Comprendre mon patrimoine</h2><button class="linkbtn" id="wealthAnalysis">Détails</button></div>
       <article class="card clickable" id="wealthChart"><div class="chart" id="wealthTrend"></div><div class="legend"><span><i class="dot dark"></i>Patrimoine</span></div></article>
     </section>
@@ -326,26 +412,50 @@
 <input id="traceSmartFiles" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.heic,.heif" multiple hidden>
 <div id="traceSmartOverlay" class="trace-smart-overlay hidden"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=5.2.2"></script>
+<script src="trace-premium-panels-5.37.0.js"></script>
+
+
+<script src="trace-deferred-debit-1.0.0.js"></script>
+<script src="trace-deferred-bank-review-1.0.0.js"></script>
+<script src="trace-deferred-lab-ui-1.0.0.js"></script>
+<script src="trace-international-1.0.0.js"></script>
+<script src="trace-deferred-write-plan-1.0.0.js"></script>
+<script src="trace-deferred-purchase-evidence-1.0.0.js"></script>
+<script src="trace-deferred-evidence-intake-1.0.0.js"></script>
+<script src="trace-deferred-evidence-lab-1.0.0.js"></script>
+<script src="trace-international-ui-1.0.0.js"></script>
+<script src="trace-statement-reconcile-1.0.0.js"></script>
+<script src="trace-statement-evidence-1.0.0.js"></script>
+<script src="trace-deferred-statement-bridge-1.0.0.js"></script>
+<script src="trace-deferred-statement-review-ui-1.0.0.js"></script>
+<script src="trace-statement-pdf-text-1.0.0.js"></script>
+<script src="trace-statement-pdfjs-adapter-1.0.0.js"></script>
+<script type="module" src="trace-pdfjs-local-loader-1.0.0.mjs"></script>
+<script src="trace-statement-monthly-ui-1.0.0.js"></script>
 <script src="trace-email-confirmation-1.0.0.js"></script>
 <script src="trace-movement-5.36.0.js"></script>
 <script src="trace-import-guide-1.2.1.js"></script>
-<script src="trace-operation-ui-1.0.0.js"></script>
-<script src="trace-insights-1.0.0.js"></script>
+<script src="trace-operation-ui-5.37.0.js"></script>
+<script src="trace-insights-5.37.0.js"></script>
 <script src="trace-card-payment-detail-1.0.0.js"></script>
 <script src="trace-duplicate-compare-1.0.0.js"></script>
- <script src="v5-app-5.36.5.js"></script>
+ <script src="trace-friend-debtor-ui-1.0.0.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=5.37.0"></script>
+<script src="trace-20-fresh-start-1.0.0.js"></script>
+ <script>window.__TRACE20_FRESH_START_REQUIRED__=true;</script>
+<script src="v5-app-5.37.0.js"></script>
 <script src="trace-bank-doc-1.11.1.js"></script>
-<script src="trace-bank-ui-2.8.1.js"></script>
-<script src="trace-import-calendar-2.1.2.js"></script>
-<script src="trace-smart-inbox-3.4.2.js"></script>
+<script src="trace-bank-ui-5.37.0.js"></script>
+<script src="trace-import-calendar-5.37.0.js"></script>
+<script src="trace-smart-inbox-3.5.0.js"></script>
 <script src="onboarding-2.0.3.js"></script>
 <script src="trace-reminders-1.0.0.js"></script>
 <script src="trace-swipe-1.1.0.js"></script>
 <script src="trace-separation-1.1.0.js"></script>
  <script src="trace-household-change-1.0.0.js"></script>
-<script src="trace-install-1.1.0.js"></script>
+
+
 <script>
 if('serviceWorker' in navigator){
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{

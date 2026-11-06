@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.36.5",
-  "release": "show-existing-transaction-details-during-duplicate-review"
+  "build": "5.37.0",
+  "release": "trace-2-0-activity-fresh-start-budget-wealth-carried-forward"
 }
