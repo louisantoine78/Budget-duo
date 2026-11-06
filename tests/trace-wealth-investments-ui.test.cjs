@@ -360,7 +360,7 @@ test('read-only compatibility explainer stays folded unless opened and uses fict
  assert.equal(bullets.length,5);
  assert.match(bullets[0],/1 compte/);
  assert.match(bullets[1],/3 opérations fictives/);
- assert.match(bullets[2],/aucune écriture supplémentaire/);
+ assert.match(bullets[2],/sans écriture supplémentaire/);
  assert.match(bullets[3],/cotation mise en attente/);
  assert.match(bullets[4],/concordants/);
  assert.match(report.children[2].textContent,/ne consulte aucun compte/);
