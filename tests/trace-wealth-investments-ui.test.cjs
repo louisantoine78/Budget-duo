@@ -113,9 +113,11 @@ test('contextual buy/sell and simplified glance are available directly in a posi
  assert.match(screen,/data-act="quickSell" data-id="dsy"/);
  assert.match(screen,/Saisir un cours/);
  assert.match(screen,/Modifier la fiche/);
- assert.match(list,/8 lignes/);
- assert.match(list,/6 actions/);
- assert.match(list,/2 ETF/);
+ assert.match(list,/data-act="positionFilter" data-id="all"/);
+ assert.match(list,/data-act="positionFilter" data-id="Action"/);
+ assert.match(list,/data-act="positionFilter" data-id="ETF"/);
+ assert.match(list,/Actions <b>6<\/b>/);
+ assert.match(list,/ETF <b>2<\/b>/);
  assert.match(list,/Cours à compléter/);
  assert.match(home,/Analyses/);
  assert.doesNotMatch(home,/Vue rapide/);
@@ -132,4 +134,17 @@ test('transaction form includes segmented operation types and non-mutating finan
  assert.match(js,/Simulation locale uniquement/);
  assert.match(css,/\.wl-op-kinds/);
  assert.match(css,/\.wl-op-preview/);
+});
+
+test('position filters show the correct securities without losing underlying portfolio data',()=>{
+ const etf=U.portfolio(p,'ETF'),shares=U.portfolio(p,'Action');
+ assert.match(etf,/Amundi PEA S&amp;P 500/);
+ assert.match(etf,/BNP STOXX Europe 600/);
+ assert.doesNotMatch(etf,/Dassault Systèmes/);
+ assert.doesNotMatch(etf,/TUI AG/);
+ assert.match(shares,/Dassault Systèmes/);
+ assert.match(shares,/Sanofi/);
+ assert.doesNotMatch(shares,/Amundi PEA S&amp;P 500/);
+ assert.match(etf,/aria-pressed="true">ETF/);
+ assert.equal(E.evaluate(p).positions.length,8);
 });
