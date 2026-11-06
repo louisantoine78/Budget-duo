@@ -53,6 +53,10 @@ function operationPreview(form,old){
    (trade?'<div class="wl-preview-meta">Ordre : '+U.fmt(gross,curr)+' · Frais : '+
     U.fmt(op.feeCents,curr)+' · Quantité détenue après : '+U.qty(result.quantityAfterMicro)+'</div>':
     '<div class="wl-preview-meta">Apports nets après : '+U.fmt(E.evaluate(result.candidate).netFlowCents,curr)+'</div>')+
+   (type==='sell'?'<div class="wl-preview-meta wl-preview-gain">'+
+    (old?'Écart sur le gain réalisé : ':'Gain réalisé estimé : ')+
+    U.fmt(result.deltaRealizedCents,curr)+'</div>':'')+
+   (!current().openingCashConfirmed?'<p class="wl-muted-small">Attention : les espèces de départ sont une estimation à confirmer.</p>':'')+
    (old?'<p class="wl-muted-small">Prévisualisation de la correction du journal complet.</p>':'')+
    '<span class="wl-preview-safe">Simulation locale uniquement · aucun ordre envoyé</span>';
   node.setAttribute('data-valid','true');
@@ -142,7 +146,7 @@ function sheet(kind,id='',preset={}){
   body='<p class="wl-op-summary">'+U.e(s.name)+' · aucune connexion boursière dans ce laboratoire.</p>'+
    field('unitPrice','Dernier cours ('+p.currency+')',priceInput(q?.priceUnits),'text','required inputmode="decimal"')+
    paired(field('date','Date du cours',q?.date||date(),'date','required'),
-    select('kind','Type',[['manuel','Manuel'],['clôture','Clôture vérifiée'],['différé','Différé vérifié']],'manuel'))+
+    select('kind','Type',[['manuel','Manuel'],['clôture','Clôture vérifiée'],['différé','Différé vérifié']],q?.kind||'manuel'))+
    field('source','Source du prix',q?.source||'Saisie manuelle','text','required')+
    note('Un cours manuel n’est jamais présenté comme temps réel.');
  }else if(kind==='strategy'){
