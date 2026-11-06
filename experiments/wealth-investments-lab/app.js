@@ -40,6 +40,27 @@ function go(next,id=''){
 function sheet(kind,id=''){
  const p=current(),s=catalog(id),old=p.operations.find(o=>o.id===id);
  let heading='',body='';
+ if(kind==='viewSnapshot'){
+  const snap=p.snapshots?.find(s=>s.date===id);
+  if(!snap)return;
+  $('wl-dialog-title').textContent='Valorisation du '+U.date(snap.date);
+  const evidence=Array.isArray(snap.evidence)?snap.evidence:[];
+  $('wl-dialog-body').innerHTML='<div class="wl-card wl-analytics">'+
+   '<span class="wl-kicker">VALEUR ENREGISTRÉE</span>'+
+   '<div class="wl-perf">'+U.fmt(snap.valueCents,p.currency)+'</div>'+
+   '<p class="wl-muted-small">'+U.e(snap.source||'Source non documentée')+'</p>'+
+   '<p class="wl-muted-small">'+(snap.estimated?'Estimation sur les derniers cours connus à cette date.':
+   evidence.length?'Cours disponibles à cette date.':'Valeur de référence fournie, non reconstituée à partir de cotations.')+'</p></div>'+
+   (evidence.length?'<div class="wl-section"><div class="wl-section-head"><h2>Justificatifs de cours</h2></div>'+
+    '<div class="wl-card wl-analytics">'+evidence.map(entry=>{
+     const sec=p.catalog.find(s=>s.id===entry.securityId);
+     return '<div class="wl-snapshot-source"><span class="wl-row-icon">↗</span>'+
+      '<span><b>'+U.e(sec?.name||entry.securityId)+'</b>'+
+      '<small>'+U.date(entry.quoteDate)+' · '+U.e(entry.source)+' · '+U.e(entry.kind)+'</small></span></div>';
+    }).join('')+'</div></div>':
+    '<p class="wl-note">Cette référence ne prouve pas les cours individuels ni les plus-values du portefeuille.</p>');
+  $('wl-dialog').showModal();return;
+ }
  if(kind==='newPortfolio'){
   heading='Créer un portefeuille';
   body=field('name','Nom du portefeuille','','text','required maxlength="70"')+
@@ -185,7 +206,7 @@ document.addEventListener('click',event=>{
  else if(a==='position'){securityId=id;go('position');}
  else if(a==='analytics')go('analytics');
  else if(a==='range'){range=id;render();}
- else if(['newPortfolio','newSecurity','opening','quote','strategy','snapshot','newOp','editOp'].includes(a))sheet(a,id);
+ else if(['newPortfolio','newSecurity','opening','quote','strategy','snapshot','newOp','editOp','viewSnapshot'].includes(a))sheet(a,id);
 });
 $('wl-close').addEventListener('click',()=>$('wl-dialog').close());
 $('wl-dialog').addEventListener('click',event=>{if(event.target===$('wl-dialog'))$('wl-dialog').close();});
