@@ -182,12 +182,20 @@ function analytics(p,range){
  section('Actions, ETF et autres','<div class="wl-card wl-analytics">'+(assetReady?
  Object.entries(byAsset).map(([type,n])=>'<div class="wl-history-row"><b>'+e(type)+'</b><b>'+percent(n/v.securitiesCents)+'</b></div>').join(''):
  placeholder('Les poids par classe nécessitent une valorisation complète.'))+'</div>')+
- section('Secteurs et géographie','<div class="wl-card wl-analytics">'+(sectorReady?
+ section('Répartition sectorielle','<div class="wl-card wl-analytics">'+(sectorReady?
  Object.entries(bySector).map(([s,n])=>'<div class="wl-history-row"><b>'+e(s)+'</b><b>'+percent(n/v.securitiesCents)+'</b></div>').join(''):
  placeholder('Classe les titres et ajoute leurs cours pour une allocation fiable.'))+'</div>')+
  section('Répartition géographique','<div class="wl-card wl-analytics">'+(geographyReady?
  Object.entries(byGeography).map(([g,n])=>'<div class="wl-history-row"><b>'+e(g)+'</b><b>'+percent(n/v.securitiesCents)+'</b></div>').join(''):
  placeholder('Géographies à renseigner pour chaque position.'))+'</div>')+
+ section('Relevés & sources','<div class="wl-card wl-snapshot-list">'+
+ (p.snapshots?.length?p.snapshots.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s=>
+ '<button type="button" class="wl-row" data-act="viewSnapshot" data-id="'+e(s.date)+'">'+
+ '<span class="wl-row-left"><span class="wl-row-icon">↗</span><span class="wl-row-label"><b>'+e(date(s.date))+'</b>'+
+ '<small>'+e(s.source||'Source à vérifier')+'</small></span></span>'+
+ '<span class="wl-row-value"><b>'+fmt(s.valueCents,p.currency)+'</b>'+
+ '<small>'+(Array.isArray(s.evidence)&&s.evidence.length?'Voir les cours':'Référence fournie')+' →</small></span></button>').join(''):
+ '<p class="wl-empty">Aucun relevé enregistré</p>')+'</div>')+
  section('Indice de référence',placeholder('Comparaison indisponible sans historique de l’indice, devise et méthodologie cohérentes.'));
 }
 window.TraceWealthLabUI=Object.freeze({e,fmt,qty,date,action,overview,portfolio,position,analytics,ref});
