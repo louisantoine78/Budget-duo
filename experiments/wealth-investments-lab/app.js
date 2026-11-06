@@ -3,7 +3,7 @@
 const E=window.TraceWealthLabEngine,U=window.TraceWealthLabUI;
 if(!E||!U)throw Error('Laboratoire Investissements incomplet.');
 const $=id=>document.getElementById(id);
-let model=E.demo(),route='overview',portfolioId='pea-demo',securityId='',range='all',positionFilter='all',serial=0,notice='';
+let model=E.demo(),route='overview',portfolioId='pea-demo',securityId='',range='all',chartMetric='value',chartFocus='',positionFilter='all',serial=0,notice='';
 const current=()=>model.portfolios.find(p=>p.id===portfolioId);
 const catalog=id=>current().catalog.find(s=>s.id===id);
 const date=()=>new Date().toISOString().slice(0,10);
@@ -78,7 +78,7 @@ function render(){
  $('wl-crumb').innerHTML=breadcrumb();
  const p=current();
  $('wl-main').innerHTML=route==='overview'?U.overview(model):
-  route==='portfolio'?U.portfolio(p,positionFilter):route==='position'?U.position(p,securityId):U.analytics(p,range);
+  route==='portfolio'?U.portfolio(p,positionFilter):route==='position'?U.position(p,securityId):U.analytics(p,range,chartMetric,chartFocus);
  if(notice){const div=document.createElement('div');div.className='wl-warning';div.textContent=notice;$('wl-main').prepend(div);notice='';}
 }
 function go(next,id=''){
@@ -268,7 +268,9 @@ document.addEventListener('click',event=>{
  else if(a==='portfolio')go('portfolio',id);
  else if(a==='position'){securityId=id;go('position');}
  else if(a==='analytics')go('analytics');
- else if(a==='range'){range=id;render();}
+ else if(a==='range'){range=id;chartFocus='';render();}
+ else if(a==='trendMetric'){chartMetric=id==='flows'?'flows':'value';render();}
+ else if(a==='trendPoint'){chartFocus=id;render();}
  else if(a==='positionFilter'){positionFilter=id;render();}
  else if(a==='quickBuy'||a==='quickSell'){
   sheet('newOp','',{type:a==='quickBuy'?'buy':'sell',securityId:id});
