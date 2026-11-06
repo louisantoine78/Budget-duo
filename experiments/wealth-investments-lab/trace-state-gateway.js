@@ -34,6 +34,20 @@
     throw Error('Opération absente, anonyme ou en doublon.');
    operationIds.add(o.id);
   }
+  // One confirmed banking transfer must not finance two separate portfolio
+  // movements silently. Any affected envelope is withheld from detail preview.
+  const bankLinkMap=new Map(),duplicateBankAccountIds=new Set();
+  for(const operation of snapshot.investmentOperations){
+   if(!operation||operation.status&&operation.status!=='confirmed'||
+      !['deposit','withdrawal'].includes(operation.type)||
+      typeof operation.linkedTransactionId!=='string'||
+      !operation.linkedTransactionId.trim())continue;
+   const link=operation.linkedTransactionId.trim();
+   if(bankLinkMap.has(link)){
+    duplicateBankAccountIds.add(operation.accountId);
+    duplicateBankAccountIds.add(bankLinkMap.get(link));
+   }else bankLinkMap.set(link,operation.accountId);
+  }
   const owners=options.scope==='couple'?new Set(['la','partner']):new Set([options.viewerOwner]);
   const portfolios=[],review=[],excluded=[],summary=[];
   const selected=snapshot.investmentAccounts.filter(a=>!a.archived&&owners.has(a.owner));
@@ -42,6 +56,12 @@
    if(account.savingsTracking==='linked'||SAVINGS.has(account.type)){
     excluded.push({accountId:account.id,name:String(account.name||account.type),
      owner:account.owner,reason:'Compte maintenu dans Épargne (classification TRACE existante)'});
+    continue;
+   }
+   if(duplicateBankAccountIds.has(account.id)){
+    review.push({accountId:account.id,name:String(account.name||account.type),
+     owner:account.owner,status:'duplicate-bank-transfer-link',
+     reasons:['Virement bancaire associé à plusieurs opérations : vérification nécessaire avant tout affichage détaillé']});
     continue;
    }
    const result=Bridge.build(account,snapshot.investmentOperations);
