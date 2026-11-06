@@ -301,12 +301,17 @@ test('native Patrimoine dialog opens without iframe and switches scoped fictiona
  const scope={events:{},addEventListener(k,cb){this.events[k]=cb;},querySelectorAll(){return scopeButtons;}};
  const total={textContent:'—'},sub={textContent:'Liquidités, épargne, placements et dettes'},msg={textContent:''};
  const diag={textContent:'',hidden:true};
+ const review={hidden:true,open:false};
+ const reviewList={children:[],replaceChildren(){this.children=[];},
+  appendChild(child){this.children.push(child);}};
  const nodes={wealthInvestmentsGrid:grid,wealthSavingsGrid:{},assetGrid:{},
   wealthTotal:total,wealthTrend:{},wlWealthDetail:popup,wlPortalScenarios:scenarios,
-  wlGatewayDiagnostics:diag,wlScenarioNotice:msg,wlPortalClose:close,wealthScope:scope,wealthSub:sub};
+  wlGatewayDiagnostics:diag,wlGatewayReview:review,wlGatewayReviewList:reviewList,
+  wlScenarioNotice:msg,wlPortalClose:close,wealthScope:scope,wealthSub:sub};
  const doc={activeElement:origin,
   getElementById:k=>k==='traceWealthInvestmentDetailEntry'?children.find(x=>x.id===k)||null:nodes[k]||null,
-  createElement:()=>({attrs:{},events:{},setAttribute(k,v){this.attrs[k]=v;},
+  createElement:()=>({attrs:{},events:{},children:[],setAttribute(k,v){this.attrs[k]=v;},
+   appendChild(child){this.children.push(child);},
    addEventListener(k,cb){this.events[k]=cb;},removeEventListener(k){delete this.events[k];}})};
  const loaded=[];
  const runtime={activateScenario(model){
@@ -342,11 +347,18 @@ test('native Patrimoine dialog opens without iframe and switches scoped fictiona
  assert.equal(diag.hidden,false);
  assert.match(diag.textContent,/1 portefeuille/);
  assert.match(diag.textContent,/1 compte\(s\) à vérifier/);
+ assert.equal(review.hidden,false);
+ assert.equal(reviewList.children.length,2);
+ assert.match(reviewList.children[0].children[0].textContent,/CTO à initialiser/);
+ assert.match(reviewList.children[0].children[1].textContent,/état initial/);
+ assert.match(reviewList.children[1].children[0].textContent,/Livret fictif/);
  scope.events.click({target:{closest:()=>scopeButtons[1]}});
  assert.equal(loaded.length,4);
  assert.deepEqual(loaded[3].portfolios.map(x=>x.id),['sample-pea','sample-reer']);
  assert.equal(loaded[3].readOnly,true);
  assert.match(diag.textContent,/EUR \/ CAD/);
+ assert.equal(reviewList.children.length,3);
+ assert.match(reviewList.children[1].children[0].textContent,/CELI épargne fictif/);
  close.events.click();
  assert.equal(popup.opened,false);
  assert.equal(origin.focused,1);
