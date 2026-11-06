@@ -391,3 +391,47 @@ test('read-only compatibility explainer stays folded unless opened and uses fict
  assert.match(report.children[2].textContent,/ne consulte aucun compte/);
  assert.match(report.children[2].textContent,/accord/);
 });
+
+test('native laboratory controller clones demo input, switches scenarios and scrolls only detail panel',()=>{
+ const events={},nodes={
+  'wl-crumb':{innerHTML:''},
+  'wl-main':{innerHTML:'',prepend(){}},
+  'wl-close':{addEventListener(){}},
+  'wl-dialog':{addEventListener(){}},
+  'wlNativeScroll':{scrollTop:75},
+  'wl-native-root':{}
+ };
+ const document={
+  getElementById:id=>nodes[id]||null,
+  addEventListener:(k,fn)=>events[k]=fn,
+  createElement:()=>({textContent:'',className:''}),
+  documentElement:{classList:{contains(){return false;}}}
+ };
+ const host={TraceWealthLabEngine:E,TraceWealthLabUI:U};
+ const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ vm.runInNewContext(js,{window:host,document,Intl,Date,console,URLSearchParams,JSON});
+ assert.equal(typeof host.TraceWealthLabRuntime?.activateScenario,'function');
+ const alternative=E.demo();
+ alternative.portfolios[0].name='Portefeuille de démonstration alternatif';
+ host.TraceWealthLabRuntime.activateScenario(alternative);
+ assert.match(nodes['wl-main'].innerHTML,/Portefeuille de démonstration alternatif/);
+ assert.equal(nodes.wlNativeScroll.scrollTop,0);
+ alternative.portfolios[0].name='Nom muté après clonage';
+ assert.doesNotMatch(nodes['wl-main'].innerHTML,/Nom muté après clonage/);
+ const invalid={portfolios:[{id:'bad'}]};
+ assert.throws(()=>host.TraceWealthLabRuntime.activateScenario(invalid),/Portefeuille invalide/);
+ assert.match(nodes['wl-main'].innerHTML,/Portefeuille de démonstration alternatif/);
+ const legacy=require(path.join(root,'legacy-bridge.js'));
+ const acc={id:'legacy',name:'Compte fictif',type:'PEA',currency:'EUR',owner:'la'};
+ const docs=[
+  {id:'one',accountId:'legacy',type:'deposit',date:'2026-11-01',amount:1000},
+  {id:'two',accountId:'legacy',type:'buy',date:'2026-11-02',symbol:'DEMO',quantity:2,unitPrice:120,fee:2}
+ ];
+ const adapted=legacy.build(acc,docs);
+ assert.equal(adapted.status,'reconciliation-required');
+ host.TraceWealthLabRuntime.activateScenario({portfolios:[adapted.portfolio],selectedId:'legacy'});
+ assert.match(nodes['wl-main'].innerHTML,/Compte fictif/);
+ assert.match(nodes['wl-main'].innerHTML,/758,00/);
+ assert.doesNotMatch(nodes['wl-main'].innerHTML,/3.788,69/);
+ assert.equal(docs.length,2);
+});
