@@ -66,7 +66,11 @@ function operationPreview(form,old){
    '<p class="wl-preview-error">'+U.e(error.message||'Opération incohérente')+'</p>';
  }
 }
-function replacePortfolio(p){E.evaluate(p);model.portfolios=model.portfolios.map(x=>x.id===p.id?p:x);}
+function mutationBlocked(){return model.readOnly===true||current()?.readOnly===true;}
+function requireEditable(){
+ if(mutationBlocked())throw Error('Lecture seule : ce compte TRACE de démonstration ne peut pas être modifié.');
+}
+function replacePortfolio(p){requireEditable();E.evaluate(p);model.portfolios=model.portfolios.map(x=>x.id===p.id?p:x);}
 function breadcrumb(){
  const embedded=document.documentElement?.classList?.contains('wl-embedded')===true||
   Boolean(document.getElementById('wl-native-root'));
@@ -94,6 +98,7 @@ function go(next,id=''){
  else window.scrollTo({top:0,behavior:'auto'});
 }
 function sheet(kind,id='',preset={}){
+ if(kind!=='viewSnapshot'){requireEditable();}
  const p=current(),s=catalog(id),old=p.operations.find(o=>o.id===id);
  let heading='',body='';
  if(kind==='viewSnapshot'){
@@ -215,6 +220,7 @@ function sheet(kind,id='',preset={}){
 function save(kind,id,fd){
  const p=current(),read=k=>get(fd,k);
  try{
+  requireEditable();
   if(kind==='newPortfolio'){
    const name=read('name');if(!name||name.length>70)throw Error('Nom de portefeuille requis');
    const next={id:'p-'+(++serial)+'-'+Date.now(),name,type:read('type'),owner:read('owner'),currency:read('currency'),
@@ -276,6 +282,7 @@ function activateScenario(seed){
  // Clone first so a simulated operation never mutates the source ledger.
  const copy=JSON.parse(JSON.stringify(seed));
  for(const portfolio of copy.portfolios)E.evaluate(portfolio);
+ if(copy.readOnly===true)copy.portfolios.forEach(p=>p.readOnly=true);
  model=copy;portfolioId=copy.portfolios.some(p=>p.id===copy.selectedId)?
   copy.selectedId:copy.portfolios[0].id;
  route='overview';securityId='';range='all';chartMetric='value';chartFocus='';positionFilter='all';notice='';
@@ -288,6 +295,11 @@ window.TraceWealthLabRuntime=Object.freeze({activateScenario});
 document.addEventListener('click',event=>{
  const el=event.target.closest('[data-act]');if(!el)return;
  const a=el.dataset.act,id=el.dataset.id||'';
+ if((model.readOnly===true||current()?.readOnly===true)&&
+  ['quickBuy','quickSell','newPortfolio','newSecurity','opening','quote','strategy','snapshot','newOp','editOp'].includes(a)){
+  notice='Lecture seule : compte de démonstration issu du modèle TRACE, sans modification autorisée.';
+  render();return;
+ }
  if(a==='home')go('overview');
  else if(a==='portfolio')go('portfolio',id);
  else if(a==='position'){securityId=id;go('position');}
