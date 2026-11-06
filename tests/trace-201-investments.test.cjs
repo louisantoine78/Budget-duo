@@ -134,3 +134,34 @@ test('portfolio edits and correction actions are structurally available but sour
  assert.match(main,/await saveDocument\('investment_accounts',next\)/);
  assert.doesNotMatch(code,/\bSupabase\b.*createClient|localStorage\.setItem/);
 });
+
+
+test('dated broker-reported valuations yield true chart points, never fabricated market quotes',()=>{
+ let p=started();
+ p.snapshots=[
+  {date:'2026-11-02',valueCents:30000,source:'Relevé du 02 novembre'},
+  {date:'2026-11-04',valueCents:30100,source:'Relevé du 04 novembre'}
+ ];
+ assert.equal(E.chartSeries(p,'all').ready,true);
+ assert.equal(E.chartSeries(p,'all').points[1].valueCents,30100);
+ assert.equal(E.chartSeries(p,'all').points[1].source,'Relevé du 04 novembre');
+ assert.equal(E.evaluate(p).valueCents,null);
+ assert.equal(W.productionSummary(p).ready,false);
+ const js=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ assert.match(js,/Relevé courtier :/);
+ assert.match(js,/const snapshot=E\.snapshotAt|snapshot=E\.snapshotAt/);
+ assert.match(js,/lineChart\(ts\.points,p\.currency,chartMode\)/);
+ assert.match(js,/Ce n’est pas un rendement TWR|pas un rendement TWR/);
+});
+test('TRACE 2.0.1 does not modify legacy 5.37 portfolioLedger, savingsLedger or global net logic',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const oldLedger=app.slice(app.indexOf('function portfolioLedger('),app.indexOf('const nativeMoney='));
+ assert.doesNotMatch(oldLedger,/investments201/);
+ const oldSavings=app.slice(app.indexOf('function savingsLedger('),app.indexOf('function portfolioLedger('));
+ assert.doesNotMatch(oldSavings,/investments201/);
+ const oldNet=app.slice(app.indexOf('function renderWealth('),app.indexOf('function renderAll('));
+ assert.match(oldNet,/bankCAD\+investments/);
+ assert.match(oldNet,/const investments=ports\.reduce/);
+ assert.doesNotMatch(oldNet,/addPortfolioValue|trace201Total|snapshotTotalCents/);
+ assert.match(app,/if\(account\?\.investments201\?\.schema===1/);
+});
