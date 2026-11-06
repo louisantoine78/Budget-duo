@@ -6933,7 +6933,7 @@ async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Charg
  }
  if(state.investmentAccounts.some(a=>a.owner===me&&window.TraceInternational.valid(a.currency)&&a.currency!=='CAD'&&a.fxAutoUpdate!==false))setTimeout(()=>refreshPublicPortfolioRates().catch(console.error),350);}
 async function ensureWorkspace(s){
-  if(!s)return;
+  if(!s||window.TracePasswordRecovery?.holdWorkspace?.())return;
   session=s;
   if(household)return;
   if(workspaceLoadPromise)return workspaceLoadPromise;
@@ -6966,9 +6966,11 @@ async function init(){
     }
   });
 
+  window.TracePasswordRecovery?.setup?.(client,showGate);
   client.auth.onAuthStateChange((event,s)=>{
     session=s||null;
     window.TraceEmailConfirmation?.handleSession?.(session);
+    if(window.TracePasswordRecovery?.onAuthEvent?.(event,session))return;
     if(event==='SIGNED_OUT'){
       trace20LegacyBankTransactions=[];trace20LegacyBankReconciliations=[];
       household=null;
@@ -6986,6 +6988,10 @@ async function init(){
     if(error)throw error;
     session=data?.session||null;
     window.TraceEmailConfirmation?.handleSession?.(session);
+    if(window.TracePasswordRecovery?.holdWorkspace?.()){
+      showGate('cloudAuthPanel');
+      return;
+    }
     if(session)await ensureWorkspace(session);
     else showGate('cloudAuthPanel');
   }catch(err){
