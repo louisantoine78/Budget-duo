@@ -74,7 +74,7 @@ function sheet(kind,id=''){
   body=field('name','Nom de l’action, ETF ou fonds','','text','required maxlength="100"')+
    paired(select('assetType','Nature',[['Action','Action'],['ETF','ETF'],['Fonds','Fonds'],['Autre','Autre']],'Action'),
     field('symbol','Symbole (facultatif)'))+
-   field('isin','ISIN (facultatif)','','text','maxlength="12"')+
+   paired(field('isin','ISIN (facultatif)','','text','maxlength="12"'),field('marketMic','Marché MIC (facultatif)','','text','maxlength="4"'))+
    paired(field('sector','Secteur'),field('geography','Géographie'))+
    paired(field('quantity','Quantité initiale','0','text','required inputmode="decimal"'),
     field('basisPrice','PRU initial, si connu','','text','inputmode="decimal"'))+
@@ -85,6 +85,7 @@ function sheet(kind,id=''){
   heading='PRU et informations';
   body='<p class="wl-op-summary">'+U.e(s.name)+' · '+U.qty(found?.quantityMicro||0)+' titres au départ.</p>'+
    paired(field('symbol','Symbole',s.symbol||''),field('isin','ISIN',s.isin||'','text','maxlength="12"'))+
+   field('marketMic','Marché de cotation (MIC)',s.marketMic||'','text','maxlength="4"')+
    paired(select('assetType','Nature',[['Action','Action'],['ETF','ETF'],['Fonds','Fonds'],['Autre','Autre']],s.assetType||'Action'),
     field('sector','Secteur',s.sector||''))+
    field('geography','Géographie',s.geography||'')+
@@ -154,13 +155,20 @@ function save(kind,id,fd){
    const name=read('name');if(!name)throw Error('Nom du titre requis');
    if(p.catalog.some(s=>s.name.toLocaleLowerCase('fr')===name.toLocaleLowerCase('fr')))throw Error('Titre déjà présent');
    const q=E.quantity(read('quantity')),cost=read('basisPrice')?E.tradeCents(q,E.price(read('basisPrice'))):null;
+   const isin=read('isin').toUpperCase(),mic=read('marketMic').toUpperCase();
+   if(isin&&!E.isinValid(isin))throw Error('ISIN invalide : vérifie le code et la clé de contrôle.');
+   if(mic&&!E.micValid(mic))throw Error('Le code MIC doit comporter 4 caractères.');
+   if(isin&&p.catalog.some(s=>String(s.isin||'').toUpperCase()===isin&&String(s.marketMic||'').toUpperCase()===mic))throw Error('Ce titre et cette place existent déjà.');
    const item={id:'s-'+(++serial)+'-'+Date.now(),name,assetType:read('assetType'),symbol:read('symbol'),
-    isin:read('isin'),sector:read('sector'),geography:read('geography'),quantityMicro:q,costBasisCents:cost,strategy:{}};
+    isin,marketMic:mic,sector:read('sector'),geography:read('geography'),quantityMicro:q,costBasisCents:cost,strategy:{}};
    replacePortfolio({...p,positions:q?[...p.positions,item]:p.positions.slice(),catalog:[...p.catalog,item]});
   }else if(kind==='opening'){
    const s=p.positions.find(s=>s.id===id);if(!s)throw Error('Position initiale inconnue');
    const cost=read('basisPrice')?E.tradeCents(s.quantityMicro,E.price(read('basisPrice'))):null;
-   const fields={symbol:read('symbol'),isin:read('isin'),assetType:read('assetType'),sector:read('sector'),geography:read('geography')};
+   const isin=read('isin').toUpperCase(),mic=read('marketMic').toUpperCase();
+   if(isin&&!E.isinValid(isin))throw Error('ISIN invalide : vérifie le code et la clé de contrôle.');
+   if(mic&&!E.micValid(mic))throw Error('Le code MIC doit comporter 4 caractères.');
+   const fields={symbol:read('symbol'),isin,marketMic:mic,assetType:read('assetType'),sector:read('sector'),geography:read('geography')};
    const next=E.setOpeningPosition(p,id,cost,fields);
    next.catalog=p.catalog.map(s=>s.id===id?{...s,...fields,costBasisCents:cost}:s);
    replacePortfolio(next);
