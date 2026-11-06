@@ -271,3 +271,52 @@ test('existing investment accounts are mapped diagnostically without inventing o
  assert.equal(integration.eligible(accounts[2]),true);
  assert.throws(()=>integration.auditAccountMapping([...accounts,accounts[0]],ops),/répété/);
 });
+
+
+test('host opens nested Investments detail without replacing or navigating Patrimoine cards',()=>{
+ const children=[];
+ const header={appendChild(node){children.push(node);node.parentNode=this;},removeChild(node){children.splice(children.indexOf(node),1);}};
+ const section={getAttribute:k=>k==='aria-label'?'Placements':null,querySelector:k=>k==='.section-head'?header:null};
+ const grid={closest:k=>k==='section.trace-wealth-section'?section:null};
+ const events={};
+ const popup={opened:false,events:{},showModal(){this.opened=true;},
+  close(){this.opened=false;this.events.close?.();},
+  addEventListener(name,fn){this.events[name]=fn;}};
+ const frame={dataset:{src:'./index.html?embedded=1'},attrs:{},
+  getAttribute(k){return this.attrs[k]||null;},setAttribute(k,v){this.attrs[k]=v;}};
+ const close={events:{},focus(){this.focused=true;},addEventListener(k,v){this.events[k]=v;}};
+ const origin={focused:0,focus(){this.focused++;}};
+ const buttons=[{dataset:{scope:'mine'},classList:{toggle(){}}},
+  {dataset:{scope:'couple'},classList:{toggle(){}}}];
+ const scope={events:{},addEventListener(k,cb){this.events[k]=cb;},querySelectorAll(){return buttons;}};
+ const total={textContent:'—'},sub={textContent:'Liquidités, épargne, placements et dettes'};
+ const nodes={wealthInvestmentsGrid:grid,wealthSavingsGrid:{},assetGrid:{},
+  wealthTotal:total,wealthTrend:{},wlWealthDetail:popup,wlPortalFrame:frame,
+  wlPortalClose:close,wealthScope:scope,wealthSub:sub};
+ const doc={activeElement:origin,
+  getElementById:k=>k==='traceWealthInvestmentDetailEntry'?children.find(x=>x.id===k)||null:nodes[k]||null,
+  createElement:()=>({attrs:{},events:{},setAttribute(k,v){this.attrs[k]=v;},
+   addEventListener(k,cb){this.events[k]=cb;},removeEventListener(k){delete this.events[k];}})};
+ const code=fs.readFileSync(path.join(root,'wealth-host.js'),'utf8');
+ vm.runInNewContext(code,{window:{TraceWealthIntegrationContract:integration},document:doc,Error});
+ assert.equal(children.length,1);
+ assert.equal(popup.opened,false);
+ children[0].events.click();
+ assert.equal(popup.opened,true);
+ assert.equal(frame.attrs.src,'./index.html?embedded=1');
+ assert.equal(close.focused,true);
+ close.events.click();
+ assert.equal(popup.opened,false);
+ assert.equal(origin.focused,1);
+ scope.events.click({target:{closest:()=>buttons[1]}});
+ assert.match(sub.textContent,/Couple/);
+ assert.equal(total.textContent,'—');
+ assert.equal(nodes.wealthSavingsGrid,doc.getElementById('wealthSavingsGrid'));
+ assert.equal(nodes.assetGrid,doc.getElementById('assetGrid'));
+});
+test('embedded navigation never pretends Patrimoine is another internal investment tab',()=>{
+ const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.match(js,/document\.documentElement\?\.classList\?\.contains\('wl-embedded'\)/);
+ assert.match(js,/embedded\?'<b>Investissements<\/b>'/);
+ assert.doesNotMatch(fs.readFileSync(path.join(root,'wealth-host.js'),'utf8'),/navigate\(|saveDocument\(|client\.rpc\(/);
+});
