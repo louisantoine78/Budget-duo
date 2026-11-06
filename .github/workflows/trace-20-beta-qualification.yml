@@ -38,6 +38,7 @@ jobs:
             tests/trace-20-live-beta-entry.test.cjs \
             tests/trace-20-prepare-main-entry.test.cjs \
             tests/trace-20-fresh-start.test.cjs \
+            tests/trace-20-release-candidate.test.cjs \
             tests/trace-20-production-release-gate.test.cjs \
             tests/trace-20-real-safety-bridge.test.cjs \
             tests/trace-20-auxiliary-mutations.test.cjs \
