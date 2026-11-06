@@ -252,7 +252,7 @@ test('No direct document update or deletion remains in candidate write adapter',
  assert.match(source,/client\.rpc\('trace_cas_save_document'/);
  assert.match(source,/client\.rpc\('trace_cas_delete_document'/);
  assert.match(source,/client\.rpc\('trace_cas_save_household_settings'/);
- assert.match(source,/select\('collection,item_id,data,revision'\)/);
+ assert.match(source,/select\('collection,item_id,data,revision,created_at'\)/);
  assert.match(source,/select\('id,name,settings,settings_revision/);
 });
 
