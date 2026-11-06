@@ -56,7 +56,9 @@ test('client-only page bootstraps Patrimoine navigation with no Supabase or live
   'wl-crumb':{innerHTML:''},
   'wl-main':{innerHTML:'',prepend(){}},
   'wl-close':{addEventListener(){}},
-  'wl-dialog':{addEventListener(){}}
+  'wl-dialog-title':{textContent:''},
+  'wl-dialog-body':{innerHTML:''},
+  'wl-dialog':{opened:false,addEventListener(){},showModal(){this.opened=true}}
  };
  const doc={
   getElementById:id=>nodes[id]||null,
@@ -74,4 +76,10 @@ test('client-only page bootstraps Patrimoine navigation with no Supabase or live
  assert.match(nodes['wl-main'].innerHTML,/PRU moyen/);
  click('analytics','');
  assert.match(nodes['wl-main'].innerHTML,/Indice de référence/);
+ assert.match(nodes['wl-main'].innerHTML,/Relevés & sources/);
+ click('viewSnapshot','2026-11-04');
+ assert.equal(nodes['wl-dialog'].opened,true);
+ assert.match(nodes['wl-dialog-body'].innerHTML,/3.788,69/);
+ assert.match(nodes['wl-dialog-body'].innerHTML,/Valeur totale fournie/);
+ assert.match(nodes['wl-dialog-body'].innerHTML,/ne prouve pas les cours individuels/);
 });
