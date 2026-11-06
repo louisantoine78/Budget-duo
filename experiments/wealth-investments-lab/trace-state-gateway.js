@@ -4,11 +4,12 @@
  */
 (function(root,factory){
  const api=factory(
-  typeof module==='object'&&module.exports?require('./legacy-bridge.js'):root.TraceWealthLegacyBridge
+  typeof module==='object'&&module.exports?require('./legacy-bridge.js'):root.TraceWealthLegacyBridge,
+  typeof module==='object'&&module.exports?require('./legacy-parity.js'):root.TraceWealthLedgerParity
  );
  if(typeof module==='object'&&module.exports)module.exports=api;
  else root.TraceWealthStateGateway=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(Bridge){
+})(typeof globalThis!=='undefined'?globalThis:this,function(Bridge,Parity){
  'use strict';
  const VALID_OWNERS=new Set(['la','partner']);
  const SAVINGS=new Set(['CELI','Épargne','Livret','Savings']);
@@ -45,6 +46,15 @@
    }
    const result=Bridge.build(account,snapshot.investmentOperations);
    if(result.status==='reconciliation-required'){
+    // Require independent agreement with the original TRACE 5.37 calculation.
+    // A discrepant cash, cost basis or realized P&L must never enter a new UI.
+    const parity=Parity.compare(account,snapshot.investmentOperations,result.portfolio);
+    if(!parity.matched){
+     review.push({accountId:account.id,name:String(account.name||account.type),
+      owner:account.owner,status:'ledger-divergence',
+      reasons:parity.problems.length?parity.problems:['Rejeu historique à vérifier']});
+     continue;
+    }
     // The ledger was replayed but is NOT verified against the user's broker.
     const copy=JSON.parse(JSON.stringify(result.portfolio));
     copy.readOnly=true;
@@ -52,7 +62,7 @@
     portfolios.push(copy);
     summary.push({accountId:account.id,name:String(account.name||account.type),
      owner:account.owner,status:'broker-reconciliation-required',
-     operationCount:result.operationCount,
+     operationCount:result.operationCount,ledgerParity:'matched',
      quoteCandidates:result.quoteCandidates.length,bankLinks:copy.operations.filter(o=>
       Boolean(o.linkedTransactionId||o.linkedBankAccountId)).length});
    }else{
