@@ -76,7 +76,7 @@ test('client-only page bootstraps Patrimoine navigation with no Supabase or live
  assert.match(nodes['wl-main'].innerHTML,/PRU moyen/);
  click('analytics','');
  assert.match(nodes['wl-main'].innerHTML,/Indice de référence/);
- assert.match(nodes['wl-main'].innerHTML,/Relevés & sources/);
+ assert.match(nodes['wl-main'].innerHTML,/Relevés &amp; sources/);
  click('viewSnapshot','2026-11-04');
  assert.equal(nodes['wl-dialog'].opened,true);
  assert.match(nodes['wl-dialog-body'].innerHTML,/3.788,69/);
