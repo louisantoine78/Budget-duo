@@ -40,6 +40,7 @@
 <link rel="stylesheet" href="trace-email-confirmation-1.0.0.css">
 <link rel="stylesheet" href="trace-premium-panels-5.37.0.css">
 <link rel="stylesheet" href="trace-premium-system-5.37.0.css">
+<link rel="stylesheet" href="trace-password-recovery-1.0.0.css">
 </head>
 <body>
 <div id="cloudGate" class="cloud-gate">
@@ -74,13 +75,25 @@
       <form id="cloudLoginForm" class="cloud-form">
         <label>Adresse courriel<input id="cloudLoginEmail" type="email" autocomplete="email" required></label>
         <label>Mot de passe<span class="password-field"><input id="cloudLoginPassword" type="password" autocomplete="current-password" minlength="6" required><button class="password-toggle" type="button" data-password-target="cloudLoginPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></span></label>
-        <button class="primary full" type="submit">Se connecter</button><div class="auth-persist-note"><span class="status-dot"></span> Session conservée sur cet appareil</div>
+        <button class="primary full" type="submit">Se connecter</button><button id="traceForgotPassword" type="button" class="trace-recovery-link">Mot de passe oublié ?</button><div class="auth-persist-note"><span class="status-dot"></span> Session conservée sur cet appareil</div>
       </form>
       <form id="cloudSignupForm" class="cloud-form hidden">
         <label>Prénom<input id="cloudSignupName" type="text" autocomplete="name" required></label>
         <label>Adresse courriel<input id="cloudSignupEmail" type="email" autocomplete="email" required></label>
         <label>Mot de passe<span class="password-field"><input id="cloudSignupPassword" type="password" autocomplete="new-password" minlength="8" required><button class="password-toggle" type="button" data-password-target="cloudSignupPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg></button></span></label>
         <button class="primary full" type="submit">Créer mon compte</button>
+      </form>
+      <form id="traceResetRequestForm" class="cloud-form hidden">
+        <p class="trace-recovery-copy">Indique le courriel de ton compte TRACE. Tu recevras un lien pour définir un nouveau mot de passe.</p>
+        <label>Adresse courriel<input id="traceResetEmail" type="email" autocomplete="email" required></label>
+        <button class="primary full" type="submit">Recevoir un lien de réinitialisation</button>
+        <button class="secondary full trace-recovery-back" type="button" data-recovery-back>Retour à la connexion</button>
+      </form>
+      <form id="traceResetConfirmForm" class="cloud-form hidden">
+        <p class="trace-recovery-copy">Définis un nouveau mot de passe pour ton compte existant. Aucun budget ou patrimoine ne sera réinitialisé.</p>
+        <label>Nouveau mot de passe<input id="traceNewPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>Confirmer le mot de passe<input id="traceConfirmNewPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="primary full" type="submit">Enregistrer le nouveau mot de passe</button>
       </form>
       <p class="trace-auth-privacy">TRACE n’a pas besoin de tes identifiants bancaires. Ne saisis jamais ton mot de passe bancaire, ton NIP ou ton numéro complet de carte.</p><p id="cloudAuthMessage" class="cloud-message"></p>
     </div>
@@ -444,6 +457,7 @@
 <script src="config.js?v=5.37.0"></script>
 <script src="trace-20-fresh-start-1.0.0.js"></script>
  <script>window.__TRACE20_FRESH_START_REQUIRED__=true;</script>
+<script src="trace-password-recovery-1.0.0.js"></script>
 <script src="v5-app-5.37.0.js"></script>
 <script src="trace-bank-doc-1.11.1.js"></script>
 <script src="trace-bank-ui-5.37.0.js"></script>
