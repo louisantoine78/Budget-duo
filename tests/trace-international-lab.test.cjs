@@ -12,10 +12,15 @@ const fixture=get('trace-international-preview-fixtures-1.0.0.js');
 const engine=get('trace-international-1.0.0.js');
 const ui=get('trace-international-ui-1.0.0.js');
 let checked=0;function test(name,fn){fn();checked++;console.log('PASS '+name);}
-test('production HTML remains TRACE 5.36.5 and does not contain lab fixtures',()=>{
- assert.match(stable,/<meta name="trace-build" content="5\.36\.5"/);
+test('production HTML is either stable 5.36.5 or reviewed real 5.37 (never lab fixtures)',()=>{
+ assert.match(stable,/<meta name="trace-build" content="5\.(?:36\.5|37\.0)"/);
  assert.doesNotMatch(stable,/trace-international-preview-fixtures/);
- assert.doesNotMatch(stable,/traceIntlHome/);
+ if(stable.includes('content="5.37.0"')){
+  assert.match(stable,/src="v5-app-5\.37\.0\.js"/);
+  assert.match(stable,/window\.__TRACE20_FRESH_START_REQUIRED__=true/);
+ }else{
+  assert.doesNotMatch(stable,/traceIntlHome/);
+ }
 });
 test('lab loads the actual versioned application and international modules in order',()=>{
  const names=[...html.matchAll(/<script\s+src="([^"]+)"/g)].map(m=>m[1]);
