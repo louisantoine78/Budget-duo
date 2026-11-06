@@ -83,7 +83,7 @@ test('version, assets, original wealth sections, live host bridge and conservati
  assert.match(main,/await saveDocument\('investment_accounts',next\)/);
  assert.match(main,/const ops=state\.investmentOperations\.filter\(o=>o\.accountId===account\.id/);
  assert.doesNotMatch(main,/if\(account\.investments201\?\.schema===1&&account\.investments201\.status==='verified'\)/);
- assert.match(main,/The original 5\.37 portfolio ledger remains the sole input/);
+ assert.match(main,/function portfolioLedger\(account,override=null,removeId=null,cutoff=null\)/);
  for(const id of ['wealthTotal','wealthSavingsGrid','wealthInvestmentsGrid','assetGrid','wealthTrend'])
   assert.match(html,new RegExp('id="'+id+'"'));
  for(const page of ['home','budget','activity','wealth'])
