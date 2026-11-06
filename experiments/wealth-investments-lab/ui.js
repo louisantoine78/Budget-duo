@@ -74,10 +74,26 @@ function positionRows(p,v){
  '<span class="wl-row-value"><b>'+(s.marketValueCents===null?'Cours manquant':fmt(s.marketValueCents,p.currency))+'</b>'+
  '<small>'+(s.unrealizedCents===null?'PRU à renseigner':fmt(s.unrealizedCents,p.currency)+' latent')+'</small></span></button>').join('');
 }
+function multiHero(state,p,v){
+ if(state.portfolios.length===1)return hero(p,v);
+ const items=state.portfolios.map(p=>({p,v:E.evaluate(p)}));
+ const same=items.every(x=>x.p.currency===p.currency);
+ const ready=same&&items.every(x=>x.v.valueCents!==null);
+ const total=ready?items.reduce((sum,x)=>sum+x.v.valueCents,0):null;
+ const cash=same?items.reduce((sum,x)=>sum+x.v.cashCents,0):null;
+ const gain=same&&items.every(x=>x.v.profitCents!==null)?
+  items.reduce((sum,x)=>sum+x.v.profitCents,0):null;
+ return '<div class="wl-hero"><small>ENSEMBLE DES INVESTISSEMENTS</small>'+
+ '<div class="wl-value">'+(total===null?'Total à compléter':fmt(total,p.currency))+'</div>'+
+ '<div class="wl-sub">'+(same?'Tous les cours sont nécessaires pour consolider.':
+ 'Devises multiples : taux de conversion datés nécessaires.')+'</div>'+
+ '<div class="wl-hero-bottom"><div><strong>'+(cash===null?'Par devise':fmt(cash,p.currency))+'</strong><span>Liquidités</span></div>'+
+ '<div><strong>'+(gain===null?'Indisponible':fmt(gain,p.currency))+'</strong><span>Gains hors apports</span></div></div></div>';
+}
 function overview(state){
  const p=state.portfolios[0],v=E.evaluate(p);
  return heading('VOTRE PATRIMOINE','Investissements','Portefeuilles et positions au même endroit. Vos chiffres essentiels, sans complexité inutile.')+
- hero(p,v)+
+ multiHero(state,p,v)+
  section('Mes portefeuilles','<div style="display:grid;gap:10px">'+state.portfolios.map(cardPortfolio).join('')+'</div>',action('+ Ajouter','newPortfolio','','wl-btn-light'))+
  section('Vue rapide','<div class="wl-two">'+stat('Plus-values latentes',v.unrealizedCents===null?'À renseigner':fmt(v.unrealizedCents,p.currency))+
  stat('Plus-values réalisées',fmt(v.realizedCents,p.currency),'Depuis le début de la simulation')+'</div>')+
