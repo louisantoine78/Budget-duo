@@ -122,3 +122,48 @@ test('static laboratory cannot read or mutate TRACE production and preserves its
  assert.doesNotMatch(prod,/wealth-investments-lab/);
  assert.match(prod,/<meta name="trace-build" content="5\.37\.0">/);
 });
+
+
+test('dated valuation never reuses a future market quote or a future transaction',()=>{
+ let p=blank();
+ p=E.appendOperation(p,op('buy-date','buy','2026-11-06',{
+  securityId:'X',quantityMicro:E.quantity(1),unitPriceUnits:E.price('10')
+ }));
+ p=E.setQuote(p,'X',{priceUnits:E.price('14'),date:'2026-11-15',source:'Manuel',kind:'manuel'});
+ assert.throws(()=>E.snapshotAt(p,'2026-11-07'),/Cours datés manquants/);
+ const early=E.snapshotAt(p,'2026-11-05');
+ assert.equal(early.valueCents,100000);
+ assert.deepEqual(early.evidence,[]);
+ p=E.setQuote(p,'X',{priceUnits:E.price('11'),date:'2026-11-07',source:'Manuel',kind:'manuel'});
+ assert.equal(p.quotes.X.priceUnits,E.price('14')); // later latest quote remains latest
+ const onDay=E.snapshotAt(p,'2026-11-07');
+ assert.equal(onDay.valueCents,100100);
+ assert.equal(onDay.estimated,false);
+ assert.equal(onDay.evidence[0].quoteDate,'2026-11-07');
+ const stale=E.snapshotAt(p,'2026-11-12');
+ assert.equal(stale.valueCents,100100);
+ assert.equal(stale.estimated,true);
+ const future=E.snapshotAt(p,'2026-11-15');
+ assert.equal(future.valueCents,100400);
+ assert.equal(future.evidence[0].quoteDate,'2026-11-15');
+ assert.equal(E.evaluate(p).valueCents,100400);
+});
+test('same-day manual quotation correction retains one entry and a clear source',()=>{
+ let p=blank();
+ p=E.appendOperation(p,op('buy','buy','2026-11-06',{securityId:'X',quantityMicro:E.quantity(1),unitPriceUnits:E.price('10')}));
+ p=E.setQuote(p,'X',{date:'2026-11-06',priceUnits:E.price('11'),source:'Saisie A',kind:'manuel'});
+ p=E.setQuote(p,'X',{date:'2026-11-06',priceUnits:E.price('12'),source:'Saisie B',kind:'manuel'});
+ assert.equal(p.quoteHistory.X.length,1);
+ assert.equal(E.snapshotAt(p,'2026-11-06').evidence[0].source,'Saisie B');
+ assert.equal(E.snapshotAt(p,'2026-11-06').valueCents,100200);
+ assert.throws(()=>E.snapshotAt(p,'2026-11-03'),/antérieure/);
+});
+test('snapshot replays partial sale at the effective day rather than applying the latest share count',()=>{
+ let p=blank();
+ p=E.appendOperation(p,op('buy10','buy','2026-11-06',{securityId:'X',quantityMicro:E.quantity(10),unitPriceUnits:E.price('10')}));
+ p=E.appendOperation(p,op('sell4','sell','2026-11-13',{securityId:'X',quantityMicro:E.quantity(4),unitPriceUnits:E.price('12')}));
+ p=E.setQuote(p,'X',{date:'2026-11-12',priceUnits:E.price('12'),source:'Saisie',kind:'manuel'});
+ assert.equal(E.snapshotAt(p,'2026-11-12').valueCents,102000);
+ assert.equal(E.snapshotAt(p,'2026-11-14').valueCents,102000);
+ assert.equal(E.snapshotAt(p,'2026-11-14').estimated,true);
+});
