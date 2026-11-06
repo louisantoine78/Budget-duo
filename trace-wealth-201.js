@@ -129,7 +129,8 @@
    html+=p.operations.length?'<div class="w201-list">'+p.operations.slice().sort((x,y)=>y.date.localeCompare(x.date)).map(o=>
     '<div class="w201-listrow"><span><b>'+e(labelType[o.type]||o.type)+'</b>'+
     '<small>'+e(o.date)+(o.securityId?' · '+e(p.catalog.find(s=>s.id===o.securityId)?.name||o.securityId):'')+'</small></span>'+
-    '<strong>'+(o.quantityMicro?qstr(o.quantityMicro)+' titre(s)':fmt(o.amountCents,p.currency))+'</strong></div>').join('')+'</div>':
+    '<strong>'+(o.quantityMicro?qstr(o.quantityMicro)+' titre(s)':fmt(o.amountCents,p.currency))+'</strong>'+
+    (edit?btn('Corriger','edit-operation',o.id,'link'):'')+'</div>').join('')+'</div>':
     '<div class="w201-empty">Aucun mouvement. Tu peux enregistrer les futurs achats, ventes, dividendes et versements.</div>';
    if(!legacy&&edit)html+=btn('Renseigner les espèces de départ','cash','','soft');
   }else if(screen==='analysis'){
@@ -232,16 +233,18 @@
     fld('Seuil haut (cours)','priceAbove',s?.strategy?.priceAbove||'','text','inputmode="decimal"')+
     fld('Poids maximal (%)','maxWeight',s?.strategy?.maxWeight||'','text','inputmode="decimal"');
   }else if(k==='operation'){
-   const def=selected&&selected.startsWith('sell:')?'sell':selected&&selected.startsWith('buy:')?'buy':'deposit';
-   content=formHead('Nouvelle opération','Le journal recalcule quantités et espèces ; aucun virement bancaire n’est créé.')+
-    '<label class="w201-field">Nature<select name="type" id="w201-type">'+Object.entries(labelType).map(([v,t])=>'<option value="'+v+'" '+(def===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'+
-    fld('Date','date',date,'date','required')+
+   const original=selected.startsWith('edit:')?p.operations.find(o=>o.id===selected.slice(5)):null;
+   const def=original?.type||(selected.startsWith('sell:')?'sell':selected.startsWith('buy:')?'buy':'deposit');
+   content=formHead(original?'Corriger l’opération':'Nouvelle opération','Le journal est rejoué entièrement ; aucun virement bancaire n’est créé.')+
+    '<label class="w201-field">Nature<select name="type" id="w201-type">'+Object.entries(labelType).map(([v,t])=>
+     '<option value="'+v+'" '+(def===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'+
+    fld('Date','date',original?.date||date,'date','required')+
     '<div class="w201-trade-fields"><label class="w201-field">Titre<select name="securityId">'+p.catalog.map(s=>
-      '<option value="'+e(s.id)+'" '+(selected.endsWith(':'+s.id)?'selected':'')+'>'+positionLabel(s)+'</option>').join('')+'</select></label>'+
-    fld('Quantité','quantity','','text','inputmode="decimal"')+
-    fld('Prix unitaire ('+p.currency+')','unitPrice','','text','inputmode="decimal"')+
-    fld('Frais ('+p.currency+')','fee','0','text','inputmode="decimal"')+'</div>'+
-    '<div class="w201-cash-fields">'+fld('Montant ('+p.currency+')','amount','','text','inputmode="decimal"')+'</div>'+
+      '<option value="'+e(s.id)+'" '+((original?.securityId||selected.split(':')[1])===s.id?'selected':'')+'>'+positionLabel(s)+'</option>').join('')+'</select></label>'+
+    fld('Quantité','quantity',original?.quantityMicro?String(original.quantityMicro/1e6):'','text','inputmode="decimal"')+
+    fld('Prix unitaire ('+p.currency+')','unitPrice',original?.unitPriceUnits?String(original.unitPriceUnits/1e4):'','text','inputmode="decimal"')+
+    fld('Frais ('+p.currency+')','fee',original?String(original.feeCents/100):'0','text','inputmode="decimal"')+'</div>'+
+    '<div class="w201-cash-fields">'+fld('Montant ('+p.currency+')','amount',original?.amountCents?String(original.amountCents/100):'','text','inputmode="decimal"')+'</div>'+
     '<div class="w201-impact" id="w201-impact" role="status" aria-live="polite">Saisis les montants pour voir leur effet sur les espèces.</div>';
   }else if(k==='snapshot'){
    content=formHead('Valorisation datée','Calcul uniquement à partir des cours enregistrés avant cette date.')+
@@ -290,8 +293,10 @@
   if(!form||!form.querySelector('#w201-impact'))return;
   const out=form.querySelector('#w201-impact');
   try{
-   const fd=new FormData(form),p=load(pick()),op=operationFrom(fd,p,true);
-   const estimate=E.previewOperation(p,op);
+   const fd=new FormData(form),p=load(pick()),op=operationFrom(fd,p,true),
+    original=selected.startsWith('edit:')?p.operations.find(x=>x.id===selected.slice(5)):null;
+   if(original)op.id=original.id;
+   const estimate=E.previewOperation(p,op,original?.id||null);
    out.textContent='Espèces après : '+fmt(estimate.cashAfterCents,p.currency)+
     ' · variation : '+fmt(estimate.deltaCashCents,p.currency)+
     (op.type==='sell'?' · gain réalisé : '+fmt(estimate.deltaRealizedCents,p.currency):'');
@@ -372,7 +377,11 @@
    next={...p,positions:p.positions.map(s=>s.id===selected?{...s,strategy}:s),
     catalog:p.catalog.map(s=>s.id===selected?{...s,strategy}:s)};
   }else if(kind==='operation'){
-   next=E.appendOperation(p,operationFrom(fd,p,false));
+   const old=selected.startsWith('edit:')?p.operations.find(x=>x.id===selected.slice(5)):null;
+   if(selected.startsWith('edit:')&&!old)throw Error('Opération à corriger introuvable.');
+   const op=operationFrom(fd,p,false);
+   if(old)op.id=old.id;
+   next=E.appendOperation(p,op,old?.id||null);
   }else if(kind==='snapshot'){
    const date=get('date');
    if(!within(date,p.openingDate)||p.snapshots.some(x=>x.date===date))throw Error('Date unique obligatoire.');
@@ -409,8 +418,9 @@
    if(['quote','strategy','edit-position'].includes(action))selected=id||selected;
    screen='form-'+action;draw();return;
   }
-  if(['new-operation','new-buy','new-sell'].includes(action)){
-   selected=action==='new-buy'?'buy:'+id:action==='new-sell'?'sell:'+id:'';
+  if(['new-operation','new-buy','new-sell','edit-operation'].includes(action)){
+   selected=action==='new-buy'?'buy:'+id:action==='new-sell'?'sell:'+id:
+    action==='edit-operation'?'edit:'+id:'';
    screen='form-operation';draw();return;
   }
  }
