@@ -116,7 +116,7 @@
    '<div class="w201-hero"><small>Valeur du suivi</small><strong>'+
     (v.valueCents===null||!p.positions.length?'À compléter':fmt(v.valueCents,p.currency))+
     '</strong><span>'+(legacy?'Journal historique TRACE : consultation conservée':
-    p.status==='verified'?'Rapproché au relevé du '+e(p.brokerVerification?.date||''):
+    p.status==='verified'?'Référence courtier rapprochée le '+e(p.brokerVerification?.date||'')+' · valeur actuelle indicative':
     'Suivi en préparation · non intégré au patrimoine net')+'</span></div>'+
    (legacy?'<p class="w201-warning">Des mouvements existent déjà dans ce compte. Pour éviter les doublons, utilise le journal historique TRACE ; la reprise avancée reste en lecture seule.</p>':
     '<p class="w201-note">Les comptes bancaires, budgets et autres éléments du Patrimoine ne sont pas modifiés. Les cours manuels ne sont pas des cours en direct.</p>')+
@@ -212,8 +212,8 @@
     fld('Nom du titre','name',s?.name||'','text','required maxlength="100"')+
     fld('Symbole (identifiant de la ligne)','symbol',s?.symbol||'','text','required maxlength="16"')+
     '<label class="w201-field">Type<select name="assetType">'+['Action','ETF','Fonds','Obligation','Autre'].map(t=>'<option '+(s?.assetType===t?'selected ':'')+'value="'+t+'">'+t+'</option>').join('')+'</select></label>'+
-    fld('Quantité initiale','quantity',s?qstr(s.quantityMicro).replace(/\s/g,'').replace(',','.'):'','text','required inputmode="decimal"')+
-    fld('Prix de revient unitaire ('+p.currency+')','cost',s?.costBasisCents===null?'':s?pxstr(Math.round(s.costBasisCents*1e8/s.quantityMicro)).replace(',','.'):'','text','inputmode="decimal"')+
+    fld('Quantité initiale','quantity',s?String(s.quantityMicro/1e6):'','text','required inputmode="decimal"')+
+    fld('Prix de revient unitaire ('+p.currency+')','cost',s?.costBasisCents===null?'':s?String(Math.round(s.costBasisCents*1e8/s.quantityMicro)/1e4):'','text','inputmode="decimal"')+
     fld('ISIN (facultatif)','isin',s?.isin||'','text','maxlength="12"')+
     fld('Place MIC (facultatif)','mic',s?.marketMic||'','text','maxlength="4"')+
     fld('Secteur','sector',s?.sector||'','text','maxlength="60"')+
@@ -381,7 +381,13 @@
    if(fd.get('approved')!=='on')throw Error('Confirme la comparaison du relevé.');
    next=reconcile(p,{date:get('date'),value:get('value'),source:get('source')});
   }else throw Error('Action inconnue.');
-  if(kind!=='reconcile')next=invalidate(next);
+  // Keep the historical broker baseline on later, sourced operations/quotes.
+  // A retroactive change affecting that baseline requires new reconciliation.
+  if(['cash','new-position','edit-position'].includes(kind)||
+    kind==='operation'&&p.brokerVerification&&next.operations.some(o=>
+     !p.operations.some(prev=>prev.id===o.id)&&o.date<=p.brokerVerification.date)||
+    kind==='quote'&&p.brokerVerification&&get('date')<=p.brokerVerification.date)
+   next=invalidate(next);
   E.evaluate(next);
   await save(a,next);
   screen=kind==='quote'||kind==='strategy'||kind==='edit-position'?'position':'positions';
