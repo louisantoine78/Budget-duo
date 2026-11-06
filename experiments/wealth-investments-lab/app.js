@@ -68,7 +68,8 @@ function operationPreview(form,old){
 }
 function replacePortfolio(p){E.evaluate(p);model.portfolios=model.portfolios.map(x=>x.id===p.id?p:x);}
 function breadcrumb(){
- const embedded=document.documentElement?.classList?.contains('wl-embedded')===true;
+ const embedded=document.documentElement?.classList?.contains('wl-embedded')===true||
+  Boolean(document.getElementById('wl-native-root'));
  if(route==='overview')return embedded?'<b>Investissements</b>':
   '<button data-act="home">Patrimoine</button><span>/</span><b>Investissements</b>';
  const p=current(),base=embedded?
@@ -87,7 +88,10 @@ function render(){
 }
 function go(next,id=''){
  if(id&&model.portfolios.some(p=>p.id===id)&&portfolioId!==id){portfolioId=id;positionFilter='all';}
- route=next;render();window.scrollTo({top:0,behavior:'auto'});
+ route=next;render();
+ const scroll=document.getElementById('wlNativeScroll');
+ if(scroll)scroll.scrollTop=0;
+ else window.scrollTo({top:0,behavior:'auto'});
 }
 function sheet(kind,id='',preset={}){
  const p=current(),s=catalog(id),old=p.operations.find(o=>o.id===id);
@@ -265,6 +269,22 @@ function save(kind,id,fd){
   $('wl-dialog').close();notice='Modifié dans la démonstration uniquement.';render();
  }catch(error){$('wl-error').textContent=String(error?.message||error);}
 }
+// The host can switch between explicit demonstration datasets. No persistence.
+function activateScenario(seed){
+ if(!seed||!Array.isArray(seed.portfolios)||!seed.portfolios.length)
+  throw Error('Jeu de démonstration invalide');
+ // Clone first so a simulated operation never mutates the source ledger.
+ const copy=JSON.parse(JSON.stringify(seed));
+ for(const portfolio of copy.portfolios)E.evaluate(portfolio);
+ model=copy;portfolioId=copy.portfolios.some(p=>p.id===copy.selectedId)?
+  copy.selectedId:copy.portfolios[0].id;
+ route='overview';securityId='';range='all';chartMetric='value';chartFocus='';positionFilter='all';notice='';
+ render();
+ const scroll=document.getElementById('wlNativeScroll');
+ if(scroll)scroll.scrollTop=0;
+ return{portfolioCount:model.portfolios.length,source:copy.portfolios[0].origin||'demonstration'};
+}
+window.TraceWealthLabRuntime=Object.freeze({activateScenario});
 document.addEventListener('click',event=>{
  const el=event.target.closest('[data-act]');if(!el)return;
  const a=el.dataset.act,id=el.dataset.id||'';
