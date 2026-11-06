@@ -26,7 +26,7 @@ test('candidate does not automatically publish or change version of live app',()
 });
 
 test('every versioned CSS and JS referenced by the release candidate is present',()=>{
- const refs=[...html.matchAll(/<(?:script|link)\\b[^>]*?(?:src|href)="([^"]+)"[^>]*>/g)]
+ const refs=[...html.matchAll(/<(?:script|link)\b[^>]*?(?:src|href)="([^"]+)"[^>]*>/g)]
   .map(x=>x[1].split('?')[0])
   .filter(x=>!x.startsWith('https:')&&!x.startsWith('#'));
  for(const p of refs){
