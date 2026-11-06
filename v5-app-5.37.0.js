@@ -5569,9 +5569,6 @@ function savingsLedger(account){
 }
 function portfolioLedger(account,override=null,removeId=null,cutoff=null){
  if(account.savingsTracking==='linked')return savingsLedger(account);
- // The original 5.37 portfolio ledger remains the sole input to Patrimoine
- // totals in TRACE 2.0.1. Detailed positions are additive, in their existing
- // investment account document, pending independent bank-flow reconciliation.
 
  const ops=state.investmentOperations.filter(o=>o.accountId===account.id&&
   (!o.status||o.status==='confirmed')&&o.id!==removeId&&(!override||o.id!==override.id));
