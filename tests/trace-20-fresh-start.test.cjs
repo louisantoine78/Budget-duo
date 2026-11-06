@@ -49,8 +49,8 @@ test('actual real 5.37 client separates archived bank evidence from visible acti
  assert.ok(app.includes('freshStart.partition(docs,h.settings||{})'));
  assert.ok(app.includes('state[k]=visibleDocs.filter'));
  assert.ok(app.includes("typeof trace20BalanceTransactions==='function'"));
- assert.ok(app.includes('trace20BalanceReconciliations().filter'));
- assert.ok(app.includes('trace20BalanceTransactions().find'));
+ assert.ok(app.includes("typeof trace20BalanceReconciliations==='function'"));
+ assert.ok(app.includes("state.transactions).find(t=>t.id===o.linkedTransactionId"));
  assert.ok(app.includes('trace20LegacyBankTransactions=[];trace20LegacyBankReconciliations=[];'));
  const p=beta.indexOf('src="trace-20-fresh-start-1.0.0.js"');
  assert.ok(p>0&&p<beta.indexOf('src="v5-app-5.37.0.js"'));
