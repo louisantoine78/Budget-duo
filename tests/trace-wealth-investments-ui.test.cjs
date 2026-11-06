@@ -204,7 +204,7 @@ test('integration host preserves all actual Patrimoine sections and does not loa
   assert.ok(html.includes(label));
  assert.match(html,/src="\.\/integration-contract\.js"/);
  assert.match(html,/src="\.\/wealth-host\.js"/);
- assert.match(html,/iframe[^>]*sandbox="allow-scripts allow-forms"/);
+ assert.match(html,/iframe[^>]*sandbox="allow-scripts allow-forms allow-modals"/);
  assert.match(html,/data-src="\.\/index\.html\?embedded=1"/);
  assert.match(embedded,/get\("embedded"\)==="1"/);
  assert.match(css,/\.wl-embedded \.wl-bottom/);
