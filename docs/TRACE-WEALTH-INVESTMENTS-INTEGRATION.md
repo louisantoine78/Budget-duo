@@ -168,3 +168,19 @@ L'UX masque les boutons d'ajout, de vente, d'achat, de modification et de cours 
 - **Ne pas toucher** à `main`, Supabase, RLS, au service worker, aux états personnels, à la production ou aux transactions avant validation explicite.
 
 Ce jalon montre que la future intégration peut se faire **dans le Patrimoine existant sans refonte**, mais il n'implique **aucun accès autorisé aux comptes de production**.
+
+
+## 10. Réconciliation croisée obligatoire avant toute présentation d'un compte réel
+
+Nouveau composant entièrement isolé : `experiments/wealth-investments-lab/legacy-parity.js`. Il calcule indépendamment les liquidités, apports nets, dividendes, frais, gains réalisés, quantités et coûts de revient en reproduisant la méthode **actuelle** de `portfolioLedger()` dans TRACE 5.37, puis compare les résultats en centimes et micro-titres au moteur de calcul fixe de laboratoire.
+
+- Les écarts ne sont jamais corrigés silencieusement : **un centime d'écart suffit** pour classer le compte `ledger-divergence` dans `review`, hors de `portfolios`.
+- Exemple couvert : deux achats fractionnés peuvent générer un centime d'écart si la version historique arrondit à la fin alors que le moteur de démonstration arrondit chaque exécution. L'écart est affiché comme problème de rapprochement à résoudre, pas comme plus-value.
+- Les **cours historiques sans source/horodatage fiable restent en quarantaine** et ne sont pas considérés comme valorisations actuelles.
+- Une même référence `linkedTransactionId` pour deux versements ou retraits confirmés déclenche `duplicate-bank-transfer-link`, avec blocage des enveloppes concernées : aucun solde n'est intégré aveuglément deux fois.
+- La projection conserve l'état `readOnly`; le composant natif refuse aussi les actions financières simulées depuis un compte repris via la passerelle.
+- Une liste repliable **« Voir les comptes à vérifier »** sous le troisième scénario « Modèle TRACE » précise les comptes bloqués (et pourquoi) et ceux qui restent dans Épargne. Les noms sont insérés via `textContent` pour empêcher toute interprétation HTML.
+
+Les tests couvrent les deux moteurs indépendants, achats/ventes partielles et PRU moyen, écarts de centime, rejet effectif par le pont d'état, doublons de virements dans une ou plusieurs enveloppes, conservation des CELI d'épargne et changements de périmètre Moi/Couple.
+
+**Important :** l'accord de deux moteurs logiciels ne remplace pas une preuve courtier. La parité certifie uniquement leur cohérence sur un même journal; elle ne valide pas l'exhaustivité de l'historique, les espèces d'ouverture, la cotation du titre, la conformité fiscale ou la valeur actuelle. Aucune donnée réelle de TRACE n'a été consultée ou modifiée dans cette phase. Le blocage du quota Vercel peut empêcher la visualisation des derniers commits ; les résultats CI et GitHub ne sont pas une recette Safari.
