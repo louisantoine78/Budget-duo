@@ -21,9 +21,9 @@ Le vrai `renderWealth()` dans `v5-app-5.37.0.js` remplit ces panneaux à partir 
 
 Dans l'en-tête de la section **Placements**, ajouter uniquement un bouton texte discret **« Suivi des titres »** à droite du titre. Ne jamais toucher aux données/cartes déjà rendues dans `#wealthInvestmentsGrid`. Ce bouton ouvre une vue de détail Investments (portefeuilles → positions → opérations → analyse) et permet de revenir immédiatement au Patrimoine. **Pas de cinquième onglet, pas de nouvelle page principale.**
 
-Le prototype `patrimoine-host.html` recopie seulement le DOM du Patrimoine pertinent avec des valeurs neutres et un PEA **explicitement de démonstration**. Il ne charge pas `v5-app-5.37.0.js`, `config.js`, Supabase ni les comptes. Le bouton est monté via `integration-contract.js` en mode **explicitement opt-in**, vérifie la présence des cinq conteneurs avant intervention, évite les doubles montages et se désinstalle sans altération des panneaux. La démo affiche l'interface d'investissement dans une fenêtre imbriquée et isolée.
+Le prototype `patrimoine-host.html` recopie seulement le DOM du Patrimoine pertinent avec des valeurs neutres et un PEA **explicitement de démonstration**. Il ne charge pas `v5-app-5.37.0.js`, `config.js`, Supabase ni les comptes. Le bouton est monté via `integration-contract.js` en mode **explicitement opt-in**, vérifie la présence des cinq conteneurs avant intervention, évite les doubles montages et se désinstalle sans altération des panneaux. La démo affiche désormais l'interface d'investissement dans un **dialogue natif** rendu dans le même document que Patrimoine, avec retour au panneau d'origine. Il n'y a plus d'iframe.
 
-**Attention : l'iframe de la prévisualisation est un dispositif de présentation seulement.** L'intégration finale doit employer les composants natifs TRACE (feuille/dialogue/routage interne) et les protections d'accès existantes, sans introduire une iframe ni des transactions dans un second espace déconnecté.
+**Attention : la vue utilise encore des composants de laboratoire, et non des comptes authentifiés.** L'intégration finale devra reprendre les contrôles d'accès, les composants natifs et les règles de calcul du Patrimoine TRACE existant. Aucune transaction réelle n'est chargée ni enregistrée.
 
 ## 3. Diff de principe pour une intégration future (NON APPLIQUÉ)
 
@@ -107,3 +107,20 @@ Tests autonomes supplémentaires : `tests/trace-wealth-investments-bridge.test.c
 ### Critères de passage en réel
 
 Avant toute intégration : lecture seule des documents existants avec autorisation explicite, rapprochement des valeurs courtier pour chaque enveloppe, sélection rigoureuse de la date de reprise, spécification des métadonnées instrument/cotation, respect des liens bancaires, contrôles RLS et rollback sans perte de documents. **Pas de modification, migration, import, déploiement production ou reclassification de CELI sans validation de l'utilisateur.**
+
+## 8. Nouveau prototype natif intégré (sans iframe, sans production)
+
+**Implémenté dans le laboratoire :** `patrimoine-host.html` utilise le DOM natif, une boîte de dialogue modale et les composants de démonstration du suivi des titres dans **le même document** que les sections actuelles. Le contenu de Patrimoine en arrière-plan n'est pas remplacé. La feuille contient les sous-écrans Investissements → Portefeuille → Position → Opérations et une commande de fermeture qui restitue le focus au bouton d'origine. Les formulaires s'ouvrent dans un deuxième dialogue natif, sans navigation vers une nouvelle page.
+
+- **Préservation des cinq zones** : `wealthTotal`, `wealthSavingsGrid`, `wealthInvestmentsGrid`, `assetGrid` et `wealthTrend`.
+- **Présentation** : le titre Placements reste à sa place, un seul bouton `Suivi des titres` est ajouté, aucune barre de navigation principale supplémentaire n'est rendue dans la feuille.
+- **Deux scénarios exclusivement fictifs** : « PEA de démonstration » (huit positions fournies, PRU/cours inconnus) et « Compte TRACE fictif » (un versement et un achat repris par `legacy-bridge.js`; un cours historique mis en quarantaine). Le second est rapproché de montants fictifs en lecture seule avant d'être proposé à l'écran.
+- **Contrôle de mutation** : le contrôleur `TraceWealthLabRuntime.activateScenario()` exige des enveloppes calculables, **clone intégralement** les données de démonstration avant utilisation et réinitialise la seule navigation d'investissement. Un scénario invalide n'altère pas l'état courant.
+- **Déclenchement** : les commandes de scénario sont uniquement internes à la fenêtre Patrimoine ; le mode « Moi/Couple » de la démonstration ne lit jamais les véritables données partagées.
+- **Aucune persistance** : l'état des formulaires reste uniquement en mémoire et disparaît au rechargement. Aucune API boursière, clé, client Supabase, transaction bancaire ou accès courtier n'est chargé. Le bouton d'intégration réel resterait désactivé tant que la fonctionnalité n'a pas été approuvée.
+- **Éléments à valider** : recette Safari iPhone de l'ouverture/fermeture, du second dialogue, du clavier numérique, de la gestion du focus et du scroll; harmonisation définitive des styles avec TRACE; consolidation des règles de propriété, RLS et de partage.
+
+Les contrôles automatisés vérifient la disparition totale de l'iframe, la présence des zones de Patrimoine, la navigation de détail, les deux scénarios fictifs, le clonage de l'état et les comparaisons numériques sans toucher aux documents réels.
+
+**Statut : prévisualisation prête pour une recette utilisateur, pas une intégration approuvée en production.** Aucun fichier de l'application réelle ni migration n'a été modifié.
+
