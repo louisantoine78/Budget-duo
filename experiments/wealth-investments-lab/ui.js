@@ -22,7 +22,12 @@ function hero(p,v){
  '<div class="wl-value">'+r.label+'</div><div class="wl-sub">'+e(r.note)+'</div>'+
  '<div class="wl-hero-bottom"><div><strong>'+fmt(v.cashCents,p.currency)+'</strong><span>Liquidités'+(p.openingCashConfirmed?'':' · base estimée')+'</span></div>'+
  '<div><strong>'+(v.profitCents===null?'Non calculable':fmt(v.profitCents,p.currency))+'</strong><span>Gain hors versements et retraits</span></div></div></div>'+
- (r.historical?'<p class="wl-note"><strong>Aucun PRU ni cours historique reconstitué.</strong> Les 3 788,69 € sont une valeur de référence, pas une cotation en direct.</p>':'');
+ (r.historical?
+  '<p class="wl-note"><strong>Aucune performance sans cours historiques vérifiables.</strong> '+
+   (p.referenceValueCents!==undefined&&p.operations.length===0?
+    'La valeur '+fmt(p.referenceValueCents,p.currency)+' est une référence fournie, pas une cotation en direct.':
+    'Ce portefeuille n’a pas de valorisation complète. Le solde espèces doit être rapproché du relevé courtier.')+
+  '</p>':'');
 }
 function cardPortfolio(p){
  const v=E.evaluate(p),r=ref(p,v);
