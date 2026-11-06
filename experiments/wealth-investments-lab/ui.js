@@ -36,7 +36,7 @@ function cardPortfolio(p){
  '<b>'+e(p.name)+'</b><small>'+e(p.type)+' · '+e(p.owner==='la'?'Moi':'Partenaire')+' · '+e(p.currency)+
  ' · '+v.positions.length+' titres</small></span></div><span class="wl-arrow">›</span></div>'+
  '<div class="wl-portfolio-footer"><div><b>'+r.label+'</b><br><span>'+(r.historical?'Référence ou valeurs manquantes':'Valorisation calculée')+'</span></div>'+
- '<div style="text-align:right"><b>'+fmt(v.cashCents,p.currency)+'</b><br><span>Liquidités</span></div></div></button>';
+ '<div style="text-align:right"><b>'+fmt(v.cashCents,p.currency)+'</b><br><span>'+(p.readOnly?'Espèces à vérifier':'Liquidités')+'</span></div></div></button>';
 }
 const stat=(name,value,sub='')=>'<div class="wl-card wl-stat"><small>'+e(name)+'</small><strong>'+value+'</strong>'+(sub?'<em>'+e(sub)+'</em>':'')+'</div>';
 const palette=['#2d7353','#7cab87','#b0c5ac','#cbd9bc','#e1c99b','#759a9e','#bba7c5','#a2ad8d'];
@@ -73,7 +73,7 @@ function multiHero(state,p,v){
  '<div class="wl-value">'+(total===null?'Total à compléter':fmt(total,p.currency))+'</div>'+
  '<div class="wl-sub">'+(same?'Tous les cours sont nécessaires pour consolider.':
  'Devises multiples : taux de conversion datés nécessaires.')+'</div>'+
- '<div class="wl-hero-bottom"><div><strong>'+(cash===null?'Par devise':fmt(cash,p.currency))+'</strong><span>Liquidités</span></div>'+
+ '<div class="wl-hero-bottom"><div><strong>'+(cash===null?'Par devise':fmt(cash,p.currency))+'</strong><span>'+(state.readOnly?'Espèces à rapprocher':'Liquidités')+'</span></div>'+
  '<div><strong>'+(gain===null?'Indisponible':fmt(gain,p.currency))+'</strong><span>Gains hors apports</span></div></div></div>';
 }
 function readiness(p,v){
