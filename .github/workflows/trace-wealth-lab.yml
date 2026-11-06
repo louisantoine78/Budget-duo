@@ -22,7 +22,7 @@ jobs:
           node --check experiments/wealth-investments-lab/ui.js
           node --check experiments/wealth-investments-lab/app.js
       - name: Run investment accounting regressions
-        run: node --test tests/trace-wealth-investments-lab.test.cjs
+        run: node --test tests/trace-wealth-investments-lab.test.cjs tests/trace-wealth-investments-ui.test.cjs
       - name: Enforce zero production file changes
         run: |
           set -eu
@@ -32,7 +32,7 @@ jobs:
           done
           changed="$(git diff --name-only origin/main HEAD)"
           echo "$changed"
-          if echo "$changed" | grep -Ev '^(experiments/wealth-investments-lab/|tests/trace-wealth-investments-lab.test.cjs$|\.github/workflows/trace-wealth-lab.yml$|docs/TRACE-WEALTH-INVESTMENTS-LAB.md$)' | grep -q .; then
+          if echo "$changed" | grep -Ev '^(experiments/wealth-investments-lab/|tests/trace-wealth-investments-lab.test.cjs$|tests/trace-wealth-investments-ui.test.cjs$|\.github/workflows/trace-wealth-lab.yml$|docs/TRACE-WEALTH-INVESTMENTS-LAB.md$)' | grep -q .; then
             echo 'Out-of-scope file touched: refusing isolated laboratory qualification.'
             exit 1
           fi
