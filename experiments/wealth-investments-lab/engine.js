@@ -28,7 +28,6 @@
   if(value>BigInt(Number.MAX_SAFE_INTEGER))throw Error('Montant trop important');
   return Number(value);
  }
- const tradeGross=(qty,unitPrice)=>roundRatio(safeInt(qty,'Quantité')*1n+BigInt(0),1n);
  // Integer arithmetic throughout; qty in micro-shares and quote in 1/10000.
  function tradeCents(qty,unitPrice){
   safeInt(qty,'Quantité');safeInt(unitPrice,'Cours');
