@@ -5569,7 +5569,6 @@ function savingsLedger(account){
 }
 function portfolioLedger(account,override=null,removeId=null,cutoff=null){
  if(account.savingsTracking==='linked')return savingsLedger(account);
-
  const ops=state.investmentOperations.filter(o=>o.accountId===account.id&&
   (!o.status||o.status==='confirmed')&&o.id!==removeId&&(!override||o.id!==override.id));
  if(override)ops.push(override);
