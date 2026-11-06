@@ -36,7 +36,10 @@
  function chooseScenario(id){
   const message=document.getElementById('wlScenarioNotice');
   const diagnostics=document.getElementById('wlGatewayDiagnostics');
+  const reviewDetail=document.getElementById('wlGatewayReview');
+  const reviewList=document.getElementById('wlGatewayReviewList');
   if(diagnostics){diagnostics.hidden=true;diagnostics.textContent='';}
+  if(reviewDetail){reviewDetail.hidden=true;reviewDetail.open=false;}
   if(id==='pea'){
    runtime.activateScenario(window.TraceWealthLabEngine.demo());
    message.textContent='PEA Fortuneo de démonstration : huit positions fournies, cours et PRU inconnus. Aucune donnée réelle chargée.';
@@ -69,6 +72,25 @@
      ' virement(s) bancaire(s) lié(s), non dupliqué(s). '+
      (result.crossCurrencyTotalAllowed?'Aucun cours de marché vérifié.':
       'EUR / CAD : pas de somme sans taux daté.');
+   }
+   if(reviewDetail&&reviewList){
+    reviewList.replaceChildren();
+    const rows=[
+     ...result.review.map(x=>({name:x.name,status:'À vérifier',
+      reason:(x.reasons||[]).join(' · ')})),
+     ...result.excluded.map(x=>({name:x.name,status:'Épargne conservée',
+      reason:x.reason||'Compte exclu du suivi des titres'}))
+    ];
+    reviewDetail.hidden=rows.length===0;
+    for(const entry of rows){
+     const line=document.createElement('div');
+     line.className='wl-gateway-review-row';
+     const name=document.createElement('strong');
+     name.textContent=entry.name+' · '+entry.status;
+     const note=document.createElement('small');
+     note.textContent=entry.reason;
+     line.appendChild(name);line.appendChild(note);reviewList.appendChild(line);
+    }
    }
   }else throw Error('Jeu de démonstration inconnu');
   selectedScenario=id;
