@@ -261,7 +261,7 @@ test('chart filters actual dated points only and rejects duplicated same-day obs
  assert.equal(month.points.length,2);
  assert.equal(month.ready,true);
  assert.equal(month.points[0].date,'2026-10-30');
- assert.equal(E.chartSeries(p,0).ready===true,false);
+ assert.throws(()=>E.chartSeries(p,0),/Période de graphique invalide/);
  assert.throws(()=>E.chartSeries({...p,snapshots:[...p.snapshots,{date:'2026-11-04',valueCents:115000}]},'all'),/même date/);
 });
 test('one reference snapshot remains a point, never a continuous chart or pretend return',()=>{
