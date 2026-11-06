@@ -5,6 +5,7 @@
  const hash=new URLSearchParams(String(location.hash||'').replace(/^#/,''));
  const query=new URLSearchParams(location.search);
  let recovering=hash.get('type')==='recovery'||query.get('type')==='recovery';
+ let verifiedRecovery=false;
  let client=null,gate=null,wired=false,mode='login',completed=false;
  const info=(text)=>{const node=$('cloudAuthMessage');if(node)node.textContent=text;};
  const views={login:'cloudLoginForm',signup:'cloudSignupForm',request:'traceResetRequestForm',confirm:'traceResetConfirmForm'};
@@ -55,7 +56,7 @@
   const confirm=$('traceResetConfirmForm');
   if(confirm)confirm.addEventListener('submit',async e=>{
    e.preventDefault();
-   if(!recovering||completed){info('Ouvre d’abord le lien reçu par courriel.');return;}
+   if(!recovering||!verifiedRecovery||completed){info('Ouvre d’abord un lien de réinitialisation valide reçu par courriel.');return;}
    const password=String($('traceNewPassword')?.value||'');
    const again=String($('traceConfirmNewPassword')?.value||'');
    if(password.length<8){info('Utilise au moins 8 caractères.');return;}
@@ -68,6 +69,7 @@
     const {error}=await client.auth.updateUser({password});
     if(error)throw error;
     completed=true;
+    verifiedRecovery=false;
     $('traceNewPassword').value='';
     $('traceConfirmNewPassword').value='';
     try{history.replaceState(null,'',location.pathname);}catch{}
@@ -88,7 +90,8 @@
   if(recovering)show('confirm');
  }
  function onAuthEvent(event,session){
-  if(event==='PASSWORD_RECOVERY'){
+  if(event==='PASSWORD_RECOVERY'&&session?.access_token){
+   verifiedRecovery=true;
    recovering=true;
    show('confirm');
    return true;
