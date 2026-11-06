@@ -62,3 +62,20 @@ Avant toute API : tester les huit ISIN réels, vérifier le marché de cotation 
 Ce laboratoire n'est pas connecté aux documents Supabase ni aux vrais portefeuilles. Il ne constitue **pas** une qualification Safari native sur les deux iPhone et ne prouve pas l'exactitude fiscale canadienne sur le PEA. Il ne stocke rien au rechargement.
 
 Après revue UX explicite par l'utilisateur : recette Safari/iPhone, validation de l'enveloppe et des positions source, comparaison des formules aux données de courtage réelles, spécification de la persistance et RLS, tests de non-régression sur 5.37.0, puis **nouvelle demande de validation avant toute fusion ou déploiement production**.
+
+
+## Itération UX 2 — amélioration sans intervention en production
+
+- La synthèse d'accueil du laboratoire est allégée : seuls les indicateurs calculables apparaissent comme performances.
+- Une carte discrète `Compléter les données` indique les cours et PRU disponibles par portefeuille, avec actions directes vers le premier titre incomplet.
+- Les positions affichent l'identification de la place de cotation MIC, distincte de l'ISIN. Si l'utilisateur entre un ISIN, la clé de contrôle ISO 6166 est validée (checksum Luhn), les codes MIC ont quatre caractères et un même couple ISIN/MIC est refusé deux fois.
+- Une nouvelle grille `Relevés & sources` affiche des valorisations datées. Ouvrir un relevé expose la source, les titres, dates de cours et leur nature ; la valeur initiale fournie reste marquée comme référence non reconstituée.
+- `engine.snapshotAt(portfolio,date)` rejoue uniquement les opérations connues à cette date et sélectionne, pour chaque titre réellement détenu, le dernier cours manuel dont la date n'est pas future par rapport au relevé. Le système mémorise désormais `quoteHistory` par titre ; l'entrée d'un cours plus ancien ne remplace pas le dernier cours affiché. Une observation plus ancienne que la date du relevé est qualifiée d'`estimated`.
+- Les actions, ETF et autres actifs, les secteurs et géographies n'affichent des poids qu'avec une valorisation complète, sans cours inventé.
+- Tests supplémentaires : saisies de cotations hors ordre, correction de cours sur une même date, rejet des cours futurs dans un relevé passé, vente partielle rejouée à sa date, checksum ISIN, MIC, doublons et consultation de provenance.
+- Limite : la méthode de performance indiquée est Dietz modifiée *approximative* quand deux snapshots datés sont disponibles ; elle n'est pas une certification de TWR ou de fiscalité.
+- Aucune ouverture à des API de marché externes : les sources de cotations sont pour le moment **uniquement renseignées manuellement**. La formule de reprise et les paramètres d'identification sont à valider sur des justificatifs réels avant intégration finale.
+
+### Mesures de sécurité de la branche
+
+Le workflow `trace-wealth-lab.yml` contrôle les nouveaux scripts, les scénarios financiers et l'interface, **puis compare les fichiers importants à `origin/main` pour exiger zéro changement de la production**. Les fichiers de la prévisualisation ne chargent ni SDK Supabase ni `config.js` ni script de la véritable application. Le laboratoire est intégralement en mémoire et ne revendique pas de compatibilité Safari prouvée tant que la recette iPhone n'a pas été effectuée.
