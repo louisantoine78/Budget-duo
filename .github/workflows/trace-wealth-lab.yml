@@ -1,0 +1,38 @@
+name: TRACE Patrimoine Investments LAB - isolated QA
+on:
+  push:
+    branches:
+      - feature/trace-537-patrimoine-investissements-lab
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  laboratory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check isolated JavaScript syntax
+        run: |
+          node --check experiments/wealth-investments-lab/engine.js
+          node --check experiments/wealth-investments-lab/ui.js
+          node --check experiments/wealth-investments-lab/app.js
+      - name: Run investment accounting regressions
+        run: node --test tests/trace-wealth-investments-lab.test.cjs
+      - name: Enforce zero production file changes
+        run: |
+          set -eu
+          git fetch origin main
+          for file in index.html sw.js manifest.webmanifest trace-version.json v5-app-5.37.0.js config.js; do
+            git diff --exit-code origin/main HEAD -- "$file"
+          done
+          changed="$(git diff --name-only origin/main HEAD)"
+          echo "$changed"
+          if echo "$changed" | grep -Ev '^(experiments/wealth-investments-lab/|tests/trace-wealth-investments-lab.test.cjs$|\.github/workflows/trace-wealth-lab.yml$|docs/TRACE-WEALTH-INVESTMENTS-LAB.md$)' | grep -q .; then
+            echo 'Out-of-scope file touched: refusing isolated laboratory qualification.'
+            exit 1
+          fi
