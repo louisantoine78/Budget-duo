@@ -158,6 +158,23 @@
   evaluate(next); // validate all historical legs before committing any local update
   return next;
  }
+ // Pure preflight: same replay rules as saving, without mutating the portfolio.
+ function previewOperation(p,operation,replaceId=null){
+  const before=evaluate(p);
+  const candidate=appendOperation(p,operation,replaceId);
+  const after=evaluate(candidate);
+  const deltaCash=after.cashCents-before.cashCents;
+  const deltaFlow=after.netFlowCents-before.netFlowCents;
+  const deltaRealized=after.realizedCents-before.realizedCents;
+  const related=operation.securityId?
+   after.positions.find(s=>s.id===operation.securityId):null;
+  return Object.freeze({cashBeforeCents:before.cashCents,cashAfterCents:after.cashCents,
+   deltaCashCents:deltaCash,deltaFlowCents:deltaFlow,
+   deltaRealizedCents:deltaRealized,
+   quantityAfterMicro:related?.quantityMicro??0,
+   valueBeforeCents:before.valueCents,valueAfterCents:after.valueCents,
+   candidate});
+ }
  function setQuote(p,securityId,quote){
   if(![...p.positions,...(p.catalog||[])].some(s=>s.id===securityId))throw Error('Titre inconnu');
   if(!quote||!Number.isSafeInteger(quote.priceUnits)||quote.priceUnits<=0||!dateValid(quote.date)||!String(quote.source||'').trim())throw Error('Cours, date et source obligatoires');
@@ -248,6 +265,6 @@
    snapshots:[{date:'2026-11-04',valueCents:378869,source:'Valeur totale fournie'}]}],
    selectedId:'pea-demo'};
  }
- return Object.freeze({SUPPORTED,cents,quantity,price,tradeCents,dateValid,isinValid,micValid,evaluate,appendOperation,setQuote,
+ return Object.freeze({SUPPORTED,cents,quantity,price,tradeCents,dateValid,isinValid,micValid,evaluate,appendOperation,previewOperation,setQuote,
   setOpeningPosition,snapshotAt,periodPerformance,demo,Q_SCALE,PRICE_SCALE});
 });
