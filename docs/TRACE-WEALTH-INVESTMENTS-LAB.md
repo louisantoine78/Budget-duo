@@ -79,3 +79,17 @@ Après revue UX explicite par l'utilisateur : recette Safari/iPhone, validation 
 ### Mesures de sécurité de la branche
 
 Le workflow `trace-wealth-lab.yml` contrôle les nouveaux scripts, les scénarios financiers et l'interface, **puis compare les fichiers importants à `origin/main` pour exiger zéro changement de la production**. Les fichiers de la prévisualisation ne chargent ni SDK Supabase ni `config.js` ni script de la véritable application. Le laboratoire est intégralement en mémoire et ne revendique pas de compatibilité Safari prouvée tant que la recette iPhone n'a pas été effectuée.
+
+
+## Itération UX 3 — saisie rapide et lecture immédiate (laboratoire uniquement)
+
+- Saisie par **6 segments tactiles** : Versement, Retrait, Achat, Vente, Dividende, Frais. Le formulaire s'adapte à l'opération, sans afficher simultanément des champs non pertinents.
+- Une fiche de position donne accès directement à **Acheter** ou **Vendre**, avec le titre pré-sélectionné. Les autres opérations restent disponibles au niveau portefeuille.
+- **Aperçu financier non mutant** : `E.previewOperation` appelle le même moteur de rejouabilité et validation que `E.appendOperation`. Avant confirmation, le formulaire montre la variation d'espèces, le solde après l'opération, le montant brut, les frais, la quantité après et, pour les ventes, le gain réalisé estimé. Une correction montre **la différence causée par la correction**, pas le montant brut d'une transaction supplémentaire.
+- Si les liquidités de départ sont estimées comme pour le PEA Fortuneo (138,29 € à confirmer), le formulaire le rappelle explicitement.
+- L'écran portefeuille présente une lecture par classe d'actifs avec filtres **Tous / Actions / ETF / Autres**, uniquement lorsque le portefeuille s'y prête. Le filtre ne modifie ni les positions ni les calculs.
+- Les indicateurs de performance indisponibles ne sont plus reproduits dans plusieurs cartes : une fiche de complétude offre les liens vers le prochain cours/PRU à saisir.
+- Aucune interaction n'est persistée dans TRACE réel ; aucune opération d'investissement n'est passée à une banque ou à un courtier.
+- Nouveaux cas vérifiés automatiquement : prévisualisation non mutante d'achat avec frais, refus de découvert, correction sans doublon, vente partielle et PRU inconnu, boutons de transactions contextuels, filtrage des huit positions d'exemple.
+
+La qualification couvre la syntaxe JavaScript, les scénarios financiers et la comparaison automatique des fichiers à `origin/main`. Le rendu Safari iPhone reste à valider par l'utilisateur via l'URL privée de la branche.
