@@ -148,6 +148,8 @@ function analytics(p,range){
  const v=E.evaluate(p),perf=E.periodPerformance(p,range),filters=[['1','1 mois'],['3','3 mois'],['6','6 mois'],['12','1 an'],['all','Origine']];
  const sectorReady=v.priced&&v.positions.every(s=>s.sector);
  const bySector={};if(sectorReady)for(const s of v.positions)bySector[s.sector]=(bySector[s.sector]||0)+s.marketValueCents;
+ const geographyReady=v.priced&&v.positions.every(s=>s.geography);
+ const byGeography={};if(geographyReady)for(const s of v.positions)byGeography[s.geography]=(byGeography[s.geography]||0)+s.marketValueCents;
  return heading('ANALYSE','Comprendre mes placements','Des graphiques alimentés par vos propres valorisations, pas par des prix inventés.')+
  section('Évolution et rendement','<div class="wl-split">'+filters.map(([id,text])=>
  '<button class="wl-pill" aria-pressed="'+(range===id)+'" data-act="range" data-id="'+id+'">'+text+'</button>').join('')+'</div>'+
@@ -158,6 +160,9 @@ function analytics(p,range){
  section('Secteurs et géographie','<div class="wl-card wl-analytics">'+(sectorReady?
  Object.entries(bySector).map(([s,n])=>'<div class="wl-history-row"><b>'+e(s)+'</b><b>'+percent(n/v.securitiesCents)+'</b></div>').join(''):
  placeholder('Classe les titres et ajoute leurs cours pour une allocation fiable.'))+'</div>')+
+ section('Répartition géographique','<div class="wl-card wl-analytics">'+(geographyReady?
+ Object.entries(byGeography).map(([g,n])=>'<div class="wl-history-row"><b>'+e(g)+'</b><b>'+percent(n/v.securitiesCents)+'</b></div>').join(''):
+ placeholder('Géographies à renseigner pour chaque position.'))+'</div>')+
  section('Indice de référence',placeholder('Comparaison indisponible sans historique de l’indice, devise et méthodologie cohérentes.'));
 }
 window.TraceWealthLabUI=Object.freeze({e,fmt,qty,date,action,overview,portfolio,position,analytics,ref});
