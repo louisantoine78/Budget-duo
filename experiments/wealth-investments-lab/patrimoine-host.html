@@ -9,6 +9,7 @@
 <link rel="icon" type="image/svg+xml" href="../../assets/trace-wallet-v1.svg">
 <link rel="stylesheet" href="../../v5-5.31.17.css">
 <link rel="stylesheet" href="../../trace-premium-system-5.37.0.css">
+<link rel="stylesheet" href="./style.css">
 <link rel="stylesheet" href="./wealth-host.css">
 </head>
 <body>
@@ -83,11 +84,35 @@
   <div><span class="wl-portal-kicker">PATRIMOINE · DÉTAIL</span><strong>Suivi des investissements</strong></div>
   <button type="button" id="wlPortalClose" aria-label="Revenir au Patrimoine">×</button>
  </div>
- <iframe id="wlPortalFrame" title="Laboratoire Investissements" sandbox="allow-scripts allow-forms allow-modals" data-src="./index.html?embedded=1"></iframe>
+ <div class="wl-portal-scenarios" id="wlPortalScenarios" role="group" aria-label="Choisir des données de démonstration">
+  <button type="button" data-scenario="pea" aria-pressed="true">PEA de démonstration</button>
+  <button type="button" data-scenario="existing" aria-pressed="false">Compte TRACE fictif</button>
+ </div>
+ <div class="wl-native-scroll" id="wlNativeScroll">
+  <div id="wl-native-root" class="wl-embedded wl-native-root">
+   <div class="wl-app" id="wl-app">
+    <div class="wl-container">
+     <p class="wl-native-banner" id="wlScenarioNotice">Données de démonstration uniquement. Aucun compte réel n’est consulté ou modifié.</p>
+     <nav class="wl-crumb" id="wl-crumb" aria-label="Navigation au sein des investissements"></nav>
+     <div id="wl-main" aria-live="polite"></div>
+     <div class="wl-footer-note">TRACE · Patrimoine · Démonstration sans synchronisation</div>
+    </div>
+   </div>
+  </div>
+ </div>
+</dialog>
+<dialog id="wl-dialog" aria-labelledby="wl-dialog-title">
+ <div class="wl-sheet-handle" aria-hidden="true"></div>
+ <div class="wl-dialog-head"><div><span class="wl-eyebrow">PATRIMOINE · INVESTISSEMENTS</span><h2 id="wl-dialog-title">Modifier</h2></div>
+  <button type="button" class="wl-close" id="wl-close" aria-label="Fermer le formulaire">×</button></div>
+ <div class="wl-dialog-body" id="wl-dialog-body"></div>
 </dialog>
 <script src="./integration-contract.js"></script>
 <script src="./engine.js"></script>
+<script src="./quote-policy.js"></script>
 <script src="./legacy-bridge.js"></script>
+<script src="./ui.js"></script>
+<script src="./app.js"></script>
 <script src="./wealth-host.js"></script>
 </body>
 </html>
