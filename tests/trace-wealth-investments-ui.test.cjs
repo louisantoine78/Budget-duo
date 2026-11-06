@@ -83,3 +83,26 @@ test('client-only page bootstraps Patrimoine navigation with no Supabase or live
  assert.match(nodes['wl-dialog-body'].innerHTML,/Valeur totale fournie/);
  assert.match(nodes['wl-dialog-body'].innerHTML,/ne prouve pas les cours individuels/);
 });
+
+
+test('mobile portfolio suggests one-tap completion of missing quote and opening PRU',()=>{
+ const html=U.portfolio(p);
+ assert.match(html,/Compléter les données/);
+ assert.match(html,/Cours enregistrés/);
+ assert.match(html,/Prix de revient/);
+ assert.match(html,/0 \/ 8/);
+ assert.match(html,/data-act="quote" data-id="dsy"/);
+ assert.match(html,/data-act="opening" data-id="dsy"/);
+});
+test('quote-backed valuation unlocks only facts supported by the entered prices',()=>{
+ const known={...p,positions:p.positions.map(s=>({...s,
+  costBasisCents:E.tradeCents(s.quantityMicro,E.price('10'))})),
+  quotes:Object.fromEntries(p.positions.map(s=>[s.id,{
+   priceUnits:E.price('12'),date:'2026-11-05',kind:'manuel',source:'Saisie utilisateur'
+  }]))};
+ const html=U.portfolio(known);
+ assert.match(html,/Positions renseignées/);
+ assert.doesNotMatch(html,/Renseigner un cours/);
+ assert.match(U.position(known,'dsy'),/Place de cotation à renseigner/);
+ assert.match(U.analytics(known,'all'),/Actions, ETF et autres/);
+});
