@@ -37,6 +37,7 @@ jobs:
           node tests/trace-regression.test.cjs
           node tests/trace-ledger-scenarios.test.cjs
           node tests/trace-ui-smoke.test.cjs
+          node --test tests/trace-password-recovery.test.cjs
           node tests/trace-card-payment-detail.test.cjs
           node tests/trace-duplicate-compare.test.cjs
           # No artifacts uploaded; real financial accounts are never queried.
