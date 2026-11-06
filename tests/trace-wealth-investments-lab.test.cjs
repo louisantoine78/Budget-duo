@@ -4,6 +4,8 @@ const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const lab=path.join(root,'experiments/wealth-investments-lab');
 const E=require(path.join(lab,'engine.js'));
+const market=require(path.join(lab,'quote-policy.js'));
+
 function blank(){
  return{id:'sandbox',name:'Simulation',type:'PEA',currency:'EUR',owner:'la',openingDate:'2026-11-04',
  openingCashCents:100000,positions:[],catalog:[{id:'X',name:'Titre X',assetType:'Action'}],
@@ -271,4 +273,44 @@ test('one reference snapshot remains a point, never a continuous chart or preten
  assert.equal(series.points[0].valueCents,378869);
  assert.equal(series.points[0].reference,true);
  assert.equal(series.points[0].flowAdjustedCents,378869);
+});
+
+
+test('future price adapter accepts attributed EUR Euronext close without using a live API',()=>{
+ const security={isin:'FR0000120073',marketMic:'XPAR',currency:'EUR'};
+ const feed={isin:'FR0000120073',marketMic:'XPAR',currency:'EUR',
+  price:'32.1234',vendor:'Demo provider',feed:'eod',marketState:'closed',
+  tradingDate:'2026-11-05',timestampUTC:'2026-11-05T16:37:00Z',
+  redistributionAllowed:true,delayMinutes:0};
+ const quote=market.acceptQuote(feed,security,'2026-11-06T10:00:00Z');
+ assert.equal(quote.priceUnits,321234);
+ assert.equal(quote.kind,'clôture');
+ assert.equal(quote.date,'2026-11-05');
+ assert.equal(quote.observedAt,'2026-11-05T16:37:00Z');
+ assert.equal(quote.marketState,'fermé');
+ assert.equal(quote.marketMic,'XPAR');
+ assert.equal(quote.displayRights,'confirmed');
+ const p=blank();
+ const injected=E.setQuote(p,'X',quote);
+ assert.equal(injected.quotes.X.kind,'clôture');
+ assert.equal(injected.quotes.X.priceUnits,321234);
+ assert.equal(p.quotes.X,undefined);
+});
+test('market quote contract refuses mismatched symbols, FX, unlicensed feeds and invented real-time status',()=>{
+ const security={isin:'FR0000120073',marketMic:'XPAR',currency:'EUR'};
+ const good={isin:'FR0000120073',marketMic:'XPAR',currency:'EUR',
+  price:'32.1234',vendor:'Demo provider',feed:'eod',marketState:'closed',
+  tradingDate:'2026-11-05',timestampUTC:'2026-11-05T16:37:00Z',
+  redistributionAllowed:true};
+ const now='2026-11-06T10:00:00Z';
+ assert.throws(()=>market.acceptQuote({...good,redistributionAllowed:false},security,now),/Licence/);
+ assert.throws(()=>market.acceptQuote({...good,isin:'FR0000130577'},security,now),/correspondance/);
+ assert.throws(()=>market.acceptQuote({...good,marketMic:'XETR'},security,now),/correspondance/);
+ assert.throws(()=>market.acceptQuote({...good,currency:'USD'},security,now),/Devise incompatible/);
+ assert.throws(()=>market.acceptQuote({...good,feed:'unknown'},security,now),/Statut/);
+ assert.throws(()=>market.acceptQuote({...good,timestampUTC:'2026-11-09T13:00:00Z'},security,now),/futur/);
+ assert.throws(()=>market.acceptQuote({...good,tradingDate:'2026-11-09'},security,now),/Date de marché/);
+ assert.throws(()=>market.acceptQuote({...good,price:'0'},security,now),/positif/);
+ assert.throws(()=>market.acceptQuote({...good,price:'32.12345'},security,now),/décimales/);
+ assert.throws(()=>market.acceptQuote(good,{...security,isin:''},now),/ISIN/);
 });
