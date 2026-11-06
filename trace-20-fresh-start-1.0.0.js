@@ -8,7 +8,7 @@
  const KEEP=['accounts','budgets','categories','investment_accounts','investment_operations'];
  function cutoff(value){
   if(value==null||value==='')return null;
-  if(typeof value!=='string'||!/^20\\d\\d-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,6})?Z$/.test(value))throw Error('Invalid UTC restart timestamp');
+  if(typeof value!=='string'||!/^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,6})?Z$/.test(value))throw Error('Invalid UTC restart timestamp');
   const ms=Date.parse(value);
   if(!Number.isFinite(ms)||new Date(ms).toISOString().slice(0,19)!==value.slice(0,19))throw Error('Invalid restart date');
   return ms;
