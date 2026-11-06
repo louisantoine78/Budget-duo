@@ -229,7 +229,23 @@ test('Patrimoine mount is opt-in, idempotent, and can only append one link to Pl
  const original=Object.keys(nodes).join('|');
  assert.equal(integration.mount(doc,{enabled:false,onOpen:()=>{}}).reason,'feature-disabled');
  assert.equal(children.length,0);
- assert.equal(integration.mount(doc,{enabled:true}).mounted,undefined); // invalid handler throws
+ assert.throws(()=>integration.mount(doc,{enabled:true}),/Action d’ouverture manquante/);
+ const handle=integration.mount(doc,{enabled:true,onOpen:()=>{clicks++;}});
+ assert.equal(handle.mounted,true);
+ assert.equal(children.length,1);
+ assert.equal(children[0].id,'traceWealthInvestmentDetailEntry');
+ assert.equal(children[0].className,'linkbtn trace-wealth-investments-link');
+ assert.match(children[0].attrs['aria-label'],/Patrimoine/);
+ children[0].handlers.click();
+ assert.equal(clicks,1);
+ assert.equal(integration.mount(doc,{enabled:true,onOpen:()=>{clicks++;}}).reason,'already-mounted');
+ assert.equal(children.length,1);
+ assert.equal(Object.keys(nodes).join('|'),original);
+ handle.unmount();
+ assert.equal(children.length,0);
+ assert.equal(typeof handle.element.handlers.click,'undefined');
+ const incomplete={...doc,getElementById:id=>id==='wealthTrend'?null:doc.getElementById(id)};
+ assert.equal(integration.mount(incomplete,{enabled:true,onOpen:()=>{}}).reason,'wealth-structure-mismatch');
 });
 test('existing investment accounts are mapped diagnostically without inventing opening positions or altering CELI savings',()=>{
  const accounts=[
