@@ -92,3 +92,21 @@ test('owner-scoped gateway only includes portfolios with successful parity',()=>
  assert.equal(result.review.length,1);
  assert.equal(result.portfolios.every(p=>p.readOnly),true);
 });
+
+
+test('gateway actually blocks an instrument when independent cost rounding disagrees by one cent',()=>{
+ const snapshot={
+  investmentAccounts:[{id:'p',name:'Test écart',type:'PEA',owner:'la',currency:'EUR'}],
+  investmentOperations:[
+   {id:'1',accountId:'p',type:'deposit',date:'2026-10-01',amount:100},
+   {id:'2',accountId:'p',type:'buy',date:'2026-10-02',symbol:'ETF',quantity:3,unitPrice:3.331,fee:0},
+   {id:'3',accountId:'p',type:'buy',date:'2026-10-03',symbol:'ETF',quantity:3,unitPrice:3.331,fee:0}
+  ]
+ };
+ const selected=Gateway.select(snapshot,{viewerOwner:'la',scope:'mine'});
+ assert.equal(selected.portfolios.length,0);
+ assert.equal(selected.review.length,1);
+ assert.equal(selected.review[0].status,'ledger-divergence');
+ assert.ok(selected.review[0].reasons.some(x=>/Coût de revient divergent/.test(x)));
+ assert.equal(snapshot.investmentOperations.length,3);
+});
