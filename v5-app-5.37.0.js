@@ -216,6 +216,11 @@ function internationalPreviewMode(){
   typeof window.TraceInternationalPreviewFixtures?.create==='function';
 }
 let state={household:{},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[],importDays:[],smartImports:[]};
+// Historical movements never populate activity and budget views, but
+// may explain preserved bank and linked savings balances in read-only mode.
+let trace20LegacyBankTransactions=[],trace20LegacyBankReconciliations=[];
+const trace20BalanceTransactions=()=>[...trace20LegacyBankTransactions,...state.transactions];
+const trace20BalanceReconciliations=()=>[...trace20LegacyBankReconciliations,...state.reconciliations];
 function withTimeout(promise,ms,label){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label||'Délai dépassé')),ms))]);}
 function loadingStage(text){const el=$('#cloudLoadingText');if(el)el.textContent=text;}
 function member(id){return(state.household.members||[]).find(x=>x.id===id)||{id,name:id==='la'?'Membre 1':'Partenaire',initials:id==='la'?'M1':'P'};}
@@ -394,7 +399,7 @@ function accountType(a){
 function traceLinkedBankTransactionCovers(o,account,boundary){
  if(!o?.linkedTransactionId)return false;
  const I=window.TraceInternational;
- const t=state.transactions.find(t=>t.id===o.linkedTransactionId&&
+ const t=trace20BalanceTransactions().find(t=>t.id===o.linkedTransactionId&&
   t.status==='confirmed'&&t.type!=='card_statement_evidence'&&
   afterBoundary(t.date,boundary));
  if(!t)return false; // Pending, old or statement-only links are not counted.
@@ -451,7 +456,7 @@ function traceCardRepaymentMismatch(t){
 }
 function accountEstimate(a){
  const I=window.TraceInternational,code=I.currency(a);
- const r=state.reconciliations.filter(x=>x.accountId===a.id&&
+ const r=trace20BalanceReconciliations().filter(x=>x.accountId===a.id&&
    (!x.status||['confirmed','complete','matched'].includes(x.status))&&x.confirmed!==false&&
    I.calendarDate(x.date)&&String(x.currency||'CAD').toUpperCase()===code&&
    I.exactMoney(x.actualBalance)!==null).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
@@ -463,7 +468,7 @@ function accountEstimate(a){
  const base=rawBase===null?null:accountType(a)==='card'&&r?.cardBalanceKind!=='credit'?-Math.abs(rawBase):rawBase;
  const boundary=r?{date:r.date,mode:'end'}:openingBoundary(a.id);
  if(base===null||!I.calendarDate(boundary.date))return null;
- const movement=state.transactions.filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
+ const movement=trace20BalanceTransactions().filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
   if(t.type==='card_statement_evidence')return x;
   if(!I.calendarDate(t.date))return NaN; // Invalid bank day cannot be positioned in the ledger.
   if(traceCardRepaymentMismatch(t))return NaN; // Card repayment bank legs disagree.
@@ -5541,7 +5546,7 @@ function isReadySavingsAccount(a){
 }
 function linkedSavingsMovements(account){
  if(!isReadySavingsAccount(account))return[];
- return state.transactions.filter(t=>t.status==='confirmed'&&
+ return trace20BalanceTransactions().filter(t=>t.status==='confirmed'&&
   t.investmentAccountId===account.id&&t.date>account.openingDate&&
   ((t.type==='external_transfer'&&t.transferPurpose==='savings')||
    (t.type==='external_refund'&&t.transferPurpose==='savings_withdrawal')));
@@ -6871,7 +6876,7 @@ function openDataSettings(){
   };
   bindSettingsBack();
 }
-async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Chargement de votre espace…');const{data:m,error:e}=await withTimeout(client.from('household_members').select('household_id,user_id,slot,display_name').eq('user_id',session.user.id).maybeSingle(),7000,'Chargement du profil trop long.');if(e)throw e;if(!m){showGate('cloudWorkspacePanel');return;}document.documentElement.dataset.traceUserId=session.user.id;me=m.slot;partner=me==='la'?'partner':'la';loadingStage('Synchronisation de vos données…');const[{data:h,error:he},{data:docs,error:de},{data:members,error:mee}]=await withTimeout(Promise.all([client.from('households').select('id,name,settings,settings_revision,schema_version,invite_code,created_by').eq('id',m.household_id).single(),client.from('documents').select('collection,item_id,data,revision').eq('household_id',m.household_id),client.from('household_members').select('slot,display_name,role,user_id').eq('household_id',m.household_id)]),9000,'Synchronisation trop longue.');if(he||de||mee)throw he||de||mee;
+async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Chargement de votre espace…');const{data:m,error:e}=await withTimeout(client.from('household_members').select('household_id,user_id,slot,display_name').eq('user_id',session.user.id).maybeSingle(),7000,'Chargement du profil trop long.');if(e)throw e;if(!m){showGate('cloudWorkspacePanel');return;}document.documentElement.dataset.traceUserId=session.user.id;me=m.slot;partner=me==='la'?'partner':'la';loadingStage('Synchronisation de vos données…');const[{data:h,error:he},{data:docs,error:de},{data:members,error:mee}]=await withTimeout(Promise.all([client.from('households').select('id,name,settings,settings_revision,schema_version,invite_code,created_by').eq('id',m.household_id).single(),client.from('documents').select('collection,item_id,data,revision,created_at').eq('household_id',m.household_id),client.from('household_members').select('slot,display_name,role,user_id').eq('household_id',m.household_id)]),9000,'Synchronisation trop longue.');if(he||de||mee)throw he||de||mee;
  // Deny missing/malformed revision data rather than silently reopening blind writes.
  const incomingRevision=internationalPreviewMode()?null:traceRevision(h.settings_revision);
  const loadedRevisions=new Map();
@@ -6884,7 +6889,14 @@ async function loadWorkspace(){showGate('cloudLoadingPanel');loadingStage('Charg
  for(const [key,rev] of loadedRevisions)traceDocRevisions.set(key,rev);
  traceSettingsRevision=incomingRevision;traceWriteQueues.clear();traceWritesBlocked=false;
  document.querySelector('#traceWriteConflict')?.remove();
- household=h;state={household:{...(h.settings||{}),name:h.name,inviteCode:h.invite_code||'',createdBy:h.created_by||'',workspaceMembers:members.map(x=>({slot:x.slot,name:x.display_name,role:x.role,userId:x.user_id}))},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[],importDays:[],smartImports:[]};if(!Array.isArray(state.household.members)||!state.household.members.length)state.household.members=members.map(x=>({id:x.slot,name:x.display_name,initials:initials(x.display_name)}));members.forEach(x=>{const mm=state.household.members.find(y=>y.id===x.slot);if(mm){mm.name=x.display_name||mm.name;mm.initials=initials(mm.name);}});const map={categories:'categories',accounts:'accounts',budgets:'budgets',transactions:'transactions',investmentAccounts:'investment_accounts',investmentOperations:'investment_operations',reconciliations:'reconciliations',importDays:'import_days',smartImports:'imports'};Object.entries(map).forEach(([k,c])=>state[k]=docs.filter(d=>d.collection===c).map(d=>d.data).filter(Boolean));state.household.referenceDate||=CM+'-01';$('#profileBtn').textContent=member(me).initials||initials(member(me).name);renderAll();navigate((location.hash||'#').slice(1)||'home');hideGate();sync('synced');window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});document.dispatchEvent(new Event('trace:workspace-ready'));setTimeout(offerInitialBankSetup,260);
+ const freshStart=window.Trace20FreshStart;
+ if(!freshStart||typeof freshStart.partition!=='function')
+  throw Error('TRACE 2.0 : module de nouveau départ indisponible.');
+ const freshDocs=freshStart.partition(docs,h.settings||{});
+ const visibleDocs=freshDocs.visible;
+ trace20LegacyBankTransactions=freshDocs.archived.filter(d=>d.collection==='transactions').map(d=>d.data).filter(Boolean);
+ trace20LegacyBankReconciliations=freshDocs.archived.filter(d=>d.collection==='reconciliations').map(d=>d.data).filter(Boolean);
+ household=h;state={household:{...(h.settings||{}),name:h.name,inviteCode:h.invite_code||'',createdBy:h.created_by||'',workspaceMembers:members.map(x=>({slot:x.slot,name:x.display_name,role:x.role,userId:x.user_id}))},categories:[],accounts:[],budgets:[],transactions:[],investmentAccounts:[],investmentOperations:[],reconciliations:[],importDays:[],smartImports:[]};if(!Array.isArray(state.household.members)||!state.household.members.length)state.household.members=members.map(x=>({id:x.slot,name:x.display_name,initials:initials(x.display_name)}));members.forEach(x=>{const mm=state.household.members.find(y=>y.id===x.slot);if(mm){mm.name=x.display_name||mm.name;mm.initials=initials(mm.name);}});const map={categories:'categories',accounts:'accounts',budgets:'budgets',transactions:'transactions',investmentAccounts:'investment_accounts',investmentOperations:'investment_operations',reconciliations:'reconciliations',importDays:'import_days',smartImports:'imports'};Object.entries(map).forEach(([k,c])=>state[k]=visibleDocs.filter(d=>d.collection===c).map(d=>d.data).filter(Boolean));state.household.referenceDate||=CM+'-01';$('#profileBtn').textContent=member(me).initials||initials(member(me).name);renderAll();navigate((location.hash||'#').slice(1)||'home');hideGate();sync('synced');window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});document.dispatchEvent(new Event('trace:workspace-ready'));setTimeout(offerInitialBankSetup,260);
  if(state.household.traceSeparatedAt){
   let greeted=false;
   const localKey='trace:separation:greeting:'+session.user.id;
@@ -6956,6 +6968,7 @@ async function init(){
     session=s||null;
     window.TraceEmailConfirmation?.handleSession?.(session);
     if(event==='SIGNED_OUT'){
+      trace20LegacyBankTransactions=[];trace20LegacyBankReconciliations=[];
       household=null;
       workspaceLoadPromise=null;
       showGate('cloudAuthPanel');
