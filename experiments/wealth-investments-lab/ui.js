@@ -78,27 +78,28 @@ function multiHero(state,p,v){
 }
 function readiness(p,v){
  const total=v.positions.length;
- if(!total)return '<div class="wl-readiness"><div class="wl-ready-title">Première étape</div><p>Ajoute un titre pour constituer ce portefeuille.</p></div>';
+ if(!total)return '<div class="wl-readiness"><div class="wl-ready-title">Première étape</div><p>'+(p.readOnly?'Aucune position vérifiée à afficher. Un relevé courtier sera nécessaire.':'Ajoute un titre pour constituer ce portefeuille.')+'</p></div>';
  const quoted=total-v.missingQuote.length,basis=total-v.missingCost.length;
  if(quoted===total&&basis===total)return '<div class="wl-readiness wl-readiness-done"><span class="wl-ready-dot">✓</span><span><b>Positions renseignées</b><small>Les cours et PRU de ce portefeuille sont disponibles.</small></span></div>';
  const toQuote=v.positions.find(x=>v.missingQuote.includes(x.id));
  const toCost=v.positions.find(x=>v.missingCost.includes(x.id));
  return '<div class="wl-readiness"><div class="wl-readiness-head"><div><span class="wl-kicker">VOTRE REPRISE</span><h3>Compléter les données</h3></div>'+
  '<span class="wl-progress-badge">'+(quoted+basis)+' / '+(total*2)+'</span></div>'+
- '<p class="wl-ready-summary">Les positions sont déjà reprises. Il reste à renseigner les données qui permettent de mesurer leur performance.</p>'+
+ '<p class="wl-ready-summary">'+(p.readOnly?'Journal de démonstration en lecture seule. Les cours et identifiants restent à vérifier auprès du courtier.':'Les positions sont déjà reprises. Il reste à renseigner les données qui permettent de mesurer leur performance.')+'</p>'+
  '<div class="wl-progress-row"><span>Cours enregistrés</span><strong>'+quoted+' / '+total+'</strong></div>'+
  '<div class="wl-progress-track"><i style="width:'+(100*quoted/total).toFixed(0)+'%"></i></div>'+
  '<div class="wl-progress-row"><span>Prix de revient</span><strong>'+basis+' / '+total+'</strong></div>'+
  '<div class="wl-progress-track"><i style="width:'+(100*basis/total).toFixed(0)+'%"></i></div>'+
- '<div class="wl-ready-actions">'+
+ (p.readOnly?'':'<div class="wl-ready-actions">'+
  (toQuote?'<button class="wl-ready-link" data-act="quote" data-id="'+e(toQuote.id)+'">+ Renseigner un cours</button>':'')+
- (toCost?'<button class="wl-ready-link" data-act="opening" data-id="'+e(toCost.id)+'">+ Renseigner un PRU</button>':'')+'</div></div>';
+ (toCost?'<button class="wl-ready-link" data-act="opening" data-id="'+e(toCost.id)+'">+ Renseigner un PRU</button>':'')+'</div>')+'</div>';
 }
 function overview(state){
  const p=state.portfolios[0],v=E.evaluate(p);
  return heading('VOTRE PATRIMOINE','Investissements','Portefeuilles et positions au même endroit. Vos chiffres essentiels, sans complexité inutile.')+
  multiHero(state,p,v)+
- section('Mes portefeuilles','<div style="display:grid;gap:10px">'+state.portfolios.map(cardPortfolio).join('')+'</div>',action('+ Ajouter','newPortfolio','','wl-btn-light'))+
+ (state.readOnly?'<p class="wl-viewonly-note">Lecture seule · les comptes proviennent d’un scénario fictif conforme à la structure TRACE. Aucune donnée réelle.</p>':'')+
+ section('Mes portefeuilles','<div style="display:grid;gap:10px">'+state.portfolios.map(cardPortfolio).join('')+'</div>',state.readOnly?'':action('+ Ajouter','newPortfolio','','wl-btn-light'))+
  (v.performanceComplete?section('Performance','<div class="wl-two">'+stat('Plus-values latentes',fmt(v.unrealizedCents,p.currency))+
  stat('Plus-values réalisées',fmt(v.realizedCents,p.currency))+'</div>'):'')+
  section('Analyses','<div class="wl-card wl-analytics">'+
@@ -117,7 +118,8 @@ function portfolio(p,filter='all'){
     '" aria-pressed="'+(filter===type)+'">'+label+' <b>'+n+'</b></button>').join('')+'</div>':
   '<div class="wl-investment-glance"><span>'+v.positions.length+' lignes</span></div>';
  return heading('PORTEFEUILLE',p.name,'Positions, liquidités et journal dans sa devise native.')+hero(p,v)+
- '<div class="wl-actions">'+action('+ Opération','newOp','','')+action('Ajouter un titre','newSecurity')+action('Instantané','snapshot','','wl-btn-light')+'</div>'+
+ (p.readOnly?'<p class="wl-viewonly-note">Dossier fictif en lecture seule · aucun rapprochement avec un compte réel n’a été effectué.</p>':
+ '<div class="wl-actions">'+action('+ Opération','newOp','','')+action('Ajouter un titre','newSecurity')+action('Instantané','snapshot','','wl-btn-light')+'</div>')+
  readiness(p,v)+
  section('Positions',filters+
  '<div class="wl-card">'+positionRows(p,v,filter)+'</div>',action('Analyser','analytics','','wl-btn-light'))+
@@ -129,9 +131,9 @@ function portfolio(p,filter='all'){
  '<div class="wl-history-row"><span><b>'+e(({buy:'Achat',sell:'Vente',deposit:'Versement',withdrawal:'Retrait',dividend:'Dividende',fee:'Frais'})[o.type])+'</b>'+
  '<small>'+date(o.date)+(o.securityId?' · '+e(p.catalog.find(s=>s.id===o.securityId)?.name||o.securityId):'')+'</small></span>'+
  '<span style="text-align:right"><b>'+(o.type==='buy'||o.type==='sell'?qty(o.quantityMicro)+' titres':fmt(o.amountCents,p.currency))+
- '</b><br><button class="wl-link" data-act="editOp" data-id="'+e(o.id)+'">Corriger</button></span></div>').join(''):
+ '</b>'+(p.readOnly?'':'<br><button class="wl-link" data-act="editOp" data-id="'+e(o.id)+'">Corriger</button>')+'</span></div>').join(''):
  '<p class="wl-empty">Aucune opération saisie. Les positions initiales ne créent pas d’achats fictifs.</p>')+'</div>')+
- '<p class="wl-note">Une correction rejoue tout le journal. Les soldes et les PRU restent cohérents ou la modification est refusée.</p>';
+ '<p class="wl-note">'+(p.readOnly?'Les opérations historiques affichées sont figées dans cet aperçu. Aucun mouvement n’est enregistré.':'Une correction rejoue tout le journal. Les soldes et les PRU restent cohérents ou la modification est refusée.')+'</p>';
 }
 function position(p,id){
  const v=E.evaluate(p),s=v.positions.find(x=>x.id===id);
@@ -147,9 +149,10 @@ function position(p,id){
  '<p class="wl-muted-small">Dernier cours : '+(s.quote?
  fmtPrice(s.quote.priceUnits,p.currency)+' · '+date(s.quote.date)+' · '+e(s.quote.source)+' ('+e(s.quote.kind||'manuel')+')':
  'À renseigner')+'</p></div>'+
+ (p.readOnly?'<p class="wl-viewonly-note">Position issue d’un journal de démonstration · ISIN, prix et PRU à confirmer.</p>':
  '<div class="wl-actions wl-position-actions">'+action('Acheter','quickBuy',id,'')+
  action('Vendre','quickSell',id,'wl-btn-alt')+action('Saisir un cours','quote',id,'wl-btn-light')+'</div>'+
- '<button type="button" class="wl-edit-position" data-act="opening" data-id="'+e(id)+'">Modifier la fiche, l’ISIN et le PRU <span aria-hidden="true">›</span></button>'+
+ '<button type="button" class="wl-edit-position" data-act="opening" data-id="'+e(id)+'">Modifier la fiche, l’ISIN et le PRU <span aria-hidden="true">›</span></button>')+
  section('Ma position','<div class="wl-two">'+stat('Quantité',qty(s.quantityMicro))+
  stat('PRU moyen',s.averageCostUnits===null?'À renseigner':fmtPrice(s.averageCostUnits,p.currency))+
  stat('Gain latent',s.unrealizedCents===null?'Indisponible':fmt(s.unrealizedCents,p.currency))+
@@ -161,7 +164,7 @@ function position(p,id){
  (strategy.resultsDate?' · Résultats : '+e(strategy.resultsDate):'')+'</p>'+
  (alerts.length?alerts.map(x=>'<span class="wl-badge wl-badge-warn">'+e(x)+'</span>').join(' '):
  '<p class="wl-muted-small">Aucun seuil déclenché. Les alertes ne placent jamais d’ordre.</p>')+'</div>',
- action('Configurer','strategy',id,'wl-btn-light'));
+ p.readOnly?'':action('Configurer','strategy',id,'wl-btn-light'));
 }
 function interactiveTrend(p,period,metric='value',focusedDate=''){
  const series=E.chartSeries(p,period);
