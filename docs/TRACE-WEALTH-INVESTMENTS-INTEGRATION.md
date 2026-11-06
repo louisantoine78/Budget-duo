@@ -124,3 +124,47 @@ Les contrôles automatisés vérifient la disparition totale de l'iframe, la pr�
 
 **Statut : prévisualisation prête pour une recette utilisateur, pas une intégration approuvée en production.** Aucun fichier de l'application réelle ni migration n'a été modifié.
 
+
+
+## 9. Passage d'une fiche fictive à la structure complète de TRACE (lab uniquement)
+
+La maquette utilise désormais une **passerelle d'état en lecture seule** : `trace-state-gateway.js`. Son entrée reproduit strictement les noms des propriétés de TRACE 5.37 : `investmentAccounts`, `investmentOperations`, `id`, `accountId`, `owner`, `status`, `type`, `symbol`, `bankAccountId`, `linkedTransactionId`, `amount`, `quantity`, `unitPrice`, `fee`, `createdAt` et `date`.
+
+**Usage proposé après autorisation future**, avec un snapshot déjà limité par les droits et le périmètre de session TRACE, et aucun appel Supabase supplémentaire :
+
+```js
+// Illustration documentaire : aucune activation dans l'application réelle.
+const snapshot = {
+  investmentAccounts: state.investmentAccounts,
+  investmentOperations: state.investmentOperations,
+};
+const diagnosis = window.TraceWealthStateGateway.select(snapshot, {
+  viewerOwner: me,
+  scope: wealthScope,
+  coupleAuthorized: householdPermissionConfirmed === true
+});
+```
+
+La passerelle **ne constitue pas** une autorisation de lecture des données du partenaire : celle-ci doit être assurée en amont par l'authentification, les permissions du foyer et RLS de l'application réelle. Elle renforce la séparation côté présentation et refuse `scope:'couple'` sans autorisation explicite. Elle bloque les identifiants de comptes ou d'opérations dupliqués, évite les comptes archivés, ne considère que les mouvements confirmés et ne recopie aucune opération bancaire.
+
+Le résultat comprend :
+- `portfolios` : comptes de placements dont le journal peut être rejoué, **toujours marqués `readOnly`** et `broker-evidence-required`.
+- `review` : comptes dont le journal ne peut pas être rapproché ou est incomplet, *sans générer d'inventaire fictif*.
+- `excluded` : CELI/livrets/soldes liés, conservés dans **Épargne** exactement comme le `renderWealth` actuel.
+- `currencies` et `crossCurrencyTotalAllowed` : jamais de somme EUR/CAD sans FX daté.
+- `summary` : comptes existants, quantités d'opérations et nombre de références bancaires conservées (sans double comptabilisation).
+
+Le **troisième scénario** de `patrimoine-host.html`, « Modèle TRACE », prend uniquement `trace-fixture.js`, un jeu **100 % fictif** : PEA d'exemple EUR (Moi), REER d'exemple CAD (Partenaire), CELI fictif conservé dans Épargne, Livret fictif lié et CTO fictif bloqué faute de journal. Les interrupteurs « Moi/Couple » font réellement varier cette liste *dans la démonstration*. Un volet discret donne le nombre de portefeuilles visibles, les comptes bloqués, les comptes d'épargne exclus et les mouvements bancaires déjà liés. Aucune donnée du vrai compte n'est lue.
+
+L'UX masque les boutons d'ajout, de vente, d'achat, de modification et de cours des portefeuilles récupérés depuis le modèle TRACE fictif. Surtout, le contrôleur **refuse aussi leur exécution** côté JavaScript même si un événement est simulé ou déclenché directement. Le PEA de laboratoire indépendant reste modifiable en mémoire uniquement pour évaluer l'ergonomie.
+
+### Tests nécessaires avant toute activation sur données réelles
+
+- Vérifier l'identité `me`, le périmètre `wealthScope` et les droits du foyer dans le runtime authentifié ; les tests du laboratoire ne prouvent pas la sécurité RLS serveur.
+- Exiger une vraie comparaison espèces + quantités + coûts de revient avec les documents du courtier ; le solde de départ « zéro » d'un journal incomplet ne doit pas devenir une vérité.
+- Revalider l'absence de doublons avec `portfolioLedger()` et `savingsLedger()` de la version de production, puis l'intégrité du total `#wealthTotal` et des vues partagées.
+- Préparer les informations ISIN/MIC, cours datés et taux FX avec provenance et droits ; un cours de la dernière opération n'est pas automatiquement un cours du marché.
+- Effectuer une recette réelle sur Safari iPhone (défilement, double dialogue natif, clavier, retour focus). Aucune recette Safari native n'est revendiquée ici.
+- **Ne pas toucher** à `main`, Supabase, RLS, au service worker, aux états personnels, à la production ou aux transactions avant validation explicite.
+
+Ce jalon montre que la future intégration peut se faire **dans le Patrimoine existant sans refonte**, mais il n'implique **aucun accès autorisé aux comptes de production**.
