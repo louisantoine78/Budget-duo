@@ -81,3 +81,29 @@ Aucune migration appliquée. À valider par un audit des schémas et droits RLS 
 - Aucun double comptage de comptes, positions, mouvements ou liquidités.
 - Aucun indicateur de performance provenant de valeurs inconnues ou de conversions FX absentes.
 - Aucun déploiement production avant approbation et tests réels sur iPhone.
+
+
+## 7. Adaptateur de reprise en lecture seule (laboratoire)
+
+Créé : `experiments/wealth-investments-lab/legacy-bridge.js`.
+
+Cette couche sépare **explicitement** le journal financier déjà enregistré dans TRACE de son affichage premium. Elle n'utilise aucun SDK, réseau ou stockage, et ne crée aucun document. Elle ne déclenche pas le bouton « Ajouter » ni les opérations de paiement.
+
+- `build(existingInvestmentAccount,existingInvestmentOperations)` sélectionne exclusivement les opérations `confirmed` ou sans champ `status`, rattachées à l'identifiant réel de l'enveloppe. Les IDs de mouvements, l'ordre chrono/horodatage et les références de virements bancaires sont conservés.
+- Les versements, retraits, achats successifs, ventes partielles, dividendes et frais passent dans le moteur de calcul en centimes et micro-actions. Les anciennes entrées `quote` sont **des candidats à vérifier**, non des cours automatiquement pris pour vrais.
+- L'ancien journal n'étant pas forcément exhaustif depuis l'ouverture, le solde d'ouverture nul n'est **qu'une hypothèse technique de simulation**. L'adaptateur ne marque donc jamais le compte comme « vérifié » sur la seule base d'un rejeu réussi.
+- En cas d'ID répété, de date, précision, devise, opération ou liquidités incohérentes, `build()` renvoie `needs-review` et ne délivre **aucun portefeuille partiellement importé**.
+- `reconcile(bridge,brokerStatement)` compare explicitement les espèces, les quantités et coûts par titre à un relevé fourni. Une concordance des montants n'autorise **pas encore** la cotation boursière ni la conversion FX ; une preuve de source, d'ISIN/MIC et de droits reste requise.
+- Les comptes CELI déjà dans Épargne sont exclus par défaut, sauf choix de typologie titres explicite. Les autres comptes `savingsTracking='linked'` restent hors périmètre. Le périmètre « Moi/Couple » demeure entièrement piloté par le propriétaire et les accès TRACE existants.
+
+### Explication dépliable dans la prévisualisation
+
+L'écran `patrimoine-host.html` affiche sous Placements une unique ligne repliée **« Comment mes placements seront-ils conservés ? »**. Elle simule trois opérations totalement fictives (un versement, un achat et un cours non vérifié), puis montre le rapprochement espèces/quantité/PRU. Elle ne demande aucune saisie personnelle et n'accède pas aux comptes de l'utilisateur.
+
+Cette démonstration n'est **ni un import ni un aperçu de données privées**. Le vrai Patrimoine et le PEA ne sont pas connectés au laboratoire. Aucun nombre issu de l'exemple de rapprochement ne doit être traité comme un solde bancaire ou une valorisation authentifiée.
+
+Tests autonomes supplémentaires : `tests/trace-wealth-investments-bridge.test.cjs` ; le workflow isolé vérifie aussi la simulation pliée/dépliée et refuse toute modification des fichiers de production.
+
+### Critères de passage en réel
+
+Avant toute intégration : lecture seule des documents existants avec autorisation explicite, rapprochement des valeurs courtier pour chaque enveloppe, sélection rigoureuse de la date de reprise, spécification des métadonnées instrument/cotation, respect des liens bancaires, contrôles RLS et rollback sans perte de documents. **Pas de modification, migration, import, déploiement production ou reclassification de CELI sans validation de l'utilisateur.**
