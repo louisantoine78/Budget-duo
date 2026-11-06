@@ -167,3 +167,25 @@ test('snapshot replays partial sale at the effective day rather than applying th
  assert.equal(E.snapshotAt(p,'2026-11-14').valueCents,102000);
  assert.equal(E.snapshotAt(p,'2026-11-14').estimated,true);
 });
+
+
+test('ISO 6166 ISIN check-digit and exchange MIC validation avoid mistyped identifiers',()=>{
+ assert.equal(E.isinValid('FR0000120073'),true);
+ assert.equal(E.isinValid('FR0000130577'),true);
+ assert.equal(E.isinValid('FR0011871128'),true);
+ assert.equal(E.isinValid('DE000TUAG505'),true);
+ assert.equal(E.isinValid('FR0000120074'),false);
+ assert.equal(E.isinValid('NOT-AN-ISIN'),false);
+ assert.equal(E.micValid('XPAR'),true);
+ assert.equal(E.micValid('XETR'),true);
+ assert.equal(E.micValid('PAR'),false);
+ const p=blank();
+ p.positions=[{id:'a',quantityMicro:E.quantity(1),costBasisCents:1000,isin:'FR0000120073',marketMic:'XPAR'}];
+ assert.doesNotThrow(()=>E.evaluate(p));
+ p.positions.push({id:'b',quantityMicro:E.quantity(1),costBasisCents:1000,isin:'FR0000120073',marketMic:'XPAR'});
+ assert.throws(()=>E.evaluate(p),/Même ISIN et place/);
+ p.positions[1].marketMic='XETR';
+ assert.doesNotThrow(()=>E.evaluate(p));
+ p.positions[1].isin='FR0000120074';
+ assert.throws(()=>E.evaluate(p),/ISIN invalide/);
+});
