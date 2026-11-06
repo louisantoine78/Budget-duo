@@ -84,3 +84,13 @@ html,body{margin:0;min-height:100%;background:#f7faf6;color:#1b4030}
  .wl-wealth-portal .wl-portal-scenarios{padding:7px 12px}
  .wl-wealth-portal .wl-portal-scenarios button{font-size:10px;min-height:43px}
 }
+
+/* Schema-aware preview: simple statuses, no extra Patrimoine cards. */
+.wl-native-gateway{margin:0 0 13px;padding:10px 12px;border:1px solid #d4e7d7;border-left:3px solid #4b9b70;
+ border-radius:10px;background:#eef8ef;color:#285940;font-size:11px;line-height:1.6;font-weight:580}
+.wl-native-gateway[hidden]{display:none!important}
+.wl-wealth-portal .wl-portal-scenarios{gap:5px}
+.wl-wealth-portal .wl-portal-scenarios button{padding:7px 5px;line-height:1.3}
+.wl-wealth-portal .wl-viewonly-note{margin:10px 0 14px;padding:11px 13px;background:#f2f8f2;
+ color:#456b54;font-size:11px;line-height:1.5;border:1px solid #dcebdd;border-radius:12px}
+@media(max-width:390px){.wl-wealth-portal .wl-portal-scenarios button{font-size:9px;padding:6px 3px}}
