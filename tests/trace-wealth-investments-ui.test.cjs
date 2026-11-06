@@ -204,8 +204,16 @@ test('integration host preserves all actual Patrimoine sections and does not loa
   assert.ok(html.includes(label));
  assert.match(html,/src="\.\/integration-contract\.js"/);
  assert.match(html,/src="\.\/wealth-host\.js"/);
- assert.match(html,/iframe[^>]*sandbox="allow-scripts allow-forms allow-modals"/);
- assert.match(html,/data-src="\.\/index\.html\?embedded=1"/);
+ assert.doesNotMatch(html,/<iframe\b/i);
+ assert.match(html,/id="wl-native-root"/);
+ assert.match(html,/id="wlNativeScroll"/);
+ assert.match(html,/id="wl-crumb"/);
+ assert.match(html,/id="wl-main"/);
+ assert.match(html,/id="wl-dialog"/);
+ assert.match(html,/src="\.\/ui\.js"/);
+ assert.match(html,/src="\.\/app\.js"/);
+ assert.match(html,/data-scenario="pea"/);
+ assert.match(html,/data-scenario="existing"/);
  assert.match(embedded,/get\("embedded"\)==="1"/);
  assert.match(css,/\.wl-embedded \.wl-bottom/);
  assert.ok(!/src="[^"]*(?:config\.js|v5-app-5\.37\.0\.js|supabase)/i.test(html));
@@ -273,42 +281,59 @@ test('existing investment accounts are mapped diagnostically without inventing o
 });
 
 
-test('host opens nested Investments detail without replacing or navigating Patrimoine cards',()=>{
- const children=[];
+test('native Patrimoine dialog opens without iframe and switches two fictitious scenarios',()=>{
+ const children=[],bridge=require(path.join(root,'legacy-bridge.js'));
  const header={appendChild(node){children.push(node);node.parentNode=this;},removeChild(node){children.splice(children.indexOf(node),1);}};
  const section={getAttribute:k=>k==='aria-label'?'Placements':null,querySelector:k=>k==='.section-head'?header:null};
  const grid={closest:k=>k==='section.trace-wealth-section'?section:null};
- const events={};
  const popup={opened:false,events:{},showModal(){this.opened=true;},
-  close(){this.opened=false;this.events.close?.();},
-  addEventListener(name,fn){this.events[name]=fn;}};
- const frame={dataset:{src:'./index.html?embedded=1'},attrs:{},
-  getAttribute(k){return this.attrs[k]||null;},setAttribute(k,v){this.attrs[k]=v;}};
- const close={events:{},focus(){this.focused=true;},addEventListener(k,v){this.events[k]=v;}};
+  close(){this.opened=false;this.events.close?.();},addEventListener(k,fn){this.events[k]=fn;}};
+ const close={events:{},focus(){this.focused=true;},addEventListener(k,fn){this.events[k]=fn;}};
  const origin={focused:0,focus(){this.focused++;}};
- const buttons=[{dataset:{scope:'mine'},classList:{toggle(){}}},
+ const choices=[{dataset:{scenario:'pea'},attrs:{},setAttribute(k,v){this.attrs[k]=v;}},
+  {dataset:{scenario:'existing'},attrs:{},setAttribute(k,v){this.attrs[k]=v;}}];
+ const scenarios={events:{},addEventListener(k,fn){this.events[k]=fn;},
+  contains(node){return choices.includes(node);},
+  querySelectorAll(){return choices;}};
+ const scopeButtons=[{dataset:{scope:'mine'},classList:{toggle(){}}},
   {dataset:{scope:'couple'},classList:{toggle(){}}}];
- const scope={events:{},addEventListener(k,cb){this.events[k]=cb;},querySelectorAll(){return buttons;}};
- const total={textContent:'—'},sub={textContent:'Liquidités, épargne, placements et dettes'};
+ const scope={events:{},addEventListener(k,cb){this.events[k]=cb;},querySelectorAll(){return scopeButtons;}};
+ const total={textContent:'—'},sub={textContent:'Liquidités, épargne, placements et dettes'},msg={textContent:''};
  const nodes={wealthInvestmentsGrid:grid,wealthSavingsGrid:{},assetGrid:{},
-  wealthTotal:total,wealthTrend:{},wlWealthDetail:popup,wlPortalFrame:frame,
-  wlPortalClose:close,wealthScope:scope,wealthSub:sub};
+  wealthTotal:total,wealthTrend:{},wlWealthDetail:popup,wlPortalScenarios:scenarios,
+  wlScenarioNotice:msg,wlPortalClose:close,wealthScope:scope,wealthSub:sub};
  const doc={activeElement:origin,
   getElementById:k=>k==='traceWealthInvestmentDetailEntry'?children.find(x=>x.id===k)||null:nodes[k]||null,
   createElement:()=>({attrs:{},events:{},setAttribute(k,v){this.attrs[k]=v;},
    addEventListener(k,cb){this.events[k]=cb;},removeEventListener(k){delete this.events[k];}})};
- const code=fs.readFileSync(path.join(root,'wealth-host.js'),'utf8');
- vm.runInNewContext(code,{window:{TraceWealthIntegrationContract:integration},document:doc,Error});
+ const loaded=[];
+ const runtime={activateScenario(model){
+  loaded.push(model);assert.equal(model.portfolios.length,1);
+  assert.doesNotThrow(()=>E.evaluate(model.portfolios[0]));
+ }};
+ const js=fs.readFileSync(path.join(root,'wealth-host.js'),'utf8');
+ vm.runInNewContext(js,{window:{TraceWealthIntegrationContract:integration,TraceWealthLegacyBridge:bridge,
+   TraceWealthLabRuntime:runtime,TraceWealthLabEngine:E},document:doc,Error});
  assert.equal(children.length,1);
  assert.equal(popup.opened,false);
  children[0].events.click();
  assert.equal(popup.opened,true);
- assert.equal(frame.attrs.src,'./index.html?embedded=1');
  assert.equal(close.focused,true);
+ scenarios.events.click({target:{closest:()=>choices[1]}});
+ assert.equal(loaded.length,1);
+ assert.equal(loaded[0].portfolios[0].id,'simulation-portefeuille');
+ assert.equal(loaded[0].portfolios[0].operations.length,2);
+ assert.equal(choices[1].attrs['aria-pressed'],'true');
+ assert.match(msg.textContent,/fictif/);
+ scenarios.events.click({target:{closest:()=>choices[0]}});
+ assert.equal(loaded.length,2);
+ assert.equal(loaded[1].portfolios[0].id,'pea-demo');
+ assert.equal(loaded[1].portfolios[0].positions.length,8);
+ assert.equal(choices[0].attrs['aria-pressed'],'true');
  close.events.click();
  assert.equal(popup.opened,false);
  assert.equal(origin.focused,1);
- scope.events.click({target:{closest:()=>buttons[1]}});
+ scope.events.click({target:{closest:()=>scopeButtons[1]}});
  assert.match(sub.textContent,/Couple/);
  assert.equal(total.textContent,'—');
  assert.equal(nodes.wealthSavingsGrid,doc.getElementById('wealthSavingsGrid'));
@@ -342,9 +367,9 @@ test('read-only compatibility explainer stays folded unless opened and uses fict
  const scope={addEventListener(){}};
  const popup={addEventListener(){},showModal(){}};
  const close={addEventListener(){}};
- const frame={dataset:{src:'./index.html?embedded=1'},getAttribute(){return null;},setAttribute(){}};
+ const scenarios={addEventListener(){}};
  const nodes={wealthInvestmentsGrid:grid,wealthSavingsGrid:{},assetGrid:{},wealthTotal:{},
-  wealthTrend:{},wlWealthDetail:popup,wlPortalFrame:frame,wlPortalClose:close,
+  wealthTrend:{},wlWealthDetail:popup,wlPortalScenarios:scenarios,wlPortalClose:close,
   wealthScope:scope,wlLegacyDemoToggle:compatibility,wlLegacyDemoReport:report};
  const document={
   getElementById:id=>nodes[id]||null,
