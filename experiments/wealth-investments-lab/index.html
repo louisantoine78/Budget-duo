@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123f38">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex,nofollow">
+<title>TRACE · Patrimoine · Laboratoire Investissements</title>
+<link rel="icon" type="image/svg+xml" href="../../assets/trace-wallet-v1.svg">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="wl-app" id="wl-app">
+ <header class="wl-header">
+  <div class="wl-brand"><span class="wl-brand-mark">T</span><span class="wl-brand-copy">TRACE<span class="wl-brand-sub">PATRIMOINE</span></span></div>
+  <span class="wl-env" aria-label="Aperçu isolé sans connexion réelle"><i></i> LABORATOIRE</span>
+ </header>
+ <div class="wl-container">
+  <div class="wl-warning" role="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8v.5"/></svg><span>Simulation locale, sans connexion à tes finances. Les modifications disparaissent au rechargement.</span></div>
+  <nav class="wl-crumb" id="wl-crumb" aria-label="Fil d’Ariane"></nav>
+  <main id="wl-main" aria-live="polite"></main>
+  <div class="wl-footer-note">TRACE 2.0 · Étude Patrimoine uniquement · Aucune donnée réelle modifiée</div>
+ </div>
+ <nav class="wl-bottom" aria-label="Navigation illustrée de TRACE">
+  <span aria-disabled="true"><span class="wl-nav-icon">⌂</span>Accueil</span>
+  <span aria-disabled="true"><span class="wl-nav-icon">▤</span>Budget</span>
+  <span aria-disabled="true"><span class="wl-nav-icon">⇄</span>Activité</span>
+  <span class="wl-current"><span class="wl-nav-icon">◇</span>Patrimoine</span>
+ </nav>
+</div>
+<dialog id="wl-dialog" aria-labelledby="wl-dialog-title">
+ <div class="wl-sheet-handle" aria-hidden="true"></div>
+ <div class="wl-dialog-head"><div><span class="wl-eyebrow">PATRIMOINE · INVESTISSEMENTS</span><h2 id="wl-dialog-title">Modifier</h2></div><button type="button" class="wl-close" id="wl-close" aria-label="Fermer">×</button></div>
+ <div class="wl-dialog-body" id="wl-dialog-body"></div>
+</dialog>
+<script src="./engine.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
