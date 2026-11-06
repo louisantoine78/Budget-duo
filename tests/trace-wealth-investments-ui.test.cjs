@@ -320,3 +320,49 @@ test('embedded navigation never pretends Patrimoine is another internal investme
  assert.match(js,/embedded\?'<b>Investissements<\/b>'/);
  assert.doesNotMatch(fs.readFileSync(path.join(root,'wealth-host.js'),'utf8'),/navigate\(|saveDocument\(|client\.rpc\(/);
 });
+
+
+test('read-only compatibility explainer stays folded unless opened and uses fictitious records',()=>{
+ const html=fs.readFileSync(path.join(root,'patrimoine-host.html'),'utf8');
+ assert.match(html,/<details class="wl-host-compat" id="wlLegacyDemoToggle">/);
+ assert.match(html,/id="wlLegacyDemoReport"/);
+ assert.match(html,/src="\.\/legacy-bridge\.js"/);
+ const bridge=require(path.join(root,'legacy-bridge.js'));
+ const head={appendChild(x){x.parentNode=this;}};
+ const section={getAttribute(k){return k==='aria-label'?'Placements':null;},
+  querySelector(){return head;}};
+ const grid={closest(){return section;}};
+ const compatibility={open:false,handlers:{},addEventListener(name,fn){this.handlers[name]=fn;}};
+ const report={children:[],textContent:'',replaceChildren(){this.children=[];},
+  appendChild(node){this.children.push(node);}};
+ const node=()=>({children:[],handlers:{},attrs:{},textContent:'',
+  appendChild(x){this.children.push(x);},
+  setAttribute(k,v){this.attrs[k]=v;},
+  addEventListener(k,fn){this.handlers[k]=fn;}});
+ const scope={addEventListener(){}};
+ const popup={addEventListener(){},showModal(){}};
+ const close={addEventListener(){}};
+ const frame={dataset:{src:'./index.html?embedded=1'},getAttribute(){return null;},setAttribute(){}};
+ const nodes={wealthInvestmentsGrid:grid,wealthSavingsGrid:{},assetGrid:{},wealthTotal:{},
+  wealthTrend:{},wlWealthDetail:popup,wlPortalFrame:frame,wlPortalClose:close,
+  wealthScope:scope,wlLegacyDemoToggle:compatibility,wlLegacyDemoReport:report};
+ const document={
+  getElementById:id=>nodes[id]||null,
+  createElement:node,activeElement:null
+ };
+ const src=fs.readFileSync(path.join(root,'wealth-host.js'),'utf8');
+ vm.runInNewContext(src,{window:{TraceWealthIntegrationContract:integration,TraceWealthLegacyBridge:bridge},document});
+ assert.equal(report.children.length,0);
+ compatibility.open=true;
+ compatibility.handlers.toggle();
+ assert.equal(report.children.length,3);
+ const bullets=report.children[1].children.map(x=>x.textContent);
+ assert.equal(bullets.length,5);
+ assert.match(bullets[0],/1 compte/);
+ assert.match(bullets[1],/3 opérations fictives/);
+ assert.match(bullets[2],/aucune écriture supplémentaire/);
+ assert.match(bullets[3],/cotation mise en attente/);
+ assert.match(bullets[4],/concordants/);
+ assert.match(report.children[2].textContent,/ne consulte aucun compte/);
+ assert.match(report.children[2].textContent,/accord/);
+});
