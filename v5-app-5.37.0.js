@@ -5569,23 +5569,9 @@ function savingsLedger(account){
 }
 function portfolioLedger(account,override=null,removeId=null,cutoff=null){
  if(account.savingsTracking==='linked')return savingsLedger(account);
- // TRACE 2.0.1: existing 5.37 ledgers remain authoritative. Only a broker-
- // reconciled, non-duplicated investment tracker may contribute to Patrimoine.
- if(account.investments201?.schema===1&&account.investments201.status==='verified'){
-  const old=state.investmentOperations.some(o=>o.accountId===account.id);
-  if(old)throw Error('Rapprochement requis : deux journaux de placement sur le même compte.');
-  const source=window.TraceWealth201?.productionSummary(account.investments201);
-  if(!source?.ready)return{cash:null,contributions:null,dividends:null,fees:null,realized:null,
-   positions:[],securities:null,value:null,performance:null,fx:null,hasFx:false,cad:null,
-   fxDate:null,fxSource:null,reviewRequired:true};
-  const I=window.TraceInternational,code=I.currency(account),
-   quote=I.valuationQuote(account,typeof internationalQuotes==='undefined'?{}:internationalQuotes),
-   cad=I.fxValue(source.value,code,quote);
-  return{...source,hasFx:cad!==null,cad,
-   fx:code==='CAD'?1:quote?.cadPerUnit??null,
-   fxDate:quote?.date||null,fxSource:quote?.source||null,
-   reviewRequired:false};
- }
+ // The original 5.37 portfolio ledger remains the sole input to Patrimoine
+ // totals in TRACE 2.0.1. Detailed positions are additive, in their existing
+ // investment account document, pending independent bank-flow reconciliation.
 
  const ops=state.investmentOperations.filter(o=>o.accountId===account.id&&
   (!o.status||o.status==='confirmed')&&o.id!==removeId&&(!override||o.id!==override.id));
