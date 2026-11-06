@@ -5935,6 +5935,8 @@ window.Trace201Host=Object.freeze({
   if(!session?.user?.id||!household?.id)
    throw Error('Session TRACE absente : aucune écriture autorisée.');
   if(traceWritesBlocked)throw Error('Synchronisation bloquée : recharge TRACE avant modification.');
+  if(traceWriteQueues.has(traceWriteKey('investment_accounts',id))||fxSyncPromise)
+   throw Error('Mise à jour du compte ou du taux de change en cours : réessaie après synchronisation.');
   const account=state.investmentAccounts.find(a=>a.id===id&&!a.archived);
   if(!account||account.owner!==me||account.savingsTracking==='linked')
    throw Error('Seul le titulaire peut modifier ce portefeuille.');
