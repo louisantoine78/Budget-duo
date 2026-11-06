@@ -9,9 +9,16 @@ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
 const shell=fs.readFileSync(path.join(root,'index.html'),'utf8');
 let count=0;
 function test(name,fn){fn();count++;console.log('PASS '+name);}
-test('new international code remains unpublished on main entrypoint',()=>{
- assert.match(shell,/<meta name="trace-build" content="5\.36\.5">/);
- assert.doesNotMatch(shell,/v5-app-5\.37\.0\.js/);
+test('main entrypoint matches either stable 5.36 or reviewed release 5.37',()=>{
+ const production=shell.includes('<meta name="trace-build" content="5.37.0">');
+ if(production){
+  assert.match(shell,/v5-app-5\.37\.0\.js/);
+  assert.match(shell,/trace-20-fresh-start-1\.0\.0\.js/);
+  assert.match(shell,/__TRACE20_FRESH_START_REQUIRED__=true/);
+ }else{
+  assert.match(shell,/<meta name="trace-build" content="5\.36\.5">/);
+  assert.doesNotMatch(shell,/v5-app-5\.37\.0\.js/);
+ }
 });
 test('bank and wealth event handlers iterate an array of nodes',()=>{
  for(const selector of ['data-foreign-bank','data-setup-bank','data-rename-bank','data-primary-bank']){
