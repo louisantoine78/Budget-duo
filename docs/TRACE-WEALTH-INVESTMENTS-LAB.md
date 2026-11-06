@@ -93,3 +93,35 @@ Le workflow `trace-wealth-lab.yml` contrôle les nouveaux scripts, les scénario
 - Nouveaux cas vérifiés automatiquement : prévisualisation non mutante d'achat avec frais, refus de découvert, correction sans doublon, vente partielle et PRU inconnu, boutons de transactions contextuels, filtrage des huit positions d'exemple.
 
 La qualification couvre la syntaxe JavaScript, les scénarios financiers et la comparaison automatique des fichiers à `origin/main`. Le rendu Safari iPhone reste à valider par l'utilisateur via l'URL privée de la branche.
+
+
+## Itération UX 4 — performances vérifiables et politique de cours (sans production)
+
+### Visualisation interactive
+
+- Sous `Patrimoine → Portefeuille → Analyser`, le graphique dispose de 2 modes : **Valeur totale** (instantanés datés) et **Hors apports** (mêmes instantanés, corrigés de l'effet en euros des versements/retraits externes depuis le premier relevé montré).
+- Les filtres 1 / 3 / 6 / 12 mois / origine gardent uniquement les **points réellement disponibles**. L'espacement horizontal suit les dates réelles, pas un faux espacement temporel constant.
+- Des contrôles iPhone accessibles permettent de sélectionner une date pour consulter son montant, l'origine du relevé et la nature des preuves (`référence fournie`, `cours reportés` ou `valorisation datée`).
+- Le mode « Hors apports » n'est **pas** un indice TWR, ni une plus-value fiscale. Le rendement en pourcentage reste séparé et présenté comme **estimation de Dietz modifiée**. Son intervalle observé est le même que celui du graphique ; correction des fenêtres de dates de fin de mois.
+- Avec l'unique référence PEA (3 788,69 € au 4 novembre 2026), aucun graphique, indice, rendement ou historique n'est fabriqué.
+- Les cours de titre et PRU affichent jusqu'à **quatre décimales** lorsque la précision de la cotation l'exige.
+
+### Préparation des cotations automatiques (non branchée)
+
+Fichier autonome `experiments/wealth-investments-lab/quote-policy.js` : validateur **pur** d'un futur paquet de cotation. Il refuse sans accès réseau toute incohérence ou absence parmi : ISIN validé, marché MIC, devise native, prix positif précis, date de séance, heure UTC, source, type direct/différé/clôture, et autorisation de diffusion explicite. Il rejette les cours « dans le futur » par rapport à une horloge fournie et ne devine jamais une conversion FX.
+
+Aucune clé, synchronisation ou tâche externe n'est utilisée dans le laboratoire. Un simple booléen `redistributionAllowed` est **une exigence du contrat d'intégration**, pas une preuve juridique : l'autorisation du fournisseur doit être vérifiée contractuellement avant activation.
+
+Sources consultées le 6 novembre 2026, à revalider avant décision commerciale :
+
+| Source | Atouts | Limites essentielles |
+|---|---|---|
+| Euronext Web Services — https://www.euronext.com/en/data/how-access-market-data/web-services | Données de référence, temps réel, différé et historique sur les places Euronext | Nécessite un contrat et ne couvre pas à lui seul les lignes hors Euronext du PEA |
+| Twelve Data — https://twelvedata.com/docs ; https://twelvedata.com/pricing | Catalogues mondiaux, séries temporelles actions/ETF, paramètres de place MIC et ISIN | Droits ISIN en supplément, accès EOD/actions ETF européennes et redistribution selon forfait ; le plan gratuit ne garantit pas notre univers |
+| FMP — https://site.financialmodelingprep.com/faqs | Flux EOD et documentation sur les corrections de clôture | Vérifier individuellement les 8 instruments, les données historiques et les droits de redistribution |
+
+**Décision : ne sélectionner aucun fournisseur maintenant.** Première condition : vérifier **les huit ISIN+MIC réels** des actions/ETF du PEA, faire une preuve de couverture par une source contractuellement autorisée et comparer coût/quotas/délais/licences. L'API externe devra rester côté serveur, jamais dans la PWA publique.
+
+### Validation
+
+Le laboratoire dispose de tests du moteur, de la prévisualisation UX, des flux externes, des filtres historiques de fin de mois, du rendu à quatre décimales et du contrat de données de marché. La CI isolée refuse toute modification des fichiers de production ou une modification hors du dossier autorisé.
