@@ -144,7 +144,7 @@ function position(p,id){
  if(s.quote&&strategy.priceAbove&&s.quote.priceUnits>=E.price(strategy.priceAbove))alerts.push('Seuil haut atteint');
  if(s.quote&&strategy.priceBelow&&s.quote.priceUnits<=E.price(strategy.priceBelow))alerts.push('Seuil bas atteint');
  if(s.weight!==null&&strategy.maxWeight&&s.weight*100>=Number(String(strategy.maxWeight).replace(',','.')))alerts.push('Concentration à revoir');
- return heading('POSITION',s.name,(s.assetType||'Titre')+' · '+(s.isin||'ISIN à renseigner'))+
+ return heading('POSITION',s.name,(s.assetType||'Titre')+' · '+(s.isin||'ISIN à renseigner')+' · '+(s.marketMic||'Place de cotation à renseigner'))+
  '<div class="wl-card wl-analytics"><span class="wl-kicker">VALORISATION</span><div class="wl-perf">'+
  (s.marketValueCents===null?'Cours manquant':fmt(s.marketValueCents,p.currency))+'</div>'+
  '<p class="wl-muted-small">Dernier cours : '+(s.quote?
