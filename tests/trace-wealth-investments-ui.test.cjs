@@ -281,7 +281,7 @@ test('existing investment accounts are mapped diagnostically without inventing o
 });
 
 
-test('native Patrimoine dialog opens without iframe and switches two fictitious scenarios',()=>{
+test('native Patrimoine dialog opens without iframe and switches scoped fictional TRACE data',()=>{
  const children=[],bridge=require(path.join(root,'legacy-bridge.js'));
  const header={appendChild(node){children.push(node);node.parentNode=this;},removeChild(node){children.splice(children.indexOf(node),1);}};
  const section={getAttribute:k=>k==='aria-label'?'Placements':null,querySelector:k=>k==='.section-head'?header:null};
@@ -291,7 +291,8 @@ test('native Patrimoine dialog opens without iframe and switches two fictitious 
  const close={events:{},focus(){this.focused=true;},addEventListener(k,fn){this.events[k]=fn;}};
  const origin={focused:0,focus(){this.focused++;}};
  const choices=[{dataset:{scenario:'pea'},attrs:{},setAttribute(k,v){this.attrs[k]=v;}},
-  {dataset:{scenario:'existing'},attrs:{},setAttribute(k,v){this.attrs[k]=v;}}];
+  {dataset:{scenario:'existing'},attrs:{},setAttribute(k,v){this.attrs[k]=v;}},
+  {dataset:{scenario:'schema'},attrs:{},setAttribute(k,v){this.attrs[k]=v;}}];
  const scenarios={events:{},addEventListener(k,fn){this.events[k]=fn;},
   contains(node){return choices.includes(node);},
   querySelectorAll(){return choices;}};
@@ -299,21 +300,24 @@ test('native Patrimoine dialog opens without iframe and switches two fictitious 
   {dataset:{scope:'couple'},classList:{toggle(){}}}];
  const scope={events:{},addEventListener(k,cb){this.events[k]=cb;},querySelectorAll(){return scopeButtons;}};
  const total={textContent:'—'},sub={textContent:'Liquidités, épargne, placements et dettes'},msg={textContent:''};
+ const diag={textContent:'',hidden:true};
  const nodes={wealthInvestmentsGrid:grid,wealthSavingsGrid:{},assetGrid:{},
   wealthTotal:total,wealthTrend:{},wlWealthDetail:popup,wlPortalScenarios:scenarios,
-  wlScenarioNotice:msg,wlPortalClose:close,wealthScope:scope,wealthSub:sub};
+  wlGatewayDiagnostics:diag,wlScenarioNotice:msg,wlPortalClose:close,wealthScope:scope,wealthSub:sub};
  const doc={activeElement:origin,
   getElementById:k=>k==='traceWealthInvestmentDetailEntry'?children.find(x=>x.id===k)||null:nodes[k]||null,
   createElement:()=>({attrs:{},events:{},setAttribute(k,v){this.attrs[k]=v;},
    addEventListener(k,cb){this.events[k]=cb;},removeEventListener(k){delete this.events[k];}})};
  const loaded=[];
  const runtime={activateScenario(model){
-  loaded.push(model);assert.equal(model.portfolios.length,1);
-  assert.doesNotThrow(()=>E.evaluate(model.portfolios[0]));
+  loaded.push(model);assert.ok(model.portfolios.length>=1);
+  for(const p of model.portfolios)assert.doesNotThrow(()=>E.evaluate(p));
  }};
  const js=fs.readFileSync(path.join(root,'wealth-host.js'),'utf8');
  vm.runInNewContext(js,{window:{TraceWealthIntegrationContract:integration,TraceWealthLegacyBridge:bridge,
-   TraceWealthLabRuntime:runtime,TraceWealthLabEngine:E},document:doc,Error});
+   TraceWealthLabRuntime:runtime,TraceWealthLabEngine:E,
+   TraceWealthStateGateway:require(path.join(root,'trace-state-gateway.js')),
+   TraceWealthSchemaFixture:require(path.join(root,'trace-fixture.js'))},document:doc,Error});
  assert.equal(children.length,1);
  assert.equal(popup.opened,false);
  children[0].events.click();
@@ -330,6 +334,19 @@ test('native Patrimoine dialog opens without iframe and switches two fictitious 
  assert.equal(loaded[1].portfolios[0].id,'pea-demo');
  assert.equal(loaded[1].portfolios[0].positions.length,8);
  assert.equal(choices[0].attrs['aria-pressed'],'true');
+ scenarios.events.click({target:{closest:()=>choices[2]}});
+ assert.equal(loaded.length,3);
+ assert.deepEqual(loaded[2].portfolios.map(x=>x.id),['sample-pea']);
+ assert.equal(loaded[2].readOnly,true);
+ assert.equal(choices[2].attrs['aria-pressed'],'true');
+ assert.equal(diag.hidden,false);
+ assert.match(diag.textContent,/1 portefeuille/);
+ assert.match(diag.textContent,/1 compte\(s\) à vérifier/);
+ scope.events.click({target:{closest:()=>scopeButtons[1]}});
+ assert.equal(loaded.length,4);
+ assert.deepEqual(loaded[3].portfolios.map(x=>x.id),['sample-pea','sample-reer']);
+ assert.equal(loaded[3].readOnly,true);
+ assert.match(diag.textContent,/EUR \/ CAD/);
  close.events.click();
  assert.equal(popup.opened,false);
  assert.equal(origin.focused,1);
@@ -434,4 +451,40 @@ test('native laboratory controller clones demo input, switches scenarios and scr
  assert.match(nodes['wl-main'].innerHTML,/758,00/);
  assert.doesNotMatch(nodes['wl-main'].innerHTML,/3.788,69/);
  assert.equal(docs.length,2);
+});
+
+test('read-only TRACE source hides financial edit actions and rejects forged write clicks',()=>{
+ const source=require(path.join(root,'trace-state-gateway.js')).select(
+  require(path.join(root,'trace-fixture.js')).create(),
+  {viewerOwner:'la',scope:'mine'});
+ const E=require(path.join(root,'engine.js'));
+ const p=source.portfolios[0];
+ assert.equal(p.readOnly,true);
+ const home=U.overview(source),detail=U.portfolio(p),position=U.position(p,'legacy-symbol:EXMP');
+ assert.match(home,/Lecture seule/);
+ assert.doesNotMatch(home,/data-act="newPortfolio"/);
+ assert.doesNotMatch(detail,/data-act="newOp"/);
+ assert.doesNotMatch(detail,/data-act="newSecurity"/);
+ assert.doesNotMatch(detail,/data-act="editOp"/);
+ assert.doesNotMatch(detail,/data-act="snapshot"/);
+ assert.doesNotMatch(position,/data-act="quickBuy"/);
+ assert.doesNotMatch(position,/data-act="quickSell"/);
+ assert.doesNotMatch(position,/data-act="strategy"/);
+ const handlers={},nodes={'wl-crumb':{innerHTML:''},
+  'wl-main':{innerHTML:'',prepend(node){this.notice=node.textContent;}},
+  'wl-close':{addEventListener(){}},
+  'wl-dialog':{addEventListener(){},showModal(){throw Error('Read-only form opened unexpectedly');}},
+  'wl-native-root':{},'wlNativeScroll':{scrollTop:0}};
+ const document={getElementById:id=>nodes[id]||null,documentElement:{classList:{contains:()=>false}},
+  addEventListener:(event,fn)=>handlers[event]=fn,
+  createElement:()=>({className:'',textContent:''})};
+ const host={TraceWealthLabEngine:E,TraceWealthLabUI:U};
+ vm.runInNewContext(fs.readFileSync(path.join(root,'app.js'),'utf8'),
+  {document,window:host,Intl,Date,console,URLSearchParams,JSON});
+ host.TraceWealthLabRuntime.activateScenario(source);
+ const first=nodes['wl-main'].innerHTML;
+ handlers.click({target:{closest:()=>({dataset:{act:'newPortfolio',id:''}})}});
+ assert.equal(nodes['wl-main'].notice.includes('Lecture seule'),true);
+ assert.equal(nodes['wl-main'].innerHTML,first);
+ assert.equal(E.evaluate(source.portfolios[0]).cashCents,76100);
 });
