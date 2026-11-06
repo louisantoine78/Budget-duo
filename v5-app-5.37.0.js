@@ -399,7 +399,7 @@ function accountType(a){
 function traceLinkedBankTransactionCovers(o,account,boundary){
  if(!o?.linkedTransactionId)return false;
  const I=window.TraceInternational;
- const t=trace20BalanceTransactions().find(t=>t.id===o.linkedTransactionId&&
+ const t=(typeof trace20BalanceTransactions==='function'?trace20BalanceTransactions():state.transactions).find(t=>t.id===o.linkedTransactionId&&
   t.status==='confirmed'&&t.type!=='card_statement_evidence'&&
   afterBoundary(t.date,boundary));
  if(!t)return false; // Pending, old or statement-only links are not counted.
@@ -456,7 +456,7 @@ function traceCardRepaymentMismatch(t){
 }
 function accountEstimate(a){
  const I=window.TraceInternational,code=I.currency(a);
- const r=trace20BalanceReconciliations().filter(x=>x.accountId===a.id&&
+ const r=(typeof trace20BalanceReconciliations==='function'?trace20BalanceReconciliations():state.reconciliations).filter(x=>x.accountId===a.id&&
    (!x.status||['confirmed','complete','matched'].includes(x.status))&&x.confirmed!==false&&
    I.calendarDate(x.date)&&String(x.currency||'CAD').toUpperCase()===code&&
    I.exactMoney(x.actualBalance)!==null).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
@@ -468,7 +468,7 @@ function accountEstimate(a){
  const base=rawBase===null?null:accountType(a)==='card'&&r?.cardBalanceKind!=='credit'?-Math.abs(rawBase):rawBase;
  const boundary=r?{date:r.date,mode:'end'}:openingBoundary(a.id);
  if(base===null||!I.calendarDate(boundary.date))return null;
- const movement=trace20BalanceTransactions().filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
+ const movement=(typeof trace20BalanceTransactions==='function'?trace20BalanceTransactions():state.transactions).filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
   if(t.type==='card_statement_evidence')return x;
   if(!I.calendarDate(t.date))return NaN; // Invalid bank day cannot be positioned in the ledger.
   if(traceCardRepaymentMismatch(t))return NaN; // Card repayment bank legs disagree.
@@ -5546,7 +5546,7 @@ function isReadySavingsAccount(a){
 }
 function linkedSavingsMovements(account){
  if(!isReadySavingsAccount(account))return[];
- return trace20BalanceTransactions().filter(t=>t.status==='confirmed'&&
+ return (typeof trace20BalanceTransactions==='function'?trace20BalanceTransactions():state.transactions).filter(t=>t.status==='confirmed'&&
   t.investmentAccountId===account.id&&t.date>account.openingDate&&
   ((t.type==='external_transfer'&&t.transferPurpose==='savings')||
    (t.type==='external_refund'&&t.transferPurpose==='savings_withdrawal')));
