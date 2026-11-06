@@ -37,3 +37,27 @@ dialog{border:0;padding:0;border-radius:24px 24px 0 0;box-shadow:0 -20px 70px rg
 @keyframes wl-rise{from{transform:translateY(20px);opacity:.85}to{transform:translateY(0);opacity:1}}@media(prefers-reduced-motion:reduce){dialog[open]{animation:none}.wl-portfolio-card{transition:none}html{scroll-behavior:auto}}
 .wl-sheet-handle{width:35px;height:4px;border-radius:3px;background:#c5d8c7;margin:11px auto 2px}.wl-dialog-head{position:sticky;top:0;z-index:3;background:rgba(255,254,251,.97);border-bottom:1px solid #e5ede5;padding:12px 20px 15px;display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.wl-dialog-head h2{font-size:21px;letter-spacing:-.038em;margin:3px 0 0}.wl-close{width:39px;height:39px;border-radius:12px;border:1px solid #d6e6d9;background:#eff6f0;color:#276448;font-size:25px;line-height:1}.wl-dialog-body{padding:18px 20px max(26px,env(safe-area-inset-bottom))}.wl-form{display:grid;gap:14px}.wl-label{display:block;font-size:11px;font-weight:750;color:#4f6d5c;margin-bottom:5px}.wl-field{width:100%;min-width:0;min-height:43px;background:white;border:1px solid #d7e5d8;border-radius:11px;color:var(--wl-ink);padding:10px 12px;font-size:14px}.wl-field:disabled{background:#f1f5f1;color:#7f9988}.wl-form-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.wl-help{margin:3px 0 0;font-size:10px;color:#7a9182;line-height:1.6}.wl-form .wl-btn{width:100%;min-height:47px}.wl-form-error{padding:10px 12px;background:#fff0ee;border:1px solid #f0ceca;color:#a34f47;font-size:12px;border-radius:11px}.wl-form-error:empty{display:none}.wl-op-summary{font-size:12px;padding:11px;border-radius:11px;background:#f2f8f2;color:#476b53}
 @media(min-width:790px){dialog{left:calc(50% - 300px);right:auto;width:600px;border-radius:24px 24px 0 0}}@media(max-width:430px){.wl-header{padding:16px 18px 13px}.wl-container{padding:16px 17px 115px}.wl-hero{padding:20px}.wl-row{padding:13px 12px}.wl-donut-layout{grid-template-columns:92px 1fr;gap:10px}.wl-donut{height:85px;width:85px}.wl-stat{padding:12px}.wl-stat strong{font-size:15px}.wl-dialog-head,.wl-dialog-body{padding-left:17px;padding-right:17px}}
+
+/* Progressive disclosure: portfolio essentials first; completion only when needed. */
+.wl-readiness{margin:15px 0 2px;border:1px solid #d7e7db;border-radius:17px;padding:17px;background:linear-gradient(120deg,#f5faf4,#eef6ee)}
+.wl-readiness-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.wl-readiness h3{font-size:15px;line-height:1.3;letter-spacing:-.028em;margin:3px 0 0;font-weight:770}
+.wl-readiness p{font-size:11px;color:#627d6c;line-height:1.6;margin:8px 0 14px}
+.wl-progress-badge{white-space:nowrap;background:#fff;color:#296348;border:1px solid #d6e7d8;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
+.wl-progress-row{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#536e5f;font-size:11px;margin-top:12px}
+.wl-progress-row strong{font-weight:730;font-variant-numeric:tabular-nums;color:#285c43}
+.wl-progress-track{height:5px;background:#dce9dd;overflow:hidden;border-radius:99px;margin-top:5px}
+.wl-progress-track i{display:block;background:#3f9472;height:100%;border-radius:99px;transition:width .24s ease}
+.wl-ready-actions{display:flex;gap:5px 16px;align-items:center;flex-wrap:wrap;padding-top:15px}
+.wl-ready-link{padding:6px 0;border:0;background:none;color:#1c6d4e;font-size:11px;font-weight:750;min-height:31px}
+.wl-ready-link:hover{text-decoration:underline}
+.wl-readiness-done{display:flex;align-items:center;gap:10px;background:#f4f9f4;padding:12px 14px}
+.wl-readiness-done b{display:block;font-size:12px;color:#255c42}.wl-readiness-done small{display:block;color:#6d8675;font-size:10px;margin-top:2px}
+.wl-ready-dot{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:#def0e4;color:#27734e;font-size:13px;font-weight:850}
+.wl-snapshot-list .wl-row-value{min-width:95px}
+.wl-snapshot-list .wl-row{min-height:64px}
+.wl-snapshot-source{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #eaf0e8}
+.wl-snapshot-source:last-child{border:0}
+.wl-snapshot-source b{display:block;font-size:11px;font-weight:700}
+.wl-snapshot-source small{display:block;font-size:10px;color:#688174;line-height:1.5}
+@media(prefers-reduced-motion:reduce){.wl-progress-track i{transition:none}}
