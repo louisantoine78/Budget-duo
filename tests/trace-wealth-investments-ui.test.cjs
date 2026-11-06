@@ -1,0 +1,77 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=path.resolve(__dirname,'../experiments/wealth-investments-lab');
+const E=require(path.join(root,'engine.js'));
+const window={TraceWealthLabEngine:E};
+vm.runInNewContext(fs.readFileSync(path.join(root,'ui.js'),'utf8'),{window,Intl,Date,Number,String,console});
+const U=window.TraceWealthLabUI;
+const demo=E.demo(),p=demo.portfolios[0];
+test('premium lab renders the eight exact demo positions without synthetic performance',()=>{
+ const html=U.overview(demo),detail=U.portfolio(p);
+ assert.match(html,/Investissements/);
+ assert.match(html,/3.788,69/);
+ assert.match(html,/Référence fournie/);
+ assert.match(html,/cours/);
+ assert.match(detail,/Dassault Systèmes/);
+ assert.match(detail,/Sanofi/);
+ assert.match(detail,/Liquidités/);
+ assert.match(detail,/PRU à renseigner/);
+ assert.match(detail,/Aucune opération saisie/);
+ assert.ok(!detail.includes('19,708'));
+});
+test('position and analysis show honest missing quotes and never fake a graph',()=>{
+ const info=U.position(p,'dsy'),analytics=U.analytics(p,'all');
+ assert.match(info,/ISIN à renseigner/);
+ assert.match(info,/Cours manquant/);
+ assert.match(info,/Gains|Gain latent/);
+ assert.match(analytics,/Une seule valeur historique/);
+ assert.doesNotMatch(analytics,/<svg class="wl-svg wl-mini-chart"/);
+ assert.match(analytics,/Indice de référence/);
+ assert.match(analytics,/Répartition géographique/);
+});
+test('multi-currency dashboard refuses to sum EUR and CAD without observed FX',()=>{
+ const second={...p,id:'cad',name:'CELI Canada',currency:'CAD',openingCashCents:10000,
+  positions:[],catalog:[],operations:[],quotes:{},snapshots:[],referenceValueCents:undefined};
+ const html=U.overview({portfolios:[p,second]});
+ assert.match(html,/Devises multiples/);
+ assert.match(html,/Total à compléter/);
+ assert.match(html,/CELI Canada/);
+});
+test('derived valuation and allocation become visible only after manual input',()=>{
+ const quoted={...p,positions:p.positions.map(s=>({...s,sector:'Test',geography:'France',
+  costBasisCents:E.tradeCents(s.quantityMicro,E.price('10'))})),
+  quotes:Object.fromEntries(p.positions.map(s=>[s.id,{priceUnits:E.price('12'),
+   date:'2026-11-04',source:'Saisie manuelle',kind:'manuel'}]))};
+ const v=E.evaluate(quoted);
+ assert.equal(v.priced,true);
+ assert.equal(v.performanceComplete,true);
+ assert.match(U.overview({portfolios:[quoted]}),/conic-gradient/);
+ assert.match(U.analytics(quoted,'all'),/Test/);
+ assert.match(U.analytics(quoted,'all'),/France/);
+});
+test('client-only page bootstraps Patrimoine navigation with no Supabase or live app',()=>{
+ const callbacks={};
+ const nodes={
+  'wl-crumb':{innerHTML:''},
+  'wl-main':{innerHTML:'',prepend(){}},
+  'wl-close':{addEventListener(){}},
+  'wl-dialog':{addEventListener(){}}
+ };
+ const doc={
+  getElementById:id=>nodes[id]||null,
+  addEventListener:(n,fn)=>{callbacks[n]=fn},
+  createElement:()=>({textContent:'',className:''})
+ };
+ const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ const screen={TraceWealthLabEngine:E,TraceWealthLabUI:U,scrollTo(){}};
+ vm.runInNewContext(js,{window:screen,document:doc,Intl,Date,console,URLSearchParams});
+ assert.match(nodes['wl-main'].innerHTML,/Investissements/);
+ const click=(act,id)=>callbacks.click({target:{closest:()=>({dataset:{act,id}})}});
+ click('portfolio','pea-demo');
+ assert.match(nodes['wl-main'].innerHTML,/Journal|Historique des opérations/);
+ click('position','dsy');
+ assert.match(nodes['wl-main'].innerHTML,/PRU moyen/);
+ click('analytics','');
+ assert.match(nodes['wl-main'].innerHTML,/Indice de référence/);
+});
