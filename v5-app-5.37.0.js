@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.0';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.1';window.__TRACE_PUBLIC_RELEASE__='2.0.1';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -5660,6 +5660,10 @@ function editSavingsReference(account){
 }
 function openInvestmentAccount(account){
  if(account?.savingsTracking==='linked'){openSavingsAccount(account);return;}
+ if(account?.investments201?.schema===1&&
+  !state.investmentOperations.some(o=>o.accountId===account.id)){
+  window.TraceWealth201?.open?.(account.id);return;
+ }
  if(!account)return;
  let p;try{p=portfolioLedger(account);}catch(e){openSheet('Données de portefeuille incohérentes','<div class="empty-note">'+esc(e.message)+'</div>');return;}
  const currency=account.currency||'CAD';
@@ -5733,6 +5737,9 @@ function editInvestmentRate(account){
 }
 
 function openInvestmentOperation(account,original=null){
+ if(account?.investments201?.schema===1){
+  window.TraceWealth201?.open?.(account.id);return;
+ }
  const typ=original?.type||'deposit',currency=account.currency||'CAD',
   I=window.TraceInternational,previousBank=state.accounts.find(b=>b.id===original?.bankAccountId),
   previousCurrency=previousBank?I.currency(previousBank):null,
@@ -5897,6 +5904,10 @@ function renderWealth(){
   '<small>'+(cad!==null?'Équiv. '+money(cad)+' CAD':'Conversion indisponible')+'</small></button>')
  ].join('');
  $('#wealthAddCard').onclick=openInvestmentAccountAdd;$('#wealthLiquidityCard').onclick=openAccountSettings;
+ if($('#trace201Entry'))$('#trace201Entry').onclick=()=>{
+  if(!window.TraceWealth201)openSheet('Investissements','<div class="empty-note">Le module de suivi est momentanément indisponible. Recharge TRACE.</div>');
+  else window.TraceWealth201.open();
+ };
  $$('[data-foreign-bank]').forEach(b=>b.onclick=openAccountSettings);
  $$('[data-inv-account]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.invAccount)));
  const cashValues=bankValues.filter(x=>accountType(x.a)==='checking'),
@@ -5907,6 +5918,45 @@ function renderWealth(){
  window.TraceInsights.renderWealth($('#wealthTrend'),insightWealthData(sId,bankSummary,ports,missing));
  updateSegments();
 }
+// TRACE 2.0.1: scoped, additive bridge into the existing Patrimoine panel.
+// Neither this bridge nor the investment module creates a Supabase client.
+window.Trace201Host=Object.freeze({
+ context(){
+  if(!session?.user?.id||!household?.id)
+   return{active:false,viewer:me,scope:wealthScope,accounts:[],operations:[]};
+  const owners=wealthScope==='couple'?['la','partner']:[me];
+  const accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner)&&!a.archived);
+  const ids=new Set(accounts.map(a=>a.id));
+  return{active:true,viewer:me,scope:wealthScope,
+   accounts,operations:state.investmentOperations.filter(o=>ids.has(o.accountId))};
+ },
+ openSheet,
+ async save(id,portfolio){
+  if(!session?.user?.id||!household?.id)
+   throw Error('Session TRACE absente : aucune écriture autorisée.');
+  if(traceWritesBlocked)throw Error('Synchronisation bloquée : recharge TRACE avant modification.');
+  if(traceWriteQueues.has(traceWriteKey('investment_accounts',id))||fxSyncPromise)
+   throw Error('Mise à jour du compte ou du taux de change en cours : réessaie après synchronisation.');
+  const account=state.investmentAccounts.find(a=>a.id===id&&!a.archived);
+  if(!account||account.owner!==me||account.savingsTracking==='linked')
+   throw Error('Seul le titulaire peut modifier ce portefeuille.');
+  if(state.investmentOperations.some(o=>o.accountId===id))
+   throw Error('Un journal historique existe : reprise à rapprocher, aucune duplication.');
+  if(portfolio?.id!==id||portfolio?.schema!==1||
+   portfolio?.owner!==account.owner||portfolio?.currency!==account.currency)
+   throw Error('Enveloppe ou devise incohérente.');
+  const engine=window.TraceWealth201Engine;
+  if(!engine)throw Error('Moteur de calcul Investissements indisponible.');
+  engine.evaluate(portfolio);
+  if(portfolio.status==='verified'&&!window.TraceWealth201?.productionSummary(portfolio)?.ready)
+   throw Error('Valorisation incomplète : impossible de valider le patrimoine.');
+  const next={...account,investments201:traceStrictWriteSnapshot(portfolio)};
+  await saveDocument('investment_accounts',next);
+  Object.assign(account,next);
+  renderWealth(); // unchanged money & bank calculations, verified only
+  return true;
+ }
+});
 function renderAll(){renderHome();renderBudget();renderActivity();renderWealth();if(!internationalPreviewMode()&&session?.user?.id&&household)window.TraceReminders?.refresh?.({userId:session.user.id,createdAt:session.user.created_at,owner:me,accounts:state.accounts,days:state.importDays,imports:state.smartImports});}
 function navigate(p){$$('.page').forEach(x=>x.classList.toggle('active',x.dataset.page===p));$$('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===p));location.hash=p==='home'?'':p;window.scrollTo({top:0,behavior:document.body.classList.contains('trace-guide-open')?'auto':'smooth'});}
 function analysis(){analysisScope=homeScope;renderAnalysis();}
