@@ -6,7 +6,7 @@
  const close=document.getElementById('wlPortalClose');
  const scenarios=document.getElementById('wlPortalScenarios');
  const runtime=window.TraceWealthLabRuntime;
- let origin=null;
+ let selectedScenario='pea',demoScope='mine',origin=null;
  const result=module.mount(document,{
   enabled:true,
   onOpen(){
@@ -35,6 +35,8 @@
  }
  function chooseScenario(id){
   const message=document.getElementById('wlScenarioNotice');
+  const diagnostics=document.getElementById('wlGatewayDiagnostics');
+  if(diagnostics){diagnostics.hidden=true;diagnostics.textContent='';}
   if(id==='pea'){
    runtime.activateScenario(window.TraceWealthLabEngine.demo());
    message.textContent='PEA Fortuneo de démonstration : huit positions fournies, cours et PRU inconnus. Aucune donnée réelle chargée.';
@@ -45,9 +47,31 @@
     cashCents:75800,positions:[{symbol:'DEMO',quantityMicro:2000000,costBasisCents:24200}]
    });
    if(!reconciliation.matched)throw Error('Le relevé de simulation ne correspond pas');
-   runtime.activateScenario({portfolios:[result.portfolio],selectedId:result.portfolio.id});
-   message.textContent='Compte TRACE fictif : le journal et les espèces ont été rejoués puis rapprochés sur des montants fictifs. Les cotations historiques restent à vérifier.';
+   runtime.activateScenario({portfolios:[result.portfolio],selectedId:result.portfolio.id,readOnly:true});
+   message.textContent='Compte TRACE fictif en lecture seule : journal et espèces rapprochés sur des montants inventés. Les cotations historiques restent à vérifier.';
+  }else if(id==='schema'){
+   const gateway=window.TraceWealthStateGateway;
+   const fixture=window.TraceWealthSchemaFixture;
+   if(!gateway||!fixture)throw Error('Passerelle TRACE de démonstration indisponible');
+   const result=gateway.select(fixture.create(),{
+    viewerOwner:'la',scope:demoScope,coupleAuthorized:true
+   });
+   if(!result.portfolios.length)throw Error('Aucun portefeuille vérifiable dans cet exemple');
+   runtime.activateScenario({portfolios:result.portfolios,
+    selectedId:result.selectedId,readOnly:true});
+   message.textContent='Exemple purement fictif, construit selon les comptes et opérations de TRACE 5.37. '+(
+    demoScope==='couple'?'Vue Couple autorisée dans la simulation.':'Vue Moi uniquement.');
+   if(diagnostics){
+    diagnostics.hidden=false;
+    diagnostics.textContent=result.portfolios.length+' portefeuille(s) en lecture seule · '+
+     result.review.length+' compte(s) à vérifier · '+result.excluded.length+
+     ' compte(s) conservé(s) en épargne · '+result.summary.reduce((sum,x)=>sum+x.bankLinks,0)+
+     ' virement(s) bancaire(s) lié(s), non dupliqué(s). '+
+     (result.crossCurrencyTotalAllowed?'Aucun cours de marché vérifié.':
+      'EUR / CAD : pas de somme sans taux daté.');
+   }
   }else throw Error('Jeu de démonstration inconnu');
+  selectedScenario=id;
   scenarios.querySelectorAll('[data-scenario]').forEach(button=>
    button.setAttribute('aria-pressed',String(button.dataset.scenario===id)));
  }
@@ -94,6 +118,8 @@
   const button=event.target.closest('button[data-scope]');
   if(!button)return;
   scope.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===button));
+  demoScope=button.dataset.scope;
+  if(selectedScenario==='schema')chooseScenario('schema');
   // UI-only demonstration: no account, total, bank or financial scope is loaded.
   document.getElementById('wealthSub').textContent=
    button.dataset.scope==='couple'?
