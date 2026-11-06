@@ -58,3 +58,29 @@ html,body{margin:0;min-height:100%;background:#f7faf6;color:#1b4030}
 .wl-host-compat-body li+li{margin-top:5px}
 .wl-host-compat-body p{margin:11px 0 0;padding-top:9px;border-top:1px solid #dce9de;
  font-size:10px;color:#64806b;line-height:1.55}
+
+/* Native (non-iframe) Investments detail: respects Patrimoine host and scroll. */
+.wl-wealth-portal .wl-portal-scenarios{display:flex;gap:6px;padding:9px 15px;border-bottom:1px solid #e4ede4;background:#fffefa;flex:none}
+.wl-wealth-portal .wl-portal-scenarios button{flex:1;min-height:39px;padding:8px 5px;border:1px solid #dce9dc;border-radius:11px;
+ background:#f6faf5;color:#62816d;font-size:11px;font-weight:760;cursor:pointer}
+.wl-wealth-portal .wl-portal-scenarios button[aria-pressed="true"]{background:#e6f4e8;border-color:#96c5a9;color:#205b40}
+.wl-wealth-portal .wl-portal-scenarios button:focus-visible{outline:2px solid #216a4d;outline-offset:2px}
+.wl-wealth-portal .wl-native-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:#fafcf9}
+.wl-wealth-portal .wl-native-root{min-height:100%;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.wl-wealth-portal .wl-native-root .wl-app{background:#fafcf9;max-width:none;min-height:0;box-shadow:none}
+.wl-wealth-portal .wl-native-root .wl-container{padding:17px 19px 24px}
+.wl-wealth-portal .wl-native-root .wl-section{margin-top:25px}
+.wl-wealth-portal .wl-native-root .wl-page-title{font-size:clamp(26px,7vw,35px)}
+.wl-wealth-portal .wl-native-root .wl-footer-note{padding-bottom:12px}
+.wl-native-banner{border:1px solid #deebdd;border-radius:12px;background:#f2f8f1;color:#527360;
+ font-size:11px;line-height:1.55;padding:11px 12px;margin:0 0 12px}
+.wl-native-legacy-note{border-left:3px solid #649c7a;border-radius:6px;background:#f5faf5;
+ padding:10px 12px;font-size:11px;line-height:1.55;color:#5d7c64;margin:8px 0 0}
+.wl-wealth-portal #wl-main .wl-hero{box-shadow:0 8px 26px rgba(19,62,41,.1)}
+#wl-dialog{max-width:600px}
+#wl-dialog .wl-dialog-head{position:sticky;top:0}
+@media(max-width:460px){
+ .wl-wealth-portal .wl-native-root .wl-container{padding:13px 15px 25px}
+ .wl-wealth-portal .wl-portal-scenarios{padding:7px 12px}
+ .wl-wealth-portal .wl-portal-scenarios button{font-size:10px;min-height:43px}
+}
