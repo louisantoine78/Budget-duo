@@ -3,14 +3,14 @@
 (()=>{'use strict';
  const module=window.TraceWealthIntegrationContract;
  const popup=document.getElementById('wlWealthDetail');
- const frame=document.getElementById('wlPortalFrame');
  const close=document.getElementById('wlPortalClose');
+ const scenarios=document.getElementById('wlPortalScenarios');
+ const runtime=window.TraceWealthLabRuntime;
  let origin=null;
  const result=module.mount(document,{
   enabled:true,
   onOpen(){
    origin=document.activeElement;
-   if(!frame.getAttribute('src'))frame.setAttribute('src',frame.dataset.src);
    popup.showModal();
    close.focus();
   }
@@ -19,15 +19,9 @@
  close.addEventListener('click',()=>popup.close());
  popup.addEventListener('click',event=>{if(event.target===popup)popup.close();});
  popup.addEventListener('close',()=>{origin?.focus?.();});
- // A reversible illustration of how existing TRACE documents can be reused.
- // These are made-up records, never user data or a Supabase import.
- const compatibility=document.getElementById('wlLegacyDemoToggle');
- compatibility?.addEventListener('toggle',()=>{
-  if(!compatibility.open)return;
-  const report=document.getElementById('wlLegacyDemoReport');
-  const bridge=window.TraceWealthLegacyBridge;
-  if(!bridge){report.textContent='Adaptateur de diagnostic indisponible.';return;}
-  const account={id:'simulation-portefeuille',name:'Compte test',type:'PEA',
+ // Only fictitious records are passed into the laboratory engine. No Supabase.
+ function exampleLegacy(){
+  const account={id:'simulation-portefeuille',name:'Compte TRACE fictif',type:'PEA',
    currency:'EUR',owner:'la'};
   const operations=[
    {id:'simulation-versement',accountId:account.id,type:'deposit',date:'2026-11-01',
@@ -37,7 +31,40 @@
    {id:'simulation-cours',accountId:account.id,type:'quote',date:'2026-11-03',
     symbol:'DEMO',unitPrice:130}
   ];
-  const result=bridge.build(account,operations);
+  return window.TraceWealthLegacyBridge.build(account,operations);
+ }
+ function chooseScenario(id){
+  const message=document.getElementById('wlScenarioNotice');
+  if(id==='pea'){
+   runtime.activateScenario(window.TraceWealthLabEngine.demo());
+   message.textContent='PEA Fortuneo de démonstration : huit positions fournies, cours et PRU inconnus. Aucune donnée réelle chargée.';
+  }else if(id==='existing'){
+   const result=exampleLegacy();
+   if(result.status!=='reconciliation-required')throw Error('Le journal de démonstration est incohérent');
+   const reconciliation=window.TraceWealthLegacyBridge.reconcile(result,{
+    cashCents:75800,positions:[{symbol:'DEMO',quantityMicro:2000000,costBasisCents:24200}]
+   });
+   if(!reconciliation.matched)throw Error('Le relevé de simulation ne correspond pas');
+   runtime.activateScenario({portfolios:[result.portfolio],selectedId:result.portfolio.id});
+   message.textContent='Compte TRACE fictif : le journal et les espèces ont été rejoués puis rapprochés sur des montants fictifs. Les cotations historiques restent à vérifier.';
+  }else throw Error('Jeu de démonstration inconnu');
+  scenarios.querySelectorAll('[data-scenario]').forEach(button=>
+   button.setAttribute('aria-pressed',String(button.dataset.scenario===id)));
+ }
+ scenarios.addEventListener('click',event=>{
+  const button=event.target.closest('button[data-scenario]');
+  if(!button||!scenarios.contains(button))return;
+  chooseScenario(button.dataset.scenario);
+ });
+ // A reversible illustration of how existing TRACE documents can be reused.
+ // These are made-up records, never user data or a Supabase import.
+ const compatibility=document.getElementById('wlLegacyDemoToggle');
+ compatibility?.addEventListener('toggle',()=>{
+  if(!compatibility.open)return;
+  const report=document.getElementById('wlLegacyDemoReport');
+  const bridge=window.TraceWealthLegacyBridge;
+  if(!bridge){report.textContent='Adaptateur de diagnostic indisponible.';return;}
+  const result=exampleLegacy();
   if(result.status!=='reconciliation-required'){
    report.textContent='Ce scénario nécessite une vérification complémentaire.';return;
   }
