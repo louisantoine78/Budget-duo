@@ -25,7 +25,7 @@ test('position and analysis show honest missing quotes and never fake a graph',(
  assert.match(info,/ISIN à renseigner/);
  assert.match(info,/Cours manquant/);
  assert.match(info,/Gains|Gain latent/);
- assert.match(analytics,/Une seule valeur historique/);
+ assert.match(analytics,/Deux valorisations réellement datées/);
  assert.doesNotMatch(analytics,/<svg class="wl-svg wl-mini-chart"/);
  assert.match(analytics,/Indice de référence/);
  assert.match(analytics,/Répartition géographique/);
@@ -147,4 +147,37 @@ test('position filters show the correct securities without losing underlying por
  assert.doesNotMatch(shares,/Amundi PEA S&amp;P 500/);
  assert.match(etf,/aria-pressed="true">ETF/);
  assert.equal(E.evaluate(p).positions.length,8);
+});
+
+test('interactive chart switches evidence-backed total and net-external-flow series',()=>{
+ const scenario={...p,operations:[
+  {id:'contrib',type:'deposit',date:'2026-11-10',amountCents:10000,feeCents:0}
+ ],snapshots:[
+  {date:'2026-11-04',valueCents:378869,source:'Valeur de référence fournie'},
+  {date:'2026-11-12',valueCents:396869,source:'Relevé manuscrit'}
+ ]};
+ const total=U.analytics(scenario,'all','value','2026-11-12');
+ const adjusted=U.analytics(scenario,'all','flows','2026-11-12');
+ assert.match(total,/396.869|3.968,69/);
+ assert.match(total,/data-act="trendPoint"/);
+ assert.match(total,/data-act="trendMetric" data-id="flows"/);
+ assert.match(total,/aria-pressed="true">Valeur totale/);
+ assert.match(adjusted,/aria-pressed="true">Hors apports/);
+ assert.match(adjusted,/3.868,69/);
+ assert.match(adjusted,/Ce n’est pas un indice de rendement/);
+ assert.match(adjusted,/Relevé manuscrit/);
+ assert.match(adjusted,/wl-trend-chart/);
+});
+test('single-point history never draws fabricated performance nor emits synthetic dates',()=>{
+ const html=U.interactiveTrend(p,'all','flows','');
+ assert.match(html,/Deux valorisations réellement datées/);
+ assert.doesNotMatch(html,/<svg/);
+ assert.doesNotMatch(html,/data-act="trendPoint"/);
+});
+test('chart controls use the same persisted-in-memory state as analysis navigation',()=>{
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.match(app,/chartMetric='value'/);
+ assert.match(app,/a==='trendMetric'/);
+ assert.match(app,/a==='trendPoint'/);
+ assert.match(app,/U.analytics\(p,range,chartMetric,chartFocus\)/);
 });
