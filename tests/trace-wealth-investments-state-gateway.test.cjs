@@ -69,3 +69,30 @@ test('new account projections are deep copies, never shared ledger references',(
  assert.equal(first.portfolios[0].operations[0].sourceOperationId,'pea-cash');
  assert.equal(second.portfolios[0].operations[0].linkedTransactionId,'sample-bank-transfer');
 });
+
+
+test('one linked bank transaction must not feed multiple investment deposits',()=>{
+ const source=fixture.create();
+ source.investmentOperations.push({
+  id:'second-linked-deposit',accountId:'sample-reer',type:'deposit',amount:100,
+  date:'2026-10-27',status:'confirmed',linkedTransactionId:'sample-bank-transfer'
+ });
+ const result=run(source,'couple',true);
+ assert.equal(result.portfolios.some(p=>p.id==='sample-pea'),false);
+ assert.equal(result.portfolios.some(p=>p.id==='sample-reer'),false);
+ assert.equal(result.review.filter(x=>x.status==='duplicate-bank-transfer-link').length,2);
+ assert.ok(result.review.some(x=>x.reasons.some(s=>s.includes('plusieurs opérations'))));
+ assert.ok(result.excluded.some(x=>x.accountId==='sample-celi'));
+});
+test('duplicated external transfers in one portfolio are flagged rather than inflating cash',()=>{
+ const source=fixture.create();
+ const first=source.investmentOperations.find(o=>o.id==='pea-cash');
+ source.investmentOperations.push({
+  ...first,id:'alternate-deposit',date:'2026-10-30',amount:20
+ });
+ const result=run(source);
+ assert.equal(result.portfolios.length,0);
+ assert.equal(result.review.some(x=>x.accountId==='sample-pea'&&
+  x.status==='duplicate-bank-transfer-link'),true);
+ assert.equal(result.review.some(x=>x.accountId==='sample-cto'),true);
+});
