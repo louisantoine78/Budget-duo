@@ -275,6 +275,33 @@
   return{gainCents:gain,percent:denominator>0?gain/denominator*100:null,
    method:'Dietz modifiée, approximation',from:first.date,to:last.date,points:series.points.length};
  }
+ // Valuation-only breakdown: withhold all weights when an active line lacks a quote.
+ // Never infer historical prices, merge currencies or count bank transfers.
+ function allocationBreakdown(p){
+  const values=evaluate(p);
+  const active=values.positions.filter(x=>x.quantityMicro>0);
+  const missing=active.filter(x=>x.marketValueCents===null);
+  if(!active.length)return{ready:false,reason:'Aucune position détenue',missing:0};
+  if(missing.length)return{ready:false,reason:'Cours manquants pour '+missing.length+' position(s)',missing:missing.length};
+  const total=active.reduce((sum,x)=>sum+x.marketValueCents,0);
+  if(!Number.isSafeInteger(total)||total<=0)
+   return{ready:false,reason:'Valorisation non disponible',missing:0};
+  const group=selector=>{
+   const totals=new Map();
+   for(const x of active){
+    const label=String(selector(x)||'Non renseigné').trim()||'Non renseigné';
+    totals.set(label,(totals.get(label)||0)+x.marketValueCents);
+   }
+   return[...totals].map(([label,valueCents])=>({
+    label,valueCents,percentage:valueCents/total*100
+   })).sort((a,b)=>b.valueCents-a.valueCents||a.label.localeCompare(b.label));
+  };
+  return{ready:true,missing:0,currency:p.currency,totalCents:total,
+   positions:group(s=>s.symbol||s.name||s.id),
+   types:group(s=>s.assetType||'Autre'),
+   sectors:group(s=>s.sector||'Non renseigné'),
+   geographies:group(s=>s.geography||'Non renseigné')};
+ }
  function demo(){
   const raw=[
    ['dsy','Dassault Systèmes',40,'Action'],
@@ -296,5 +323,5 @@
    selectedId:'pea-demo'};
  }
  return Object.freeze({SUPPORTED,cents,quantity,price,tradeCents,dateValid,isinValid,micValid,evaluate,appendOperation,previewOperation,setQuote,
-  setOpeningPosition,snapshotAt,chartSeries,periodPerformance,demo,Q_SCALE,PRICE_SCALE});
+  setOpeningPosition,snapshotAt,chartSeries,periodPerformance,allocationBreakdown,demo,Q_SCALE,PRICE_SCALE});
 });
