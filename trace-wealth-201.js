@@ -225,7 +225,8 @@
      '<span><b>'+positionLabel(x)+'</b><small>'+qstr(x.quantityMicro)+' titre(s) · '+
      e(x.isin||'ISIN à renseigner')+'</small></span><span class="w201-posvalue">'+
      (x.marketValueCents===null?'Cours absent':fmt(x.marketValueCents,p.currency))+
-     '<small>'+(x.unrealizedCents===null?'Gain non calculable':fmt(x.unrealizedCents,p.currency)+' latent')+'</small></span></button>').join('')+'</div>':
+     '<small>'+(x.unrealizedCents===null?'Gain non calculable':fmt(x.unrealizedCents,p.currency)+
+      (x.costBasisCents>0?' ('+percentText(x.unrealizedCents/x.costBasisCents*100)+')':'')+' latent')+'</small></span></button>').join('')+'</div>':
      '<div class="w201-empty">Aucune position initiale. Saisis les quantités figurant sur ton relevé courtier ; aucun achat fictif ne sera créé.</div>';
    }
   }
@@ -245,7 +246,8 @@
    '</strong><span>'+(s.quote?e(s.quote.source)+' · '+e(s.quote.date)+' · '+e(s.quote.kind||'manuel'):'Aucun cours daté vérifié')+'</span></div>'+
    '<div class="w201-metrics"><div><small>Quantité</small><strong>'+qstr(s.quantityMicro)+'</strong></div>'+
    '<div><small>PRU moyen</small><strong>'+(s.averageCostUnits===null?'Inconnu':pxstr(s.averageCostUnits)+' '+e(p.currency))+'</strong></div>'+
-   '<div><small>Gain latent</small><strong>'+(s.unrealizedCents===null?'Non calculable':fmt(s.unrealizedCents,p.currency))+'</strong></div>'+
+   '<div><small>Gain latent</small><strong>'+(s.unrealizedCents===null?'Non calculable':fmt(s.unrealizedCents,p.currency)+
+    (s.costBasisCents>0?' · '+percentText(s.unrealizedCents/s.costBasisCents*100):''))+'</strong></div>'+
    '<div><small>Poids</small><strong>'+(s.weight===null?'Inconnu':(s.weight*100).toFixed(1)+' %')+'</strong></div></div>'+
    '<div class="w201-card"><b>Classification et stratégie</b><p>'+e(s.sector||'Secteur inconnu')+' · '+
    e(s.geography||'Géographie inconnue')+'</p><p>'+e(s.strategy?.thesis||'Thèse non renseignée')+'</p>'+
