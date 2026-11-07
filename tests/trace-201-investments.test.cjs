@@ -165,3 +165,60 @@ test('TRACE 2.0.1 does not modify legacy 5.37 portfolioLedger, savingsLedger or 
  assert.doesNotMatch(oldNet,/addPortfolioValue|trace201Total|snapshotTotalCents/);
  assert.match(app,/if\(account\?\.investments201\?\.schema===1/);
 });
+
+test('allocation breakdown is exact, excludes cash, and refuses missing active prices',()=>{
+ let p=started();
+ p.positions[0].symbol='TEST';p.positions[0].sector='Technologie';p.positions[0].geography='Europe';
+ p.positions.push({id:'line-b',name:'Fonds fictif',symbol:'ETF',assetType:'ETF',
+  sector:'Diversifié',geography:'Monde',quantityMicro:E.quantity(2),costBasisCents:30000});
+ p.catalog=p.positions.map(x=>({...x}));
+ p=E.setQuote(p,'line-a',{priceUnits:E.price('50'),date:'2026-11-05',source:'Relevé contrôlé',kind:'manuel'});
+ const missing=E.allocationBreakdown(p);
+ assert.equal(missing.ready,false);
+ assert.equal(missing.missing,1);
+ assert.match(missing.reason,/Cours manquants/);
+ p=E.setQuote(p,'line-b',{priceUnits:E.price('150'),date:'2026-11-05',source:'Relevé contrôlé',kind:'manuel'});
+ const a=E.allocationBreakdown(p);
+ assert.equal(a.ready,true);
+ assert.equal(a.currency,'EUR');
+ assert.equal(a.totalCents,40000);
+ assert.equal(a.positions.length,2);
+ assert.equal(a.types.length,2);
+ assert.equal(a.types[0].label,'ETF');
+ assert.equal(a.types[0].percentage,75);
+ assert.equal(a.types[1].percentage,25);
+ assert.equal(a.sectors.find(x=>x.label==='Technologie').valueCents,10000);
+ assert.equal(a.geographies.find(x=>x.label==='Monde').valueCents,30000);
+ assert.equal(a.types.reduce((sum,x)=>sum+x.valueCents,0),a.totalCents);
+ assert.equal(E.evaluate(p).cashCents,20000);
+});
+
+test('dated period performance removes external flows and is explicit about its approximation',()=>{
+ let p=started();
+ p.snapshots=[
+  {date:'2026-11-01',valueCents:30000,source:'Courtier : ouverture'},
+  {date:'2026-11-11',valueCents:33000,source:'Courtier : contrôle'}
+ ];
+ p.operations=[{id:'cash-1',date:'2026-11-06',type:'deposit',amountCents:2000,feeCents:0}];
+ const perf=E.periodPerformance(p,'all');
+ assert.equal(perf.from,'2026-11-01');
+ assert.equal(perf.to,'2026-11-11');
+ assert.equal(perf.gainCents,1000);
+ assert.ok(Math.abs(perf.percent-(1000/31000*100))<1e-9);
+ assert.match(perf.method,/Dietz modifiée/);
+ assert.equal(E.chartSeries(p,'all').points.at(-1).flowAdjustedCents,31000);
+ assert.equal(E.periodPerformance({...p,snapshots:p.snapshots.slice(0,1)},'all'),null);
+});
+
+test('analytics are limited to investment module and surface missing evidence rather than fake values',()=>{
+ const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ assert.match(ui,/periodPerformance\(p,chartPeriod\)/);
+ assert.match(ui,/allocationBreakdown\(p\)/);
+ assert.match(ui,/\['1','1M'\].*\['3','3M'\].*\['6','6M'\].*\['12','1A'\].*\['all','Tout'\]/);
+ assert.match(ui,/aucune pondération fictive|Aucune pondération fictive/);
+ assert.match(ui,/Dietz modifiée/);
+ assert.match(css,/\.w201-periods/);
+ assert.match(css,/\.w201-bar-track/);
+ assert.doesNotMatch(css,/(^|\n)\s*(?:body|:root|\.home|\.budget|\.activity)\s*\{/m);
+});
