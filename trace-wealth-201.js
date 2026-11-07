@@ -172,7 +172,7 @@
     costs=active.filter(x=>x.costBasisCents!==null).length;
    const ts=E.chartSeries(p,chartPeriod),performance=E.periodPerformance(p,chartPeriod);
    const allocation=E.allocationBreakdown(p);
-   html+='<div class="w201-metrics"><div><small>Liquidités de départ</small><strong>'+
+   html+='<div class="w201-metrics"><div><small>Liquidités disponibles</small><strong>'+
     (p.openingCashConfirmed?fmt(v.cashCents,p.currency):'À confirmer')+'</strong></div>'+
     '<div><small>Apports nets depuis la reprise</small><strong>'+fmt(v.netFlowCents,p.currency)+'</strong></div>'+
     '<div><small>Gains réalisés</small><strong>'+fmt(v.realizedCents,p.currency)+'</strong></div>'+
