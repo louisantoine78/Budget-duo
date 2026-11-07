@@ -83,7 +83,7 @@
    }))};
  }
  // host is injected from authenticated original TRACE runtime.
- let host=null,accountId='',screen='home',selected='',error='',saving=false,filter='all',chartMode='value';
+ let host=null,accountId='',screen='home',selected='',error='',saving=false,filter='all',chartMode='value',chartPeriod='all';
  function context(){if(!host)throw Error('TRACE indisponible');const c=host.context();if(!c||!c.active)throw Error('Connecte-toi à TRACE pour accéder au Patrimoine');return c;}
  function accounts(){const c=context();return c.accounts.filter(a=>
   !a.archived&&a.savingsTracking!=='linked'&&!['CELI','Épargne','Livret','Savings'].includes(a.type));}
@@ -124,6 +124,23 @@
    elements+'<text x="18" y="142" font-size="9" fill="#789380">'+e(pts[0].date)+'</text>'+
    '<text x="300" y="142" font-size="9" text-anchor="end" fill="#789380">'+e(pts.at(-1).date)+'</text></svg>';
  }
+ function renderAllocation(title,rows,cur){
+  if(!rows.length)return '';
+  const rest=rows.slice(5).reduce((sum,x)=>sum+x.valueCents,0);
+  const visible=rows.slice(0,5);
+  if(rest)visible.push({label:'Autres',valueCents:rest,
+   percentage:rest/rows.reduce((sum,x)=>sum+x.valueCents,0)*100});
+  return '<section class="w201-card w201-allocation"><b>'+e(title)+'</b>'+
+   '<div class="w201-bars">'+visible.map(x=>{
+    const pct=Math.max(0,Math.min(100,x.percentage));
+    return '<div class="w201-bar-row"><div class="w201-bar-label"><span>'+e(x.label)+'</span>'+
+     '<strong>'+pct.toFixed(1).replace('.',',')+' %</strong></div>'+
+     '<div class="w201-bar-track" aria-hidden="true"><span style="width:'+pct.toFixed(2)+'%"></span></div>'+
+     '<small>'+e(fmt(x.valueCents,cur))+'</small></div>';
+   }).join('')+'</div></section>';
+ }
+ const percentText=n=>Number.isFinite(n)?n.toFixed(1).replace('.',',')+' %':'—';
+ const signedMoney=(c,cur)=>c>0?'+'+fmt(c,cur):fmt(c,cur);
  function renderAccount(){
   const a=pick(),p=load(a),v=E.evaluate(p),legacy=isLegacy(a),owned=own(a);
   let html='<div class="w201-kicker">PATRIMOINE · '+e(a.type)+' · '+e(p.currency)+'</div>'+
@@ -149,8 +166,13 @@
     '<div class="w201-empty">Aucun mouvement. Tu peux enregistrer les futurs achats, ventes, dividendes et versements.</div>';
    if(!legacy&&edit)html+=btn('Renseigner les espèces de départ','cash','','soft');
   }else if(screen==='analysis'){
-   const count=v.positions.length,prices=count-v.missingQuote.length,costs=count-v.missingCost.length;
-   html+='<div class="w201-metrics"><div><small>Espèces estimées</small><strong>'+
+   const count=v.positions.filter(x=>x.quantityMicro>0).length,
+    active=v.positions.filter(x=>x.quantityMicro>0),
+    prices=active.filter(x=>x.quote).length,
+    costs=active.filter(x=>x.costBasisCents!==null).length;
+   const ts=E.chartSeries(p,chartPeriod),performance=E.periodPerformance(p,chartPeriod);
+   const allocation=E.allocationBreakdown(p);
+   html+='<div class="w201-metrics"><div><small>Liquidités de départ</small><strong>'+
     (p.openingCashConfirmed?fmt(v.cashCents,p.currency):'À confirmer')+'</strong></div>'+
     '<div><small>Apports nets depuis la reprise</small><strong>'+fmt(v.netFlowCents,p.currency)+'</strong></div>'+
     '<div><small>Gains réalisés</small><strong>'+fmt(v.realizedCents,p.currency)+'</strong></div>'+
@@ -158,16 +180,35 @@
     '</strong></div></div>'+
     '<div class="w201-card"><b>Qualité des données</b><p>Cours : '+prices+'/'+count+
     ' · Prix de revient : '+costs+'/'+count+'.</p></div>';
-   const ts=E.chartSeries(p,'all');
-   html+='<div class="w201-card"><b>Évolution datée</b>'+
+   html+='<section class="w201-card"><b>Performance et évolution</b>'+
+    '<div class="w201-periods" role="group" aria-label="Période des analyses">'+
+    [['1','1M'],['3','3M'],['6','6M'],['12','1A'],['all','Tout']].map(([id,label])=>
+      btn(label,'period',id,chartPeriod===id?'selected':'')).join('')+'</div>'+
+    (performance?
+      '<div class="w201-perf"><div><small>Gain hors versements et retraits</small><strong>'+
+       e(signedMoney(performance.gainCents,p.currency))+'</strong></div>'+
+       '<div><small>Performance estimée</small><strong>'+e(percentText(performance.percent))+
+       '</strong></div></div>'+
+       '<p class="w201-fine">Dietz modifiée : rendement approximatif calculé sur les relevés existants du '+
+       e(performance.from)+' au '+e(performance.to)+'. Aucun cours historique fictif.</p>':
+       '<p class="w201-fine">Performance en % indisponible : au moins deux relevés datés distincts sont nécessaires pour cette période.</p>')+
     (ts.ready?'<div class="w201-chart-controls">'+
      btn('Valeur totale','metric','value',chartMode==='value'?'selected':'')+
      btn('Hors apports','metric','flows',chartMode==='flows'?'selected':'')+'</div>'+
      lineChart(ts.points,p.currency,chartMode)+
      '<div class="w201-history">'+ts.points.map(x=>'<div><span>'+e(x.date)+'</span><strong>'+
       fmt(chartMode==='flows'?x.flowAdjustedCents:x.valueCents,p.currency)+'</strong><small>'+e(x.source)+'</small></div>').join('')+'</div>'+
-      '<p class="w201-fine">Les écarts hors apports sont des montants absolus, pas un rendement TWR. Les relevés sont datés ; aucun cours historique n’est inventé.</p>':
-      '<p>Deux valorisations datées sont nécessaires. Aucune courbe n’est inventée.</p>')+'</div>';
+     '<p class="w201-fine">La courbe « Hors apports » n’est pas un rendement TWR. Les dates sont celles des relevés.</p>':
+     '<p class="w201-fine">Aucune courbe inventée : deux valorisations datées sont nécessaires dans cette période.</p>')+
+     '</section>';
+   html+=allocation.ready?
+     '<div class="w201-section-title">Répartition des titres <span>Valorisation des lignes · hors espèces</span></div>'+
+      renderAllocation('Par position',allocation.positions,p.currency)+
+      renderAllocation('Actions, ETF et fonds',allocation.types,p.currency)+
+      renderAllocation('Par secteur',allocation.sectors,p.currency)+
+      renderAllocation('Par zone géographique',allocation.geographies,p.currency):
+     '<div class="w201-note">Répartitions non calculables : '+
+      e(allocation.reason)+'. Aucune pondération fictive n’est affichée.</div>';
    if(edit)html+='<div class="w201-actionbar">'+btn('Enregistrer une valorisation','snapshot','','soft')+
      btn('Rapprocher au relevé courtier','reconcile','','primary')+'</div>';
   }else{
@@ -441,6 +482,7 @@
   if(action==='tab'){screen=id;selected='';draw();return;}
   if(action==='filter'){filter=id;draw();return;}
   if(action==='metric'){chartMode=id==='flows'?'flows':'value';draw();return;}
+  if(action==='period'){if(!['1','3','6','12','all'].includes(id))return;chartPeriod=id;draw();return;}
   if(action==='position'){selected=id;screen='position';draw();return;}
   if(action==='cancel'){screen=selected?'position':'positions';draw();return;}
   const p=load(pick()),a=pick();
@@ -459,7 +501,7 @@
   const list=accounts();
   if(id&&list.some(a=>a.id===id)){accountId=id;screen='positions';}
   else{accountId='';screen='home';}
-  selected='';error='';filter='all';draw();
+  selected='';error='';filter='all';chartPeriod='all';draw();
  }
  function connect(h){if(!h||typeof h.context!=='function'||typeof h.save!=='function'||typeof h.openSheet!=='function')throw Error('Hôte TRACE 2.0.1 incomplet');host=h;return true;}
  return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict});
