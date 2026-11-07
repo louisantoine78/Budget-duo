@@ -222,3 +222,14 @@ test('analytics are limited to investment module and surface missing evidence ra
  assert.match(css,/\.w201-bar-track/);
  assert.doesNotMatch(css,/(^|\n)\s*(?:body|:root|\.home|\.budget|\.activity)\s*\{/m);
 });
+
+test('standalone iPhone prototype is disconnected from real financial storage',()=>{
+ const preview=fs.readFileSync(path.join(root,'experiments/trace-201-analytics-demo.html'),'utf8');
+ const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ assert.match(preview,/E\.demo\(\)/);
+ assert.match(preview,/Mode démonstration : aucune écriture ou sauvegarde autorisée/);
+ assert.match(preview,/Les cours et relevés du portefeuille/);
+ assert.doesNotMatch(preview,/createClient\(|trace_cas_save_document|config\.js|\.from\(['"]documents/);
+ assert.match(ui,/s\.unrealizedCents\/s\.costBasisCents\*100/);
+ assert.match(ui,/x\.unrealizedCents\/x\.costBasisCents\*100/);
+});
