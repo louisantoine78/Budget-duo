@@ -315,7 +315,7 @@
   ];
   const positions=raw.map(([id,name,q,assetType])=>({id,name,assetType,
    quantityMicro:quantity(q),costBasisCents:null,symbol:'',isin:'',sector:'',geography:'',thesis:''}));
-  return{portfolios:[{id:'pea-demo',name:'PEA Fortuneo',type:'PEA',owner:'la',currency:'EUR',
+  return{portfolios:[{id:'pea-demo',name:'PEA · exemple de portefeuille',type:'PEA',owner:'la',currency:'EUR',
    openingDate:'2026-11-04',openingCashCents:13829,openingCashConfirmed:false,
    referenceValueCents:378869,referenceDate:'2026-11-04',
    positions,catalog:positions.map(x=>({...x})),operations:[],quotes:{},
