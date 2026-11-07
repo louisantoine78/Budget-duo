@@ -2401,7 +2401,7 @@ function openManualTransaction(preferredKind='expense'){
 function openInvestmentAccountAdd(){
   openSheet('Ajouter un compte',
     '<div class="settings-hero"><span class="pico large">'+uiIcon('chart')+'</span><div><b>Nouveau compte de patrimoine</b><small>Ajoute le compte maintenant ; les opérations et la valorisation viendront ensuite.</small></div></div>'+
-    '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. PEA Boursorama, CELI">'+
+    '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. Mon PEA, Compte-titres, CELI">'+
     '<div class="formrow"><div><label class="label2">Type</label><select class="input" id="investmentAccountType"><option value="CELI">CELI</option><option value="Épargne">Épargne</option><option value="Livret">Livret</option><option value="PEA">PEA</option><option value="REER">REER</option><option value="Courtage">Courtage</option><option value="Autre">Autre</option></select></div>'+
     '<div><label class="label2">Devise</label><select class="input" id="investmentAccountCurrency"><option value="CAD">CAD</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="CHF">CHF</option></select></div></div>'+
     '<div id="newSavingsReference" class="trace-savings-reference"><div class="empty-note">Les transferts confirmés alimenteront ce compte d’épargne. Pour commencer à calculer son solde, indique sa référence bancaire.</div>'+
