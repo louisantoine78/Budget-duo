@@ -197,12 +197,12 @@ test('dated period performance removes external flows and is explicit about its 
  let p=started();
  p.snapshots=[
   {date:'2026-11-01',valueCents:30000,source:'Courtier : ouverture'},
-  {date:'2026-11-11',valueCents:33000,source:'Courtier : contrôle'}
+  {date:'2026-11-07',valueCents:33000,source:'Courtier : contrôle'}
  ];
- p.operations=[{id:'cash-1',date:'2026-11-06',type:'deposit',amountCents:2000,feeCents:0}];
+ p.operations=[{id:'cash-1',date:'2026-11-04',type:'deposit',amountCents:2000,feeCents:0}];
  const perf=E.periodPerformance(p,'all');
  assert.equal(perf.from,'2026-11-01');
- assert.equal(perf.to,'2026-11-11');
+ assert.equal(perf.to,'2026-11-07');
  assert.equal(perf.gainCents,1000);
  assert.ok(Math.abs(perf.percent-(1000/31000*100))<1e-9);
  assert.match(perf.method,/Dietz modifiée/);
