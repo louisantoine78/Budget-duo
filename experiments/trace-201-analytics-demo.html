@@ -39,7 +39,7 @@
   Les cours et relevés du portefeuille « Fictif » sont inventés et ne représentent aucun marché.</div>
  <nav class="lab-tabs" aria-label="Portefeuilles de démonstration">
   <button type="button" id="lab-home">Mes portefeuilles</button>
-  <button type="button" id="lab-pea">PEA Fortuneo fourni</button>
+  <button type="button" id="lab-pea">Exemple de PEA</button>
   <button type="button" id="lab-sample">Exemple fictif avec graphiques</button>
  </nav>
  <main id="lab-stage" class="lab-stage" aria-label="Aperçu du module Investissements"></main>
@@ -54,7 +54,7 @@
  const E=window.TraceWealth201Engine,W=window.TraceWealth201;
  if(!E||!W){document.getElementById('lab-stage').textContent='Erreur de chargement de la démonstration.';return;}
  const peaRaw=E.demo().portfolios[0];
- const pea={...peaRaw,schema:1,status:'draft',quoteHistory:{},name:'PEA Fortuneo · données fournies'};
+ const pea={...peaRaw,schema:1,status:'draft',quoteHistory:{},name:'PEA · exemple (positions fournies)'};
  const fake={
   id:'demo-fictive',name:'Portefeuille fictif · exemple UX',owner:'la',type:'CTO',currency:'EUR',
   openingDate:'2026-01-10',openingCashCents:E.cents('500'),openingCashConfirmed:true,
