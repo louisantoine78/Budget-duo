@@ -278,7 +278,7 @@ test('new in-place Patrimoine summary never enters bank or portfolio total calcu
  assert.match(css,/#trace201WealthSummary\.trace201-wealth-summary/);
  const net=app.slice(app.indexOf('function renderWealth('),app.indexOf('function renderAll('));
  assert.match(net,/window\.TraceWealth201\?\.dashboardSummary\?\.\(\)/);
- assert.match(net,/investmentSummaryNode\.textContent/);
+ assert.match(net,/investmentSummaryNode\.innerHTML/);
  assert.match(net,/const investments=ports\.reduce/);
  assert.match(net,/total=bankCAD\+investments/);
  const totalCalculation=net.slice(0,net.indexOf('const savings=ports.filter('));
