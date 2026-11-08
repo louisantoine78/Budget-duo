@@ -113,7 +113,7 @@ async function run(){
     const gainRect=await gainReturn.boundingBox();
     const gainParentRect=await gainReturn.locator('..').boundingBox();
     console.log('GAIN_RETURN_BOX '+JSON.stringify({label,gainRect,gainParentRect,text:await gainReturn.innerText()}));
-    assert.ok(gainRect&&gainParentRect&&gainRect.right<=gainParentRect.right+1,
+    assert.ok(gainRect&&gainParentRect&&gainRect.x+gainRect.width<=gainParentRect.x+gainParentRect.width+1,
      label+' position return must fit its financial card');
     assert.ok(gainRect.height<=22,label+' percent return must stay on a single line');
     await assertLayout(page,label,'position-detail');
