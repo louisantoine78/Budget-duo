@@ -14,6 +14,37 @@ const allow=new Map([
 const server=http.createServer((req,res)=>{
  try{
   const url=new URL(req.url,'http://127.0.0.1');
+  if(url.pathname==='/__trace202_patrimoine_taps.html'){
+   const source=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+   const from=source.indexOf('function trace202OpenTracking('),to=source.indexOf('function renderWealth(){',from);
+   if(from<0||to<from)throw Error('Patrimoine delegated router absent');
+   const methods=source.slice(from,to);
+   const page=`<!doctype html><html lang="fr"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>body{font:16px system-ui;padding:20px;background:#f6f5ef}
+    button{display:block;min-height:48px;margin:10px 0;padding:12px;border-radius:12px;border:1px solid #c6daca;background:#fff;color:#12402f}
+    #result{padding:15px;min-height:28px;background:#eaf5ec}</style>
+    <body><div class="page" data-page="wealth">
+    <button type="button" id="trace201Entry">Suivi des titres</button>
+    <button type="button" id="trace202Explore">Voir mes positions et analyses</button>
+    <div id="wealthInvestmentsGrid">
+      <button type="button" data-inv-account="pea">PEA courtier de test</button>
+      <button type="button" id="wealthAddCard">Ajouter un placement</button>
+    </div>
+    <button type="button" id="wealthLiquidityCard">Comptes bancaires</button>
+    <div id="result" role="status"></div></div>
+    <script>
+      const state={investmentAccounts:[{id:'pea',name:'PEA de test',type:'PEA',owner:'la'}],investmentOperations:[]};
+      function report(kind,id=''){document.querySelector('#result').textContent=kind+':'+id;}
+      window.TraceWealth201={open:id=>report('tracking',id)};
+      function openSheet(title){report('sheet',title);}
+      function openInvestmentAccountAdd(){report('add');}
+      function openAccountSettings(){report('settings');}
+      function openInvestmentAccount(a){report('legacy',a.id);}
+      ${methods}
+      trace202BindWealthActions();
+    </script></body></html>`;
+   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(page);return;
+  }
   if(!allow.has(url.pathname)){res.writeHead(404).end('Not in fictional test');return;}
   const file=path.join(root,url.pathname.slice(1));
   const data=fs.readFileSync(file);
@@ -137,6 +168,28 @@ async function run(){
     await page.locator('#w201-save').click();
     assert.equal(await page.locator('#w201-save').isEnabled(),true,label+' retry must remain enabled');
     assert.ok(await page.locator('#w201-form').count()===1);
+    // Real WebKit touch events on replaceable Patrimoine buttons.
+    // Uses the exact delegated handler extracted from the live application,
+    // a completely local fixture and no finance database or network requests.
+    await page.goto(origin+'/__trace202_patrimoine_taps.html',{waitUntil:'load'});
+    await page.locator('#trace202Explore').tap();
+    assert.equal(await page.locator('#result').innerText(),'tracking:');
+    await page.locator('[data-inv-account="pea"]').tap();
+    assert.equal(await page.locator('#result').innerText(),'tracking:pea');
+    await page.evaluate(()=>{
+     document.querySelector('#wealthInvestmentsGrid').innerHTML=
+      '<button type="button" data-inv-account="pea">PEA remplacé après recalcul FX</button>'+
+      '<button type="button" id="wealthAddCard">Ajouter un placement</button>';
+    });
+    await page.locator('[data-inv-account="pea"]').tap();
+    assert.equal(await page.locator('#result').innerText(),'tracking:pea');
+    await page.locator('#wealthAddCard').tap();
+    assert.equal(await page.locator('#result').innerText(),'add:');
+    await page.locator('#wealthLiquidityCard').tap();
+    assert.equal(await page.locator('#result').innerText(),'settings:');
+    await page.evaluate(()=>{window.TraceWealth201.open=()=>{throw Error('Simulated follow-up failure');};});
+    await page.locator('#trace201Entry').tap();
+    assert.match(await page.locator('#result').innerText(),/sheet:Investissements indisponibles/);
     assert.deepEqual(external,[],label+' attempted external network request');
     assert.deepEqual(errors,[],label+' page error');
     console.log('QA_MOBILE_PASS '+label);
