@@ -477,7 +477,7 @@ test('CSP-safe production bridge connects real investment module without inline 
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  assert.match(html,/Content-Security-Policy/);
  assert.match(html,/script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
- assert.doesNotMatch(html,/script-src[^"]*'unsafe-inline'/);
+ assert.doesNotMatch(html,/script-src[^;"]*'unsafe-inline'/);
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2.1'));
  assert.ok(!html.includes('window.TraceWealth201?.connect(window.Trace201Host)'));
  assert.ok(js.includes('if(root.Trace201Host)api.connect(root.Trace201Host);'));
