@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Trace">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="TRACE — ton budget, ton activité et ton patrimoine au même endroit.">
-<meta name="trace-build" content="5.37.0">
+<meta name="trace-build" content="5.37.2">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; connect-src 'self' https://eiqvabddtgfonouyeavi.supabase.co wss://eiqvabddtgfonouyeavi.supabase.co https://www.bankofcanada.ca; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; worker-src 'self'; form-action 'self'; base-uri 'self';">
 <meta name="robots" content="noindex, nofollow">
 <title>TRACE</title>
@@ -40,7 +40,7 @@
 <link rel="stylesheet" href="trace-email-confirmation-1.0.0.css">
 <link rel="stylesheet" href="trace-premium-panels-5.37.0.css">
 <link rel="stylesheet" href="trace-premium-system-5.37.0.css">
-<link rel="stylesheet" href="trace-wealth-201.css?v=2.0.1">
+<link rel="stylesheet" href="trace-wealth-201.css?v=2.0.2">
 <link rel="stylesheet" href="trace-password-recovery-1.0.0.css">
 </head>
 <body>
@@ -357,8 +357,9 @@
         <div class="section-head trace-wealth-section-head"><h2>Épargne</h2><button class="linkbtn" id="addAsset">+ Ajouter</button></div>
         <div class="portfolio-grid trace-wealth-grid" id="wealthSavingsGrid"></div>
       </section>
-      <section class="trace-wealth-section" aria-label="Placements">
-        <div class="section-head trace-wealth-section-head"><h2>Placements</h2><button type="button" id="trace201Entry" aria-label="Ouvrir le suivi détaillé des investissements">Suivi des titres ›</button></div>
+      <section class="trace-wealth-section" aria-label="Investissements">
+        <div class="section-head trace-wealth-section-head"><h2>Investissements</h2><button type="button" id="trace201Entry" aria-label="Ouvrir le suivi détaillé des investissements">Suivi des titres ›</button></div>
+        <div id="trace201WealthSummary" class="trace201-wealth-summary" aria-live="polite"></div>
         <div class="portfolio-grid trace-wealth-grid" id="wealthInvestmentsGrid"></div>
       </section>
       <section class="trace-wealth-net-section" aria-label="Trésorerie et comptes">
@@ -459,10 +460,10 @@
 <script src="trace-20-fresh-start-1.0.0.js"></script>
  <script>window.__TRACE20_FRESH_START_REQUIRED__=true;</script>
 <script src="trace-password-recovery-1.0.0.js"></script>
-<script src="trace-wealth-201-engine.js?v=2.0.1"></script>
-<script src="v5-app-5.37.0.js"></script>
-<script src="trace-wealth-201.js?v=2.0.1"></script>
-<script>try{window.TraceWealth201?.connect(window.Trace201Host)}catch(error){console.warn("TRACE 2.0.1 investissements:",error.message)}</script>
+<script src="trace-wealth-201-engine.js?v=2.0.2"></script>
+<script src="v5-app-5.37.0.js?v=5.37.2"></script>
+<script src="trace-wealth-201.js?v=2.0.2"></script>
+<script>try{window.TraceWealth201?.connect(window.Trace201Host)}catch(error){console.warn("TRACE 2.0.2 investissements:",error.message)}</script>
 <script src="trace-bank-doc-1.11.1.js"></script>
 <script src="trace-bank-ui-5.37.0.js"></script>
 <script src="trace-import-calendar-5.37.0.js"></script>

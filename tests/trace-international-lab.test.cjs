@@ -13,10 +13,11 @@ const engine=get('trace-international-1.0.0.js');
 const ui=get('trace-international-ui-1.0.0.js');
 let checked=0;function test(name,fn){fn();checked++;console.log('PASS '+name);}
 test('production HTML is either stable 5.36.5 or reviewed real 5.37 (never lab fixtures)',()=>{
- assert.match(stable,/<meta name="trace-build" content="5\.(?:36\.5|37\.0)"/);
+ const build=stable.match(/<meta name="trace-build" content="([^"]+)">/)?.[1];
+ assert.ok(build==='5.36.5'||build?.startsWith('5.37.'),'Unsupported production build: '+build);
  assert.doesNotMatch(stable,/trace-international-preview-fixtures/);
- if(stable.includes('content="5.37.0"')){
-  assert.match(stable,/src="v5-app-5\.37\.0\.js"/);
+ if(build.startsWith('5.37.')){
+  assert.ok(stable.includes('src="v5-app-5.37.0.js'));
   assert.match(stable,/window\.__TRACE20_FRESH_START_REQUIRED__=true/);
  }else{
   assert.doesNotMatch(stable,/traceIntlHome/);

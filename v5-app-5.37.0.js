@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.1';window.__TRACE_PUBLIC_RELEASE__='2.0.1';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.2';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -2401,7 +2401,7 @@ function openManualTransaction(preferredKind='expense'){
 function openInvestmentAccountAdd(){
   openSheet('Ajouter un compte',
     '<div class="settings-hero"><span class="pico large">'+uiIcon('chart')+'</span><div><b>Nouveau compte de patrimoine</b><small>Ajoute le compte maintenant ; les opérations et la valorisation viendront ensuite.</small></div></div>'+
-    '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. PEA Boursorama, CELI">'+
+    '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. Mon PEA, Compte-titres, CELI">'+
     '<div class="formrow"><div><label class="label2">Type</label><select class="input" id="investmentAccountType"><option value="CELI">CELI</option><option value="Épargne">Épargne</option><option value="Livret">Livret</option><option value="PEA">PEA</option><option value="REER">REER</option><option value="Courtage">Courtage</option><option value="Autre">Autre</option></select></div>'+
     '<div><label class="label2">Devise</label><select class="input" id="investmentAccountCurrency"><option value="CAD">CAD</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="CHF">CHF</option></select></div></div>'+
     '<div id="newSavingsReference" class="trace-savings-reference"><div class="empty-note">Les transferts confirmés alimenteront ce compte d’épargne. Pour commencer à calculer son solde, indique sa référence bancaire.</div>'+
@@ -5660,9 +5660,13 @@ function editSavingsReference(account){
 }
 function openInvestmentAccount(account){
  if(account?.savingsTracking==='linked'){openSavingsAccount(account);return;}
- if(account?.investments201?.schema===1&&
-  !state.investmentOperations.some(o=>o.accountId===account.id)){
-  window.TraceWealth201?.open?.(account.id);return;
+ // TRACE 2.0.2 — opening an empty, eligible placement starts the new
+ // detailed follow-up. Existing investment journals stay on their legacy path.
+ if(account&&!account.archived&&account.savingsTracking!=='linked'&&
+  !['CELI','Épargne','Livret','Savings'].includes(account.type)&&
+  !state.investmentOperations.some(o=>o.accountId===account.id)&&
+  window.TraceWealth201?.open){
+  window.TraceWealth201.open(account.id);return;
  }
  if(!account)return;
  let p;try{p=portfolioLedger(account);}catch(e){openSheet('Données de portefeuille incohérentes','<div class="empty-note">'+esc(e.message)+'</div>');return;}
@@ -5881,11 +5885,20 @@ function renderWealth(){
  const savings=ports.filter(({a})=>a.savingsTracking==='linked'||
   ['CELI','Épargne','Livret','Savings'].includes(a.type));
  const placements=ports.filter(({a})=>!savings.some(({a:shown})=>shown.id===a.id));
- const tile=({a,p})=>'<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
-  esc('Consulter '+(a.name||a.type||'Investissement'))+'"><span class="a-icon" aria-hidden="true">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
-  (p.reviewRequired?'Mouvement à vérifier':a.savingsTracking==='linked'&&!p.configured?'À configurer':nativeMoney(p.value,a.currency))+'</b><small>'+
-  (p.hasFx?(a.savingsTracking==='linked'?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+(p.fxDate?' · taux du '+esc(p.fxDate):''):
-    'Conversion CAD indisponible')+'</small></button>';
+ const tile=({a,p})=>{
+  const isSavings=a.savingsTracking==='linked'||
+   ['CELI','Épargne','Livret','Savings'].includes(a.type);
+  const needsSetup=!isSavings&&!a.investments201&&
+   !state.investmentOperations.some(o=>o.accountId===a.id)&&p.value===0;
+  return '<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
+   esc('Consulter '+(a.name||a.type||'Investissement'))+'"><span class="a-icon" aria-hidden="true">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
+   (p.reviewRequired?'Mouvement à vérifier':isSavings&&!p.configured?'À configurer':
+    needsSetup?'À initialiser':nativeMoney(p.value,a.currency))+'</b><small>'+
+   (needsSetup?'Renseigner les positions et les espèces ›':
+    p.hasFx?(isSavings?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+
+     (p.fxDate?' · taux du '+esc(p.fxDate):''):'Conversion CAD indisponible')+
+   '</small></button>';
+ };
  const savingsNode=$('#wealthSavingsGrid'),placementsNode=$('#wealthInvestmentsGrid');
  if(savingsNode)savingsNode.innerHTML=savings.length?savings.map(tile).join(''):
   '<div class="trace-wealth-empty">Aucun compte d’épargne suivi. Ajoute un livret ou un CELI pour commencer.</div>';
@@ -5894,6 +5907,36 @@ function renderWealth(){
    ['<div class="trace-wealth-empty">Aucun placement suivi pour le moment.</div>']),
   '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon" aria-hidden="true">＋</span><span>Ajouter un placement</span><b>Ajouter</b><small>PEA, CELI, REER…</small></button>'
  ].join('');
+ // TRACE 2.0.2 — read-only in-place investment gateway. Never alter ledger totals.
+ const investmentSummaryNode=$('#trace201WealthSummary');
+ if(investmentSummaryNode){
+  let overview=null,valuation=null;
+  try{
+   overview=window.TraceWealth201?.dashboardSummary?.()||null;
+   valuation=window.TraceWealth201?.portfolioOverview?.()||null;
+  }catch(err){console.warn('Synthèse du suivi des investissements indisponible :',err.message);}
+  const portfolios=overview?.portfolios||placements.length;
+  const positions=overview?.positions||0,verified=overview?.verified||0;
+  const complete=valuation?.complete&&valuation.totalCadCents!==null;
+  const value=complete?money(valuation.totalCadCents/100):'À compléter';
+  const note=positions?
+   'Les montants ne sont affichés que lorsque les relevés et les cours sont vérifiés.':
+   'Renseigne les positions et les espèces de tes comptes pour activer les analyses.';
+  investmentSummaryNode.innerHTML=
+   '<div class="trace202-wealth-panel" role="region" aria-label="Suivi des investissements">'+
+    '<div class="trace202-wealth-label">SUIVI DES INVESTISSEMENTS <span>TRACE 2.0.2</span></div>'+
+    '<strong>Mes titres en un coup d’œil</strong>'+
+    '<p>'+note+'</p>'+
+    '<div class="trace202-wealth-metrics">'+
+     '<div><b>'+portfolios+'</b><small>Portefeuilles</small></div>'+
+     '<div><b>'+positions+'</b><small>Positions</small></div>'+
+     '<div><b>'+verified+'</b><small>Rapprochés</small></div>'+
+    '</div>'+
+    '<div class="trace202-wealth-value"><span>Total indicatif en CAD</span><b>'+value+'</b></div>'+
+    '<button type="button" class="trace202-wealth-open" id="trace202Explore">Voir mes positions et analyses ›</button>'+
+    '<p class="trace202-wealth-fine">Aucune valorisation n’est ajoutée deux fois au patrimoine net.</p>'+
+   '</div>';
+ }
  $('#assetGrid').innerHTML=[
  '<button class="asset-card" type="button" id="wealthLiquidityCard"><span class="a-icon">$</span><span>Comptes bancaires</span><b>'+
   (bankMissing.length?'Solde incomplet':money(bankCAD))+'</b><small>Toutes devises, dettes déduites · Configurer ›</small></button>',
@@ -5904,10 +5947,12 @@ function renderWealth(){
   '<small>'+(cad!==null?'Équiv. '+money(cad)+' CAD':'Conversion indisponible')+'</small></button>')
  ].join('');
  $('#wealthAddCard').onclick=openInvestmentAccountAdd;$('#wealthLiquidityCard').onclick=openAccountSettings;
- if($('#trace201Entry'))$('#trace201Entry').onclick=()=>{
+ const openTitleTracking=()=>{
   if(!window.TraceWealth201)openSheet('Investissements','<div class="empty-note">Le module de suivi est momentanément indisponible. Recharge TRACE.</div>');
   else window.TraceWealth201.open();
  };
+ if($('#trace201Entry'))$('#trace201Entry').onclick=openTitleTracking;
+ if($('#trace202Explore'))$('#trace202Explore').onclick=openTitleTracking;
  $$('[data-foreign-bank]').forEach(b=>b.onclick=openAccountSettings);
  $$('[data-inv-account]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.invAccount)));
  const cashValues=bankValues.filter(x=>accountType(x.a)==='checking'),

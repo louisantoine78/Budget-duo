@@ -71,13 +71,13 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.1');
- assert.match(version.release,/2\.0\.1/);
- assert.match(main,/window\.__TRACE_BUILD__='5\.37\.1'/);
+ assert.equal(version.build,'5.37.2');
+ assert.ok(version.release.includes('2.0.2'));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.2'"));
  assert.match(html,/id="trace201Entry"/);
- assert.match(html,/trace-wealth-201-engine\.js\?v=2\.0\.1/);
- assert.match(html,/trace-wealth-201\.js\?v=2\.0\.1/);
- assert.match(html,/trace-wealth-201\.css\?v=2\.0\.1/);
+ assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
+ assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
+ assert.ok(html.includes('trace-wealth-201.css?v=2.0.2'));
  assert.match(main,/window\.Trace201Host=Object\.freeze/);
  assert.match(main,/traceStrictWriteSnapshot\(portfolio\)/);
  assert.match(main,/await saveDocument\('investment_accounts',next\)/);
@@ -164,4 +164,245 @@ test('TRACE 2.0.1 does not modify legacy 5.37 portfolioLedger, savingsLedger or 
  assert.match(oldNet,/const investments=ports\.reduce/);
  assert.doesNotMatch(oldNet,/addPortfolioValue|trace201Total|snapshotTotalCents/);
  assert.match(app,/if\(account\?\.investments201\?\.schema===1/);
+});
+
+test('allocation breakdown is exact, excludes cash, and refuses missing active prices',()=>{
+ let p=started();
+ p.positions[0].symbol='TEST';p.positions[0].sector='Technologie';p.positions[0].geography='Europe';
+ p.positions.push({id:'line-b',name:'Fonds fictif',symbol:'ETF',assetType:'ETF',
+  sector:'Diversifié',geography:'Monde',quantityMicro:E.quantity(2),costBasisCents:30000});
+ p.catalog=p.positions.map(x=>({...x}));
+ p=E.setQuote(p,'line-a',{priceUnits:E.price('50'),date:'2026-11-05',source:'Relevé contrôlé',kind:'manuel'});
+ const missing=E.allocationBreakdown(p);
+ assert.equal(missing.ready,false);
+ assert.equal(missing.missing,1);
+ assert.match(missing.reason,/Cours manquants/);
+ p=E.setQuote(p,'line-b',{priceUnits:E.price('150'),date:'2026-11-05',source:'Relevé contrôlé',kind:'manuel'});
+ const a=E.allocationBreakdown(p);
+ assert.equal(a.ready,true);
+ assert.equal(a.currency,'EUR');
+ assert.equal(a.totalCents,40000);
+ assert.equal(a.positions.length,2);
+ assert.equal(a.types.length,2);
+ assert.equal(a.types[0].label,'ETF');
+ assert.equal(a.types[0].percentage,75);
+ assert.equal(a.types[1].percentage,25);
+ assert.equal(a.sectors.find(x=>x.label==='Technologie').valueCents,10000);
+ assert.equal(a.geographies.find(x=>x.label==='Monde').valueCents,30000);
+ assert.equal(a.types.reduce((sum,x)=>sum+x.valueCents,0),a.totalCents);
+ assert.equal(E.evaluate(p).cashCents,20000);
+});
+
+test('dated period performance removes external flows and is explicit about its approximation',()=>{
+ let p=started();
+ p.snapshots=[
+  {date:'2026-11-01',valueCents:30000,source:'Courtier : ouverture'},
+  {date:'2026-11-07',valueCents:33000,source:'Courtier : contrôle'}
+ ];
+ p.operations=[{id:'cash-1',date:'2026-11-04',type:'deposit',amountCents:2000,feeCents:0}];
+ const perf=E.periodPerformance(p,'all');
+ assert.equal(perf.from,'2026-11-01');
+ assert.equal(perf.to,'2026-11-07');
+ assert.equal(perf.gainCents,1000);
+ assert.ok(Math.abs(perf.percent-(1000/31000*100))<1e-9);
+ assert.match(perf.method,/Dietz modifiée/);
+ assert.equal(E.chartSeries(p,'all').points.at(-1).flowAdjustedCents,31000);
+ assert.equal(E.periodPerformance({...p,snapshots:p.snapshots.slice(0,1)},'all'),null);
+});
+
+test('analytics are limited to investment module and surface missing evidence rather than fake values',()=>{
+ const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ assert.match(ui,/periodPerformance\(p,chartPeriod\)/);
+ assert.match(ui,/allocationBreakdown\(p\)/);
+ assert.match(ui,/\['1','1M'\].*\['3','3M'\].*\['6','6M'\].*\['12','1A'\].*\['all','Tout'\]/);
+ assert.match(ui,/aucune pondération fictive|Aucune pondération fictive/);
+ assert.match(ui,/Dietz modifiée/);
+ assert.match(css,/\.w201-periods/);
+ assert.match(css,/\.w201-bar-track/);
+ assert.doesNotMatch(css,/(^|\n)\s*(?:body|:root|\.home|\.budget|\.activity)\s*\{/m);
+});
+
+test('standalone iPhone prototype is disconnected from real financial storage',()=>{
+ const preview=fs.readFileSync(path.join(root,'experiments/trace-201-analytics-demo.html'),'utf8');
+ const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ assert.match(preview,/E\.demo\(\)/);
+ assert.match(preview,/Mode démonstration : aucune écriture ou sauvegarde autorisée/);
+ assert.match(preview,/Données et cotations fictives/);
+ assert.match(preview,/date:'2026-01-10',valueCents:E\.cents\('2200'\)/);
+ assert.doesNotMatch(preview,/createClient\(|trace_cas_save_document|config\.js|\.from\(['"]documents/);
+ assert.match(ui,/s\.unrealizedCents\/s\.costBasisCents\*100/);
+ assert.match(ui,/x\.unrealizedCents\/x\.costBasisCents\*100/);
+});
+
+test('Patrimoine investment summary is scoped, broker-neutral, and leaves linked CELIs in Épargne',()=>{
+ const pea={...acct(),name:'Mon PEA · courtier libre',investments201:started()};
+ const reer={id:'retirement',name:'REER local',type:'REER',owner:'partner',currency:'CAD'};
+ const celi={id:'savings-celi',name:'CELI épargne',type:'CELI',owner:'la',currency:'CAD',
+  savingsTracking:'linked'};
+ let view={active:true,viewer:'la',scope:'mine',accounts:[pea,celi],operations:[]};
+ W.connect({
+  context(){return view;},
+  openSheet(){},
+  async save(){throw Error('No writes in summary test');}
+ });
+ const personal=W.dashboardSummary();
+ assert.equal(personal.portfolios,1);
+ assert.equal(personal.positions,1);
+ assert.equal(personal.initialized,1);
+ assert.equal(personal.verified,0);
+ assert.equal(personal.toReview,1);
+ assert.equal(personal.savings,1);
+ view={...view,scope:'couple',accounts:[pea,celi,reer]};
+ const household=W.dashboardSummary();
+ assert.equal(household.portfolios,2);
+ assert.equal(household.positions,1);
+ assert.equal(household.savings,1);
+ assert.equal(household.verified,0);
+ view={...view,operations:[{id:'old-op',accountId:pea.id,status:'confirmed'}]};
+ const legacy=W.dashboardSummary();
+ assert.equal(legacy.legacy,1);
+ assert.equal(legacy.positions,0);
+ assert.equal(legacy.toReview,2);
+ assert.equal(JSON.stringify(pea.investments201),JSON.stringify(started()));
+});
+
+test('new in-place Patrimoine summary never enters bank or portfolio total calculations',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ assert.match(html,/<section class="trace-wealth-section" aria-label="Investissements">/);
+ assert.match(html,/id="trace201WealthSummary"/);
+ assert.match(html,/id="wealthInvestmentsGrid"/);
+ assert.match(html,/id="trace201Entry"/);
+ assert.match(css,/#trace201WealthSummary\.trace201-wealth-summary/);
+ const net=app.slice(app.indexOf('function renderWealth('),app.indexOf('function renderAll('));
+ assert.match(net,/window\.TraceWealth201\?\.dashboardSummary\?\.\(\)/);
+ assert.match(net,/investmentSummaryNode\.innerHTML/);
+ assert.match(net,/const investments=ports\.reduce/);
+ assert.match(net,/total=bankCAD\+investments/);
+ const totalCalculation=net.slice(0,net.indexOf('const savings=ports.filter('));
+ assert.ok(totalCalculation.length>0);
+ assert.doesNotMatch(totalCalculation,/investments201|\bE\.evaluate\(/);
+ for(const page of ['home','budget','activity'])assert.match(html,new RegExp('data-page="'+page+'"'));
+});
+
+test('dated FX conversion uses fixed-point cents and refuses stale, future or unsourced rates',()=>{
+ const quote={cadPerUnit:1.5732,date:'2026-11-06',source:'Banque du Canada · Valet'};
+ const eur=E.cadValue(32000,'EUR',quote,'2026-11-07');
+ assert.equal(eur.ready,true);
+ assert.equal(eur.valueCents,50342);
+ assert.equal(eur.rate,'1.5732');
+ assert.equal(eur.date,'2026-11-06');
+ assert.equal(eur.source,quote.source);
+ assert.equal(E.cadValue(32000,'CAD',null,'2026-11-07').valueCents,32000);
+ assert.equal(E.cadValue(32000,'EUR',null,'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,source:''},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,date:'2026-10-31'},'2026-11-07').ready,true);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,date:'2026-10-30'},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,date:'2026-11-08'},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,cadPerUnit:0},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,cadPerUnit:Infinity},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(Number.MAX_SAFE_INTEGER,'EUR',{...quote,cadPerUnit:99999},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(1,'EUR',{...quote,cadPerUnit:'1.005'},'2026-11-07').valueCents,1);
+ assert.throws(()=>E.cadValue(-1,'EUR',quote,'2026-11-07'),/invalide/);
+ assert.throws(()=>E.cadValue(100,'EUR',quote,'2026-11-32'),/Date/);
+});
+
+test('multi-portfolio view requires broker validation and a dated CAD quote to show a complete total',()=>{
+ const a=acct();
+ let p=started();
+ p=E.setQuote(p,'line-a',{priceUnits:E.price('60'),date:'2026-11-05',source:'Relevé fictif',kind:'manuel'});
+ p=W.reconcile(p,{date:'2026-11-06',value:'320',source:'Courtier fictif'});
+ const day=new Date().toISOString().slice(0,10);
+ const account={...a,investments201:p,fxCadPerUnit:1.5732,
+  fxRateDate:day,fxRateProvider:'Banque du Canada · Valet'};
+ let env={active:true,viewer:'la',scope:'mine',accounts:[account],operations:[]};
+ W.connect({context(){return env;},openSheet(){},async save(){throw Error('No writes');}});
+ const ok=W.portfolioOverview();
+ assert.equal(ok.complete,true);
+ assert.equal(ok.totalCadCents,50342);
+ assert.equal(ok.records[0].nativeCents,32000);
+ assert.equal(ok.records[0].verified,true);
+ assert.equal(ok.records[0].status,'Rapproché');
+ assert.equal(ok.records[0].fx.source,'Banque du Canada · Valet');
+ const without={...account,id:'another',name:'Autre PEA',investments201:undefined};
+ env={...env,accounts:[account,without]};
+ const incomplete=W.portfolioOverview();
+ assert.equal(incomplete.complete,false);
+ assert.equal(incomplete.totalCadCents,null);
+ assert.equal(incomplete.missing,1);
+ env={...env,accounts:[{...account,fxRateProvider:null}]};
+ const noSource=W.portfolioOverview();
+ assert.equal(noSource.complete,false);
+ assert.equal(noSource.records[0].status,'Taux à vérifier');
+ assert.equal(noSource.totalCadCents,null);
+});
+
+test('multicurrency UI preserves account-only gains and does not create a global percentage',()=>{
+ const js=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ const legacy=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ assert.match(js,/portfolioOverview\(\)/);
+ assert.match(js,/E\.cadValue\(v\.valueCents,a\.currency,q,asOf\)/);
+ assert.match(js,/Une performance commune en %/);
+ assert.match(js,/Aucune position fictive n’est importée/);
+ assert.match(js,/if\(isLegacy\(a\)\)/);
+ assert.match(css,/\.w201-overview/);
+ assert.doesNotMatch(js,/localStorage|sessionStorage|createClient\(|window\.fetch\(/);
+ const oldNet=legacy.slice(legacy.indexOf('function renderWealth('),legacy.indexOf('function renderAll('));
+ assert.match(oldNet,/const investments=ports\.reduce/);
+ assert.match(oldNet,/total=bankCAD\+investments/);
+});
+
+
+test('TRACE 2.0.2 opens uninitialized portfolios directly but protects legacy journals and savings',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const entry=app.slice(app.indexOf('function openInvestmentAccount(account)'),app.indexOf('function editInvestmentRate('));
+ assert.ok(entry.includes('!state.investmentOperations.some(o=>o.accountId===account.id)'));
+ assert.ok(entry.includes("!['CELI','Épargne','Livret','Savings'].includes(account.type)"));
+ assert.ok(entry.includes('window.TraceWealth201.open(account.id);return;'));
+ assert.ok(!entry.includes('window.TraceWealth201.save('));
+});
+
+test('TRACE 2.0.2 displays a read-only Patrimoine gateway without inventing missing holdings',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const wealth=app.slice(app.indexOf('function renderWealth(){'),app.indexOf('window.Trace201Host=Object.freeze('));
+ for(const needle of [
+  'const needsSetup=!isSavings&&!a.investments201&&',
+  "needsSetup?'À initialiser'",
+  'Renseigner les positions et les espèces',
+  'window.TraceWealth201?.dashboardSummary?.()',
+  'window.TraceWealth201?.portfolioOverview?.()',
+  'valuation?.complete&&valuation.totalCadCents!==null',
+  'id="trace202Explore"',
+  "$('#trace202Explore').onclick=openTitleTracking",
+  'Aucune valorisation n’est ajoutée deux fois au patrimoine net',
+  'const investments=ports.reduce',
+  'total=bankCAD+investments'
+ ])assert.ok(wealth.includes(needle),'Missing read-only Patrimoine guard: '+needle);
+ assert.ok(index.includes('id="trace201WealthSummary"'));
+ assert.ok(css.includes('.trace202-wealth-panel'));
+ assert.ok(css.includes('@media(max-width:370px)'));
+ for(const forbidden of ['saveDocument(','removeDocument(','createClient(']){
+  assert.ok(!wealth.includes(forbidden),'Unexpected mutation in overview: '+forbidden);
+ }
+});
+
+test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',()=>{
+ const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ assert.equal(version.build,'5.37.2');
+ assert.ok(version.release.startsWith('TRACE 2.0.2'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.2';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.2">'));
+ for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
+  assert.ok(html.includes(asset+'?v=2.0.2'),'Missing cache-bust: '+asset);
+ }
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.2'));
+ assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
 });

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>TRACE · aperçu privé Patrimoine</title>
+<link rel="stylesheet" href="../trace-wealth-201.css">
+<style>
+ :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#254a36}
+ *{box-sizing:border-box}
+ body{margin:0;background:#f3f7f1;min-height:100dvh}
+ .lab-shell{max-width:740px;margin:0 auto;padding:18px 14px 45px}
+ .lab-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+ .lab-mark{font-weight:850;letter-spacing:-.05em;font-size:26px;color:#163d2e}
+ .lab-tag{border:1px solid #b7d1c0;background:#e6f2e9;border-radius:999px;padding:7px 10px;
+  font-size:10px;font-weight:750;color:#2b6a45}
+ .lab-title{font-size:18px;margin:17px 0 6px;letter-spacing:-.02em}
+ .lab-copy{font-size:12px;line-height:1.6;color:#54705e;margin:0 0 14px}
+ .lab-notice{background:#fff5e7;border:1px solid #eed5ab;border-radius:13px;color:#6a5035;
+  font-size:11px;line-height:1.65;padding:12px 13px;margin-bottom:14px}
+ .lab-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+ .lab-tabs button{padding:10px 13px;border:1px solid #d4e5d7;background:#fff;border-radius:10px;
+  color:#285b40;font-size:12px;font-weight:700;cursor:pointer}
+ .lab-tabs button:focus-visible{outline:2px solid #276d4d;outline-offset:2px}
+ .lab-stage{background:#fff;padding:16px;border:1px solid #e2ebe0;border-radius:19px;
+  box-shadow:0 10px 36px rgba(20,65,45,.06);min-height:300px}
+ .lab-footer{font-size:10px;color:#778c7e;line-height:1.6;margin-top:15px}
+ @media(max-width:420px){.lab-shell{padding:12px 9px 30px}.lab-stage{padding:11px;border-radius:14px}}
+</style>
+</head>
+<body>
+<div class="lab-shell">
+ <header class="lab-header"><strong class="lab-mark">TRACE</strong><span class="lab-tag">LAB · PATRIMOINE</span></header>
+ <h1 class="lab-title">Aperçu isolé du suivi des investissements</h1>
+ <p class="lab-copy">Teste la navigation et les graphiques sur iPhone sans te connecter à ton vrai compte.</p>
+ <div class="lab-notice" role="status"><strong>Démo sécurisée.</strong>
+  Données et cotations fictives, sans connexion à Supabase et sans aucune sauvegarde.</div>
+ <nav class="lab-tabs" aria-label="Portefeuilles de démonstration">
+  <button type="button" id="lab-home">Mes portefeuilles</button>
+  <button type="button" id="lab-pea">Exemple de PEA</button>
+  <button type="button" id="lab-sample">Exemple fictif avec graphiques</button>
+ </nav>
+ <main id="lab-stage" class="lab-stage" aria-label="Aperçu du module Investissements"></main>
+ <p class="lab-footer">Prévisualisation technique · TRACE 2.0.2. Les quantités du PEA proviennent du cahier
+  des charges mais ses cours et PRU ne sont pas devinés. Pour saisir tes véritables investissements, utilise TRACE en production.</p>
+</div>
+<script src="../trace-wealth-201-engine.js"></script>
+<script src="../trace-wealth-201.js"></script>
+<script>
+(()=>{
+ 'use strict';
+ const E=window.TraceWealth201Engine,W=window.TraceWealth201;
+ if(!E||!W){document.getElementById('lab-stage').textContent='Erreur de chargement de la démonstration.';return;}
+ const peaRaw=E.demo().portfolios[0];
+ const pea={...peaRaw,schema:1,status:'draft',quoteHistory:{},name:'PEA · exemple (positions fournies)'};
+ const fake={
+  id:'demo-fictive',name:'Portefeuille fictif · exemple UX',owner:'la',type:'CTO',currency:'EUR',
+  openingDate:'2026-01-10',openingCashCents:E.cents('500'),openingCashConfirmed:true,
+  positions:[
+   {id:'fiction-a',name:'Entreprise Alpha fictive',symbol:'FALP',assetType:'Action',
+    quantityMicro:E.quantity('10'),costBasisCents:E.cents('800'),sector:'Technologie',
+    geography:'Europe',strategy:{thesis:'Exemple de stratégie sans valeur financière réelle'}},
+   {id:'fiction-b',name:'Fonds Monde fictif',symbol:'FMON',assetType:'ETF',
+    quantityMicro:E.quantity('8'),costBasisCents:E.cents('400'),sector:'Diversifié',
+    geography:'Monde',strategy:{}},
+   {id:'fiction-c',name:'Entreprise Beta fictive',symbol:'FBET',assetType:'Action',
+    quantityMicro:E.quantity('5'),costBasisCents:E.cents('500'),sector:'Industrie',
+    geography:'Amérique du Nord',strategy:{}}
+  ],operations:[{id:'fiction-apport',date:'2026-08-01',type:'deposit',amountCents:E.cents('200'),
+   feeCents:0}],quotes:{},quoteHistory:{},snapshots:[
+    {date:'2026-01-10',valueCents:E.cents('2200'),source:'Scénario fictif · ouverture'},
+    {date:'2026-04-10',valueCents:E.cents('2320'),source:'Scénario fictif · trimestre'},
+    {date:'2026-08-10',valueCents:E.cents('2590'),source:'Scénario fictif · été'},
+    {date:'2026-11-04',valueCents:E.cents('2645'),source:'Scénario fictif · novembre'}
+  ],status:'draft',schema:1
+ };
+ fake.catalog=fake.positions.map(x=>({...x}));
+ let portfolio=fake;
+ portfolio=E.setQuote(portfolio,'fiction-a',{priceUnits:E.price('90'),date:'2026-11-04',
+  source:'Cours fictif',kind:'manuel'});
+ portfolio=E.setQuote(portfolio,'fiction-b',{priceUnits:E.price('65'),date:'2026-11-04',
+  source:'Cours fictif',kind:'manuel'});
+ portfolio=E.setQuote(portfolio,'fiction-c',{priceUnits:E.price('105'),date:'2026-11-04',
+  source:'Cours fictif',kind:'manuel'});
+ // This is a fictional broker statement, never a production claim.
+ portfolio=W.reconcile(portfolio,{date:'2026-11-04',value:'2645',
+  source:'Relevé de démonstration entièrement fictif'});
+ const current=new Date(),sampleRateDate=[current.getFullYear(),
+  String(current.getMonth()+1).padStart(2,'0'),String(current.getDate()).padStart(2,'0')].join('-');
+ const items=[pea,portfolio].map(p=>({id:p.id,name:p.name,type:p.type,owner:p.owner,
+  currency:p.currency,investments201:p,
+  ...(p.id==='demo-fictive'?{fxCadPerUnit:1.5,fxRateDate:sampleRateDate,
+   fxRateProvider:'Taux fictif · démonstration',fxAutoUpdate:false}:{})}));
+ W.connect({
+  context(){return {active:true,viewer:'la',scope:'mine',accounts:items,operations:[]};},
+  openSheet(_title,markup){document.getElementById('lab-stage').innerHTML=markup;},
+  async save(){throw Error('Mode démonstration : aucune écriture ou sauvegarde autorisée.');}
+ });
+ document.getElementById('lab-home').addEventListener('click',()=>W.open());
+ document.getElementById('lab-pea').addEventListener('click',()=>W.open('pea-demo'));
+ document.getElementById('lab-sample').addEventListener('click',()=>W.open('demo-fictive'));
+ W.open('demo-fictive');
+})();
+</script>
+</body>
+</html>

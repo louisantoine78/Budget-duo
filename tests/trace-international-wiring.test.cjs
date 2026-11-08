@@ -10,7 +10,8 @@ const shell=fs.readFileSync(path.join(root,'index.html'),'utf8');
 let count=0;
 function test(name,fn){fn();count++;console.log('PASS '+name);}
 test('main entrypoint matches either stable 5.36 or reviewed release 5.37',()=>{
- const production=shell.includes('<meta name="trace-build" content="5.37.0">');
+ const releaseMeta=shell.match(/<meta name="trace-build" content="([^"]+)">/);
+ const production=(releaseMeta?.[1]||'').startsWith('5.37.');
  if(production){
   assert.match(shell,/v5-app-5\.37\.0\.js/);
   assert.match(shell,/trace-20-fresh-start-1\.0\.0\.js/);
