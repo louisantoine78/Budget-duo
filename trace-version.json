@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.37.2",
-  "release": "TRACE 2.0.2 — Patrimoine / suivi intégré, analyses et multidevise (sans migration)"
+  "build": "5.37.3",
+  "release": "TRACE 2.0.2 — correctif de navigation Patrimoine sur iPhone (sans migration)"
 }
