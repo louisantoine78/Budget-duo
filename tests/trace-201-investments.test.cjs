@@ -376,7 +376,7 @@ test('TRACE 2.0.2 displays a read-only Patrimoine gateway without inventing miss
   'Renseigner les positions et les espèces',
   'window.TraceWealth201?.dashboardSummary?.()',
   'window.TraceWealth201?.portfolioOverview?.()',
-  'valuation?.complete&&valuation.totalCadCents!==null',
+  'valuation?.complete===true&&valuation.totalCadCents!==null',
   'trace203-invest-stats',
   'Valeur du suivi · CAD',
   'quickCount(\'wealthQuickInvestments\',placements.length)',
