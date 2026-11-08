@@ -53,7 +53,7 @@ const server=http.createServer((req,res)=>{
      {id:'celi2',owner:'la',type:'CELI',name:'CELI ET2',currency:'CAD',savingsTracking:'linked'}
     ],investmentOperations:[],accounts:[{id:'bank',owner:'la',type:'checking',currency:'CAD'}]};
     const $=selector=>document.querySelector(selector);
-    const scope=x=>x;
+    const scope=x=>x==='mine'?me:'couple';
     const bank=()=>({needsCardReview:false});
     const accountType=a=>a.type;
     const accountEstimate=a=>a.type==='checking'?1117:null;
