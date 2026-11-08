@@ -412,7 +412,7 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
 test('TRACE 2.0.2 iPhone hotfix delegates dynamic investment clicks safely without financial writes',()=>{
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const from=app.indexOf('function trace202OpenTracking(');
- const to=app.indexOf('function renderWealth(){',from);
+ const to=app.lastIndexOf('\n})();');
  assert.ok(from>0&&to>from,'Actual delegated click functions must exist');
  const source=app.slice(from,to);
  const attached={},opened=[],errors=[],notices=[];
