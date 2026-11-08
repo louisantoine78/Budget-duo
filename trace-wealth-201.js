@@ -8,7 +8,13 @@
   root
  );
  if(typeof module==='object'&&module.exports)module.exports=api;
- else root.TraceWealth201=api;
+ else{
+  root.TraceWealth201=api;
+  // The production Content-Security-Policy forbids inline bootstraps.
+  // The authenticated app/host is loaded before this same-origin module.
+  // Connect in this external script: never weaken script-src for a UI fix.
+  if(root.Trace201Host)api.connect(root.Trace201Host);
+ }
 })(typeof globalThis!=='undefined'?globalThis:this,function(E,root){
  'use strict';
  const key='investments201',today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
