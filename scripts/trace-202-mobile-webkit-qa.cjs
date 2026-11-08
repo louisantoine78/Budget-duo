@@ -314,6 +314,7 @@ async function run(){
     }));
     assert.ok(beforeLayout.documentWidth<=beforeLayout.viewport+2,label+' redesigned Patrimoine overflow');
     assert.deepEqual(beforeLayout.order,['traceWealthInvestments','traceWealthSavings','traceWealthCash']);
+    await saveImage(page,label,'patrimoine-redesign');
     await page.locator('[data-wealth-jump="traceWealthSavings"]').tap();
     assert.equal(await page.evaluate(()=>document.activeElement?.id),'traceWealthSavings');
     await page.locator('[data-wealth-jump="traceWealthCash"]').tap();
