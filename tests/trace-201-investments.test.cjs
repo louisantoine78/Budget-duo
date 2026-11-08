@@ -228,7 +228,8 @@ test('standalone iPhone prototype is disconnected from real financial storage',(
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
  assert.match(preview,/E\.demo\(\)/);
  assert.match(preview,/Mode démonstration : aucune écriture ou sauvegarde autorisée/);
- assert.match(preview,/Les cours et relevés du portefeuille/);
+ assert.match(preview,/Données et cotations fictives/);
+ assert.match(preview,/date:'2026-01-10',valueCents:E\.cents\('2200'\)/);
  assert.doesNotMatch(preview,/createClient\(|trace_cas_save_document|config\.js|\.from\(['"]documents/);
  assert.match(ui,/s\.unrealizedCents\/s\.costBasisCents\*100/);
  assert.match(ui,/x\.unrealizedCents\/x\.costBasisCents\*100/);
