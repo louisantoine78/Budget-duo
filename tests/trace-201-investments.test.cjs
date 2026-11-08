@@ -71,7 +71,7 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.4');
+ assert.equal(version.build,'5.37.5');
  assert.ok(version.release.includes('2.0.2'));
  assert.ok(main.includes("window.__TRACE_BUILD__='5.37.4'"));
  assert.match(html,/id="trace201Entry"/);
@@ -377,8 +377,11 @@ test('TRACE 2.0.2 displays a read-only Patrimoine gateway without inventing miss
   'window.TraceWealth201?.dashboardSummary?.()',
   'window.TraceWealth201?.portfolioOverview?.()',
   'valuation?.complete&&valuation.totalCadCents!==null',
-  'id="trace202Explore"',
-  'Aucune valorisation n’est ajoutée deux fois au patrimoine net',
+  'trace203-invest-stats',
+  'Valeur du suivi · CAD',
+  'quickCount(\'wealthQuickInvestments\',placements.length)',
+  'quickCount(\'wealthQuickSavings\',savings.length)',
+  'quickCount(\'wealthQuickCash\',banks.length)',
   'const investments=ports.reduce',
   'total=bankCAD+investments'
  ])assert.ok(wealth.includes(needle),'Missing read-only Patrimoine guard: '+needle);
@@ -397,14 +400,14 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.4');
+ assert.equal(version.build,'5.37.5');
  assert.ok(version.release.startsWith('TRACE 2.0.2'));
- assert.ok(app.includes("window.__TRACE_BUILD__='5.37.4';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
- assert.ok(html.includes('<meta name="trace-build" content="5.37.4">'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.5';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.5">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
-  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.1':'2.0.2')),'Missing cache-bust: '+asset);
+  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.1':asset==='trace-wealth-201.css'?'2.0.2.2':'2.0.2')),'Missing cache-bust: '+asset);
  }
- assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.4'));
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.5'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
 });
 
@@ -482,8 +485,40 @@ test('CSP-safe production bridge connects real investment module without inline 
  assert.ok(!html.includes('window.TraceWealth201?.connect(window.Trace201Host)'));
  assert.ok(js.includes('if(root.Trace201Host)api.connect(root.Trace201Host);'));
  assert.ok(app.includes('window.Trace201Host=Object.freeze({'));
- assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.4"')<
+ assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.5"')<
    html.indexOf('src="trace-wealth-201.js?v=2.0.2.1"'));
  assert.ok(!js.includes('createClient('));
  assert.ok(!js.includes('localStorage'));
+});
+
+test('Patrimoine 2.0.2 premium reorganisation preserves counts, grouping and trusted totals',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ const i=html.indexOf('id="traceWealthInvestments"');
+ const s=html.indexOf('id="traceWealthSavings"');
+ const c=html.indexOf('id="traceWealthCash"');
+ const nav=html.indexOf('class="trace203-wealth-nav"');
+ const total=html.indexOf('id="wealthTotal"');
+ assert.ok(total>=0&&nav>total&&i>nav&&s>i&&c>s,
+  'Estimated net value, shortcut navigation, Investments, Savings, Treasury must stay in that order');
+ for(const id of ['traceWealthInvestments','traceWealthSavings','traceWealthCash']){
+  assert.match(html,new RegExp('data-wealth-jump="'+id+'"'));
+  assert.match(html,new RegExp('id="'+id+'" aria-label='));
+ }
+ for(const id of ['wealthSavingsGrid','wealthInvestmentsGrid','assetGrid','wealthTrend','wealthAnalysis','addAsset','trace201Entry']){
+  assert.ok(html.includes('id="'+id+'"'),'Existing functionality was removed: '+id);
+ }
+ const wealth=app.slice(app.indexOf('function renderWealth(){'),app.indexOf('window.Trace201Host=Object.freeze('));
+ assert.ok(wealth.includes('const investments=ports.reduce'));
+ assert.ok(wealth.includes('total=bankCAD+investments'));
+ assert.ok(wealth.includes('valuation?.complete===true&&valuation.totalCadCents!==null'));
+ assert.ok(wealth.includes("'À compléter'"));
+ assert.ok(!wealth.includes('id="trace202Explore"'),'Repeated full width button should not be presented');
+ assert.ok(app.includes("button.matches('[data-wealth-jump]')"));
+ assert.ok(css.includes('.trace203-wealth-nav'));
+ assert.ok(css.includes('scroll-margin-top:'));
+ for(const dangerous of ['saveDocument(','removeDocument(','createClient(']){
+  assert.ok(!wealth.includes(dangerous),'Read-only overview should not write finance data');
+ }
 });
