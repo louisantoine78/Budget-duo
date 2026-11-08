@@ -233,3 +233,53 @@ test('standalone iPhone prototype is disconnected from real financial storage',(
  assert.match(ui,/s\.unrealizedCents\/s\.costBasisCents\*100/);
  assert.match(ui,/x\.unrealizedCents\/x\.costBasisCents\*100/);
 });
+
+test('Patrimoine investment summary is scoped, broker-neutral, and leaves linked CELIs in Épargne',()=>{
+ const pea={...acct(),name:'Mon PEA · courtier libre',investments201:started()};
+ const reer={id:'retirement',name:'REER local',type:'REER',owner:'partner',currency:'CAD'};
+ const celi={id:'savings-celi',name:'CELI épargne',type:'CELI',owner:'la',currency:'CAD',
+  savingsTracking:'linked'};
+ let view={active:true,viewer:'la',scope:'mine',accounts:[pea,celi],operations:[]};
+ W.connect({
+  context(){return view;},
+  openSheet(){},
+  async save(){throw Error('No writes in summary test');}
+ });
+ const personal=W.dashboardSummary();
+ assert.equal(personal.portfolios,1);
+ assert.equal(personal.positions,1);
+ assert.equal(personal.initialized,1);
+ assert.equal(personal.verified,0);
+ assert.equal(personal.toReview,1);
+ assert.equal(personal.savings,1);
+ view={...view,scope:'couple',accounts:[pea,celi,reer]};
+ const household=W.dashboardSummary();
+ assert.equal(household.portfolios,2);
+ assert.equal(household.positions,1);
+ assert.equal(household.savings,1);
+ assert.equal(household.verified,0);
+ view={...view,operations:[{id:'old-op',accountId:pea.id,status:'confirmed'}]};
+ const legacy=W.dashboardSummary();
+ assert.equal(legacy.legacy,1);
+ assert.equal(legacy.positions,0);
+ assert.equal(legacy.toReview,2);
+ assert.equal(JSON.stringify(pea.investments201),JSON.stringify(started()));
+});
+
+test('new in-place Patrimoine summary never enters bank or portfolio total calculations',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ assert.match(html,/<section class="trace-wealth-section" aria-label="Investissements">/);
+ assert.match(html,/id="trace201WealthSummary"/);
+ assert.match(html,/id="wealthInvestmentsGrid"/);
+ assert.match(html,/id="trace201Entry"/);
+ assert.match(css,/#trace201WealthSummary\.trace201-wealth-summary/);
+ const net=app.slice(app.indexOf('function renderWealth('),app.indexOf('function renderAll('));
+ assert.match(net,/window\.TraceWealth201\?\.dashboardSummary\?\.\(\)/);
+ assert.match(net,/investmentSummaryNode\.textContent/);
+ assert.match(net,/const investments=ports\.reduce/);
+ assert.match(net,/total=bankCAD\+investments/);
+ assert.doesNotMatch(net,/investments201|\bE\.evaluate\(/);
+ for(const page of ['home','budget','activity'])assert.match(html,new RegExp('data-page="'+page+'"'));
+});
