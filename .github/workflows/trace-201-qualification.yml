@@ -46,7 +46,8 @@ jobs:
 
   mobile-webkit:
     # Isolated demo only. No production credentials, Supabase, or network calls.
-    runs-on: ubuntu-latest
+    # WebKit Playwright 1.56 is tested on noble, not Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
