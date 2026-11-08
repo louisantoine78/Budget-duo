@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.2';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.3';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -5946,15 +5946,9 @@ function renderWealth(){
   (native===null?'Solde à configurer':window.TraceInternational.money(native,currency))+'</b>'+
   '<small>'+(cad!==null?'Équiv. '+money(cad)+' CAD':'Conversion indisponible')+'</small></button>')
  ].join('');
- $('#wealthAddCard').onclick=openInvestmentAccountAdd;$('#wealthLiquidityCard').onclick=openAccountSettings;
- const openTitleTracking=()=>{
-  if(!window.TraceWealth201)openSheet('Investissements','<div class="empty-note">Le module de suivi est momentanément indisponible. Recharge TRACE.</div>');
-  else window.TraceWealth201.open();
- };
- if($('#trace201Entry'))$('#trace201Entry').onclick=openTitleTracking;
- if($('#trace202Explore'))$('#trace202Explore').onclick=openTitleTracking;
- $$('[data-foreign-bank]').forEach(b=>b.onclick=openAccountSettings);
- $$('[data-inv-account]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.invAccount)));
+ // Investment cards are re-created by FX updates and account refreshes.
+ // Stable delegated handlers are installed once on the Patrimoine page by bind().
+ // Do not bind to these replaceable descendants or iPhone taps can be lost.
  const cashValues=bankValues.filter(x=>accountType(x.a)==='checking'),
   cardValues=bankValues.filter(x=>accountType(x.a)==='card'),
   bankSummary={checking:cashValues.length&&cashValues.every(x=>x.cad!==null)?cashValues.reduce((n,x)=>n+x.cad,0):null,
@@ -7115,7 +7109,7 @@ function bind(){$('#closeSheet').onclick=closeSheet;$('#sheetBackdrop').onclick=
  });$$('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='review'){navigate('activity');showTab('review');}else navigate(b.dataset.go);});$('#quickAdd').onclick=openTraceAddMenu;$('#homeAccountsBtn').onclick=openAccountsOverview;$('#homeBudgetShortcut').onclick=()=>navigate('budget');$('#homeImportCalendar').onclick=()=>openTraceImportWorkspace('daily');$('#activityImportCalendar')?.addEventListener('click',()=>openTraceImportWorkspace('daily'));$('#profileBtn').onclick=profile;$('#analysisBtn').onclick=analysis;$('#homeTrendCard').onclick=analysis;$('#shareCard').onclick=openActivitySharing;$('#shareOpen').onclick=openActivitySharing;$$('[data-kpi]').forEach(b=>b.onclick=()=>detail(b.dataset.kpi));$$('#homeScope .seg').forEach(b=>b.onclick=()=>{homeScope=b.dataset.scope;renderHome();});document.querySelectorAll('#budgetScope .seg').forEach(b=>b.onclick=()=>{budgetScope=b.dataset.scope;renderBudget();});$('#budgetMonthPicker')?.addEventListener('change',e=>setBudgetMonth(e.target.value));$('#budgetCurrentMonth')?.addEventListener('click',()=>setBudgetMonth(CM));$('#budgetCopyPrevious')?.addEventListener('click',copyPreviousBudget);$$('#wealthScope .seg').forEach(b=>b.onclick=()=>{wealthScope=b.dataset.scope;renderWealth();});$$('#activityTabs .tab').forEach(b=>{
  b.onclick=()=>showTab(b.dataset.tab);
  b.onkeydown=e=>activityTabKey(e,b);
-});$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;$('#activityImportBack')?.addEventListener('click',()=>showTab('transactions'));$('#traceImportDaily')?.addEventListener('click',()=>openTraceImportWorkspace('daily'));$('#traceImportMonthly')?.addEventListener('click',()=>openTraceImportWorkspace('monthly'));$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};if(internationalPreviewMode())window.TraceMonthlyStatementUI?.mount?.({
+});$('#activityMonthPicker')?.addEventListener('change',e=>setActivityMonth(e.target.value));$('#activityPrevMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,-1)));$('#activityNextMonth')?.addEventListener('click',()=>setActivityMonth(monthOffset(activityMonth,1)));$('#activityCurrentMonth')?.addEventListener('click',()=>setActivityMonth(CM));$('#annualBudgetDetails').onclick=openAnnualBudgetAnalysis;$('#annualBudgetCard').onclick=openAnnualBudgetAnalysis;$('#addAsset').onclick=openInvestmentAccountAdd;$('#wealthAnalysis').onclick=openPortfolioAnalysis;$('#wealthChart').onclick=$('#wealthAnalysis').onclick;trace202BindWealthActions();$('#activityImportBack')?.addEventListener('click',()=>showTab('transactions'));$('#traceImportDaily')?.addEventListener('click',()=>openTraceImportWorkspace('daily'));$('#traceImportMonthly')?.addEventListener('click',()=>openTraceImportWorkspace('monthly'));$('#chooseImport').onclick=()=>{const input=$('#importFile'),accountId=window.TraceImportCalendar?.selectedAccount?.();if(!accountId||!visibleBankAccounts(me).some(a=>a.id===accountId)){traceNotice('Choisis d’abord le compte bancaire dans Importer.');return;}delete input.dataset.preferredDate;input.dataset.preferredAccount=accountId;input.value='';input.click();};$('#importFile').onchange=e=>{importFile(e.target.files?.[0]);e.target.value='';};if(internationalPreviewMode())window.TraceMonthlyStatementUI?.mount?.({
  host:$('#traceStatementControl'),
  accounts:()=>visibleBankAccounts(me).map(a=>({...a,type:accountType(a),
    currency:window.TraceInternational.currency(a)})),
@@ -7361,4 +7355,54 @@ if(document.readyState==='loading'){
 }else{
   bootTrace();
 }
+// Stable handlers are declared at the end of the runtime to avoid changing
+// existing renderer extraction boundaries; function declarations are hoisted.
+function trace202OpenTracking(accountId=''){
+ try{
+  if(typeof window.TraceWealth201?.open!=='function')
+   throw Error('Le suivi des investissements n’est pas chargé.');
+  window.TraceWealth201.open(accountId);
+ }catch(error){
+  console.error('TRACE Patrimoine: ouverture impossible',error);
+  const description='Le suivi des investissements n’a pas pu s’ouvrir. Actualise TRACE puis réessaie.';
+  try{openSheet('Investissements indisponibles','<div class="empty-note" role="alert">'+description+'</div>');}
+  catch(sheetError){console.error('TRACE Patrimoine: panneau indisponible',sheetError);window.alert?.(description);}
+ }
+}
+function trace202BindWealthActions(){
+ const page=document.querySelector('.page[data-page="wealth"]');
+ if(!page||page.dataset.trace202ActionsBound==='yes')return;
+ page.dataset.trace202ActionsBound='yes';
+ // Use event delegation: both the premium summary and the account cards are
+ // replaced by renderWealth(). The page itself never gets replaced.
+ page.addEventListener('click',event=>{
+  const button=event.target?.closest?.('button');
+  if(!button||!page.contains(button))return;
+  if(button.matches('#trace201Entry,#trace202Explore')){
+   trace202OpenTracking();return;
+  }
+  if(button.matches('#wealthAddCard')){
+   openInvestmentAccountAdd();return;
+  }
+  if(button.matches('#wealthLiquidityCard,[data-foreign-bank]')){
+   openAccountSettings();return;
+  }
+  if(button.matches('[data-inv-account]')){
+   const account=state.investmentAccounts.find(a=>a.id===button.dataset.invAccount);
+   if(!account){trace202OpenTracking('');return;}
+   const newTracking=!account.archived&&account.savingsTracking!=='linked'&&
+    !['CELI','Épargne','Livret','Savings'].includes(account.type)&&
+    !state.investmentOperations.some(o=>o.accountId===account.id);
+   if(newTracking)trace202OpenTracking(account.id);
+   else{
+    try{openInvestmentAccount(account);}
+    catch(error){console.error('TRACE Patrimoine: compte indisponible',error);
+     try{openSheet('Compte indisponible','<div class="empty-note" role="alert">Impossible d’ouvrir ce compte. Recharge TRACE puis réessaie.</div>');}
+     catch{window.alert?.('Impossible d’ouvrir ce compte. Recharge TRACE puis réessaie.');}
+    }
+   }
+  }
+ });
+}
+
 })();

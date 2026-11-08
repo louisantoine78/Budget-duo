@@ -71,9 +71,9 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.2');
+ assert.equal(version.build,'5.37.3');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.2'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.3'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
@@ -378,11 +378,12 @@ test('TRACE 2.0.2 displays a read-only Patrimoine gateway without inventing miss
   'window.TraceWealth201?.portfolioOverview?.()',
   'valuation?.complete&&valuation.totalCadCents!==null',
   'id="trace202Explore"',
-  "$('#trace202Explore').onclick=openTitleTracking",
   'Aucune valorisation n’est ajoutée deux fois au patrimoine net',
   'const investments=ports.reduce',
   'total=bankCAD+investments'
  ])assert.ok(wealth.includes(needle),'Missing read-only Patrimoine guard: '+needle);
+ assert.ok(app.includes("button.matches('#trace201Entry,#trace202Explore')"));
+ assert.ok(app.includes('trace202BindWealthActions();'));
  assert.ok(index.includes('id="trace201WealthSummary"'));
  assert.ok(css.includes('.trace202-wealth-panel'));
  assert.ok(css.includes('@media(max-width:370px)'));
@@ -396,13 +397,75 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.2');
+ assert.equal(version.build,'5.37.3');
  assert.ok(version.release.startsWith('TRACE 2.0.2'));
- assert.ok(app.includes("window.__TRACE_BUILD__='5.37.2';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
- assert.ok(html.includes('<meta name="trace-build" content="5.37.2">'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.3';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.3">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
   assert.ok(html.includes(asset+'?v=2.0.2'),'Missing cache-bust: '+asset);
  }
- assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.2'));
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.3'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
+});
+
+
+test('TRACE 2.0.2 iPhone hotfix delegates dynamic investment clicks safely without financial writes',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const from=app.indexOf('function trace202OpenTracking(');
+ const to=app.lastIndexOf('\n})();');
+ assert.ok(from>0&&to>from,'Actual delegated click functions must exist');
+ const source=app.slice(from,to);
+ const attached={},opened=[],errors=[],notices=[];
+ const page={dataset:{},contains(){return true;},addEventListener(name,fn){
+  assert.equal(name,'click');
+  assert.equal(attached.click,undefined,'one listener, not one listener per redraw');
+  attached.click=fn;
+ }};
+ const state={investmentAccounts:[
+  {id:'pea',name:'PEA courtier indépendant',type:'PEA',owner:'la'},
+  {id:'celi',name:'CELI épargne',type:'CELI',savingsTracking:'linked',owner:'la'},
+  {id:'historical',name:'PEA historique',type:'PEA',owner:'la'}
+ ],investmentOperations:[{accountId:'historical',id:'old-op'}]};
+ const window={TraceWealth201:{open:id=>opened.push(['tracking',id])},alert:msg=>notices.push(msg)};
+ const context={
+  document:{querySelector:selector=>selector==='.page[data-page="wealth"]'?page:null},
+  window,state,
+  openSheet:(title)=>opened.push(['sheet',title]),
+  openInvestmentAccountAdd:()=>opened.push(['add']),
+  openAccountSettings:()=>opened.push(['settings']),
+  openInvestmentAccount:account=>opened.push(['legacy',account.id]),
+  console:{error:(...args)=>errors.push(args.map(String).join(' '))}
+ };
+ const api=new Function(...Object.keys(context),source+
+  '\nreturn {trace202OpenTracking,trace202BindWealthActions};')(...Object.values(context));
+ api.trace202BindWealthActions();
+ api.trace202BindWealthActions();
+ assert.equal(typeof attached.click,'function');
+ const tap=(selector,dataset={})=>{
+  const button={dataset,matches:list=>list.split(',').includes(selector)};
+  attached.click({target:{closest:()=>button}});
+ };
+ tap('#trace201Entry');
+ tap('#trace202Explore');
+ tap('[data-inv-account]',{invAccount:'pea'});
+ tap('[data-inv-account]',{invAccount:'celi'});
+ tap('[data-inv-account]',{invAccount:'historical'});
+ tap('#wealthAddCard');
+ tap('#wealthLiquidityCard');
+ tap('[data-foreign-bank]');
+ assert.deepEqual(opened,[
+  ['tracking',''],['tracking',''],['tracking','pea'],
+  ['legacy','celi'],['legacy','historical'],['add'],['settings'],['settings']
+ ]);
+ // Replacement button nodes still route through the same page listener.
+ tap('[data-inv-account]',{invAccount:'pea'});
+ assert.deepEqual(opened.at(-1),['tracking','pea']);
+ // Invalid tracking module reports failure rather than a no-op.
+ window.TraceWealth201.open=()=>{throw Error('Open failed');};
+ tap('#trace202Explore');
+ assert.equal(opened.at(-1)[0],'sheet');
+ assert.ok(notices.length===0);
+ assert.ok(errors.some(x=>x.includes('Open failed')));
+ assert.ok(!source.includes('saveDocument('));
+ assert.ok(!source.includes('removeDocument('));
 });
