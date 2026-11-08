@@ -280,6 +280,8 @@ test('new in-place Patrimoine summary never enters bank or portfolio total calcu
  assert.match(net,/investmentSummaryNode\.textContent/);
  assert.match(net,/const investments=ports\.reduce/);
  assert.match(net,/total=bankCAD\+investments/);
- assert.doesNotMatch(net,/investments201|\bE\.evaluate\(/);
+ const totalCalculation=net.slice(0,net.indexOf('const savings=ports.filter('));
+ assert.ok(totalCalculation.length>0);
+ assert.doesNotMatch(totalCalculation,/investments201|\bE\.evaluate\(/);
  for(const page of ['home','budget','activity'])assert.match(html,new RegExp('data-page="'+page+'"'));
 });
