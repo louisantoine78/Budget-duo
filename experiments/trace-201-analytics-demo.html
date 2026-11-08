@@ -84,8 +84,15 @@
   source:'Cours fictif',kind:'manuel'});
  portfolio=E.setQuote(portfolio,'fiction-c',{priceUnits:E.price('105'),date:'2026-11-04',
   source:'Cours fictif',kind:'manuel'});
+ // This is a fictional broker statement, never a production claim.
+ portfolio=W.reconcile(portfolio,{date:'2026-11-04',value:'2645',
+  source:'Relevé de démonstration entièrement fictif'});
+ const current=new Date(),sampleRateDate=[current.getFullYear(),
+  String(current.getMonth()+1).padStart(2,'0'),String(current.getDate()).padStart(2,'0')].join('-');
  const items=[pea,portfolio].map(p=>({id:p.id,name:p.name,type:p.type,owner:p.owner,
-  currency:p.currency,investments201:p}));
+  currency:p.currency,investments201:p,
+  ...(p.id==='demo-fictive'?{fxCadPerUnit:1.5,fxRateDate:sampleRateDate,
+   fxRateProvider:'Taux fictif · démonstration',fxAutoUpdate:false}:{})}));
  W.connect({
   context(){return {active:true,viewer:'la',scope:'mine',accounts:items,operations:[]};},
   openSheet(_title,markup){document.getElementById('lab-stage').innerHTML=markup;},
