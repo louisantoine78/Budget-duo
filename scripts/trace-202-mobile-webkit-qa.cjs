@@ -108,6 +108,13 @@ async function run(){
     await page.locator('#lab-sample').click();
     await page.locator('[data-w201="position"]').first().click();
     await page.getByText('Classification et stratégie').waitFor();
+    const gainReturn=page.locator('.w201-metrics .w201-return');
+    await gainReturn.waitFor();
+    const gainRect=await gainReturn.boundingBox();
+    const gainParentRect=await gainReturn.locator('..').boundingBox();
+    assert.ok(gainRect&&gainParentRect&&gainRect.right<=gainParentRect.right+1,
+     label+' position return must fit its financial card');
+    assert.ok(gainRect.height<=22,label+' percent return must stay on a single line');
     await assertLayout(page,label,'position-detail');
     await saveImage(page,label,'position-detail');
     await page.locator('[data-w201="new-buy"]').click();
