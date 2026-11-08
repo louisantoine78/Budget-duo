@@ -275,6 +275,33 @@
   return{gainCents:gain,percent:denominator>0?gain/denominator*100:null,
    method:'Dietz modifiée, approximation',from:first.date,to:last.date,points:series.points.length};
  }
+ // Conversion read-only of a verified native-currency value to CAD.
+ // Quoted rates are CAD per 1 currency unit, never an intraday execution rate.
+ // Integer cents and 8-decimal fixed-point rate avoid floating-point rounding.
+ function cadValue(nativeCents,code,quote,asOf){
+  safeInt(nativeCents,'Valeur en devise du compte');
+  if(!dateValid(asOf))throw Error('Date de synthèse invalide');
+  if(!SUPPORTED.includes(code))return{ready:false,reason:'Devise de portefeuille inconnue'};
+  if(code==='CAD')return{ready:true,valueCents:nativeCents,
+   currency:'CAD',rate:'1',date:null,source:'Devise de référence',stale:false};
+  if(!quote||!dateValid(quote.date)||quote.date>asOf||
+     !String(quote.source||'').trim())
+   return{ready:false,reason:'Taux CAD daté et sourcé requis'};
+  const raw=String(quote.cadPerUnit??'').trim(),scale=100000000n;
+  if(!/^[0-9]{1,5}(?:\\.[0-9]{1,8})?$/.test(raw))
+   return{ready:false,reason:'Taux CAD invalide'};
+  const [whole,frac='']=raw.split('.');
+  const rate=BigInt(whole)*scale+BigInt((frac+'0'.repeat(8)).slice(0,8));
+  if(rate<=0n)return{ready:false,reason:'Taux CAD invalide'};
+  const age=(Date.parse(asOf+'T12:00:00Z')-Date.parse(quote.date+'T12:00:00Z'))/86400000;
+  if(!Number.isInteger(age)||age<0||age>7)return{ready:false,
+   reason:'Taux de change trop ancien pour une synthèse actuelle'};
+  try{
+   const valueCents=roundRatio(BigInt(nativeCents)*rate,scale);
+   return{ready:true,valueCents,currency:'CAD',rate:raw,date:quote.date,
+    source:String(quote.source).trim(),stale:age>2};
+  }catch{return{ready:false,reason:'Conversion hors limites financières'};}
+ }
  // Valuation-only breakdown: withhold all weights when an active line lacks a quote.
  // Never infer historical prices, merge currencies or count bank transfers.
  function allocationBreakdown(p){
@@ -323,5 +350,5 @@
    selectedId:'pea-demo'};
  }
  return Object.freeze({SUPPORTED,cents,quantity,price,tradeCents,dateValid,isinValid,micValid,evaluate,appendOperation,previewOperation,setQuote,
-  setOpeningPosition,snapshotAt,chartSeries,periodPerformance,allocationBreakdown,demo,Q_SCALE,PRICE_SCALE});
+  setOpeningPosition,snapshotAt,chartSeries,periodPerformance,allocationBreakdown,cadValue,demo,Q_SCALE,PRICE_SCALE});
 });
