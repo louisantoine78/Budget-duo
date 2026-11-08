@@ -32,7 +32,7 @@
   const stored=account[key];
   if(!stored)return blank(account);
   if(stored.schema!==1||stored.id!==account.id||stored.owner!==account.owner||
-   stored.currency!==account.currency)throw Error('Compte non compatible avec TRACE 2.0.1 : aucune modification autorisée');
+   stored.currency!==account.currency)throw Error('Compte non compatible avec TRACE 2.0.2 : aucune modification autorisée');
   const p=JSON.parse(JSON.stringify(stored));
   E.evaluate(p);
   return p;
@@ -414,7 +414,7 @@
  }
  function draw(){
   if(!host)return;
-  host.openSheet('Investissements · TRACE 2.0.1','<div class="w201" id="w201-root">'+
+  host.openSheet('Investissements · TRACE 2.0.2','<div class="w201" id="w201-root">'+
    (error?'<p class="w201-error" role="alert">'+e(error)+'</p>':'')+html()+'</div>');
   const rootNode=document.querySelector('#w201-root');
   rootNode.querySelectorAll('[data-w201]').forEach(button=>button.addEventListener('click',()=>handle(button.dataset.w201,button.dataset.id||'')));
@@ -588,6 +588,6 @@
   else{accountId='';screen='home';}
   selected='';error='';filter='all';chartPeriod='all';draw();
  }
- function connect(h){if(!h||typeof h.context!=='function'||typeof h.save!=='function'||typeof h.openSheet!=='function')throw Error('Hôte TRACE 2.0.1 incomplet');host=h;return true;}
+ function connect(h){if(!h||typeof h.context!=='function'||typeof h.save!=='function'||typeof h.openSheet!=='function')throw Error('Hôte TRACE 2.0.2 incomplet');host=h;return true;}
  return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary,portfolioOverview});
 });
