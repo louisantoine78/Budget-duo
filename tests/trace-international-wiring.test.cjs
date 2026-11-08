@@ -21,11 +21,13 @@ test('main entrypoint matches either stable 5.36 or reviewed release 5.37',()=>{
   assert.doesNotMatch(shell,/v5-app-5\.37\.0\.js/);
  }
 });
-test('bank and wealth event handlers iterate an array of nodes',()=>{
- for(const selector of ['data-foreign-bank','data-setup-bank','data-rename-bank','data-primary-bank']){
+test('bank event handlers remain safe and Patrimoine uses stable delegated clicks',()=>{
+ for(const selector of ['data-setup-bank','data-rename-bank','data-primary-bank']){
   assert.ok(app.includes("$('["+selector+"]')"));
   assert.equal(app.split('\n').some(line=>line.trim().startsWith("$('["+selector+"]')")&&line.includes('.forEach')),false);
  }
+ assert.ok(app.includes("button.matches('#wealthLiquidityCard,[data-foreign-bank]')"));
+ assert.ok(app.includes("page.addEventListener('click',event=>"));
 });
 test('personal international dashboard does not overwrite Couple numbers',()=>{
  assert.match(app,/balanceNode:homeScope==='mine'\?\$\('#homeBalance'\):null/);
