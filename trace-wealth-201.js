@@ -111,24 +111,80 @@
   return Object.freeze({portfolios:data.length,positions,initialized,verified,legacy,invalid,
    toReview:Math.max(0,data.length-verified),savings:savingsAccounts().length});
  }
+ // Snapshot-only comparison of existing investment accounts. Cross-currency
+ // transaction cost bases are NOT converted or recomputed in this display.
+ function portfolioOverview(){
+  const list=accounts(),asOf=today(),records=[];
+  for(const a of list){
+   const record={id:a.id,name:a.name||a.type||'Placement',type:a.type,
+    currency:a.currency||'CAD',owner:a.owner,status:'À initialiser',
+    nativeCents:null,cadCents:null,fx:null,performance:null,verified:false};
+   if(isLegacy(a)){record.status='Historique protégé';records.push(record);continue;}
+   try{
+    const p=load(a),v=E.evaluate(p);
+    const pending=p.positions.length||p.operations.length;
+    record.status=pending?'À rapprocher':'À initialiser';
+    const ready=productionSummary(p).ready;
+    record.verified=ready;
+    if(ready){
+     record.nativeCents=v.valueCents;
+     const q=a.currency==='CAD'?null:{cadPerUnit:a.fxCadPerUnit,
+      date:a.fxRateDate,source:a.fxRateProvider};
+     const converted=E.cadValue(v.valueCents,a.currency,q,asOf);
+     record.fx=converted;
+     record.cadCents=converted.ready?converted.valueCents:null;
+     record.status=converted.ready?'Rapproché':'Taux à vérifier';
+     const measured=E.periodPerformance(p,'all');
+     if(measured&&Number.isFinite(measured.percent))record.performance=measured;
+    }
+   }catch{record.status='Données à vérifier';}
+   records.push(record);
+  }
+  const verified=records.filter(x=>x.verified).length;
+  const complete=records.length>0&&records.every(x=>x.verified&&x.cadCents!==null);
+  const rawTotal=complete?records.reduce((n,x)=>n+BigInt(x.cadCents),0n):null;
+  const safeTotal=rawTotal!==null&&rawTotal<=BigInt(Number.MAX_SAFE_INTEGER);
+  return Object.freeze({records,asOf,verified,complete:complete&&safeTotal,
+   totalCadCents:safeTotal?Number(rawTotal):null,
+   missing:records.length-records.filter(x=>x.verified&&x.cadCents!==null).length});
+ }
  function renderHome(){
-  const data=accounts();
-  return '<div class="w201-kicker">PATRIMOINE · TRACE 2.0.1</div>'+
+  const overview=portfolioOverview(),data=overview.records;
+  let html='<div class="w201-kicker">PATRIMOINE · INVESTISSEMENTS</div>'+
    '<h2 class="w201-headline">Mes investissements</h2>'+
-   '<p class="w201-muted">Les portefeuilles existants, sans nouvel onglet ni doublon bancaire.</p>'+
-   (!data.length?'<div class="w201-empty">Aucun portefeuille de titres dans cet espace. Ajoute un PEA, un compte-titres ou un REER depuis Patrimoine pour commencer.</div>':
-    '<div class="w201-accounts">'+data.map(a=>{
-     let p=null,status='À initialiser';try{p=load(a);status=isLegacy(a)?'Historique protégé':p.status==='verified'?'Rapproché':
-      p.positions.length||p.operations.length?'À vérifier':'À initialiser';}catch{status='Données à vérifier'}
-     return '<button type="button" class="w201-account" data-w201="account" data-id="'+e(a.id)+'">'+
-      '<span class="w201-account-icon">◇</span><span class="w201-account-name"><strong>'+e(a.name||a.type)+'</strong><small>'+
-      e(a.type)+' · '+e(a.currency||'CAD')+' · '+(a.owner===context().viewer?'Moi':'Partenaire')+
-      '</small></span><span class="w201-account-status">'+status+' ›</span></button>';
-    }).join('')+'</div>')+
-   (savingsAccounts().length?
-    '<p class="w201-fine">'+savingsAccounts().length+
-    ' compte(s) d’épargne (dont les CELI éventuels) restent suivis dans Épargne. Leurs soldes ne sont pas dupliqués dans les titres.</p>':'')+
-   '<p class="w201-fine">Les données actuelles de Patrimoine restent inchangées jusqu’au rapprochement. Aucune position fictive n’est importée.</p>';
+   '<p class="w201-muted">La même expérience TRACE, pour tes PEA, comptes-titres, REER et autres placements.</p>';
+  if(data.length){
+   html+='<section class="w201-overview" aria-label="Synthèse des placements">'+
+    '<small>Portefeuilles en suivi · contre-valeur CAD</small>'+
+    '<strong>'+(overview.complete?e(fmt(overview.totalCadCents,'CAD')):'Total à compléter')+'</strong>'+
+    '<span>'+overview.verified+'/'+data.length+' portefeuille(s) rapproché(s) · '+
+      overview.missing+' sans valorisation CAD vérifiée</span>'+
+    '<p>Conversion indicative des portefeuilles, avec taux datés et sourcés. '+
+    'Aucun montant n’est ajouté au patrimoine net existant.</p></section>';
+  }
+  html+=!data.length?
+   '<div class="w201-empty">Aucun portefeuille de titres dans cet espace. Ajoute un PEA, un compte-titres ou un REER depuis Patrimoine pour commencer.</div>':
+   '<div class="w201-accounts">'+data.map(a=>{
+    const owner=a.owner===context().viewer?'Moi':'Partenaire';
+    const caption=a.nativeCents!==null?fmt(a.nativeCents,a.currency):
+      'Valorisation à compléter';
+    const cad=a.cadCents!==null?' · ≈ '+fmt(a.cadCents,'CAD'):
+      a.verified?' · conversion CAD indisponible':'';
+    const rate=a.fx?.ready&&a.fx.date?
+      ' · taux '+a.fx.date+(a.fx.stale?' (à actualiser)':''):'';
+    const perf=a.performance?' · Dietz estimée '+percentText(a.performance.percent):'';
+    return '<button type="button" class="w201-account" data-w201="account" data-id="'+e(a.id)+'">'+
+     '<span class="w201-account-icon" aria-hidden="true">◇</span>'+
+     '<span class="w201-account-name"><strong>'+e(a.name)+'</strong><small>'+
+     e(a.type)+' · '+e(a.currency)+' · '+owner+
+     '</small><small class="w201-account-valuation">'+e(caption+cad+rate+perf)+'</small></span>'+
+     '<span class="w201-account-status">'+e(a.status)+' ›</span></button>';
+   }).join('')+'</div>';
+  if(savingsAccounts().length)html+='<p class="w201-fine">'+savingsAccounts().length+
+    ' compte(s) d’épargne (dont les CELI éventuels) restent suivis dans Épargne. Leurs soldes ne sont pas dupliqués dans les titres.</p>';
+  html+='<p class="w201-fine">Une performance commune en % entre différentes devises exigerait des taux historiques aux dates des flux. Aucune performance mondiale artificielle n’est affichée.</p>'+
+   '<p class="w201-fine">Aucune position fictive n’est importée dans les comptes réels.</p>';
+  return html;
  }
  function lineChart(rows,cur,mode){
   const pts=rows.map(x=>({date:x.date,value:mode==='flows'?x.flowAdjustedCents:x.valueCents,source:x.source}));
@@ -527,5 +583,5 @@
   selected='';error='';filter='all';chartPeriod='all';draw();
  }
  function connect(h){if(!h||typeof h.context!=='function'||typeof h.save!=='function'||typeof h.openSheet!=='function')throw Error('Hôte TRACE 2.0.1 incomplet');host=h;return true;}
- return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary});
+ return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary,portfolioOverview});
 });
