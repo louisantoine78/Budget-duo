@@ -288,7 +288,7 @@
      !String(quote.source||'').trim())
    return{ready:false,reason:'Taux CAD daté et sourcé requis'};
   const raw=String(quote.cadPerUnit??'').trim(),scale=100000000n;
-  if(!/^[0-9]{1,5}(?:\\.[0-9]{1,8})?$/.test(raw))
+  if(!/^[0-9]{1,5}(?:[.][0-9]{1,8})?$/.test(raw))
    return{ready:false,reason:'Taux CAD invalide'};
   const [whole,frac='']=raw.split('.');
   const rate=BigInt(whole)*scale+BigInt((frac+'0'.repeat(8)).slice(0,8));
