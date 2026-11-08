@@ -121,3 +121,34 @@
 /* Position return in its own quiet line: no isolated % wrap on 375px screens. */
 .w201-metrics .w201-return{display:block;margin-top:5px;color:#3c8160;font-weight:750;
  font-size:11px;line-height:1.35;white-space:nowrap}
+
+
+/* TRACE 2.0.2 — in-place Patrimoine portfolio summary (no global layout selectors). */
+#trace201WealthSummary.trace201-wealth-summary{margin:0 0 14px;padding:0;color:inherit;font-size:inherit;line-height:normal}
+.trace202-wealth-panel{background:linear-gradient(145deg,#f1f8f1 0%,#ffffff 90%);border:1px solid #d8e7da;
+ border-radius:17px;padding:16px 15px;box-shadow:0 6px 20px rgba(20,65,40,.035);min-width:0}
+.trace202-wealth-label{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;
+ color:#487b5c;font-size:9px;font-weight:800;letter-spacing:.09em;line-height:1.4}
+.trace202-wealth-label span{color:#477a59;background:#e4f1e7;border-radius:20px;padding:4px 8px;
+ font-size:9px;letter-spacing:0}
+.trace202-wealth-panel>strong{display:block;color:#1e4f39;font-size:17px;letter-spacing:-.025em;
+ line-height:1.3;margin:8px 0 3px}
+.trace202-wealth-panel>p{font-size:11px;line-height:1.55;color:#64816d;margin:5px 0 11px}
+.trace202-wealth-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:11px 0}
+.trace202-wealth-metrics>div{background:#fffefa;border:1px solid #dfeadf;border-radius:11px;
+ padding:9px 8px;min-width:0}
+.trace202-wealth-metrics b{display:block;color:#245a3f;font-size:20px;font-weight:800;
+ line-height:1.2;font-variant-numeric:tabular-nums}
+.trace202-wealth-metrics small{display:block;color:#738a7a;font-size:10px;line-height:1.4;margin-top:3px}
+.trace202-wealth-value{display:flex;justify-content:space-between;align-items:baseline;gap:7px;flex-wrap:wrap;
+ padding:10px 0;border-top:1px solid #dce7da;color:#617d69;font-size:11px}
+.trace202-wealth-value b{color:#1f523a;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;
+ overflow-wrap:anywhere}
+.trace202-wealth-open{display:block;width:100%;min-height:43px;border:1px solid #225d44;
+ background:#225d44;color:#ffffff;border-radius:11px;padding:10px 12px;cursor:pointer;
+ font:inherit;font-size:12px;font-weight:750;text-align:center}
+.trace202-wealth-open:focus-visible{outline:2px solid #286d50;outline-offset:3px}
+.trace202-wealth-panel>p.trace202-wealth-fine{font-size:10px;line-height:1.4;color:#8a9b8d;
+ text-align:center;margin:9px 0 0}
+@media(max-width:370px){.trace202-wealth-panel{padding:13px 11px}
+ .trace202-wealth-metrics{gap:5px}.trace202-wealth-metrics>div{padding:8px 6px}}
