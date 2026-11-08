@@ -171,7 +171,7 @@
     const cad=a.cadCents!==null?' · ≈ '+fmt(a.cadCents,'CAD'):
       a.verified?' · conversion CAD indisponible':'';
     const rate=a.fx?.ready&&a.fx.date?
-      ' · taux '+a.fx.date+(a.fx.stale?' (à actualiser)':''):'';
+      ' · taux '+a.fx.date+' · '+a.fx.source+(a.fx.stale?' (à actualiser)':''):'';
     const perf=a.performance?' · Dietz estimée '+percentText(a.performance.percent):'';
     return '<button type="button" class="w201-account" data-w201="account" data-id="'+e(a.id)+'">'+
      '<span class="w201-account-icon" aria-hidden="true">◇</span>'+
