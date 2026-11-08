@@ -39,7 +39,7 @@ jobs:
           done
           changed="$(git diff --name-only origin/main HEAD)"
           echo "$changed"
-          if echo "$changed" | grep -Ev '^(trace-wealth-201-engine.js$|trace-wealth-201.js$|trace-wealth-201.css$|index.html$|v5-app-5.37.0.js$|trace-version.json$|tests/trace-201-investments.test.cjs$|tests/trace-international-preview-boot.test.cjs$|\.github/workflows/trace-201-qualification.yml$|docs/TRACE-2.0.1-PATRIMOINE-RELEASE.md$|docs/TRACE-2.0.2-MULTIDEVISE-ET-COURS.md$|experiments/trace-201-analytics-demo.html$|scripts/trace-202-mobile-webkit-qa.cjs$)' | grep -q .; then
+          if echo "$changed" | grep -Ev '^(trace-wealth-201-engine.js$|trace-wealth-201.js$|trace-wealth-201.css$|index.html$|v5-app-5.37.0.js$|trace-version.json$|tests/trace-201-investments.test.cjs$|tests/trace-password-recovery.test.cjs$|tests/trace-international-preview-boot.test.cjs$|\.github/workflows/trace-201-qualification.yml$|docs/TRACE-2.0.1-PATRIMOINE-RELEASE.md$|docs/TRACE-2.0.2-MULTIDEVISE-ET-COURS.md$|experiments/trace-201-analytics-demo.html$|scripts/trace-202-mobile-webkit-qa.cjs$)' | grep -q .; then
             echo 'Unexpected file outside TRACE 2.0.1 scope.'
             exit 1
           fi
