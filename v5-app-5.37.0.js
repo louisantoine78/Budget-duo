@@ -5865,8 +5865,6 @@ function openPortfolioAnalysis(){
  $$('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
 }
 
-// TRACE 2.0.2 iPhone hotfix: stable touch/click entry for investment actions.
-// Only changes navigation. No financial state or bank transaction is written.
 function renderWealth(){
  const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
  requestInternationalRates(accounts.map(a=>window.TraceInternational.currency(a)));
