@@ -14,6 +14,29 @@ const allow=new Map([
 const server=http.createServer((req,res)=>{
  try{
   const url=new URL(req.url,'http://127.0.0.1');
+  if(url.pathname==='/__trace202_csp_bridge.html'){
+   const html=`<!doctype html><html lang="fr"><head>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'">
+    <title>TRACE CSP investment bridge</title></head><body>
+    <h1 id="fixtureTitle">Investissements CSP</h1><div id="fixtureBody"></div>
+    <script src="/__trace202_csp_host.js"></script>
+    <script src="/trace-wealth-201-engine.js"></script>
+    <script src="/trace-wealth-201.js?v=2.0.2.1"></script>
+    </body></html>`;
+   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(html);return;
+  }
+  if(url.pathname==='/__trace202_csp_host.js'){
+   const js=[
+    "window.__CSP_TEST_OPEN_COUNT__=0;",
+    "window.Trace201Host={",
+    " context(){return {active:true,viewer:'la',scope:'mine',accounts:[{id:'pea-fictif',owner:'la',name:'PEA de test',type:'PEA',currency:'EUR'}],operations:[]};},",
+    " async save(){throw Error('Fixture locale : aucun enregistrement');},",
+    " openSheet(title,html){window.__CSP_TEST_OPEN_COUNT__++;document.querySelector('#fixtureTitle').textContent=title;document.querySelector('#fixtureBody').innerHTML=html;}",
+    "};"
+   ].join('\n');
+   res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8','Cache-Control':'no-store'}).end(js);return;
+  }
   if(url.pathname==='/__trace202_patrimoine_taps.html'){
    const source=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
    const from=source.indexOf('function trace202OpenTracking('),to=source.lastIndexOf('\n})();');
@@ -190,6 +213,18 @@ async function run(){
     await page.evaluate(()=>{window.TraceWealth201.open=()=>{throw Error('Simulated follow-up failure');};});
     await page.locator('#trace201Entry').tap();
     assert.match(await page.locator('#result').innerText(),/sheet:Investissements indisponibles/);
+    // Live CSP blocks the former inline connect() call. Check the actual
+    // external module connects to an authenticated fixture under strict CSP.
+    await page.goto(origin+'/__trace202_csp_bridge.html',{waitUntil:'load'});
+    assert.equal(await page.evaluate(()=>typeof window.TraceWealth201?.open),'function');
+    assert.equal(await page.evaluate(()=>window.TraceWealth201.dashboardSummary().portfolios),1);
+    await page.evaluate(()=>window.TraceWealth201.open());
+    await page.locator('#fixtureBody .w201-account').waitFor();
+    assert.match(await page.locator('#fixtureTitle').innerText(),/Investissements/);
+    await page.locator('#fixtureBody .w201-account').tap();
+    assert.match(await page.locator('#fixtureTitle').innerText(),/TRACE 2.0.2/);
+    assert.match(await page.locator('#fixtureBody').innerText(),/PEA de test/);
+    assert.ok(await page.evaluate(()=>window.__CSP_TEST_OPEN_COUNT__>=2));
     assert.deepEqual(external,[],label+' attempted external network request');
     assert.deepEqual(errors,[],label+' page error');
     console.log('QA_MOBILE_PASS '+label);

@@ -71,9 +71,9 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.3');
+ assert.equal(version.build,'5.37.4');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.3'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.4'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
@@ -397,14 +397,14 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.3');
+ assert.equal(version.build,'5.37.4');
  assert.ok(version.release.startsWith('TRACE 2.0.2'));
- assert.ok(app.includes("window.__TRACE_BUILD__='5.37.3';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
- assert.ok(html.includes('<meta name="trace-build" content="5.37.3">'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.4';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.4">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
-  assert.ok(html.includes(asset+'?v=2.0.2'),'Missing cache-bust: '+asset);
+  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.1':'2.0.2')),'Missing cache-bust: '+asset);
  }
- assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.3'));
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.4'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
 });
 
@@ -468,4 +468,22 @@ test('TRACE 2.0.2 iPhone hotfix delegates dynamic investment clicks safely witho
  assert.ok(errors.some(x=>x.includes('Open failed')));
  assert.ok(!source.includes('saveDocument('));
  assert.ok(!source.includes('removeDocument('));
+});
+
+
+test('CSP-safe production bridge connects real investment module without inline execution',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const js=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ assert.match(html,/Content-Security-Policy/);
+ assert.match(html,/script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
+ assert.doesNotMatch(html,/script-src[^;"]*'unsafe-inline'/);
+ assert.ok(html.includes('trace-wealth-201.js?v=2.0.2.1'));
+ assert.ok(!html.includes('window.TraceWealth201?.connect(window.Trace201Host)'));
+ assert.ok(js.includes('if(root.Trace201Host)api.connect(root.Trace201Host);'));
+ assert.ok(app.includes('window.Trace201Host=Object.freeze({'));
+ assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.4"')<
+   html.indexOf('src="trace-wealth-201.js?v=2.0.2.1"'));
+ assert.ok(!js.includes('createClient('));
+ assert.ok(!js.includes('localStorage'));
 });
