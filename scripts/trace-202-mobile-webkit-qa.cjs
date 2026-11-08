@@ -7,6 +7,9 @@ const {webkit}=require('playwright-core');
 const root=path.resolve(__dirname,'..');
 const allow=new Map([
  ['/experiments/trace-201-analytics-demo.html','text/html; charset=utf-8'],
+ ['/v5-5.31.17.css','text/css; charset=utf-8'],
+ ['/trace-international-1.0.0.css','text/css; charset=utf-8'],
+ ['/trace-premium-system-5.37.0.css','text/css; charset=utf-8'],
  ['/trace-wealth-201.css','text/css; charset=utf-8'],
  ['/trace-wealth-201.js','text/javascript; charset=utf-8'],
  ['/trace-wealth-201-engine.js','text/javascript; charset=utf-8']
@@ -14,6 +17,75 @@ const allow=new Map([
 const server=http.createServer((req,res)=>{
  try{
   const url=new URL(req.url,'http://127.0.0.1');
+  if(url.pathname==='/__trace203_wealth_layout.html'){
+   const source=fs.readFileSync(path.join(root,'index.html'),'utf8');
+   const start=source.indexOf('    <section class="page" data-page="wealth">');
+   const end=source.indexOf('  </main>',start);
+   if(start<0||end<=start)throw Error('Real Patrimoine markup missing');
+   const content=source.slice(start,end).replace('class="page" data-page="wealth"',
+    'class="page active" data-page="wealth"');
+   const html=`<!doctype html><html lang="fr"><head>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <link rel="stylesheet" href="/v5-5.31.17.css">
+    <link rel="stylesheet" href="/trace-international-1.0.0.css">
+    <link rel="stylesheet" href="/trace-premium-system-5.37.0.css">
+    <link rel="stylesheet" href="/trace-wealth-201.css">
+    <style>.page[data-page=wealth]{display:block!important}body{margin:0}
+     .app{min-height:0} .topbar{display:none}</style></head>
+    <body><main class="app">${content}</main>
+    <script src="/__trace203_wealth_host.js"></script></body></html>`;
+   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(html);return;
+  }
+  if(url.pathname==='/__trace203_wealth_host.js'){
+   const source=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+   const renderStart=source.indexOf('function renderWealth(){');
+   const renderEnd=source.indexOf('// TRACE 2.0.1: scoped, additive bridge',renderStart);
+   const routerStart=source.indexOf('function trace202OpenTracking(');
+   const routerEnd=source.lastIndexOf('\n})();');
+   if(renderStart<0||renderEnd<=renderStart||routerStart<0||routerEnd<=routerStart)
+    throw Error('Real Patrimoine rendering or router missing');
+   const render=source.slice(renderStart,renderEnd),router=source.slice(routerStart,routerEnd);
+   const code=`'use strict';
+    const me='la',wealthScope='mine';
+    const state={investmentAccounts:[
+     {id:'pea',owner:'la',type:'PEA',name:'PEA de démonstration',currency:'EUR'},
+     {id:'celi1',owner:'la',type:'CELI',name:'CELI ET1',currency:'CAD',savingsTracking:'linked'},
+     {id:'celi2',owner:'la',type:'CELI',name:'CELI ET2',currency:'CAD',savingsTracking:'linked'}
+    ],investmentOperations:[],accounts:[{id:'bank',owner:'la',type:'checking',currency:'CAD'}]};
+    const $=selector=>document.querySelector(selector);
+    const scope=x=>x==='mine'?me:'couple';
+    const bank=()=>({needsCardReview:false});
+    const accountType=a=>a.type;
+    const accountEstimate=a=>a.type==='checking'?1117:null;
+    const internationalQuotes={};
+    const money=x=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD'}).format(x);
+    const nativeMoney=(x,c)=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:c||'CAD'}).format(x);
+    const esc=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    const shortAccountLabel=a=>a.name;
+    const requestInternationalRates=()=>{};
+    const portfolioLedger=a=>a.id==='pea'?{value:0,cad:null,hasFx:false,configured:false,reviewRequired:false}:
+     a.id==='celi2'?{value:0,cad:null,hasFx:false,configured:false,reviewRequired:true}:
+      {value:5000,cad:5000,hasFx:true,configured:true,reviewRequired:false};
+    const insightWealthData=()=>({});
+    const updateSegments=()=>{};
+    const windowOriginal=window;
+    window.TraceInternational={currency:a=>a.currency,fxValue:(value)=>value,
+      money:(value,currency)=>nativeMoney(value,currency)};
+    window.TraceInsights={renderWealth:()=>{}};
+    window.TraceWealth201={dashboardSummary:()=>({portfolios:1,positions:0,verified:0}),
+      portfolioOverview:()=>({complete:false,totalCadCents:null}),
+      open:id=>{document.body.dataset.opened=id||'home';}};
+    function openSheet(title){document.body.dataset.opened=title;}
+    function openInvestmentAccountAdd(){document.body.dataset.opened='add';}
+    function openAccountSettings(){document.body.dataset.opened='cash';}
+    function openInvestmentAccount(account){document.body.dataset.opened='legacy-'+account.id;}
+    ${render}
+    ${router}
+    renderWealth();
+    trace202BindWealthActions();
+   `;
+   res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8','Cache-Control':'no-store'}).end(code);return;
+  }
   if(url.pathname==='/__trace202_csp_bridge.html'){
    const html=`<!doctype html><html lang="fr"><head>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -225,6 +297,34 @@ async function run(){
     assert.match(await page.locator('#fixtureTitle').innerText(),/TRACE 2.0.2/);
     assert.match(await page.locator('#fixtureBody').innerText(),/PEA de test/);
     assert.ok(await page.evaluate(()=>window.__CSP_TEST_OPEN_COUNT__>=2));
+    // Real Patrimoine HTML, stylesheet and renderWealth(), with fictional
+    // accounts and real delegated touch routing — no Supabase or bank access.
+    await page.goto(origin+'/__trace203_wealth_layout.html',{waitUntil:'load'});
+    assert.equal(await page.locator('#wealthQuickInvestments').innerText(),'1 compte');
+    assert.equal(await page.locator('#wealthQuickSavings').innerText(),'2 comptes');
+    assert.equal(await page.locator('#wealthQuickCash').innerText(),'1 compte');
+    assert.equal(await page.locator('#wealthTotal').innerText(),'Total incomplet');
+    assert.equal(await page.locator('#trace202Explore').count(),0);
+    assert.match(await page.locator('[data-inv-account="pea"]').innerText(),/À initialiser/);
+    const beforeLayout=await page.evaluate(()=>({
+     viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
+     navWidth:document.querySelector('.trace203-wealth-nav').getBoundingClientRect().width,
+     order:[...document.querySelectorAll('#traceWealthInvestments,#traceWealthSavings,#traceWealthCash')]
+      .map(node=>node.id)
+    }));
+    assert.ok(beforeLayout.documentWidth<=beforeLayout.viewport+2,label+' redesigned Patrimoine overflow');
+    assert.deepEqual(beforeLayout.order,['traceWealthInvestments','traceWealthSavings','traceWealthCash']);
+    await saveImage(page,label,'patrimoine-redesign');
+    await page.locator('[data-wealth-jump="traceWealthSavings"]').tap();
+    assert.equal(await page.evaluate(()=>document.activeElement?.id),'traceWealthSavings');
+    await page.locator('[data-wealth-jump="traceWealthCash"]').tap();
+    assert.equal(await page.evaluate(()=>document.activeElement?.id),'traceWealthCash');
+    await page.locator('#trace201Entry').tap();
+    assert.equal(await page.evaluate(()=>document.body.dataset.opened),'home');
+    await page.locator('[data-inv-account="pea"]').tap();
+    assert.equal(await page.evaluate(()=>document.body.dataset.opened),'pea');
+    await page.locator('#wealthAddCard').tap();
+    assert.equal(await page.evaluate(()=>document.body.dataset.opened),'add');
     assert.deepEqual(external,[],label+' attempted external network request');
     assert.deepEqual(errors,[],label+' page error');
     console.log('QA_MOBILE_PASS '+label);

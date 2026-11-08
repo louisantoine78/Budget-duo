@@ -87,7 +87,7 @@ test('actual installed 2.0 page contains accessible recovery UI and loads helper
  assert.match(html,/id="traceResetRequestForm"/);
  assert.match(html,/id="traceResetConfirmForm"/);
  assert.ok(html.indexOf('src="trace-password-recovery-1.0.0.js"')<
-  html.indexOf('src="v5-app-5.37.0.js?v=5.37.4"'));
+  html.indexOf('src="v5-app-5.37.0.js?v=5.37.5"'));
  assert.match(app,/TracePasswordRecovery\?\.setup/);
  assert.match(app,/TracePasswordRecovery\?\.onAuthEvent/);
  assert.match(app,/TracePasswordRecovery\?\.holdWorkspace/);
