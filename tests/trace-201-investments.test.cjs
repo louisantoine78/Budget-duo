@@ -359,30 +359,34 @@ test('multicurrency UI preserves account-only gains and does not create a global
 test('TRACE 2.0.2 opens uninitialized portfolios directly but protects legacy journals and savings',()=>{
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const entry=app.slice(app.indexOf('function openInvestmentAccount(account)'),app.indexOf('function editInvestmentRate('));
- assert.match(entry,/!state\\.investmentOperations\\.some\\(o=>o\\.accountId===account\\.id\\)/);
- assert.match(entry,/!\\['CELI','Épargne','Livret','Savings'\\]\\.includes\\(account\\.type\\)/);
- assert.match(entry,/window\\.TraceWealth201\\.open\\(account\\.id\\);return;/);
- assert.doesNotMatch(entry,/window\\.TraceWealth201\\.save\\(/);
+ assert.ok(entry.includes('!state.investmentOperations.some(o=>o.accountId===account.id)'));
+ assert.ok(entry.includes("!['CELI','Épargne','Livret','Savings'].includes(account.type)"));
+ assert.ok(entry.includes('window.TraceWealth201.open(account.id);return;'));
+ assert.ok(!entry.includes('window.TraceWealth201.save('));
 });
 
-test('TRACE 2.0.2 renders a scoped read-only Patrimoine overview and never substitutes zero for missing holdings',()=>{
+test('TRACE 2.0.2 displays a read-only Patrimoine gateway without inventing missing holdings',()=>{
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const wealth=app.slice(app.indexOf('function renderWealth(){'),app.indexOf('window.Trace201Host=Object.freeze('));
- assert.match(wealth,/const needsSetup=!isSavings&&!a\\.investments201&&/);
- assert.match(wealth,/needsSetup\\?'À initialiser'/);
- assert.match(wealth,/Renseigner les positions et les espèces/);
- assert.match(wealth,/window\\.TraceWealth201\\?\\.dashboardSummary\\?\\.\\(\\)/);
- assert.match(wealth,/window\\.TraceWealth201\\?\\.portfolioOverview\\?\\.\\(\\)/);
- assert.match(wealth,/valuation\\?\\.complete&&valuation\\.totalCadCents!==null/);
- assert.match(wealth,/id=\"trace202Explore\"/);
- assert.match(wealth,/\\$\\('#trace202Explore'\\)\\.onclick=openTitleTracking/);
- assert.match(wealth,/Aucune valorisation n’est ajoutée deux fois au patrimoine net/);
- assert.match(wealth,/const investments=ports\\.reduce/);
- assert.match(wealth,/total=bankCAD\\+investments/);
- assert.match(index,/id=\"trace201WealthSummary\"/);
- assert.match(css,/\\.trace202-wealth-panel/);
- assert.match(css,/@media\\(max-width:370px\\)/);
- assert.doesNotMatch(wealth,/saveDocument\\(|removeDocument\\(|createClient\\(/);
+ for(const needle of [
+  'const needsSetup=!isSavings&&!a.investments201&&',
+  "needsSetup?'À initialiser'",
+  'Renseigner les positions et les espèces',
+  'window.TraceWealth201?.dashboardSummary?.()',
+  'window.TraceWealth201?.portfolioOverview?.()',
+  'valuation?.complete&&valuation.totalCadCents!==null',
+  'id="trace202Explore"',
+  "$('#trace202Explore').onclick=openTitleTracking",
+  'Aucune valorisation n’est ajoutée deux fois au patrimoine net',
+  'const investments=ports.reduce',
+  'total=bankCAD+investments'
+ ])assert.ok(wealth.includes(needle),'Missing read-only Patrimoine guard: '+needle);
+ assert.ok(index.includes('id="trace201WealthSummary"'));
+ assert.ok(css.includes('.trace202-wealth-panel'));
+ assert.ok(css.includes('@media(max-width:370px)'));
+ for(const forbidden of ['saveDocument(','removeDocument(','createClient(']){
+  assert.ok(!wealth.includes(forbidden),'Unexpected mutation in overview: '+forbidden);
+ }
 });
