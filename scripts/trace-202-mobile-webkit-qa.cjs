@@ -122,11 +122,21 @@ async function run(){
     await page.locator('#w201-form').waitFor();
     await assertLayout(page,label,'buy-form');
     await saveImage(page,label,'buy-form');
-    // Demonstration must refuse all actual saves.
+    // Submit valid fictional data: the preview must reject every save, without
+    // freezing the action button or losing the form, on each iPhone viewport.
     await page.locator('#w201-form input[name="date"]').fill('2026-11-05');
-    // Don't submit a trade, test that the preview injects an explicit rejecting save adapter.
-    const noWrites=await page.evaluate(()=>window.TraceWealth201&&document.querySelector('#lab-stage'));
-    assert.ok(noWrites);
+    await page.locator('#w201-form input[name="quantity"]').fill('1');
+    await page.locator('#w201-form input[name="unitPrice"]').fill('10');
+    await page.locator('#w201-save').click();
+    await page.waitForFunction(()=>document.querySelector('#w201-error')?.textContent.includes('Mode démonstration'));
+    assert.match(await page.locator('#w201-error').innerText(),/aucune écriture ou sauvegarde/);
+    assert.equal(await page.locator('#w201-save').isEnabled(),true,label+' save must be retryable after rejection');
+    assert.equal(await page.locator('#w201-form input[name="quantity"]').inputValue(),'1');
+    await assertLayout(page,label,'buy-rejected');
+    // A second attempt must also fail safely, without any external traffic.
+    await page.locator('#w201-save').click();
+    assert.equal(await page.locator('#w201-save').isEnabled(),true,label+' retry must remain enabled');
+    assert.ok(await page.locator('#w201-form').count()===1);
     assert.deepEqual(external,[],label+' attempted external network request');
     assert.deepEqual(errors,[],label+' page error');
     console.log('QA_MOBILE_PASS '+label);
