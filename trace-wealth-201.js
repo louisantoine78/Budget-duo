@@ -216,7 +216,7 @@
      '<small>'+e(fmt(x.valueCents,cur))+'</small></div>';
    }).join('')+'</div></section>';
  }
- const percentText=n=>Number.isFinite(n)?n.toFixed(1).replace('.',',')+' %':'—';
+ const percentText=n=>Number.isFinite(n)?n.toFixed(1).replace('.',',')+'\u00a0%':'—';
  const signedMoney=(c,cur)=>c>0?'+'+fmt(c,cur):fmt(c,cur);
  function renderAccount(){
   const a=pick(),p=load(a),v=E.evaluate(p),legacy=isLegacy(a),owned=own(a);
@@ -323,9 +323,10 @@
    '</strong><span>'+(s.quote?e(s.quote.source)+' · '+e(s.quote.date)+' · '+e(s.quote.kind||'manuel'):'Aucun cours daté vérifié')+'</span></div>'+
    '<div class="w201-metrics"><div><small>Quantité</small><strong>'+qstr(s.quantityMicro)+'</strong></div>'+
    '<div><small>PRU moyen</small><strong>'+(s.averageCostUnits===null?'Inconnu':pxstr(s.averageCostUnits)+' '+e(p.currency))+'</strong></div>'+
-   '<div><small>Gain latent</small><strong>'+(s.unrealizedCents===null?'Non calculable':fmt(s.unrealizedCents,p.currency)+
-    (s.costBasisCents>0?' · '+percentText(s.unrealizedCents/s.costBasisCents*100):''))+'</strong></div>'+
-   '<div><small>Poids</small><strong>'+(s.weight===null?'Inconnu':(s.weight*100).toFixed(1)+' %')+'</strong></div></div>'+
+   '<div><small>Gain latent</small><strong>'+(s.unrealizedCents===null?'Non calculable':fmt(s.unrealizedCents,p.currency))+'</strong>'+
+    (s.unrealizedCents!==null&&s.costBasisCents>0?
+      '<small class="w201-return">'+percentText(s.unrealizedCents/s.costBasisCents*100)+'</small>':'')+'</div>'+
+   '<div><small>Poids</small><strong>'+(s.weight===null?'Inconnu':percentText(s.weight*100))+'</strong></div></div>'+
    '<div class="w201-card"><b>Classification et stratégie</b><p>'+e(s.sector||'Secteur inconnu')+' · '+
    e(s.geography||'Géographie inconnue')+'</p><p>'+e(s.strategy?.thesis||'Thèse non renseignée')+'</p>'+
    '<small>'+e(s.strategy?.horizon||'Horizon non renseigné')+'</small></div>';
