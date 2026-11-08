@@ -5867,53 +5867,6 @@ function openPortfolioAnalysis(){
 
 // TRACE 2.0.2 iPhone hotfix: stable touch/click entry for investment actions.
 // Only changes navigation. No financial state or bank transaction is written.
-function trace202OpenTracking(accountId=''){
- try{
-  if(typeof window.TraceWealth201?.open!=='function')
-   throw Error('Le suivi des investissements n’est pas chargé.');
-  window.TraceWealth201.open(accountId);
- }catch(error){
-  console.error('TRACE Patrimoine: ouverture impossible',error);
-  const description='Le suivi des investissements n’a pas pu s’ouvrir. Actualise TRACE puis réessaie.';
-  try{openSheet('Investissements indisponibles','<div class="empty-note" role="alert">'+description+'</div>');}
-  catch(sheetError){console.error('TRACE Patrimoine: panneau indisponible',sheetError);window.alert?.(description);}
- }
-}
-function trace202BindWealthActions(){
- const page=document.querySelector('.page[data-page="wealth"]');
- if(!page||page.dataset.trace202ActionsBound==='yes')return;
- page.dataset.trace202ActionsBound='yes';
- // Use event delegation: both the premium summary and the account cards are
- // replaced by renderWealth(). The page itself never gets replaced.
- page.addEventListener('click',event=>{
-  const button=event.target?.closest?.('button');
-  if(!button||!page.contains(button))return;
-  if(button.matches('#trace201Entry,#trace202Explore')){
-   trace202OpenTracking();return;
-  }
-  if(button.matches('#wealthAddCard')){
-   openInvestmentAccountAdd();return;
-  }
-  if(button.matches('#wealthLiquidityCard,[data-foreign-bank]')){
-   openAccountSettings();return;
-  }
-  if(button.matches('[data-inv-account]')){
-   const account=state.investmentAccounts.find(a=>a.id===button.dataset.invAccount);
-   if(!account){trace202OpenTracking('');return;}
-   const newTracking=!account.archived&&account.savingsTracking!=='linked'&&
-    !['CELI','Épargne','Livret','Savings'].includes(account.type)&&
-    !state.investmentOperations.some(o=>o.accountId===account.id);
-   if(newTracking)trace202OpenTracking(account.id);
-   else{
-    try{openInvestmentAccount(account);}
-    catch(error){console.error('TRACE Patrimoine: compte indisponible',error);
-     try{openSheet('Compte indisponible','<div class="empty-note" role="alert">Impossible d’ouvrir ce compte. Recharge TRACE puis réessaie.</div>');}
-     catch{window.alert?.('Impossible d’ouvrir ce compte. Recharge TRACE puis réessaie.');}
-    }
-   }
-  }
- });
-}
 function renderWealth(){
  const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
  requestInternationalRates(accounts.map(a=>window.TraceInternational.currency(a)));
@@ -7404,4 +7357,54 @@ if(document.readyState==='loading'){
 }else{
   bootTrace();
 }
+// Stable handlers are declared at the end of the runtime to avoid changing
+// existing renderer extraction boundaries; function declarations are hoisted.
+function trace202OpenTracking(accountId=''){
+ try{
+  if(typeof window.TraceWealth201?.open!=='function')
+   throw Error('Le suivi des investissements n’est pas chargé.');
+  window.TraceWealth201.open(accountId);
+ }catch(error){
+  console.error('TRACE Patrimoine: ouverture impossible',error);
+  const description='Le suivi des investissements n’a pas pu s’ouvrir. Actualise TRACE puis réessaie.';
+  try{openSheet('Investissements indisponibles','<div class="empty-note" role="alert">'+description+'</div>');}
+  catch(sheetError){console.error('TRACE Patrimoine: panneau indisponible',sheetError);window.alert?.(description);}
+ }
+}
+function trace202BindWealthActions(){
+ const page=document.querySelector('.page[data-page="wealth"]');
+ if(!page||page.dataset.trace202ActionsBound==='yes')return;
+ page.dataset.trace202ActionsBound='yes';
+ // Use event delegation: both the premium summary and the account cards are
+ // replaced by renderWealth(). The page itself never gets replaced.
+ page.addEventListener('click',event=>{
+  const button=event.target?.closest?.('button');
+  if(!button||!page.contains(button))return;
+  if(button.matches('#trace201Entry,#trace202Explore')){
+   trace202OpenTracking();return;
+  }
+  if(button.matches('#wealthAddCard')){
+   openInvestmentAccountAdd();return;
+  }
+  if(button.matches('#wealthLiquidityCard,[data-foreign-bank]')){
+   openAccountSettings();return;
+  }
+  if(button.matches('[data-inv-account]')){
+   const account=state.investmentAccounts.find(a=>a.id===button.dataset.invAccount);
+   if(!account){trace202OpenTracking('');return;}
+   const newTracking=!account.archived&&account.savingsTracking!=='linked'&&
+    !['CELI','Épargne','Livret','Savings'].includes(account.type)&&
+    !state.investmentOperations.some(o=>o.accountId===account.id);
+   if(newTracking)trace202OpenTracking(account.id);
+   else{
+    try{openInvestmentAccount(account);}
+    catch(error){console.error('TRACE Patrimoine: compte indisponible',error);
+     try{openSheet('Compte indisponible','<div class="empty-note" role="alert">Impossible d’ouvrir ce compte. Recharge TRACE puis réessaie.</div>');}
+     catch{window.alert?.('Impossible d’ouvrir ce compte. Recharge TRACE puis réessaie.');}
+    }
+   }
+  }
+ });
+}
+
 })();
