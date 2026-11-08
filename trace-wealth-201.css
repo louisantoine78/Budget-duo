@@ -99,3 +99,8 @@
 .w201-bar-track>span{display:block;height:100%;border-radius:999px;background:#3b8c64}
 .w201-bar-row>small{display:block;font-size:10px;color:#829588;font-variant-numeric:tabular-nums}
 @media(max-width:370px){.w201-perf strong{font-size:15px}.w201-periods{gap:3px}.w201-periods .w201-btn{min-width:40px}}
+
+/* In-place summary in the existing Patrimoine Investments section only. */
+#trace201WealthSummary.trace201-wealth-summary{margin:-2px 0 12px;padding:0 2px;
+ font-size:11px;line-height:1.55;color:#748a7a;letter-spacing:.005em;max-width:100%;
+ overflow-wrap:anywhere}
