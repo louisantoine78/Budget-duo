@@ -94,7 +94,8 @@ async function run(){
     await saveImage(page,label,'analysis-all');
     for(const period of ['1','3','6','12','all']){
      await page.locator('[data-w201="period"][data-id="'+period+'"]').click();
-     assert.equal(await page.locator('[data-w201="period"][data-id="'+period+'"]').getAttribute('class')?.includes('selected'),true);
+     const selectedClass=await page.locator('[data-w201="period"][data-id="'+period+'"]').getAttribute('class');
+     assert.equal(selectedClass?.includes('selected'),true);
      await assertLayout(page,label,'analysis-'+period);
     }
     await page.locator('#lab-home').click();
