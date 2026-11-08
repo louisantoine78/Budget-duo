@@ -285,3 +285,71 @@ test('new in-place Patrimoine summary never enters bank or portfolio total calcu
  assert.doesNotMatch(totalCalculation,/investments201|\bE\.evaluate\(/);
  for(const page of ['home','budget','activity'])assert.match(html,new RegExp('data-page="'+page+'"'));
 });
+
+test('dated FX conversion uses fixed-point cents and refuses stale, future or unsourced rates',()=>{
+ const quote={cadPerUnit:1.5732,date:'2026-11-06',source:'Banque du Canada · Valet'};
+ const eur=E.cadValue(32000,'EUR',quote,'2026-11-07');
+ assert.equal(eur.ready,true);
+ assert.equal(eur.valueCents,50342);
+ assert.equal(eur.rate,'1.5732');
+ assert.equal(eur.date,'2026-11-06');
+ assert.equal(eur.source,quote.source);
+ assert.equal(E.cadValue(32000,'CAD',null,'2026-11-07').valueCents,32000);
+ assert.equal(E.cadValue(32000,'EUR',null,'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,source:''},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,date:'2026-10-31'},'2026-11-07').ready,true);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,date:'2026-10-30'},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,date:'2026-11-08'},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,cadPerUnit:0},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(32000,'EUR',{...quote,cadPerUnit:Infinity},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(Number.MAX_SAFE_INTEGER,'EUR',{...quote,cadPerUnit:99999},'2026-11-07').ready,false);
+ assert.equal(E.cadValue(1,'EUR',{...quote,cadPerUnit:'1.005'},'2026-11-07').valueCents,1);
+ assert.throws(()=>E.cadValue(-1,'EUR',quote,'2026-11-07'),/invalide/);
+ assert.throws(()=>E.cadValue(100,'EUR',quote,'2026-11-32'),/Date/);
+});
+
+test('multi-portfolio view requires broker validation and a dated CAD quote to show a complete total',()=>{
+ const a=acct();
+ let p=started();
+ p=E.setQuote(p,'line-a',{priceUnits:E.price('60'),date:'2026-11-05',source:'Relevé fictif',kind:'manuel'});
+ p=W.reconcile(p,{date:'2026-11-06',value:'320',source:'Courtier fictif'});
+ const day=new Date().toISOString().slice(0,10);
+ const account={...a,investments201:p,fxCadPerUnit:1.5732,
+  fxRateDate:day,fxRateProvider:'Banque du Canada · Valet'};
+ let env={active:true,viewer:'la',scope:'mine',accounts:[account],operations:[]};
+ W.connect({context(){return env;},openSheet(){},async save(){throw Error('No writes');}});
+ const ok=W.portfolioOverview();
+ assert.equal(ok.complete,true);
+ assert.equal(ok.totalCadCents,50342);
+ assert.equal(ok.records[0].nativeCents,32000);
+ assert.equal(ok.records[0].verified,true);
+ assert.equal(ok.records[0].status,'Rapproché');
+ assert.equal(ok.records[0].fx.source,'Banque du Canada · Valet');
+ const without={...account,id:'another',name:'Autre PEA',investments201:undefined};
+ env={...env,accounts:[account,without]};
+ const incomplete=W.portfolioOverview();
+ assert.equal(incomplete.complete,false);
+ assert.equal(incomplete.totalCadCents,null);
+ assert.equal(incomplete.missing,1);
+ env={...env,accounts:[{...account,fxRateProvider:null}]};
+ const noSource=W.portfolioOverview();
+ assert.equal(noSource.complete,false);
+ assert.equal(noSource.records[0].status,'Taux à vérifier');
+ assert.equal(noSource.totalCadCents,null);
+});
+
+test('multicurrency UI preserves account-only gains and does not create a global percentage',()=>{
+ const js=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ const legacy=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ assert.match(js,/portfolioOverview\(\)/);
+ assert.match(js,/E\.cadValue\(v\.valueCents,a\.currency,q,asOf\)/);
+ assert.match(js,/Une performance commune en %/);
+ assert.match(js,/Aucune position fictive n’est importée/);
+ assert.match(js,/if\(isLegacy\(a\)\)/);
+ assert.match(css,/\.w201-overview/);
+ assert.doesNotMatch(js,/localStorage|sessionStorage|createClient\(|window\.fetch\(/);
+ const oldNet=legacy.slice(legacy.indexOf('function renderWealth('),legacy.indexOf('function renderAll('));
+ assert.match(oldNet,/const investments=ports\.reduce/);
+ assert.match(oldNet,/total=bankCAD\+investments/);
+});
