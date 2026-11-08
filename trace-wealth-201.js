@@ -474,7 +474,12 @@
    await host.save(account.id,portfolio);
    error='';
    return true;
-  }finally{saving=false;}
+  }finally{
+   saving=false;
+   // A failed CAS save must not strand iPhone users with a disabled submit button.
+   // A successful save redraws the form, so only restore a button still in the DOM.
+   if(submit&&submit.isConnected)submit.disabled=false;
+  }
  }
  async function submit(form){
   const a=pick(),p=load(a),fd=new FormData(form),get=k=>String(fd.get(k)||'').trim(),kind=form.dataset.kind;
