@@ -117,3 +117,7 @@
 .w201-account-valuation{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .w201-account-status{max-width:100px;white-space:normal;text-align:right;line-height:1.35}
 @media(max-width:370px){.w201-overview strong{font-size:23px}.w201-account-status{max-width:76px}}
+
+/* Position return in its own quiet line: no isolated % wrap on 375px screens. */
+.w201-metrics .w201-return{display:block;margin-top:5px;color:#3c8160;font-weight:750;
+ font-size:11px;line-height:1.35;white-space:nowrap}
