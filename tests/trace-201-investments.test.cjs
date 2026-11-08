@@ -73,7 +73,7 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
  assert.equal(version.build,'5.37.5');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.4'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.5'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
@@ -271,7 +271,7 @@ test('new in-place Patrimoine summary never enters bank or portfolio total calcu
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
- assert.match(html,/<section class="trace-wealth-section" aria-label="Investissements">/);
+ assert.match(html,/<section class="trace-wealth-section" id="traceWealthInvestments" aria-label="Investissements"/);
  assert.match(html,/id="trace201WealthSummary"/);
  assert.match(html,/id="wealthInvestmentsGrid"/);
  assert.match(html,/id="trace201Entry"/);
