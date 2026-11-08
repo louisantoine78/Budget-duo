@@ -73,7 +73,7 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
  assert.equal(version.build,'5.37.3');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.2'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.3'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
