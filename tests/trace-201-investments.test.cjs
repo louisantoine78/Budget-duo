@@ -71,13 +71,13 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.1');
- assert.match(version.release,/2\.0\.1/);
- assert.match(main,/window\.__TRACE_BUILD__='5\.37\.1'/);
+ assert.equal(version.build,'5.37.2');
+ assert.ok(version.release.includes('2.0.2'));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.2'"));
  assert.match(html,/id="trace201Entry"/);
- assert.match(html,/trace-wealth-201-engine\.js\?v=2\.0\.1/);
- assert.match(html,/trace-wealth-201\.js\?v=2\.0\.1/);
- assert.match(html,/trace-wealth-201\.css\?v=2\.0\.1/);
+ assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
+ assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
+ assert.ok(html.includes('trace-wealth-201.css?v=2.0.2'));
  assert.match(main,/window\.Trace201Host=Object\.freeze/);
  assert.match(main,/traceStrictWriteSnapshot\(portfolio\)/);
  assert.match(main,/await saveDocument\('investment_accounts',next\)/);
@@ -397,7 +397,7 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
  assert.equal(version.build,'5.37.2');
- assert.match(version.release,/TRACE 2\\.0\\.2/);
+ assert.ok(version.release.startsWith('TRACE 2.0.2'));
  assert.ok(app.includes("window.__TRACE_BUILD__='5.37.2';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
  assert.ok(html.includes('<meta name="trace-build" content="5.37.2">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
