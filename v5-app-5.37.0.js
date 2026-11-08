@@ -5894,6 +5894,18 @@ function renderWealth(){
    ['<div class="trace-wealth-empty">Aucun placement suivi pour le moment.</div>']),
   '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon" aria-hidden="true">＋</span><span>Ajouter un placement</span><b>Ajouter</b><small>PEA, CELI, REER…</small></button>'
  ].join('');
+ // Additive Patrimoine presentation only: metadata, never extra amounts in global net.
+ const investmentSummaryNode=$('#trace201WealthSummary');
+ if(investmentSummaryNode){
+  let overview=null;
+  try{overview=window.TraceWealth201?.dashboardSummary?.()||null;}
+  catch(err){console.warn('Synthèse du suivi des investissements indisponible :',err.message);}
+  investmentSummaryNode.textContent=overview?.portfolios?
+   overview.portfolios+' portefeuille(s) · '+overview.positions+' ligne(s) de titres renseignée(s)'+
+    (overview.verified?' · '+overview.verified+' rapproché(s)':'')+
+    (overview.toReview?' · '+overview.toReview+' à vérifier':''):
+   'Positions, opérations et analyses · aucune valorisation ajoutée deux fois au patrimoine net.';
+ }
  $('#assetGrid').innerHTML=[
  '<button class="asset-card" type="button" id="wealthLiquidityCard"><span class="a-icon">$</span><span>Comptes bancaires</span><b>'+
   (bankMissing.length?'Solde incomplet':money(bankCAD))+'</b><small>Toutes devises, dettes déduites · Configurer ›</small></button>',
