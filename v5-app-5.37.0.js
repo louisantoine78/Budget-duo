@@ -5899,6 +5899,15 @@ function renderWealth(){
      (p.fxDate?' · taux du '+esc(p.fxDate):''):'Conversion CAD indisponible')+
    '</small></button>';
  };
+ // Display account counts, never inferred valuations, in the quick navigation.
+ // Counts follow the selected Moi/Couple scope and cannot affect ledger totals.
+ const quickCount=(id,count)=>{
+  const node=$('#'+id);
+  if(node)node.textContent=count+' '+(count===1?'compte':'comptes');
+ };
+ quickCount('wealthQuickInvestments',placements.length);
+ quickCount('wealthQuickSavings',savings.length);
+ quickCount('wealthQuickCash',banks.length);
  const savingsNode=$('#wealthSavingsGrid'),placementsNode=$('#wealthInvestmentsGrid');
  if(savingsNode)savingsNode.innerHTML=savings.length?savings.map(tile).join(''):
   '<div class="trace-wealth-empty">Aucun compte d’épargne suivi. Ajoute un livret ou un CELI pour commencer.</div>';
@@ -5915,26 +5924,26 @@ function renderWealth(){
    overview=window.TraceWealth201?.dashboardSummary?.()||null;
    valuation=window.TraceWealth201?.portfolioOverview?.()||null;
   }catch(err){console.warn('Synthèse du suivi des investissements indisponible :',err.message);}
-  const portfolios=overview?.portfolios||placements.length;
-  const positions=overview?.positions||0,verified=overview?.verified||0;
-  const complete=valuation?.complete&&valuation.totalCadCents!==null;
+  const portfolios=overview?.portfolios??placements.length;
+  const positions=overview?.positions??0,verified=overview?.verified??0;
+  const complete=valuation?.complete===true&&valuation.totalCadCents!==null;
   const value=complete?money(valuation.totalCadCents/100):'À compléter';
   const note=positions?
-   'Les montants ne sont affichés que lorsque les relevés et les cours sont vérifiés.':
-   'Renseigne les positions et les espèces de tes comptes pour activer les analyses.';
+   'Les valorisations restent indicatives tant que les relevés et les cours ne sont pas vérifiés.':
+   'Renseigne tes positions et tes espèces pour activer les analyses.';
+  // Compact read-only summary; the section heading and each account card are
+  // the two distinct entry points. No duplicate full-width action.
   investmentSummaryNode.innerHTML=
-   '<div class="trace202-wealth-panel" role="region" aria-label="Suivi des investissements">'+
-    '<div class="trace202-wealth-label">SUIVI DES INVESTISSEMENTS <span>TRACE 2.0.2</span></div>'+
-    '<strong>Mes titres en un coup d’œil</strong>'+
-    '<p>'+note+'</p>'+
-    '<div class="trace202-wealth-metrics">'+
-     '<div><b>'+portfolios+'</b><small>Portefeuilles</small></div>'+
-     '<div><b>'+positions+'</b><small>Positions</small></div>'+
-     '<div><b>'+verified+'</b><small>Rapprochés</small></div>'+
+   '<div class="trace202-wealth-panel trace203-wealth-compact" role="region" aria-label="Synthèse des investissements">'+
+    '<div class="trace203-invest-line"><strong>Suivi des titres</strong><span>'+
+     (complete?'Rapproché':'À compléter')+'</span></div>'+
+    '<div class="trace203-invest-stats">'+
+     '<span><b>'+portfolios+'</b> portefeuille'+(portfolios===1?'':'s')+'</span>'+
+     '<span><b>'+positions+'</b> position'+(positions===1?'':'s')+'</span>'+
+     '<span><b>'+verified+'</b> rapproché'+(verified===1?'':'s')+'</span>'+
     '</div>'+
-    '<div class="trace202-wealth-value"><span>Total indicatif en CAD</span><b>'+value+'</b></div>'+
-    '<button type="button" class="trace202-wealth-open" id="trace202Explore">Voir mes positions et analyses ›</button>'+
-    '<p class="trace202-wealth-fine">Aucune valorisation n’est ajoutée deux fois au patrimoine net.</p>'+
+    '<p>'+note+'</p>'+
+    '<div class="trace203-invest-value"><span>Valeur du suivi · CAD</span><b>'+value+'</b></div>'+
    '</div>';
  }
  $('#assetGrid').innerHTML=[
@@ -7378,6 +7387,16 @@ function trace202BindWealthActions(){
  page.addEventListener('click',event=>{
   const button=event.target?.closest?.('button');
   if(!button||!page.contains(button))return;
+  if(button.matches('[data-wealth-jump]')){
+   const id=button.dataset.wealthJump;
+   if(!['traceWealthInvestments','traceWealthSavings','traceWealthCash'].includes(id))return;
+   const section=page.querySelector('#'+id);
+   if(!section)return;
+   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+   section.scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'});
+   section.focus?.({preventScroll:true});
+   return;
+  }
   if(button.matches('#trace201Entry,#trace202Explore')){
    trace202OpenTracking();return;
   }
