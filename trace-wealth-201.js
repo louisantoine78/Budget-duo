@@ -87,26 +87,47 @@
  function context(){if(!host)throw Error('TRACE indisponible');const c=host.context();if(!c||!c.active)throw Error('Connecte-toi à TRACE pour accéder au Patrimoine');return c;}
  function accounts(){const c=context();return c.accounts.filter(a=>
   !a.archived&&a.savingsTracking!=='linked'&&!['CELI','Épargne','Livret','Savings'].includes(a.type));}
+ function savingsAccounts(){return context().accounts.filter(a=>!a.archived&&
+  (a.savingsTracking==='linked'||['CELI','Épargne','Livret','Savings'].includes(a.type)));}
  function pick(){const a=accounts().find(x=>x.id===accountId);if(!a)throw Error('Compte indisponible dans ce périmètre');return a;}
  function ledgerRows(a){return context().operations.filter(o=>o.accountId===a.id&&(!o.status||o.status==='confirmed'));}
  function isLegacy(a){return ledgerRows(a).length>0;}
  function own(a){return a.owner===context().viewer;}
  function btn(label,act,value='',cls=''){return '<button type="button" class="w201-btn '+cls+'" data-w201="'+e(act)+'" data-id="'+e(value)+'">'+e(label)+'</button>';}
  function positionLabel(s){return e(s.name||s.symbol||'Titre');}
+ // Metadata only. Never add quote-based tracking values to Patrimoine's existing ledger.
+ function dashboardSummary(){
+  const data=accounts();
+  let positions=0,initialized=0,verified=0,legacy=0,invalid=0;
+  for(const account of data){
+   if(isLegacy(account)){legacy++;continue;}
+   try{
+    const p=load(account),evaluation=E.evaluate(p);
+    positions+=evaluation.positions.length;
+    if(p.positions.length||p.operations.length)initialized++;
+    if(p.status==='verified'&&productionSummary(p).ready)verified++;
+   }catch{invalid++;}
+  }
+  return Object.freeze({portfolios:data.length,positions,initialized,verified,legacy,invalid,
+   toReview:Math.max(0,data.length-verified),savings:savingsAccounts().length});
+ }
  function renderHome(){
   const data=accounts();
   return '<div class="w201-kicker">PATRIMOINE · TRACE 2.0.1</div>'+
    '<h2 class="w201-headline">Mes investissements</h2>'+
    '<p class="w201-muted">Les portefeuilles existants, sans nouvel onglet ni doublon bancaire.</p>'+
-   (!data.length?'<div class="w201-empty">Aucun compte de placement dans ce périmètre. Utilise « Ajouter un placement » dans Patrimoine.</div>':
+   (!data.length?'<div class="w201-empty">Aucun portefeuille de titres dans cet espace. Ajoute un PEA, un compte-titres ou un REER depuis Patrimoine pour commencer.</div>':
     '<div class="w201-accounts">'+data.map(a=>{
-     let p=null,status='À initialiser';try{p=load(a);status=p.status==='verified'?'Rapproché':
+     let p=null,status='À initialiser';try{p=load(a);status=isLegacy(a)?'Historique protégé':p.status==='verified'?'Rapproché':
       p.positions.length||p.operations.length?'À vérifier':'À initialiser';}catch{status='Données à vérifier'}
      return '<button type="button" class="w201-account" data-w201="account" data-id="'+e(a.id)+'">'+
       '<span class="w201-account-icon">◇</span><span class="w201-account-name"><strong>'+e(a.name||a.type)+'</strong><small>'+
       e(a.type)+' · '+e(a.currency||'CAD')+' · '+(a.owner===context().viewer?'Moi':'Partenaire')+
       '</small></span><span class="w201-account-status">'+status+' ›</span></button>';
     }).join('')+'</div>')+
+   (savingsAccounts().length?
+    '<p class="w201-fine">'+savingsAccounts().length+
+    ' compte(s) d’épargne (dont les CELI éventuels) restent suivis dans Épargne. Leurs soldes ne sont pas dupliqués dans les titres.</p>':'')+
    '<p class="w201-fine">Les données actuelles de Patrimoine restent inchangées jusqu’au rapprochement. Aucune position fictive n’est importée.</p>';
  }
  function lineChart(rows,cur,mode){
@@ -506,5 +527,5 @@
   selected='';error='';filter='all';chartPeriod='all';draw();
  }
  function connect(h){if(!h||typeof h.context!=='function'||typeof h.save!=='function'||typeof h.openSheet!=='function')throw Error('Hôte TRACE 2.0.1 incomplet');host=h;return true;}
- return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict});
+ return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary});
 });
