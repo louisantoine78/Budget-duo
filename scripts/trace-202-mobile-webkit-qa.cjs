@@ -16,7 +16,7 @@ const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1');
   if(url.pathname==='/__trace202_patrimoine_taps.html'){
    const source=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
-   const from=source.indexOf('function trace202OpenTracking('),to=source.indexOf('function renderWealth(){',from);
+   const from=source.indexOf('function trace202OpenTracking('),to=source.lastIndexOf('\n})();');
    if(from<0||to<from)throw Error('Patrimoine delegated router absent');
    const methods=source.slice(from,to);
    const page=`<!doctype html><html lang="fr"><meta name="viewport" content="width=device-width,initial-scale=1">
