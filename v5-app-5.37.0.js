@@ -5890,7 +5890,7 @@ function openPortfolioAnalysis(){
  const scopeValue=scope(wealthScope),bk=bank(scopeValue);
  const missing=accounts.filter(({p})=>p.netReady!==true);
  window.TraceInsights.renderWealth($('#traceWealthDetail'),insightWealthData(scopeValue,bk,accounts,missing));
- $('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
+ $$('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
 }
 
 function renderWealth(){
