@@ -287,7 +287,9 @@ test('new in-place Patrimoine summary never enters bank or portfolio total calcu
  assert.doesNotMatch(amountArithmetic,/investments201|\bE\.evaluate\(/);
  // A captured broker balance may block an incomplete total; it must NEVER
  // contribute its unverified amount to the actual CAD calculation.
- assert.ok(totalCalculation.includes("x.a.investments201?.brokerCapture&&x.a.investments201?.status!=='verified'"));
+ assert.ok(totalCalculation.includes('x.p.netReady!==true'));
+ assert.ok(app.includes('function trace202PortfolioForNet(a)'));
+ assert.ok(app.includes('window.TraceWealth201?.netWorthBridge?.(a,legacyExists)'));
  for(const page of ['home','budget','activity'])assert.match(html,new RegExp('data-page="'+page+'"'));
 });
 
@@ -537,7 +539,7 @@ test('Patrimoine 2.0.2 premium reorganisation preserves counts, grouping and tru
 test('TRACE 2.0.2 Patrimoine never shows an invented zero for imported broker holdings',()=>{
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const wealth=app.slice(app.indexOf('function renderWealth('),app.indexOf('function renderAll('));
- assert.ok(wealth.includes('x.a.investments201?.positions?.length>0'),
+ assert.ok(app.includes('function trace202PortfolioForNet(a)'),
   'detailed unintegrated positions must block the legacy zero from net worth');
  const start=wealth.indexOf(' const tile=({a,p})=>{');
  const end=wealth.indexOf('\n };',start);
@@ -554,7 +556,7 @@ test('TRACE 2.0.2 Patrimoine never shows an invented zero for imported broker ho
   brokerCapture:{date:'2026-11-08',currency:'EUR',
    securitiesCents:368096,cashCents:13829,totalCents:null,partial:true}
  }};
- const ledger={value:0,hasFx:true,fx:1.5732,fxDate:'2026-11-06'};
+ const ledger={value:0,hasFx:true,netReady:false,fx:1.5732,fxDate:'2026-11-06'};
  const html=tile({a,p:ledger});
  assert.match(html,/EUR:3819\.25/,'sum of read-only broker securities and cash is visible');
  assert.match(html,/CAD:6008\./,'EUR/CAD reference is not a fabricated 0');
@@ -565,8 +567,70 @@ test('TRACE 2.0.2 Patrimoine never shows an invented zero for imported broker ho
  assert.match(tile({a:noCapture,p:ledger}),/À rapprocher/);
  assert.doesNotMatch(tile({a:noCapture,p:ledger}),/EUR:0\.00/);
  const verified={...a,investments201:{...a.investments201,status:'verified'}};
- assert.match(tile({a:verified,p:ledger}),/EUR:3819\.25/);
+ assert.match(tile({a:verified,p:{...ledger,netReady:true}}),/EUR:3819\.25/);
  const withoutTracking={...a,investments201:null};
  assert.match(tile({a:withoutTracking,p:ledger}),/À initialiser/);
  assert.match(wealth,/portefeuille.*rapproché/);
+});
+
+test('verified new investment ledger contributes exactly once, while draft, FX and legacy conflicts fail closed',()=>{
+ let p=started();
+ p=E.setQuote(p,'line-a',{priceUnits:E.price('60'),date:'2026-11-05',
+  source:'Relevé courtier fictif',kind:'manuel'});
+ const verified=W.reconcile(p,{date:'2026-11-06',value:'320',source:'Relevé complet fictif'});
+ const a={...acct(),investments201:verified,fxCadPerUnit:1.5732,
+  fxRateDate:'2026-11-06',fxRateProvider:'Banque du Canada · Valet'};
+ const net=W.netWorthBridge(a,false,'2026-11-08');
+ assert.equal(net.ready,true);
+ assert.equal(net.mode,'detailed');
+ assert.equal(net.nativeCents,32000);
+ assert.equal(net.cadCents,50342);
+ assert.equal(net.fx,'1.5732');
+ assert.equal(net.fxDate,'2026-11-06');
+ assert.equal(W.netWorthBridge(a,true,'2026-11-08').ready,false,
+  'new and legacy journals for the same account cannot be added twice');
+ assert.equal(W.netWorthBridge({...a,investments201:null},false,'2026-11-08').mode,'legacy');
+ const copy=JSON.stringify(a);
+ const pending={...verified,status:'draft',brokerCapture:{totalCents:123456789,partial:true}};
+ assert.equal(W.netWorthBridge({...a,investments201:pending},false,'2026-11-08').ready,false,
+  'captured totals are evidence only, not net-worth values');
+ assert.equal(W.netWorthBridge({...a,fxRateProvider:''},false,'2026-11-08').ready,false,
+  'an unsourced FX rate must not be silently accepted');
+ assert.equal(W.netWorthBridge({...a,fxRateDate:'2026-10-31'},false,'2026-11-08').ready,false,
+  'a stale FX rate must block current net worth');
+ assert.equal(W.netWorthBridge({...a,fxRateDate:'2026-11-09'},false,'2026-11-08').ready,false,
+  'a future FX rate must block current net worth');
+ const tampered={...verified,openingCashCents:verified.openingCashCents+100};
+ assert.equal(W.netWorthBridge({...a,investments201:tampered},false,'2026-11-08').ready,false,
+  'a stale verified flag must not survive a changed broker baseline');
+ assert.equal(JSON.stringify(a),copy,'the net bridge must never mutate account data');
+ // A dated, sourced CAD-equivalent value is consistently visible in summary.
+ W.connect({context(){return{active:true,viewer:'la',scope:'mine',accounts:[a],operations:[]};},
+  openSheet(){},async save(){throw Error('Read-only test');}});
+ const overview=W.portfolioOverview();
+ assert.equal(overview.verified,1);
+ assert.equal(overview.totalCadCents,50342);
+ assert.equal(overview.complete,true);
+});
+
+test('net-worth renderer and financial analysis use the same one-ledger bridge',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const bridge=app.slice(app.indexOf('function trace202PortfolioForNet('),
+  app.indexOf('function renderWealth('));
+ const view=app.slice(app.indexOf('function renderWealth('),
+  app.indexOf('window.Trace201Host=Object.freeze('));
+ const analysis=app.slice(app.indexOf('function openPortfolioAnalysis('),
+  app.indexOf('function renderWealth('));
+ assert.match(bridge,/const legacyExists=state\.investmentOperations\.some/);
+ assert.match(bridge,/window\.TraceWealth201\?\.netWorthBridge\?\.\(a,legacyExists\)/);
+ assert.match(bridge,/if\(!bridge\.ready\)return/);
+ assert.match(bridge,/netReady:false/);
+ assert.match(bridge,/netReady:true,detailedNet:true/);
+ assert.match(view,/const ports=accounts\.map\(a=>\(\{a,p:trace202PortfolioForNet\(a\)\}\)\)/);
+ assert.match(view,/const investments=ports\.reduce\(\(sum,x\)=>sum\+\(x\.p\.netReady\?x\.p\.cad:0\),0\)/);
+ assert.match(analysis,/trace202PortfolioForNet\(a\)/);
+ assert.match(app,/cad:p\.netReady\?p\.cad:null/);
+ assert.match(app,/ready:p\.netReady===true/);
+ for(const forbidden of ['saveDocument(', 'removeDocument(', 'createClient('])
+  assert.ok(!bridge.includes(forbidden),'wealth bridge must not write persistent financial data');
 });
