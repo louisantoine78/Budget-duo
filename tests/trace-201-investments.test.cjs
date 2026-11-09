@@ -282,8 +282,12 @@ test('new in-place Patrimoine summary never enters bank or portfolio total calcu
  assert.match(net,/const investments=ports\.reduce/);
  assert.match(net,/total=bankCAD\+investments/);
  const totalCalculation=net.slice(0,net.indexOf('const savings=ports.filter('));
- assert.ok(totalCalculation.length>0);
- assert.doesNotMatch(totalCalculation,/investments201|\bE\.evaluate\(/);
+ const amountArithmetic=totalCalculation.slice(totalCalculation.indexOf('const investments=ports.reduce'));
+ assert.ok(amountArithmetic.length>0);
+ assert.doesNotMatch(amountArithmetic,/investments201|\bE\.evaluate\(/);
+ // A captured broker balance may block an incomplete total; it must NEVER
+ // contribute its unverified amount to the actual CAD calculation.
+ assert.ok(totalCalculation.includes("x.a.investments201?.brokerCapture&&x.a.investments201?.status!=='verified'"));
  for(const page of ['home','budget','activity'])assert.match(html,new RegExp('data-page="'+page+'"'));
 });
 
