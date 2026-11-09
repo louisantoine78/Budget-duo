@@ -154,6 +154,37 @@
    totalCadCents:safeTotal?Number(rawTotal):null,
    missing:records.length-records.filter(x=>x.verified&&x.cadCents!==null).length});
  }
+ // Audited read-only bridge from the new detailed investment ledger to
+ // the existing Patrimoine net in CAD. The caller picks ONE ledger per account.
+ // Unverified OCR/capture data and unsupported FX never become financial assets.
+ function netWorthBridge(account,hasLegacyJournal=false,asOf=today()){
+  const blocked=(reason,mode='detailed')=>Object.freeze({mode,ready:false,reason,
+   nativeCents:null,cadCents:null,fx:null,fxDate:null});
+  if(!account?.investments201)return Object.freeze({mode:'legacy',ready:false,reason:'Journal TRACE historique'});
+  if(hasLegacyJournal)return blocked('Ancien journal et nouveau suivi présents : rapprochement nécessaire','conflict');
+  try{
+   const p=load(account);
+   if(!p.positions.length||!p.openingCashConfirmed)return blocked('Positions ou espèces non confirmées');
+   if(p.status!=='verified')return blocked('Portefeuille à rapprocher');
+   const b=p.brokerVerification;
+   if(!b||!E.dateValid(b.date)||b.date>asOf||b.date<p.openingDate||
+      !Number.isSafeInteger(b.statementValueCents)||b.statementValueCents<0||
+      !String(b.source||'').trim())return blocked('Référence courtier absente ou incohérente');
+   // Protect against a stale "verified" flag surviving edits to the baseline.
+   if(E.snapshotAt(p,b.date).valueCents!==b.statementValueCents)
+    return blocked('Écart entre le relevé contrôlé et le suivi des titres');
+   if(!productionSummary(p).ready)return blocked('Cotations ou coûts incomplets');
+   const value=E.evaluate(p).valueCents;
+   if(!Number.isSafeInteger(value)||value<0)return blocked('Valeur du portefeuille invalide');
+   const fx=E.cadValue(value,p.currency,p.currency==='CAD'?null:{
+    cadPerUnit:account.fxCadPerUnit,date:account.fxRateDate,source:account.fxRateProvider
+   },asOf);
+   if(!fx.ready)return blocked(fx.reason||'Conversion CAD à vérifier');
+   return Object.freeze({mode:'detailed',ready:true,reason:'',
+    nativeCents:value,cadCents:fx.valueCents,fx:fx.rate,fxDate:fx.date,
+    fxSource:fx.source});
+  }catch(error){return blocked('Données à vérifier : '+String(error?.message||error));}
+ }
  function renderHome(){
   const overview=portfolioOverview(),data=overview.records;
   let html='<div class="w201-kicker">PATRIMOINE · INVESTISSEMENTS</div>'+
@@ -600,5 +631,5 @@
   selected='';error='';filter='all';chartPeriod='all';draw();
  }
  function connect(h){if(!h||typeof h.context!=='function'||typeof h.save!=='function'||typeof h.openSheet!=='function')throw Error('Hôte TRACE 2.0.2 incomplet');host=h;return true;}
- return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary,portfolioOverview});
+ return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary,portfolioOverview,netWorthBridge});
 });
