@@ -540,7 +540,7 @@ test('TRACE 2.0.2 Patrimoine never shows an invented zero for imported broker ho
  assert.ok(wealth.includes('x.a.investments201?.positions?.length>0'),
   'detailed unintegrated positions must block the legacy zero from net worth');
  const start=wealth.indexOf(' const tile=({a,p})=>{');
- const end=wealth.indexOf('\\n };',start);
+ const end=wealth.indexOf('\n };',start);
  assert.ok(start>=0&&end>start,'expected an isolated portfolio card renderer');
  const expression=wealth.slice(start+' const tile='.length,end+3).trim();
  const state={investmentOperations:[]};
@@ -556,16 +556,16 @@ test('TRACE 2.0.2 Patrimoine never shows an invented zero for imported broker ho
  }};
  const ledger={value:0,hasFx:true,fx:1.5732,fxDate:'2026-11-06'};
  const html=tile({a,p:ledger});
- assert.match(html,/EUR:3819\\.25/,'sum of read-only broker securities and cash is visible');
- assert.match(html,/CAD:6008\\./,'EUR/CAD reference is not a fabricated 0');
- assert.match(html,/Titres \\+ espèces de la capture/);
+ assert.match(html,/EUR:3819\.25/,'sum of read-only broker securities and cash is visible');
+ assert.match(html,/CAD:6008\./,'EUR/CAD reference is not a fabricated 0');
+ assert.match(html,/Titres \+ espèces de la capture/);
  assert.match(html,/non rapprochée/);
- assert.doesNotMatch(html,/EUR:0\\.00|CAD:0\\.00/);
+ assert.doesNotMatch(html,/EUR:0\.00|CAD:0\.00/);
  const noCapture={...a,investments201:{...a.investments201,brokerCapture:null}};
  assert.match(tile({a:noCapture,p:ledger}),/À rapprocher/);
- assert.doesNotMatch(tile({a:noCapture,p:ledger}),/EUR:0\\.00/);
+ assert.doesNotMatch(tile({a:noCapture,p:ledger}),/EUR:0\.00/);
  const verified={...a,investments201:{...a.investments201,status:'verified'}};
- assert.match(tile({a:verified,p:ledger}),/EUR:3819\\.25/);
+ assert.match(tile({a:verified,p:ledger}),/EUR:3819\.25/);
  const withoutTracking={...a,investments201:null};
  assert.match(tile({a:withoutTracking,p:ledger}),/À initialiser/);
  assert.match(wealth,/portefeuille.*rapproché/);
