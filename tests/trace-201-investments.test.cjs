@@ -71,9 +71,9 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.7');
+ assert.equal(version.build,'5.37.8');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.7'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.8'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
@@ -406,14 +406,14 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.7');
+ assert.equal(version.build,'5.37.8');
  assert.ok(version.release.startsWith('TRACE 2.0.2'));
- assert.ok(app.includes("window.__TRACE_BUILD__='5.37.7';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
- assert.ok(html.includes('<meta name="trace-build" content="5.37.7">'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.8';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.8">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
   assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.1':asset==='trace-wealth-201.css'?'2.0.2.4':'2.0.2')),'Missing cache-bust: '+asset);
  }
- assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.7'));
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.8'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
 });
 
@@ -491,7 +491,7 @@ test('CSP-safe production bridge connects real investment module without inline 
  assert.ok(!html.includes('window.TraceWealth201?.connect(window.Trace201Host)'));
  assert.ok(js.includes('if(root.Trace201Host)api.connect(root.Trace201Host);'));
  assert.ok(app.includes('window.Trace201Host=Object.freeze({'));
- assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.7"')<
+ assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.8"')<
    html.indexOf('src="trace-wealth-201.js?v=2.0.2.1"'));
  assert.ok(!js.includes('createClient('));
  assert.ok(!js.includes('localStorage'));
