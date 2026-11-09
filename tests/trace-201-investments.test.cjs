@@ -71,9 +71,9 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.5');
+ assert.equal(version.build,'5.37.6');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.5'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.6'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
@@ -377,8 +377,8 @@ test('TRACE 2.0.2 displays a read-only Patrimoine gateway without inventing miss
   'window.TraceWealth201?.dashboardSummary?.()',
   'window.TraceWealth201?.portfolioOverview?.()',
   'valuation?.complete===true&&valuation.totalCadCents!==null',
-  'trace203-invest-stats',
-  'Valeur du suivi · CAD',
+  'trace204-invest-overview',
+  'trace204-invest-state',
   'quickCount(\'wealthQuickInvestments\',placements.length)',
   'quickCount(\'wealthQuickSavings\',savings.length)',
   'quickCount(\'wealthQuickCash\',banks.length)',
@@ -400,14 +400,14 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.5');
+ assert.equal(version.build,'5.37.6');
  assert.ok(version.release.startsWith('TRACE 2.0.2'));
- assert.ok(app.includes("window.__TRACE_BUILD__='5.37.5';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
- assert.ok(html.includes('<meta name="trace-build" content="5.37.5">'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.6';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.6">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
-  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.1':asset==='trace-wealth-201.css'?'2.0.2.2':'2.0.2')),'Missing cache-bust: '+asset);
+  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.1':asset==='trace-wealth-201.css'?'2.0.2.3':'2.0.2')),'Missing cache-bust: '+asset);
  }
- assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.5'));
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.6'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
 });
 
@@ -485,7 +485,7 @@ test('CSP-safe production bridge connects real investment module without inline 
  assert.ok(!html.includes('window.TraceWealth201?.connect(window.Trace201Host)'));
  assert.ok(js.includes('if(root.Trace201Host)api.connect(root.Trace201Host);'));
  assert.ok(app.includes('window.Trace201Host=Object.freeze({'));
- assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.5"')<
+ assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.6"')<
    html.indexOf('src="trace-wealth-201.js?v=2.0.2.1"'));
  assert.ok(!js.includes('createClient('));
  assert.ok(!js.includes('localStorage'));
@@ -513,8 +513,14 @@ test('Patrimoine 2.0.2 premium reorganisation preserves counts, grouping and tru
  assert.ok(wealth.includes('const investments=ports.reduce'));
  assert.ok(wealth.includes('total=bankCAD+investments'));
  assert.ok(wealth.includes('valuation?.complete===true&&valuation.totalCadCents!==null'));
- assert.ok(wealth.includes("'À compléter'"));
+ assert.ok(wealth.includes("'À vérifier'"));
  assert.ok(!wealth.includes('id="trace202Explore"'),'Repeated full width button should not be presented');
+ assert.ok(!wealth.includes('trace203-wealth-compact'),'Repeated summary panel should not be rendered');
+ assert.ok(html.includes('id="wealthNetState"'));
+ assert.ok(html.includes('id="wealthReviewAction"'));
+ assert.ok(wealth.includes('reviewAction.hidden=netComplete'));
+ assert.ok(wealth.includes("$('#wealthTotal').textContent=netComplete?money(total):'—'"));
+ assert.ok(css.includes('.trace204-invest-overview'));
  assert.ok(app.includes("button.matches('[data-wealth-jump]')"));
  assert.ok(css.includes('.trace203-wealth-nav'));
  assert.ok(css.includes('scroll-margin-top:'));
