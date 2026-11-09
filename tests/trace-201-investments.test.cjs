@@ -616,7 +616,7 @@ test('verified new investment ledger contributes exactly once, while draft, FX a
 test('net-worth renderer and financial analysis use the same one-ledger bridge',()=>{
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const bridge=app.slice(app.indexOf('function trace202PortfolioForNet('),
-  app.indexOf('function renderWealth('));
+  app.indexOf('function trace20TrackAux('));
  const view=app.slice(app.indexOf('function renderWealth('),
   app.indexOf('window.Trace201Host=Object.freeze('));
  const analysis=app.slice(app.indexOf('function openPortfolioAnalysis('),
