@@ -111,7 +111,7 @@
     const p=load(account),evaluation=E.evaluate(p);
     positions+=evaluation.positions.length;
     if(p.positions.length||p.operations.length)initialized++;
-    if(p.status==='verified'&&productionSummary(p).ready)verified++;
+    if(netWorthBridge(account,false).ready)verified++;
    }catch{invalid++;}
   }
   return Object.freeze({portfolios:data.length,positions,initialized,verified,legacy,invalid,
@@ -125,25 +125,22 @@
    const record={id:a.id,name:a.name||a.type||'Placement',type:a.type,
     currency:a.currency||'CAD',owner:a.owner,status:'À initialiser',
     nativeCents:null,cadCents:null,fx:null,performance:null,verified:false};
-   if(isLegacy(a)){record.status='Historique protégé';records.push(record);continue;}
-   try{
-    const p=load(a),v=E.evaluate(p);
-    const pending=p.positions.length||p.operations.length;
-    record.status=pending?'À rapprocher':'À initialiser';
-    const ready=productionSummary(p).ready;
-    record.verified=ready;
-    if(ready){
-     record.nativeCents=v.valueCents;
-     const q=a.currency==='CAD'?null:{cadPerUnit:a.fxCadPerUnit,
-      date:a.fxRateDate,source:a.fxRateProvider};
-     const converted=E.cadValue(v.valueCents,a.currency,q,asOf);
-     record.fx=converted;
-     record.cadCents=converted.ready?converted.valueCents:null;
-     record.status=converted.ready?'Rapproché':'Taux à vérifier';
-     const measured=E.periodPerformance(p,'all');
+   const legacy=isLegacy(a),bridge=netWorthBridge(a,legacy,asOf);
+   if(bridge.mode==='legacy'){
+    record.status='Historique protégé';
+   }else if(bridge.mode==='conflict'){
+    record.status='Journaux à rapprocher';
+   }else if(bridge.ready){
+    record.nativeCents=bridge.nativeCents;
+    record.cadCents=bridge.cadCents;
+    record.fx={ready:true,rate:bridge.fx,date:bridge.fxDate,source:bridge.fxSource};
+    record.verified=true;record.status='Rapproché';
+    try{
+     const p=load(a),measured=E.periodPerformance(p,'all');
      if(measured&&Number.isFinite(measured.percent))record.performance=measured;
-    }
-   }catch{record.status='Données à vérifier';}
+    }catch{}
+   }else record.status=/taux|conversion/i.test(bridge.reason)?'Taux à vérifier':
+    a.investments201?.positions?.length?'À rapprocher':'À initialiser';
    records.push(record);
   }
   const verified=records.filter(x=>x.verified).length;
@@ -153,6 +150,37 @@
   return Object.freeze({records,asOf,verified,complete:complete&&safeTotal,
    totalCadCents:safeTotal?Number(rawTotal):null,
    missing:records.length-records.filter(x=>x.verified&&x.cadCents!==null).length});
+ }
+ // Audited read-only bridge from the new detailed investment ledger to
+ // the existing Patrimoine net in CAD. The caller picks ONE ledger per account.
+ // Unverified OCR/capture data and unsupported FX never become financial assets.
+ function netWorthBridge(account,hasLegacyJournal=false,asOf=today()){
+  const blocked=(reason,mode='detailed')=>Object.freeze({mode,ready:false,reason,
+   nativeCents:null,cadCents:null,fx:null,fxDate:null});
+  if(!account?.investments201)return Object.freeze({mode:'legacy',ready:false,reason:'Journal TRACE historique'});
+  if(hasLegacyJournal)return blocked('Ancien journal et nouveau suivi présents : rapprochement nécessaire','conflict');
+  try{
+   const p=load(account);
+   if(!p.positions.length||!p.openingCashConfirmed)return blocked('Positions ou espèces non confirmées');
+   if(p.status!=='verified')return blocked('Portefeuille à rapprocher');
+   const b=p.brokerVerification;
+   if(!b||!E.dateValid(b.date)||b.date>asOf||b.date<p.openingDate||
+      !Number.isSafeInteger(b.statementValueCents)||b.statementValueCents<0||
+      !String(b.source||'').trim())return blocked('Référence courtier absente ou incohérente');
+   // Protect against a stale "verified" flag surviving edits to the baseline.
+   if(E.snapshotAt(p,b.date).valueCents!==b.statementValueCents)
+    return blocked('Écart entre le relevé contrôlé et le suivi des titres');
+   if(!productionSummary(p).ready)return blocked('Cotations ou coûts incomplets');
+   const value=E.evaluate(p).valueCents;
+   if(!Number.isSafeInteger(value)||value<0)return blocked('Valeur du portefeuille invalide');
+   const fx=E.cadValue(value,p.currency,p.currency==='CAD'?null:{
+    cadPerUnit:account.fxCadPerUnit,date:account.fxRateDate,source:account.fxRateProvider
+   },asOf);
+   if(!fx.ready)return blocked(fx.reason||'Conversion CAD à vérifier');
+   return Object.freeze({mode:'detailed',ready:true,reason:'',
+    nativeCents:value,cadCents:fx.valueCents,fx:fx.rate,fxDate:fx.date,
+    fxSource:fx.source});
+  }catch(error){return blocked('Données à vérifier : '+String(error?.message||error));}
  }
  function renderHome(){
   const overview=portfolioOverview(),data=overview.records;
@@ -166,7 +194,7 @@
     '<span>'+overview.verified+'/'+data.length+' portefeuille(s) rapproché(s) · '+
       overview.missing+' sans valorisation CAD vérifiée</span>'+
     '<p>Conversion indicative des portefeuilles, avec taux datés et sourcés. '+
-    'Aucun montant n’est ajouté au patrimoine net existant.</p></section>';
+    'Seuls les comptes détaillés complètement rapprochés contribuent au patrimoine net.</p></section>';
   }
   html+=!data.length?
    '<div class="w201-empty">Aucun portefeuille de titres dans cet espace. Ajoute un PEA, un compte-titres ou un REER depuis Patrimoine pour commencer.</div>':
@@ -600,5 +628,5 @@
   selected='';error='';filter='all';chartPeriod='all';draw();
  }
  function connect(h){if(!h||typeof h.context!=='function'||typeof h.save!=='function'||typeof h.openSheet!=='function')throw Error('Hôte TRACE 2.0.2 incomplet');host=h;return true;}
- return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary,portfolioOverview});
+ return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary,portfolioOverview,netWorthBridge});
 });

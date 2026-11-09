@@ -96,7 +96,8 @@ test('category drilldown attaches transaction links',()=>{
 });
 const portfolioLedger=()=>({contributions:0,performance:0,value:300,cad:300,hasFx:true,configured:true});
 const wealth=compile('openPortfolioAnalysis','\nfunction renderWealth(',{
- ...ctx,portfolioLedger,nativeMoney:n=>n+' $',shortAccountLabel:a=>a.name,
+ ...ctx,portfolioLedger,trace202PortfolioForNet:portfolioLedger,
+ nativeMoney:n=>String(n),shortAccountLabel:a=>a.name,
  bank:()=>({checking:100,cardDebt:20,net:80}),insightWealthData:()=>({})
  ,openInvestmentAccount(){}
 });

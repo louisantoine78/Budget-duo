@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.37.7",
-  "release": "TRACE 2.0.2 — Import de captures de portefeuille contrôlé (sans migration)"
+  "build": "5.37.8",
+  "release": "TRACE 2.0.2 — Patrimoine net rapproché et soldes fiables (sans migration)"
 }

@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.7';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.8';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -26,6 +26,25 @@ const traceUnsavedWriteKeys=new Set();
 // Candidate-only secondary tracker: never authorizes updates or modifies RPC
 // responses. Direct profile/household/auth mutations do not use the CAS queue.
 const trace20AuxPending=new Map(),trace20AuxFailures=new Set();
+// Select exactly one investment ledger for each account before adding any
+// CAD value to Patrimoine. The new module never replaces linked savings or
+// historical portfolios, and capture text itself cannot generate a balance.
+function trace202PortfolioForNet(a){
+ const legacy=portfolioLedger(a);
+ if(a.savingsTracking==='linked')return{...legacy,
+  netReady:legacy.configured===true&&legacy.reviewRequired!==true&&legacy.hasFx===true};
+ const legacyExists=state.investmentOperations.some(o=>o.accountId===a.id);
+ const bridge=window.TraceWealth201?.netWorthBridge?.(a,legacyExists);
+ if(!bridge||bridge.mode==='legacy')return{...legacy,
+  netReady:legacyExists&&legacy.hasFx===true&&legacy.reviewRequired!==true};
+ if(!bridge.ready)return{...legacy,cad:null,value:null,securities:null,
+  netReady:false,detailedNet:false,fxStatus:bridge.reason,
+  reviewRequired:legacy.reviewRequired===true||bridge.mode==='conflict'};
+ return{...legacy,netReady:true,detailedNet:true,
+  value:bridge.nativeCents/100,cad:bridge.cadCents/100,
+  hasFx:true,fx:Number(bridge.fx),fxDate:bridge.fxDate,
+  fxSource:bridge.fxSource,reviewRequired:false};
+}
 function trace20TrackAux(label,operation){
  if(!/^[a-z][a-z0-9:-]{2,70}$/.test(String(label))||typeof operation!=='function')
   return Promise.reject(Error('TRACE_AUX_TRACKER_INVALID_OPERATION'));
@@ -901,8 +920,8 @@ function insightCategoryDrilldown(month,scopeValue,categoryId){
 }
 function insightWealthData(scopeValue,bankResult,ports,missing){
  const owners=scopeValue==='couple'?['la','partner']:[scopeValue],accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
- const included=ports.map(({a,p})=>({name:a.name||a.type||'Compte',cad:p.cad,ready:p.hasFx&&
-  (a.savingsTracking!=='linked'||p.configured),linked:a.savingsTracking==='linked'}));
+ const included=ports.map(({a,p})=>({name:a.name||a.type||'Compte',cad:p.netReady?p.cad:null,
+  ready:p.netReady===true,linked:a.savingsTracking==='linked'}));
  const flows=[];
  accounts.forEach(a=>{
   if(a.savingsTracking==='linked'){
@@ -5855,14 +5874,21 @@ function openInvestmentOperation(account,original=null){
  };
 }
 function openPortfolioAnalysis(){
- const owners=wealthScope==='couple'?['la','partner']:[me];const accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner)).map(a=>({a,p:portfolioLedger(a)}));
+ const owners=wealthScope==='couple'?['la','partner']:[me];
+ const accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner))
+  .map(a=>({a,p:trace202PortfolioForNet(a)}));
  openSheet('Comprendre mon patrimoine',
  '<div class="trace-insight-modal" id="traceWealthDetail"></div>'+
  '<div class="section-head"><h2>Comptes suivis</h2></div>'+
- accounts.map(({a,p})=>'<button class="trace-list-btn" type="button" data-analysis-invest="'+esc(a.id)+'"><span><b>'+esc(shortAccountLabel(a))+'</b><small>Versements nets : '+nativeMoney(p.contributions,a.currency)+' · Performance : '+(a.savingsTracking==='linked'?'non mesurée':nativeMoney(p.performance,a.currency))+'</small></span><strong>'+nativeMoney(p.value,a.currency)+'</strong></button>').join('')+
+ accounts.map(({a,p})=>'<button class="trace-list-btn" type="button" data-analysis-invest="'+esc(a.id)+'"><span><b>'+esc(shortAccountLabel(a))+'</b><small>'+
+  (!p.netReady?'Valorisation non rapprochée · '+esc(p.fxStatus||'à vérifier'):
+   p.detailedNet?'Suivi des titres rapproché · valeur indicative':
+   'Versements nets : '+nativeMoney(p.contributions,a.currency)+' · Performance : '+
+     (a.savingsTracking==='linked'?'non mesurée':nativeMoney(p.performance,a.currency)))+
+  '</small></span><strong>'+(p.netReady?nativeMoney(p.value,a.currency):'À vérifier')+'</strong></button>').join('')+
  (!accounts.length?'<div class="empty-note">Ajoute un compte pour suivre ton patrimoine.</div>':''));
  const scopeValue=scope(wealthScope),bk=bank(scopeValue);
- const missing=accounts.filter(({a,p})=>!p.hasFx||(a.savingsTracking==='linked'&&!p.configured));
+ const missing=accounts.filter(({p})=>p.netReady!==true);
  window.TraceInsights.renderWealth($('#traceWealthDetail'),insightWealthData(scopeValue,bk,accounts,missing));
  $$('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
 }
@@ -5870,12 +5896,11 @@ function openPortfolioAnalysis(){
 function renderWealth(){
  const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
  requestInternationalRates(accounts.map(a=>window.TraceInternational.currency(a)));
- const ports=accounts.map(a=>({a,p:portfolioLedger(a)}));
- // A screenshot is external evidence, not a verified financial ledger.
- // Keep the net-worth total incomplete while captured positions await reconciliation.
- const missing=ports.filter(x=>!x.p.hasFx||x.a.savingsTracking==='linked'&&!x.p.configured||
-  x.a.investments201?.brokerCapture&&x.a.investments201?.status!=='verified');
- const investments=ports.reduce((sum,x)=>sum+(x.p.cad||0),0),
+ const ports=accounts.map(a=>({a,p:trace202PortfolioForNet(a)}));
+ // Unverified positions, incomplete FX and pending bank reconciliation
+ // must not leak into an apparently complete net-worth total.
+ const missing=ports.filter(x=>x.p.netReady!==true);
+ const investments=ports.reduce((sum,x)=>sum+(x.p.netReady?x.p.cad:0),0),
   banks=state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&['checking','card'].includes(accountType(a))),
   bankValues=banks.map(a=>{const native=accountEstimate(a),currency=window.TraceInternational.currency(a);
    return{a,native,currency,cad:native===null?null:window.TraceInternational.fxValue(native,currency,internationalQuotes[currency])};}),
@@ -5893,7 +5918,7 @@ function renderWealth(){
  const netNote=document.querySelector('.page[data-page="wealth"] .trace-wealth-note');
  if(netNote)netNote.textContent=netComplete?
   'Valorisation indicative : certains placements ne sont pas immédiatement disponibles.':
-  'Aucun montant manquant n’est estimé.';
+  'Les valeurs non rapprochées ne sont pas comptées dans le patrimoine net.';
  const savings=ports.filter(({a})=>a.savingsTracking==='linked'||
   ['CELI','Épargne','Livret','Savings'].includes(a.type));
  const placements=ports.filter(({a})=>!savings.some(({a:shown})=>shown.id===a.id));
@@ -5911,19 +5936,42 @@ function renderWealth(){
   const needsSetup=!isSavings&&!a.investments201&&
    !state.investmentOperations.some(o=>o.accountId===a.id)&&p.value===0;
   const evidence=!isSavings?a.investments201?.brokerCapture:null;
+  const detailed=a.investments201;
+  const hasDetailedPositions=!isSavings&&Array.isArray(detailed?.positions)&&
+   detailed.positions.length>0&&!state.investmentOperations.some(o=>o.accountId===a.id);
+  const explicitTotal=Number.isSafeInteger(evidence?.totalCents)&&evidence.totalCents>=0?
+   evidence.totalCents:null;
+  const sumTotal=Number.isSafeInteger(evidence?.securitiesCents)&&evidence.securitiesCents>=0&&
+   Number.isSafeInteger(evidence?.cashCents)&&evidence.cashCents>=0&&
+   Number.isSafeInteger(evidence.securitiesCents+evidence.cashCents)?
+   evidence.securitiesCents+evidence.cashCents:null;
+  const referenceCents=explicitTotal??sumTotal;
   const captured=!p.reviewRequired&&evidence&&evidence.currency===a.currency&&
-   a.investments201?.status!=='verified'&&Number.isSafeInteger(evidence.totalCents)&&
-   evidence.totalCents>=0;
+   detailed?.status!=='verified'&&referenceCents!==null;
+  const referenceCad=captured&&p.hasFx&&Number.isFinite(p.fx)?
+   money(referenceCents/100*p.fx):null;
+  let detailedVerified=null;
+  if(hasDetailedPositions&&p.netReady&&detailed.status==='verified'){
+   try{const verified=window.TraceWealth201?.productionSummary?.(detailed);
+    if(verified?.ready&&Number.isFinite(verified.value))detailedVerified=verified.value;
+   }catch(error){console.warn('Valorisation détaillée à vérifier :',error.message);}
+  }
+  const pendingDetails=hasDetailedPositions&&!p.netReady;
+  const shownValue=p.reviewRequired?'Mouvement à vérifier':
+   isSavings&&!p.configured?'À configurer':needsSetup?'À initialiser':
+   captured?nativeMoney(referenceCents/100,a.currency):
+   detailedVerified!==null?nativeMoney(detailedVerified,a.currency):
+   pendingDetails?'À rapprocher':nativeMoney(p.value,a.currency);
+  const shownDetail=needsSetup?'Renseigner les positions et les espèces ›':
+   captured?(explicitTotal===null?'Titres + espèces de la capture':'Valeur lue sur la capture')+
+    ' · '+(referenceCad?'≈ '+referenceCad+' CAD · taux du '+esc(p.fxDate||'non daté')+' · ':'')+'non rapprochée':
+   detailedVerified!==null?'Suivi rapproché · intégration au patrimoine net à confirmer':
+   pendingDetails?'Positions suivies · '+esc(p.fxStatus||'valeur non rapprochée'):
+   p.hasFx?(isSavings?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+
+    (p.fxDate?' · taux du '+esc(p.fxDate):''):'Conversion CAD indisponible';
   return '<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
    esc('Consulter '+(a.name||a.type||'Investissement'))+'"><span class="a-icon" aria-hidden="true">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
-   (p.reviewRequired?'Mouvement à vérifier':isSavings&&!p.configured?'À configurer':
-    needsSetup?'À initialiser':captured?nativeMoney(evidence.totalCents/100,a.currency):
-    nativeMoney(p.value,a.currency))+'</b><small>'+
-   (needsSetup?'Renseigner les positions et les espèces ›':
-    captured?'Référence capture du '+esc(evidence.date)+' · à rapprocher':
-    p.hasFx?(isSavings?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+
-     (p.fxDate?' · taux du '+esc(p.fxDate):''):'Conversion CAD indisponible')+
-   '</small></button>';
+   shownValue+'</b><small>'+shownDetail+'</small></button>';
  };
  // Display account counts, never inferred valuations, in the quick navigation.
  // Counts follow the selected Moi/Couple scope and cannot affect ledger totals.
@@ -5940,7 +5988,7 @@ function renderWealth(){
  if(placementsNode)placementsNode.innerHTML=[
   ...(placements.length?placements.map(tile):
    ['<div class="trace-wealth-empty">Aucun placement suivi pour le moment.</div>']),
-  '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon" aria-hidden="true">＋</span><span>Ajouter un placement</span><b>Ajouter</b><small>PEA, CELI, REER…</small></button>'
+  '<button class="asset-card asset-card-add" id="wealthAddCard" type="button"><span class="a-icon" aria-hidden="true">＋</span><span>Ajouter un placement</span><b>Ajouter</b><small>PEA, compte-titres, REER…</small></button>'
  ].join('');
  // TRACE 2.0.2 — read-only in-place investment gateway. Never alter ledger totals.
  const investmentSummaryNode=$('#trace201WealthSummary');
@@ -5955,7 +6003,7 @@ function renderWealth(){
   const trackingReady=valuation?.complete===true&&valuation.totalCadCents!==null;
   const count=portfolios+' portefeuille'+(portfolios===1?'':'s')+' · '+
    positions+' position'+(positions===1?'':'s')+
-   (positions?' · '+verified+' rapproché'+(verified===1?'':'s'):'');
+   (positions?' · '+verified+'/'+portfolios+' portefeuille'+(portfolios===1?'':'s')+' rapproché'+(portfolios===1?'':'s'):'');
   const stateLabel=trackingReady?'Rapproché':positions?'À vérifier':'À initialiser';
   // Deliberately a quiet metadata row, not a second large financial card.
   // Financial valuations remain read-only and are shown only when fully verified.
