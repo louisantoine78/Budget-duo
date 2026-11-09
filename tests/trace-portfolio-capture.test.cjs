@@ -58,11 +58,11 @@ test('capture import is additive, explicitly approved, owner scoped and uses the
  const capture=fs.readFileSync(path.join(root,'trace-portfolio-capture-1.0.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
  const wealth=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.8');
+ assert.equal(version.build,'5.37.9');
  assert.ok(app.includes('id="traceAddPortfolioCapture"'));
  assert.ok(app.includes('window.TracePortfolioCapture?.open()'));
  for(const asset of ['trace-portfolio-capture-parser-1.0.0.js','trace-portfolio-capture-1.0.0.js'])
-  assert.ok(index.includes('<script src="'+asset+'"></script>'));
+  assert.ok(index.includes('<script src="'+asset+(asset==='trace-portfolio-capture-1.0.0.js'?'?v=1.0.1':'')+'"></script>'));
  assert.ok(index.indexOf('trace-portfolio-capture-parser-1.0.0.js')<index.indexOf('trace-portfolio-capture-1.0.0.js'));
  for(const guard of ['host().save(a.id,next)','owner===c.viewer',
   "node('wcapApprove')?.checked!==true",'Capture de portefeuille confirmée',
@@ -77,7 +77,7 @@ test('capture import is additive, explicitly approved, owner scoped and uses the
  assert.ok(!capture.includes("root.fetch("));
  assert.ok(index.includes("worker-src 'self'"));
  assert.ok(index.includes("'wasm-unsafe-eval'"));
- assert.ok(index.includes('v5-app-5.37.0.js?v=5.37.8'));
+ assert.ok(index.includes('v5-app-5.37.0.js?v=5.37.9'));
 });
 
 test('known truncated ETF is attached to existing position instead of silently skipped',()=>{
