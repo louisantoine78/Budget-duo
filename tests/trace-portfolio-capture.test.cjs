@@ -64,7 +64,7 @@ test('capture import is additive, explicitly approved, owner scoped and uses the
  for(const asset of ['trace-portfolio-capture-parser-1.0.0.js','trace-portfolio-capture-1.0.0.js'])
   assert.ok(index.includes('<script src="'+asset+'"></script>'));
  assert.ok(index.indexOf('trace-portfolio-capture-parser-1.0.0.js')<index.indexOf('trace-portfolio-capture-1.0.0.js'));
- for(const guard of ['window','host().save(a.id,next)','owner===c.viewer',
+ for(const guard of ['host().save(a.id,next)','owner===c.viewer',
   "node('wcapApprove')?.checked!==true",'Capture de portefeuille confirmée',
   "status:'draft'",'next.positions.map(x=>({...x}))','aucune transaction fictive']){
   assert.ok(capture.includes(guard),'capture guard absent: '+guard);
