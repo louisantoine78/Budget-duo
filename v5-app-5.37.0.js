@@ -5855,16 +5855,23 @@ function openInvestmentOperation(account,original=null){
  };
 }
 function openPortfolioAnalysis(){
- const owners=wealthScope==='couple'?['la','partner']:[me];const accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner)).map(a=>({a,p:portfolioLedger(a)}));
+ const owners=wealthScope==='couple'?['la','partner']:[me];
+ const accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner))
+  .map(a=>({a,p:trace202PortfolioForNet(a)}));
  openSheet('Comprendre mon patrimoine',
  '<div class="trace-insight-modal" id="traceWealthDetail"></div>'+
  '<div class="section-head"><h2>Comptes suivis</h2></div>'+
- accounts.map(({a,p})=>'<button class="trace-list-btn" type="button" data-analysis-invest="'+esc(a.id)+'"><span><b>'+esc(shortAccountLabel(a))+'</b><small>Versements nets : '+nativeMoney(p.contributions,a.currency)+' · Performance : '+(a.savingsTracking==='linked'?'non mesurée':nativeMoney(p.performance,a.currency))+'</small></span><strong>'+nativeMoney(p.value,a.currency)+'</strong></button>').join('')+
+ accounts.map(({a,p})=>'<button class="trace-list-btn" type="button" data-analysis-invest="'+esc(a.id)+'"><span><b>'+esc(shortAccountLabel(a))+'</b><small>'+
+  (!p.netReady?'Valorisation non rapprochée · '+esc(p.fxStatus||'à vérifier'):
+   p.detailedNet?'Suivi des titres rapproché · valeur indicative':
+   'Versements nets : '+nativeMoney(p.contributions,a.currency)+' · Performance : '+
+     (a.savingsTracking==='linked'?'non mesurée':nativeMoney(p.performance,a.currency)))+
+  '</small></span><strong>'+(p.netReady?nativeMoney(p.value,a.currency):'À vérifier')+'</strong></button>').join('')+
  (!accounts.length?'<div class="empty-note">Ajoute un compte pour suivre ton patrimoine.</div>':''));
  const scopeValue=scope(wealthScope),bk=bank(scopeValue);
- const missing=accounts.filter(({a,p})=>!p.hasFx||(a.savingsTracking==='linked'&&!p.configured));
+ const missing=accounts.filter(({p})=>p.netReady!==true);
  window.TraceInsights.renderWealth($('#traceWealthDetail'),insightWealthData(scopeValue,bk,accounts,missing));
- $$('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
+ $('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
 }
 
 // Select exactly one investment ledger for each account before adding any
