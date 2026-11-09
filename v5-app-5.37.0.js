@@ -5907,11 +5907,17 @@ function renderWealth(){
    ['CELI','Épargne','Livret','Savings'].includes(a.type);
   const needsSetup=!isSavings&&!a.investments201&&
    !state.investmentOperations.some(o=>o.accountId===a.id)&&p.value===0;
+  const evidence=!isSavings?a.investments201?.brokerCapture:null;
+  const captured=!p.reviewRequired&&evidence&&evidence.currency===a.currency&&
+   a.investments201?.status!=='verified'&&Number.isSafeInteger(evidence.totalCents)&&
+   evidence.totalCents>=0;
   return '<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
    esc('Consulter '+(a.name||a.type||'Investissement'))+'"><span class="a-icon" aria-hidden="true">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
    (p.reviewRequired?'Mouvement à vérifier':isSavings&&!p.configured?'À configurer':
-    needsSetup?'À initialiser':nativeMoney(p.value,a.currency))+'</b><small>'+
+    needsSetup?'À initialiser':captured?nativeMoney(evidence.totalCents/100,a.currency):
+    nativeMoney(p.value,a.currency))+'</b><small>'+
    (needsSetup?'Renseigner les positions et les espèces ›':
+    captured?'Référence capture du '+esc(evidence.date)+' · à rapprocher':
     p.hasFx?(isSavings?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+
      (p.fxDate?' · taux du '+esc(p.fxDate):''):'Conversion CAD indisponible')+
    '</small></button>';
