@@ -901,8 +901,8 @@ function insightCategoryDrilldown(month,scopeValue,categoryId){
 }
 function insightWealthData(scopeValue,bankResult,ports,missing){
  const owners=scopeValue==='couple'?['la','partner']:[scopeValue],accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
- const included=ports.map(({a,p})=>({name:a.name||a.type||'Compte',cad:p.cad,ready:p.hasFx&&
-  (a.savingsTracking!=='linked'||p.configured),linked:a.savingsTracking==='linked'}));
+ const included=ports.map(({a,p})=>({name:a.name||a.type||'Compte',cad:p.netReady?p.cad:null,
+  ready:p.netReady===true,linked:a.savingsTracking==='linked'}));
  const flows=[];
  accounts.forEach(a=>{
   if(a.savingsTracking==='linked'){
@@ -5867,19 +5867,33 @@ function openPortfolioAnalysis(){
  $$('[data-analysis-invest]').forEach(btn=>btn.onclick=()=>openInvestmentAccount(state.investmentAccounts.find(a=>a.id===btn.dataset.analysisInvest)));
 }
 
+// Select exactly one investment ledger for each account before adding any
+// CAD value to Patrimoine. The new module never replaces linked savings or
+// historical portfolios, and capture text itself cannot generate a balance.
+function trace202PortfolioForNet(a){
+ const legacy=portfolioLedger(a);
+ if(a.savingsTracking==='linked')return{...legacy,
+  netReady:legacy.configured===true&&legacy.reviewRequired!==true&&legacy.hasFx===true};
+ const legacyExists=state.investmentOperations.some(o=>o.accountId===a.id);
+ const bridge=window.TraceWealth201?.netWorthBridge?.(a,legacyExists);
+ if(!bridge||bridge.mode==='legacy')return{...legacy,
+  netReady:legacyExists&&legacy.hasFx===true&&legacy.reviewRequired!==true};
+ if(!bridge.ready)return{...legacy,cad:null,value:null,securities:null,
+  netReady:false,detailedNet:false,fxStatus:bridge.reason,
+  reviewRequired:legacy.reviewRequired===true||bridge.mode==='conflict'};
+ return{...legacy,netReady:true,detailedNet:true,
+  value:bridge.nativeCents/100,cad:bridge.cadCents/100,
+  hasFx:true,fx:Number(bridge.fx),fxDate:bridge.fxDate,
+  fxSource:bridge.fxSource,reviewRequired:false};
+}
 function renderWealth(){
  const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
  requestInternationalRates(accounts.map(a=>window.TraceInternational.currency(a)));
- const ports=accounts.map(a=>({a,p:portfolioLedger(a)}));
- // A screenshot is external evidence, not a verified financial ledger.
- // Keep the net-worth total incomplete while captured positions await reconciliation.
- const missing=ports.filter(x=>!x.p.hasFx||x.a.savingsTracking==='linked'&&!x.p.configured||
-  x.a.investments201?.brokerCapture&&x.a.investments201?.status!=='verified'||
-  // A detailed portfolio with no legacy operations must not be treated as
-  // a zero-value, verified legacy ledger even after its own reconciliation.
-  x.a.investments201?.positions?.length>0&&
-   !state.investmentOperations.some(o=>o.accountId===x.a.id));
- const investments=ports.reduce((sum,x)=>sum+(x.p.cad||0),0),
+ const ports=accounts.map(a=>({a,p:trace202PortfolioForNet(a)}));
+ // Unverified positions, incomplete FX and pending bank reconciliation
+ // must not leak into an apparently complete net-worth total.
+ const missing=ports.filter(x=>x.p.netReady!==true);
+ const investments=ports.reduce((sum,x)=>sum+(x.p.netReady?x.p.cad:0),0),
   banks=state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&['checking','card'].includes(accountType(a))),
   bankValues=banks.map(a=>{const native=accountEstimate(a),currency=window.TraceInternational.currency(a);
    return{a,native,currency,cad:native===null?null:window.TraceInternational.fxValue(native,currency,internationalQuotes[currency])};}),
@@ -5930,12 +5944,12 @@ function renderWealth(){
   const referenceCad=captured&&p.hasFx&&Number.isFinite(p.fx)?
    money(referenceCents/100*p.fx):null;
   let detailedVerified=null;
-  if(hasDetailedPositions&&detailed.status==='verified'){
+  if(hasDetailedPositions&&p.netReady&&detailed.status==='verified'){
    try{const verified=window.TraceWealth201?.productionSummary?.(detailed);
     if(verified?.ready&&Number.isFinite(verified.value))detailedVerified=verified.value;
    }catch(error){console.warn('Valorisation détaillée à vérifier :',error.message);}
   }
-  const pendingDetails=hasDetailedPositions&&p.value===0;
+  const pendingDetails=hasDetailedPositions&&!p.netReady;
   const shownValue=p.reviewRequired?'Mouvement à vérifier':
    isSavings&&!p.configured?'À configurer':needsSetup?'À initialiser':
    captured?nativeMoney(referenceCents/100,a.currency):
@@ -5945,7 +5959,7 @@ function renderWealth(){
    captured?(explicitTotal===null?'Titres + espèces de la capture':'Valeur lue sur la capture')+
     ' · '+(referenceCad?'≈ '+referenceCad+' CAD · taux du '+esc(p.fxDate||'non daté')+' · ':'')+'non rapprochée':
    detailedVerified!==null?'Suivi rapproché · intégration au patrimoine net à confirmer':
-   pendingDetails?'Positions suivies · valeur non rapprochée':
+   pendingDetails?'Positions suivies · '+esc(p.fxStatus||'valeur non rapprochée'):
    p.hasFx?(isSavings?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+
     (p.fxDate?' · taux du '+esc(p.fxDate):''):'Conversion CAD indisponible';
   return '<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
