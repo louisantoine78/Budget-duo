@@ -303,7 +303,9 @@ async function run(){
     assert.equal(await page.locator('#wealthQuickInvestments').innerText(),'1 compte');
     assert.equal(await page.locator('#wealthQuickSavings').innerText(),'2 comptes');
     assert.equal(await page.locator('#wealthQuickCash').innerText(),'1 compte');
-    assert.equal(await page.locator('#wealthTotal').innerText(),'Total incomplet');
+    assert.equal(await page.locator('#wealthTotal').innerText(),'—');
+    assert.equal(await page.locator('#wealthNetState').innerText(),'À vérifier');
+    assert.ok(await page.locator('#wealthReviewAction').isVisible());
     assert.equal(await page.locator('#trace202Explore').count(),0);
     assert.match(await page.locator('[data-inv-account="pea"]').innerText(),/À initialiser/);
     const beforeLayout=await page.evaluate(()=>({
@@ -315,6 +317,8 @@ async function run(){
     assert.ok(beforeLayout.documentWidth<=beforeLayout.viewport+2,label+' redesigned Patrimoine overflow');
     assert.deepEqual(beforeLayout.order,['traceWealthInvestments','traceWealthSavings','traceWealthCash']);
     await saveImage(page,label,'patrimoine-redesign');
+    await page.locator('#wealthReviewAction').tap();
+    assert.equal(await page.evaluate(()=>document.activeElement?.id),'traceWealthInvestments');
     await page.locator('[data-wealth-jump="traceWealthSavings"]').tap();
     assert.equal(await page.evaluate(()=>document.activeElement?.id),'traceWealthSavings');
     await page.locator('[data-wealth-jump="traceWealthCash"]').tap();
