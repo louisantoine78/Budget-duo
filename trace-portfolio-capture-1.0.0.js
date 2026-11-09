@@ -73,6 +73,8 @@
   const items=list.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===accountId?'selected':'')+'>'+
    esc(a.name)+' · '+esc(a.currency)+'</option>').join('');
   const sum=proposal?.summary;
+  const absent=proposal&&p?p.positions.filter(position=>
+   !proposal.rows.some(row=>matches(p,row.name)===position.id)):[];
   host().openSheet('Importer un portefeuille',
    '<div id="wcap-root" class="wcap">'+
    '<p class="wcap-intro">Ajoute une capture de ton courtier. TRACE propose les quantités, les cours et les espèces, puis te demande de tout vérifier avant sauvegarde.</p>'+
@@ -92,6 +94,9 @@
    (proposal&&p?'<div class="wcap-review"><h3>Vérifier les informations lues</h3>'+
     '<p class="wcap-warning">Capture analysée : '+proposal.rows.length+' ligne(s) détectée(s) · '+p.positions.length+
      ' position(s) déjà suivie(s). Vérifie les lignes ignorées ou absentes : aucune ne sera supprimée automatiquement.</p>'+
+    (absent.length?'<p class="wcap-warning">Titres non visibles sur cette capture : '+
+      absent.slice(0,6).map(s=>esc(s.name)).join(', ')+(absent.length>6?'…':'')+
+      '. Ils restent conservés et leur valeur doit être vérifiée.</p>':'')+
     '<div class="wcap-pair">'+field('Valeur totale du courtier ('+p.currency+')','wcapTotal',cashText(sum.totalCents),'text','inputmode="decimal"')+
     field('Titres ('+p.currency+')','wcapSecurities',cashText(sum.securitiesCents),'text','inputmode="decimal"')+'</div>'+
     field('Espèces ('+p.currency+')','wcapCash',cashText(sum.cashCents),'text','inputmode="decimal"')+
