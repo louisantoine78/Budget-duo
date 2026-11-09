@@ -44,7 +44,7 @@
   // Security names are rendered in uppercase; reject explanatory captions.
   return v===v.toLocaleUpperCase('fr-FR')&&n.length>=3;
  }
- const priceRe=/(\d{1,6}[,.]\d{2,4})\s*(?:EUR|€)\b?/i;
+ const priceRe=/(\d{1,6}[,.]\d{2,4})\s*(?:EUR\b|€)/i;
  const quantityRe=/^\s*(\d{1,7}(?:[,.]\d{1,6})?)\s+PRU\s+(\d{1,7}(?:[,.]\d{1,4})?)\s+([\d \u202f\u00a0]+[,.]\d{2})/i;
  function captureQuoteDate(dayMonth,captureDate){
   const m=String(dayMonth||'').match(/^(\d{2})\/(\d{2})$/);
