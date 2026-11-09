@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "node scripts/build-trace-vercel.mjs",
+  "outputDirectory": "trace-vercel-output",
   "git": {
     "deploymentEnabled": {
       "trace-5.37.0-international-accounts-fx": false
