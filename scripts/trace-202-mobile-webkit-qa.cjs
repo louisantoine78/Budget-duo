@@ -98,6 +98,7 @@ const server=http.createServer((req,res)=>{
     const portfolioLedger=a=>a.id==='pea'?{value:0,cad:null,hasFx:false,configured:false,reviewRequired:false}:
      a.id==='celi2'?{value:0,cad:null,hasFx:false,configured:false,reviewRequired:true}:
       {value:5000,cad:5000,hasFx:true,configured:true,reviewRequired:false};
+    const trace202PortfolioForNet=a=>({...portfolioLedger(a),netReady:a.id==='celi1'});
     const insightWealthData=()=>({});
     const updateSegments=()=>{};
     const windowOriginal=window;
@@ -126,7 +127,7 @@ const server=http.createServer((req,res)=>{
     <h1 id="fixtureTitle">Investissements CSP</h1><div id="fixtureBody"></div>
     <script src="/__trace202_csp_host.js"></script>
     <script src="/trace-wealth-201-engine.js"></script>
-    <script src="/trace-wealth-201.js?v=2.0.2.1"></script>
+    <script src="/trace-wealth-201.js?v=2.0.2.2"></script>
     </body></html>`;
    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(html);return;
   }
