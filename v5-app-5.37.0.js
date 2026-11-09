@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.6';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.7';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -1737,9 +1737,11 @@ function openTraceAddMenu(){
   openSheet('Importer',
    '<div class="trace-add-choice-list" role="group" aria-label="Choisir le type de document">'+
    '<button type="button" class="trace-add-choice" id="traceAddDaily"><span class="trace-add-choice-symbol" aria-hidden="true">▤</span><strong>Opérations quotidiennes</strong><small>Captures et suivi par compte</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button>'+
-   '<button type="button" class="trace-add-choice" id="traceAddMonthly"><span class="trace-add-choice-symbol" aria-hidden="true">≡</span><strong>Relevé mensuel</strong><small>CSV ou PDF · validation manuelle</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button></div>');
+   '<button type="button" class="trace-add-choice" id="traceAddMonthly"><span class="trace-add-choice-symbol" aria-hidden="true">≡</span><strong>Relevé mensuel</strong><small>CSV ou PDF · validation manuelle</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button>'+
+   '<button type="button" class="trace-add-choice" id="traceAddPortfolioCapture"><span class="trace-add-choice-symbol" aria-hidden="true">▧</span><strong>Capture de portefeuille</strong><small>Positions, cours et espèces · vérification avant sauvegarde</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button></div>');
   $('#traceAddDaily').onclick=()=>openTraceImportWorkspace('daily');
   $('#traceAddMonthly').onclick=()=>openTraceImportWorkspace('monthly');
+  $('#traceAddPortfolioCapture').onclick=()=>{try{window.TracePortfolioCapture?.open();}catch(error){console.error('Import portefeuille indisponible',error);openSheet('Capture indisponible','<p class="empty-note">Recharge TRACE puis réessaie. Aucune donnée modifiée.</p>');}};
  };
 }
 function traceImportAccountChoices(){
