@@ -411,7 +411,7 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  assert.ok(app.includes("window.__TRACE_BUILD__='5.37.8';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
  assert.ok(html.includes('<meta name="trace-build" content="5.37.8">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
-  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.1':asset==='trace-wealth-201.css'?'2.0.2.4':'2.0.2')),'Missing cache-bust: '+asset);
+  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.2':asset==='trace-wealth-201.css'?'2.0.2.4':'2.0.2')),'Missing cache-bust: '+asset);
  }
  assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.8'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
