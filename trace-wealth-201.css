@@ -252,3 +252,145 @@
 @media(prefers-reduced-motion:reduce){
  .page[data-page="wealth"] .trace203-wealth-nav button{transition:none}
 }
+
+
+/* TRACE 2.0.2 · build 5.37.6 — Patrimoine editorial refinement.
+   Scoped exclusively to Patrimoine; finance, persistence and global navigation unchanged. */
+.page[data-page="wealth"] .trace-wealth-net-card{
+ min-height:0;padding:17px 18px 16px;border-radius:19px;
+ background:linear-gradient(150deg,#f1f8f2 0%,#f9fbf7 100%);
+}
+.page[data-page="wealth"] .trace-wealth-net-card::before{display:none}
+.page[data-page="wealth"] .trace204-net-heading{
+ display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.page[data-page="wealth"] .trace204-net-heading .label{
+ color:#547663;font-size:12px;font-weight:760;line-height:1.3;
+}
+.page[data-page="wealth"] .trace204-net-state{
+ flex:none;max-width:48%;padding:5px 9px;
+ border-radius:999px;background:#e2eee4;color:#35734f;
+ font-size:10px;font-weight:780;line-height:1.25;text-align:center;
+}
+.page[data-page="wealth"] .trace-wealth-net-card .big{
+ margin:11px 0 4px;font-size:clamp(30px,8vw,39px);
+ line-height:1.1;letter-spacing:-.045em;
+ font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-net-card .sub{
+ color:#536f5d;font-size:12px;line-height:1.45;
+}
+.page[data-page="wealth"] .trace204-net-footer{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:8px 14px;flex-wrap:wrap;margin-top:13px;
+ padding-top:11px;border-top:1px solid #dce9de;
+}
+.page[data-page="wealth"] .trace204-net-footer .trace-wealth-note{
+ flex:1 1 135px;min-width:0;margin:0;padding:0;
+ font-size:10px;line-height:1.5;color:#758b7b;
+}
+.page[data-page="wealth"] #wealthReviewAction{
+ flex:0 1 auto;min-height:37px;padding:7px 10px;
+ background:#e1f0e5;border:1px solid #cce3d1;border-radius:10px;
+ font-size:11px;font-weight:780;line-height:1.3;color:#235c40;
+ text-align:left;cursor:pointer;
+}
+.page[data-page="wealth"] #wealthReviewAction[hidden]{display:none!important}
+.page[data-page="wealth"] #wealthReviewAction:focus-visible{
+ outline:2px solid #2c7955;outline-offset:2px;
+}
+.page[data-page="wealth"] .trace203-wealth-nav{
+ gap:7px;margin-bottom:15px;
+}
+.page[data-page="wealth"] .trace203-wealth-nav button{
+ min-height:58px;padding:9px 11px;border-radius:13px;
+ box-shadow:none;background:#fffdfa;
+}
+.page[data-page="wealth"] .trace203-wealth-nav button span{
+ font-size:11px;color:#688071;line-height:1.2;
+}
+.page[data-page="wealth"] .trace203-wealth-nav button strong{
+ font-size:12px;letter-spacing:-.01em;line-height:1.2;
+}
+.page[data-page="wealth"] .trace-wealth-section-head{
+ margin:22px 1px 11px;gap:9px;
+}
+.page[data-page="wealth"] .trace-wealth-section-head h2{
+ font-size:19px;letter-spacing:-.035em;
+}
+.page[data-page="wealth"] #trace201Entry{
+ min-height:37px;padding:7px 11px;background:#e9f2eb;
+ border-color:#d9e8de;border-radius:10px;white-space:nowrap;
+}
+.page[data-page="wealth"] #trace201WealthSummary.trace201-wealth-summary{
+ margin:0 0 10px;
+}
+.page[data-page="wealth"] .trace204-invest-overview{
+ display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;
+ min-height:28px;color:#617e6b;font-size:11px;line-height:1.4;
+}
+.page[data-page="wealth"] .trace204-invest-info{
+ flex:1 1 auto;font-variant-numeric:tabular-nums;
+}
+.page[data-page="wealth"] .trace204-invest-state{
+ flex:none;padding:4px 8px;border-radius:999px;
+ color:#487457;background:#eef5eb;font-size:10px;font-weight:750;
+}
+.page[data-page="wealth"] .trace204-invest-valuation{
+ flex:1 1 100%;font-size:11px;color:#688473;
+}
+.page[data-page="wealth"] .trace204-invest-valuation b{
+ color:#255b41;font-variant-numeric:tabular-nums;
+}
+.page[data-page="wealth"] .trace-wealth-grid{
+ gap:8px;grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card{
+ display:grid;grid-template-columns:34px minmax(0,1fr) auto;
+ grid-template-areas:"icon name value" "icon note note";
+ column-gap:10px;row-gap:5px;align-items:center;
+ min-width:0;min-height:75px;padding:12px;
+ border-radius:15px;box-shadow:none;text-align:left;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card .a-icon{
+ grid-area:icon;margin:0;width:34px;height:34px;
+ border-radius:10px;font-size:17px;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>span:not(.a-icon){
+ grid-area:name;min-width:0;color:#29553e;
+ font-size:13px;font-weight:780;line-height:1.35;overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>b{
+ grid-area:value;margin:0;max-width:140px;
+ color:#245940;font-size:12px;line-height:1.3;
+ text-align:right;font-weight:790;overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card>small{
+ grid-area:note;margin:0;min-width:0;
+ color:#789080;font-size:10px;line-height:1.4;
+ overflow-wrap:anywhere;
+}
+.page[data-page="wealth"] .trace-wealth-grid .asset-card-add{
+ background:#f8faf5;border-style:dashed;
+}
+.page[data-page="wealth"] .trace-wealth-empty{
+ padding:13px 14px;min-height:55px;font-size:11px;line-height:1.5;
+ border-radius:13px;
+}
+.page[data-page="wealth"] #traceWealthSavings,
+.page[data-page="wealth"] #traceWealthCash{margin-top:21px}
+.page[data-page="wealth"] .trace203-wealth-analysis-head{margin-top:23px}
+@media(max-width:760px){
+ .page[data-page="wealth"] .trace-wealth-grid{grid-template-columns:minmax(0,1fr)}
+ .page[data-page="wealth"] .trace-wealth-net-card{padding:17px 16px 15px}
+}
+@media(max-width:370px){
+ .page[data-page="wealth"] .trace203-wealth-nav button{padding:9px 7px;min-height:58px}
+ .page[data-page="wealth"] .trace203-wealth-nav button strong{font-size:11px}
+ .page[data-page="wealth"] .trace-wealth-grid .asset-card{
+  grid-template-columns:32px minmax(0,1fr) auto;gap:5px 8px;padding:11px 9px;
+ }
+ .page[data-page="wealth"] .trace-wealth-grid .asset-card>b{max-width:100px}
+ .page[data-page="wealth"] .trace204-net-footer{align-items:stretch}
+ .page[data-page="wealth"] #wealthReviewAction{width:100%;text-align:center}
+}
