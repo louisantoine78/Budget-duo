@@ -79,3 +79,42 @@ test('capture import is additive, explicitly approved, owner scoped and uses the
  assert.ok(index.includes("'wasm-unsafe-eval'"));
  assert.ok(index.includes('v5-app-5.37.0.js?v=5.37.8'));
 });
+
+test('known truncated ETF is attached to existing position instead of silently skipped',()=>{
+ const capture=fs.readFileSync(path.join(root,'trace-portfolio-capture-1.0.0.js'),'utf8');
+ const first=capture.indexOf(' function matches(p,name){');
+ const last=capture.indexOf(' function render(){',first);
+ assert.ok(first>=0&&last>first);
+ const esc=x=>String(x);
+ const field=(label,id,value)=>'['+id+'='+value+']';
+ const fn=new Function('P','esc','field','money','captureDate','today',
+  capture.slice(first,last)+'\nreturn {matches,rowHtml};');
+ const {matches,rowHtml}=fn(P,esc,field,()=>'', '2026-11-08',()=> '2026-11-08');
+ const p={currency:'EUR',status:'draft',operations:[],positions:[
+  {id:'e600',name:'BNP PARIBAS EASY STOXX EUROPE 600 UCITS ETF'},
+  {id:'tui',name:'TUI AG'},
+  {id:'saf',name:'SAF-HOLLAND'}
+ ]};
+ const row=P.parse(screenshot,'2026-11-08').rows[3];
+ assert.equal(row.truncated,true);
+ assert.equal(matches(p,row.name),'e600');
+ const html=rowHtml(row,3,p);
+ assert.match(html,/wcapName3=BNP PARIBAS EASY STOXX EUROPE 600 UCITS ETF/);
+ assert.match(html,/Titre tronqué retrouvé/);
+ assert.match(html,/value="id:e600" selected/);
+ assert.doesNotMatch(html,/value="skip" selected/);
+ assert.equal(matches(p,'TUI AG'),'tui');
+});
+test('screenshot reimports flag omissions, require explicit approval and forbid known-name duplicates',()=>{
+ const capture=fs.readFileSync(path.join(root,'trace-portfolio-capture-1.0.0.js'),'utf8');
+ assert.ok(capture.includes('Titres non visibles sur cette capture'));
+ assert.ok(capture.includes('absent.slice(0,6).map(s=>esc(s.name))'));
+ assert.ok(capture.includes('id="wcapOmissionsAck"'));
+ assert.ok(capture.includes("node('wcapOmissionsAck')?.checked!==true"));
+ assert.ok(capture.includes("proposal.summary.partial||ignored.length"));
+ assert.ok(capture.includes("if(action==='new'&&matches(p,name))"));
+ assert.ok(capture.includes('reviews.filter(x=>x.status===\'non modifié\').length'));
+ assert.ok(capture.includes('next.positions.length'));
+ assert.ok(capture.includes('host().save(a.id,next)'));
+ assert.ok(!capture.includes('deleteDocument('));
+});
