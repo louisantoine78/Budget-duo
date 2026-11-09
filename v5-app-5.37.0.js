@@ -26,6 +26,25 @@ const traceUnsavedWriteKeys=new Set();
 // Candidate-only secondary tracker: never authorizes updates or modifies RPC
 // responses. Direct profile/household/auth mutations do not use the CAS queue.
 const trace20AuxPending=new Map(),trace20AuxFailures=new Set();
+// Select exactly one investment ledger for each account before adding any
+// CAD value to Patrimoine. The new module never replaces linked savings or
+// historical portfolios, and capture text itself cannot generate a balance.
+function trace202PortfolioForNet(a){
+ const legacy=portfolioLedger(a);
+ if(a.savingsTracking==='linked')return{...legacy,
+  netReady:legacy.configured===true&&legacy.reviewRequired!==true&&legacy.hasFx===true};
+ const legacyExists=state.investmentOperations.some(o=>o.accountId===a.id);
+ const bridge=window.TraceWealth201?.netWorthBridge?.(a,legacyExists);
+ if(!bridge||bridge.mode==='legacy')return{...legacy,
+  netReady:legacyExists&&legacy.hasFx===true&&legacy.reviewRequired!==true};
+ if(!bridge.ready)return{...legacy,cad:null,value:null,securities:null,
+  netReady:false,detailedNet:false,fxStatus:bridge.reason,
+  reviewRequired:legacy.reviewRequired===true||bridge.mode==='conflict'};
+ return{...legacy,netReady:true,detailedNet:true,
+  value:bridge.nativeCents/100,cad:bridge.cadCents/100,
+  hasFx:true,fx:Number(bridge.fx),fxDate:bridge.fxDate,
+  fxSource:bridge.fxSource,reviewRequired:false};
+}
 function trace20TrackAux(label,operation){
  if(!/^[a-z][a-z0-9:-]{2,70}$/.test(String(label))||typeof operation!=='function')
   return Promise.reject(Error('TRACE_AUX_TRACKER_INVALID_OPERATION'));
@@ -5853,25 +5872,6 @@ function openInvestmentOperation(account,original=null){
    catch(e){$('#confirmInvDelete').disabled=false;traceNotice(e);}
   };
  };
-}
-// Select exactly one investment ledger for each account before adding any
-// CAD value to Patrimoine. The new module never replaces linked savings or
-// historical portfolios, and capture text itself cannot generate a balance.
-function trace202PortfolioForNet(a){
- const legacy=portfolioLedger(a);
- if(a.savingsTracking==='linked')return{...legacy,
-  netReady:legacy.configured===true&&legacy.reviewRequired!==true&&legacy.hasFx===true};
- const legacyExists=state.investmentOperations.some(o=>o.accountId===a.id);
- const bridge=window.TraceWealth201?.netWorthBridge?.(a,legacyExists);
- if(!bridge||bridge.mode==='legacy')return{...legacy,
-  netReady:legacyExists&&legacy.hasFx===true&&legacy.reviewRequired!==true};
- if(!bridge.ready)return{...legacy,cad:null,value:null,securities:null,
-  netReady:false,detailedNet:false,fxStatus:bridge.reason,
-  reviewRequired:legacy.reviewRequired===true||bridge.mode==='conflict'};
- return{...legacy,netReady:true,detailedNet:true,
-  value:bridge.nativeCents/100,cad:bridge.cadCents/100,
-  hasFx:true,fx:Number(bridge.fx),fxDate:bridge.fxDate,
-  fxSource:bridge.fxSource,reviewRequired:false};
 }
 function openPortfolioAnalysis(){
  const owners=wealthScope==='couple'?['la','partner']:[me];
