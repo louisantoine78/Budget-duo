@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.5';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.6';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -5878,13 +5878,28 @@ function renderWealth(){
     accountType(x.a)==='card'&&Number(x.native)>0),
   bankCAD=bankValues.reduce((n,x)=>n+(x.cad??0),0),
   total=bankCAD+investments,complete=!bankMissing.length&&!missing.length;
- $('#wealthTotal').textContent=complete&&!bk.needsCardReview?money(total):'Total incomplet';
- $('#wealthSub').textContent=bk.needsCardReview?'La carte présente un avoir non vérifié : vérifie ton relevé.':
-  !complete?'Total incomplet · '+(missing.length+bankMissing.length)+' compte(s) sans solde ou taux fiable':
-  'Comptes bancaires et placements suivis · conversion indicative CAD';
+ const netComplete=complete&&!bk.needsCardReview;
+ const netUnverified=missing.length+bankMissing.length;
+ $('#wealthTotal').textContent=netComplete?money(total):'—';
+ const netState=$('#wealthNetState');
+ if(netState)netState.textContent=netComplete?'Estimation CAD':'À vérifier';
+ $('#wealthSub').textContent=netComplete?'Comptes et placements suivis · contre-valeur CAD':
+  netUnverified+' compte'+(netUnverified===1?'':'s')+' à vérifier avant de calculer le total.';
+ const netNote=document.querySelector('.page[data-page="wealth"] .trace-wealth-note');
+ if(netNote)netNote.textContent=netComplete?
+  'Valorisation indicative : certains placements ne sont pas immédiatement disponibles.':
+  'Aucun montant manquant n’est estimé.';
  const savings=ports.filter(({a})=>a.savingsTracking==='linked'||
   ['CELI','Épargne','Livret','Savings'].includes(a.type));
  const placements=ports.filter(({a})=>!savings.some(({a:shown})=>shown.id===a.id));
+ const reviewAction=$('#wealthReviewAction');
+ if(reviewAction){
+  reviewAction.hidden=netComplete;
+  const pending=missing[0]?.a;
+  reviewAction.dataset.wealthJump=pending?
+   (savings.some(({a})=>a.id===pending.id)?'traceWealthSavings':'traceWealthInvestments'):
+   'traceWealthCash';
+ }
  const tile=({a,p})=>{
   const isSavings=a.savingsTracking==='linked'||
    ['CELI','Épargne','Livret','Savings'].includes(a.type);
@@ -5926,24 +5941,19 @@ function renderWealth(){
   }catch(err){console.warn('Synthèse du suivi des investissements indisponible :',err.message);}
   const portfolios=overview?.portfolios??placements.length;
   const positions=overview?.positions??0,verified=overview?.verified??0;
-  const complete=valuation?.complete===true&&valuation.totalCadCents!==null;
-  const value=complete?money(valuation.totalCadCents/100):'À compléter';
-  const note=positions?
-   'Les valorisations restent indicatives tant que les relevés et les cours ne sont pas vérifiés.':
-   'Renseigne tes positions et tes espèces pour activer les analyses.';
-  // Compact read-only summary; the section heading and each account card are
-  // the two distinct entry points. No duplicate full-width action.
+  const trackingReady=valuation?.complete===true&&valuation.totalCadCents!==null;
+  const count=portfolios+' portefeuille'+(portfolios===1?'':'s')+' · '+
+   positions+' position'+(positions===1?'':'s')+
+   (positions?' · '+verified+' rapproché'+(verified===1?'':'s'):'');
+  const stateLabel=trackingReady?'Rapproché':positions?'À vérifier':'À initialiser';
+  // Deliberately a quiet metadata row, not a second large financial card.
+  // Financial valuations remain read-only and are shown only when fully verified.
   investmentSummaryNode.innerHTML=
-   '<div class="trace202-wealth-panel trace203-wealth-compact" role="region" aria-label="Synthèse des investissements">'+
-    '<div class="trace203-invest-line"><strong>Suivi des titres</strong><span>'+
-     (complete?'Rapproché':'À compléter')+'</span></div>'+
-    '<div class="trace203-invest-stats">'+
-     '<span><b>'+portfolios+'</b> portefeuille'+(portfolios===1?'':'s')+'</span>'+
-     '<span><b>'+positions+'</b> position'+(positions===1?'':'s')+'</span>'+
-     '<span><b>'+verified+'</b> rapproché'+(verified===1?'':'s')+'</span>'+
-    '</div>'+
-    '<p>'+note+'</p>'+
-    '<div class="trace203-invest-value"><span>Valeur du suivi · CAD</span><b>'+value+'</b></div>'+
+   '<div class="trace204-invest-overview" role="status">'+
+    '<span class="trace204-invest-info">'+count+'</span>'+
+    '<span class="trace204-invest-state">'+stateLabel+'</span>'+
+    (trackingReady?'<span class="trace204-invest-valuation">Valeur vérifiée · CAD <b>'+
+      money(valuation.totalCadCents/100)+'</b></span>':'')+
    '</div>';
  }
  $('#assetGrid').innerHTML=[
