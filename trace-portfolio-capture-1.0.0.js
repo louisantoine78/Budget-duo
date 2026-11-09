@@ -44,7 +44,8 @@
   return near.length===1?near[0].id:'';
  }
  function rowHtml(r,i,p){
-  const matched=matches(p,r.name),restricted=p.operations.length>0||p.status==='verified';
+  const matched=matches(p,r.name),resolved=p.positions.find(x=>x.id===matched);
+  const restricted=p.operations.length>0||p.status==='verified';
   const chosen=matched?'id:'+matched:r.truncated||!r.consistent||restricted?'skip':'new';
   const options='<option value="skip" '+(chosen==='skip'?'selected':'')+'>Ne pas modifier</option>'+
    (!restricted?'<option value="new" '+(chosen==='new'?'selected':'')+'>Nouvelle position initiale</option>':'')+
@@ -53,7 +54,9 @@
   return '<div class="wcap-row" data-capture-row="'+i+'">'+
    '<div class="wcap-row-head"><strong>Ligne '+(i+1)+'</strong><small>'+
     (r.consistent?'Calcul cohérent':'Valeur à contrôler')+(r.truncated?' · Titre tronqué':'')+'</small></div>'+
-   field('Titre','wcapName'+i,r.name,'text','maxlength="100"')+
+   field('Titre','wcapName'+i,resolved&&r.truncated?resolved.name:r.name,'text','maxlength="100"')+
+   (r.truncated&&resolved?'<p class="wcap-muted">Titre tronqué retrouvé dans ton portefeuille : '+esc(resolved.name)+'</p>':
+    r.truncated?'<p class="wcap-warning">Nom incomplet : complète-le et sélectionne Nouvelle position pour l’ajouter.</p>':'')+
    '<div class="wcap-pair">'+field('Quantité','wcapQuantity'+i,r.quantity,'text','inputmode="decimal"')+
    field('Cours ('+esc(p.currency)+')','wcapPrice'+i,r.price,'text','inputmode="decimal"')+'</div>'+
    '<div class="wcap-pair">'+field('PRU indicatif','wcapPru'+i,r.pru,'text','inputmode="decimal"')+
@@ -87,7 +90,8 @@
    (notice?'<p id="wcapNotice" class="wcap-alert" role="status">'+esc(notice)+'</p>':
     '<p id="wcapNotice" role="status" class="wcap-muted"></p>')+
    (proposal&&p?'<div class="wcap-review"><h3>Vérifier les informations lues</h3>'+
-    '<p class="wcap-warning">Une capture peut ne montrer qu’une partie des titres. Les lignes absentes ne seront jamais supprimées et aucune transaction ne sera inventée.</p>'+
+    '<p class="wcap-warning">Capture analysée : '+proposal.rows.length+' ligne(s) détectée(s) · '+p.positions.length+
+     ' position(s) déjà suivie(s). Vérifie les lignes ignorées ou absentes : aucune ne sera supprimée automatiquement.</p>'+
     '<div class="wcap-pair">'+field('Valeur totale du courtier ('+p.currency+')','wcapTotal',cashText(sum.totalCents),'text','inputmode="decimal"')+
     field('Titres ('+p.currency+')','wcapSecurities',cashText(sum.securitiesCents),'text','inputmode="decimal"')+'</div>'+
     field('Espèces ('+p.currency+')','wcapCash',cashText(sum.cashCents),'text','inputmode="decimal"')+
@@ -98,6 +102,7 @@
     '<div class="wcap-rows">'+proposal.rows.map((r,i)=>rowHtml(r,i,p)).join('')+'</div>'+
     '<button type="button" class="w201-btn" id="wcapAddRow">Ajouter une ligne manuellement</button>'+
     '<label class="wcap-approve"><input type="checkbox" id="wcapApprove"> J’ai comparé les valeurs et les quantités avec la capture ; je confirme le compte et la date.</label>'+
+    '<label class="wcap-approve"><input type="checkbox" id="wcapOmissionsAck"> Si la capture est partielle ou si une ligne est ignorée, je confirme que les titres absents restent à vérifier et ne doivent pas être supprimés.</label>'+
     '<button type="button" class="w201-btn primary wcap-save" id="wcapSave" '+(busy?'disabled':'')+'>Enregistrer les données vérifiées</button>'+
     '<p class="wcap-muted">Les informations extraites restent un brouillon de suivi jusqu’au rapprochement avec le relevé courtier. Le budget et les soldes bancaires ne changent pas.</p>'+
    '</div>':'')+
@@ -194,10 +199,13 @@
    taken.add(id);
    if(action.startsWith('id:')&&!p.positions.some(s=>s.id===id))
     throw Error('La position cible a changé : recommence l’import.');
-   if(action==='new'&&p.positions.some(s=>P.normalized(s.name)===P.normalized(name)))
-    throw Error('Un titre existe déjà avec ce nom : associe-le au lieu de le dupliquer.');
+   if(action==='new'&&matches(p,name))
+    throw Error('Un titre semblable existe déjà : associe la ligne au titre présent, sans créer de doublon.');
    return{name,action,quantityMicro:qty,priceUnits:price,costBasisCents:cost,quoteDate};
   });
+  const ignored=rows.filter(x=>x.action==='skip'&&x.name);
+  if((proposal.summary.partial||ignored.length)&&node('wcapOmissionsAck')?.checked!==true)
+   throw Error('Capture partielle ou '+ignored.length+' ligne(s) ignorée(s) : confirme explicitement les omissions avant de sauvegarder.');
   if(!rows.some(x=>x.action!=='skip')&&summary.totalCents===null&&summary.cashCents===null)
    throw Error('Aucune donnée vérifiée à enregistrer.');
   return{a,p,date,summary,rows,restricted};
@@ -261,7 +269,9 @@
     '<div class="wcap"><h3>Import contrôlé enregistré</h3>'+
     '<p>Portefeuille : <strong>'+esc(a.name)+'</strong></p>'+
     '<p>Référence courtier : <strong>'+money(summary.totalCents,a.currency)+'</strong></p>'+
-    '<p>'+applied.length+' information(s) rapprochée(s). Les lignes absentes restent inchangées et aucune transaction fictive n’a été créée.</p>'+
+    '<p>'+next.positions.length+' position(s) suivie(s) au total · '+
+     reviews.filter(x=>x.status==='non modifié').length+' ligne(s) ignorée(s) sur cette capture.</p>'+
+    '<p>'+applied.length+' information(s) appliquée(s). Les lignes absentes restent inchangées et aucune transaction fictive n’a été créée.</p>'+
     '<p class="wcap-warning">Le suivi reste à rapprocher : cette capture ne valide pas automatiquement le patrimoine net.</p>'+
     '<button type="button" class="w201-btn primary" id="wcapOpenAccount">Voir le suivi du portefeuille</button></div>');
    const openAccount=node('wcapOpenAccount');if(openAccount)openAccount.onclick=()=>root.TraceWealth201.open(a.id);
