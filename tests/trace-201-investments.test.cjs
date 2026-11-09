@@ -350,10 +350,10 @@ test('multicurrency UI preserves account-only gains and does not create a global
  const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
  const legacy=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  assert.match(js,/portfolioOverview\(\)/);
- assert.match(js,/E\.cadValue\(v\.valueCents,a\.currency,q,asOf\)/);
+ assert.match(js,/E\.cadValue\(value,p\.currency,p\.currency==='CAD'\?null/);
  assert.match(js,/Une performance commune en %/);
  assert.match(js,/Aucune position fictive n’est importée/);
- assert.match(js,/if\(isLegacy\(a\)\)/);
+ assert.match(js,/const legacy=isLegacy\(a\)/);
  assert.match(css,/\.w201-overview/);
  assert.doesNotMatch(js,/localStorage|sessionStorage|createClient\(|window\.fetch\(/);
  const oldNet=legacy.slice(legacy.indexOf('function renderWealth('),legacy.indexOf('function renderAll('));
