@@ -111,7 +111,7 @@
     const p=load(account),evaluation=E.evaluate(p);
     positions+=evaluation.positions.length;
     if(p.positions.length||p.operations.length)initialized++;
-    if(p.status==='verified'&&productionSummary(p).ready)verified++;
+    if(netWorthBridge(account,false).ready)verified++;
    }catch{invalid++;}
   }
   return Object.freeze({portfolios:data.length,positions,initialized,verified,legacy,invalid,
@@ -125,25 +125,22 @@
    const record={id:a.id,name:a.name||a.type||'Placement',type:a.type,
     currency:a.currency||'CAD',owner:a.owner,status:'À initialiser',
     nativeCents:null,cadCents:null,fx:null,performance:null,verified:false};
-   if(isLegacy(a)){record.status='Historique protégé';records.push(record);continue;}
-   try{
-    const p=load(a),v=E.evaluate(p);
-    const pending=p.positions.length||p.operations.length;
-    record.status=pending?'À rapprocher':'À initialiser';
-    const ready=productionSummary(p).ready;
-    record.verified=ready;
-    if(ready){
-     record.nativeCents=v.valueCents;
-     const q=a.currency==='CAD'?null:{cadPerUnit:a.fxCadPerUnit,
-      date:a.fxRateDate,source:a.fxRateProvider};
-     const converted=E.cadValue(v.valueCents,a.currency,q,asOf);
-     record.fx=converted;
-     record.cadCents=converted.ready?converted.valueCents:null;
-     record.status=converted.ready?'Rapproché':'Taux à vérifier';
-     const measured=E.periodPerformance(p,'all');
+   const legacy=isLegacy(a),bridge=netWorthBridge(a,legacy,asOf);
+   if(bridge.mode==='legacy'){
+    record.status='Historique protégé';
+   }else if(bridge.mode==='conflict'){
+    record.status='Journaux à rapprocher';
+   }else if(bridge.ready){
+    record.nativeCents=bridge.nativeCents;
+    record.cadCents=bridge.cadCents;
+    record.fx={ready:true,rate:bridge.fx,date:bridge.fxDate,source:bridge.fxSource};
+    record.verified=true;record.status='Rapproché';
+    try{
+     const p=load(a),measured=E.periodPerformance(p,'all');
      if(measured&&Number.isFinite(measured.percent))record.performance=measured;
-    }
-   }catch{record.status='Données à vérifier';}
+    }catch{}
+   }else record.status=/taux|conversion/i.test(bridge.reason)?'Taux à vérifier':
+    a.investments201?.positions?.length?'À rapprocher':'À initialiser';
    records.push(record);
   }
   const verified=records.filter(x=>x.verified).length;
@@ -197,7 +194,7 @@
     '<span>'+overview.verified+'/'+data.length+' portefeuille(s) rapproché(s) · '+
       overview.missing+' sans valorisation CAD vérifiée</span>'+
     '<p>Conversion indicative des portefeuilles, avec taux datés et sourcés. '+
-    'Aucun montant n’est ajouté au patrimoine net existant.</p></section>';
+    'Seuls les comptes détaillés complètement rapprochés contribuent au patrimoine net.</p></section>';
   }
   html+=!data.length?
    '<div class="w201-empty">Aucun portefeuille de titres dans cet espace. Ajoute un PEA, un compte-titres ou un REER depuis Patrimoine pour commencer.</div>':
