@@ -5943,7 +5943,7 @@ function renderWealth(){
    pendingDetails?'À rapprocher':nativeMoney(p.value,a.currency);
   const shownDetail=needsSetup?'Renseigner les positions et les espèces ›':
    captured?(explicitTotal===null?'Titres + espèces de la capture':'Valeur lue sur la capture')+
-    ' · '+(referenceCad?'≈ '+referenceCad+' CAD · ':'')+'non rapprochée':
+    ' · '+(referenceCad?'≈ '+referenceCad+' CAD · taux du '+esc(p.fxDate||'non daté')+' · ':'')+'non rapprochée':
    detailedVerified!==null?'Suivi rapproché · intégration au patrimoine net à confirmer':
    pendingDetails?'Positions suivies · valeur non rapprochée':
    p.hasFx?(isSavings?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+
@@ -5982,7 +5982,7 @@ function renderWealth(){
   const trackingReady=valuation?.complete===true&&valuation.totalCadCents!==null;
   const count=portfolios+' portefeuille'+(portfolios===1?'':'s')+' · '+
    positions+' position'+(positions===1?'':'s')+
-   (positions?' · '+verified+'/'+portfolios+' portefeuille'+(portfolios===1?'':'s')+' rapproché'+(verified===1?'':'s'):'');
+   (positions?' · '+verified+'/'+portfolios+' portefeuille'+(portfolios===1?'':'s')+' rapproché'+(portfolios===1?'':'s'):'');
   const stateLabel=trackingReady?'Rapproché':positions?'À vérifier':'À initialiser';
   // Deliberately a quiet metadata row, not a second large financial card.
   // Financial valuations remain read-only and are shown only when fully verified.
