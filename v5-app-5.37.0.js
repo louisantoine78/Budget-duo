@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.6';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.7';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -1737,9 +1737,11 @@ function openTraceAddMenu(){
   openSheet('Importer',
    '<div class="trace-add-choice-list" role="group" aria-label="Choisir le type de document">'+
    '<button type="button" class="trace-add-choice" id="traceAddDaily"><span class="trace-add-choice-symbol" aria-hidden="true">▤</span><strong>Opérations quotidiennes</strong><small>Captures et suivi par compte</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button>'+
-   '<button type="button" class="trace-add-choice" id="traceAddMonthly"><span class="trace-add-choice-symbol" aria-hidden="true">≡</span><strong>Relevé mensuel</strong><small>CSV ou PDF · validation manuelle</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button></div>');
+   '<button type="button" class="trace-add-choice" id="traceAddMonthly"><span class="trace-add-choice-symbol" aria-hidden="true">≡</span><strong>Relevé mensuel</strong><small>CSV ou PDF · validation manuelle</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button>'+
+   '<button type="button" class="trace-add-choice" id="traceAddPortfolioCapture"><span class="trace-add-choice-symbol" aria-hidden="true">▧</span><strong>Capture de portefeuille</strong><small>Positions, cours et espèces · vérification avant sauvegarde</small><span class="trace-add-choice-chevron" aria-hidden="true">›</span></button></div>');
   $('#traceAddDaily').onclick=()=>openTraceImportWorkspace('daily');
   $('#traceAddMonthly').onclick=()=>openTraceImportWorkspace('monthly');
+  $('#traceAddPortfolioCapture').onclick=()=>{try{window.TracePortfolioCapture?.open();}catch(error){console.error('Import portefeuille indisponible',error);openSheet('Capture indisponible','<p class="empty-note">Recharge TRACE puis réessaie. Aucune donnée modifiée.</p>');}};
  };
 }
 function traceImportAccountChoices(){
@@ -5869,7 +5871,10 @@ function renderWealth(){
  const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
  requestInternationalRates(accounts.map(a=>window.TraceInternational.currency(a)));
  const ports=accounts.map(a=>({a,p:portfolioLedger(a)}));
- const missing=ports.filter(x=>!x.p.hasFx||x.a.savingsTracking==='linked'&&!x.p.configured);
+ // A screenshot is external evidence, not a verified financial ledger.
+ // Keep the net-worth total incomplete while captured positions await reconciliation.
+ const missing=ports.filter(x=>!x.p.hasFx||x.a.savingsTracking==='linked'&&!x.p.configured||
+  x.a.investments201?.brokerCapture&&x.a.investments201?.status!=='verified');
  const investments=ports.reduce((sum,x)=>sum+(x.p.cad||0),0),
   banks=state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&['checking','card'].includes(accountType(a))),
   bankValues=banks.map(a=>{const native=accountEstimate(a),currency=window.TraceInternational.currency(a);
@@ -5905,11 +5910,17 @@ function renderWealth(){
    ['CELI','Épargne','Livret','Savings'].includes(a.type);
   const needsSetup=!isSavings&&!a.investments201&&
    !state.investmentOperations.some(o=>o.accountId===a.id)&&p.value===0;
+  const evidence=!isSavings?a.investments201?.brokerCapture:null;
+  const captured=!p.reviewRequired&&evidence&&evidence.currency===a.currency&&
+   a.investments201?.status!=='verified'&&Number.isSafeInteger(evidence.totalCents)&&
+   evidence.totalCents>=0;
   return '<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
    esc('Consulter '+(a.name||a.type||'Investissement'))+'"><span class="a-icon" aria-hidden="true">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
    (p.reviewRequired?'Mouvement à vérifier':isSavings&&!p.configured?'À configurer':
-    needsSetup?'À initialiser':nativeMoney(p.value,a.currency))+'</b><small>'+
+    needsSetup?'À initialiser':captured?nativeMoney(evidence.totalCents/100,a.currency):
+    nativeMoney(p.value,a.currency))+'</b><small>'+
    (needsSetup?'Renseigner les positions et les espèces ›':
+    captured?'Référence capture du '+esc(evidence.date)+' · à rapprocher':
     p.hasFx?(isSavings?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+
      (p.fxDate?' · taux du '+esc(p.fxDate):''):'Conversion CAD indisponible')+
    '</small></button>';
