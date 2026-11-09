@@ -256,7 +256,7 @@
    busy=true;
    // CAS-protected, owner-scoped existing TRACE save; no bypass or direct Supabase calls.
    await host().save(a.id,next);
-   cleanupImage();busy=false;
+   busy=false;
    host().openSheet('Capture de portefeuille enregistrée',
     '<div class="wcap"><h3>Import contrôlé enregistré</h3>'+
     '<p>Portefeuille : <strong>'+esc(a.name)+'</strong></p>'+
@@ -265,6 +265,8 @@
     '<p class="wcap-warning">Le suivi reste à rapprocher : cette capture ne valide pas automatiquement le patrimoine net.</p>'+
     '<button type="button" class="w201-btn primary" id="wcapOpenAccount">Voir le suivi du portefeuille</button></div>');
    const openAccount=node('wcapOpenAccount');if(openAccount)openAccount.onclick=()=>root.TraceWealth201.open(a.id);
+   // Revoke only after the preview image has been detached from the sheet.
+   cleanupImage();
   }catch(ex){busy=false;
    if(status)status.textContent='Import non enregistré : '+String(ex.message||ex);
    if(button){button.disabled=false;button.textContent='Enregistrer les données vérifiées';}
