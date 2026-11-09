@@ -158,6 +158,7 @@
   if(!imageFile)throw Error('Sélectionne d’abord une capture de portefeuille.');
   const {a,p}=current(),date=node('wcapDate')?.value||captureDate;
   if(!E.dateValid(date)||date>today())throw Error('Date de consultation invalide.');
+  if(proposal?.currency&&proposal.currency!==p.currency)throw Error('La capture contient des cours en '+proposal.currency+' mais le compte est en '+p.currency+'. Aucun taux de change n’est estimé.');
   if(node('wcapApprove')?.checked!==true)throw Error('Confirme la comparaison avec la capture.');
   const readMoney=id=>{
    const val=String(node(id)?.value||'').trim();
@@ -240,7 +241,8 @@
     next={...next,openingCashCents:summary.cashCents,openingCashConfirmed:true};
     applied.push('Espèces confirmées');
    }
-   if(applied.length)next={...next,status:'draft',brokerVerification:undefined};
+   // Preserve previous reconciliation evidence while withholding verified totals until reviewed.
+   if(applied.length)next={...next,status:'draft'};
    const missingPositions=summary.securitiesCents!==null&&
     (proposal.summary.partial||reviews.filter(x=>x.status==='capturé').length<next.positions.length);
    next={...next,brokerCapture:{
