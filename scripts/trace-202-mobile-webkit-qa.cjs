@@ -12,11 +12,43 @@ const allow=new Map([
  ['/trace-premium-system-5.37.0.css','text/css; charset=utf-8'],
  ['/trace-wealth-201.css','text/css; charset=utf-8'],
  ['/trace-wealth-201.js','text/javascript; charset=utf-8'],
- ['/trace-wealth-201-engine.js','text/javascript; charset=utf-8']
+ ['/trace-wealth-201-engine.js','text/javascript; charset=utf-8'],
+ ['/trace-portfolio-capture-parser-1.0.0.js','text/javascript; charset=utf-8'],
+ ['/trace-portfolio-capture-1.0.0.js','text/javascript; charset=utf-8']
 ]);
 const server=http.createServer((req,res)=>{
  try{
   const url=new URL(req.url,'http://127.0.0.1');
+  if(url.pathname==='/__trace204_capture_import.html'){
+   const html=`<!doctype html><html lang="fr"><head>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <link rel="stylesheet" href="/v5-5.31.17.css"><link rel="stylesheet" href="/trace-wealth-201.css">
+    <style>body{margin:0;padding:15px;background:#f7f8f5}#sheetBody{max-width:640px;margin:auto}</style></head>
+    <body><div id="sheetBody"></div>
+    <script src="/trace-wealth-201-engine.js"></script>
+    <script src="/trace-portfolio-capture-parser-1.0.0.js"></script>
+    <script>
+     window.__SAVED_CAPTURE__=null;
+     const account={id:'pea',owner:'la',name:'PEA de test',type:'PEA',currency:'EUR'};
+     window.Trace201Host={
+      context(){return{active:true,viewer:'la',accounts:[account],operations:[]};},
+      openSheet(_title,html){document.querySelector('#sheetBody').innerHTML=html;},
+      async save(id,portfolio){if(id!=='pea')throw Error('Unrelated account');
+       window.TraceWealth201Engine.evaluate(portfolio);account.investments201=portfolio;
+       window.__SAVED_CAPTURE__=portfolio;return true;}
+     };
+     window.TraceWealth201={
+      load(a){return a.investments201||{id:a.id,name:a.name,owner:a.owner,type:a.type,currency:a.currency,
+       openingDate:'2026-11-01',openingCashCents:0,openingCashConfirmed:false,positions:[],catalog:[],
+       operations:[],quotes:{},quoteHistory:{},snapshots:[],status:'draft',schema:1};},
+      open(id){document.body.dataset.opened=id;}
+     };
+    </script>
+    <script src="/trace-portfolio-capture-1.0.0.js"></script>
+    <script>window.TracePortfolioCapture.open();</script>
+    </body></html>`;
+   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(html);return;
+  }
   if(url.pathname==='/__trace203_wealth_layout.html'){
    const source=fs.readFileSync(path.join(root,'index.html'),'utf8');
    const start=source.indexOf('    <section class="page" data-page="wealth">');
@@ -329,6 +361,32 @@ async function run(){
     assert.equal(await page.evaluate(()=>document.body.dataset.opened),'pea');
     await page.locator('#wealthAddCard').tap();
     assert.equal(await page.evaluate(()=>document.body.dataset.opened),'add');
+    // Screenshot capture: offline review with fictional image and account (no OCR CDN).
+    await page.goto(origin+'/__trace204_capture_import.html',{waitUntil:'load'});
+    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9QAAAABJRU5ErkJggg==','base64');
+    await page.locator('#wcapFile').setInputFiles({name:'fictional-pea.png',mimeType:'image/png',buffer:png});
+    await page.locator('#wcapDate').fill('2026-11-08');
+    await page.locator('#wcapText').fill(
+     'PEA\\n3 819,25 €\\nÉvaluation Titres 3 680,96 €\\nEspèces 138,29 €\\n'+
+     'AIR LIQUIDE\\n187,78 EUR 06/11 -1,02 %\\n3 PRU 159,123 563,34 €');
+    await page.locator('#wcapAnalyze').tap();
+    assert.equal(await page.locator('[data-capture-row]').count(),1);
+    assert.equal(await page.locator('#wcapQuantity0').inputValue(),'3');
+    assert.equal(await page.locator('#wcapQuoteDate0').inputValue(),'2026-11-06');
+    await assertLayout(page,label,'capture-import-review');
+    await saveImage(page,label,'capture-import-review');
+    await page.locator('#wcapApprove').check();
+    await page.locator('#wcapSave').tap();
+    await page.waitForFunction(()=>!!window.__SAVED_CAPTURE__);
+    const savedCapture=await page.evaluate(()=>window.__SAVED_CAPTURE__);
+    assert.equal(savedCapture.brokerCapture.totalCents,381925);
+    assert.equal(savedCapture.brokerCapture.securitiesCents,368096);
+    assert.equal(savedCapture.openingCashCents,13829);
+    assert.equal(savedCapture.positions.length,1);
+    assert.equal(savedCapture.positions[0].quantityMicro,3000000);
+    assert.equal(savedCapture.operations.length,0);
+    assert.equal(savedCapture.status,'draft');
+    assert.ok(savedCapture.brokerCapture.partial);
     assert.deepEqual(external,[],label+' attempted external network request');
     assert.deepEqual(errors,[],label+' page error');
     console.log('QA_MOBILE_PASS '+label);
