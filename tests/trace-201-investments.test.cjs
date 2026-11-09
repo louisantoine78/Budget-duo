@@ -532,3 +532,41 @@ test('Patrimoine 2.0.2 premium reorganisation preserves counts, grouping and tru
   assert.ok(!wealth.includes(dangerous),'Read-only overview should not write finance data');
  }
 });
+
+
+test('TRACE 2.0.2 Patrimoine never shows an invented zero for imported broker holdings',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const wealth=app.slice(app.indexOf('function renderWealth('),app.indexOf('function renderAll('));
+ assert.ok(wealth.includes('x.a.investments201?.positions?.length>0'),
+  'detailed unintegrated positions must block the legacy zero from net worth');
+ const start=wealth.indexOf(' const tile=({a,p})=>{');
+ const end=wealth.indexOf('\\n };',start);
+ assert.ok(start>=0&&end>start,'expected an isolated portfolio card renderer');
+ const expression=wealth.slice(start+' const tile='.length,end+3).trim();
+ const state={investmentOperations:[]};
+ const nativeMoney=(n,c)=>c+':'+Number(n).toFixed(2);
+ const money=n=>'CAD:'+Number(n).toFixed(2);
+ const window={TraceWealth201:{productionSummary:()=>({ready:true,value:3819.25})}};
+ const tile=Function('state','window','nativeMoney','money','esc',
+  'return ('+expression+');')(state,window,nativeMoney,money,x=>String(x));
+ const a={id:'pea',name:'PEA TEST',type:'PEA',currency:'EUR',investments201:{
+  status:'draft',positions:[{id:'air'},{id:'cda'},{id:'sp'},{id:'dsy'}],
+  brokerCapture:{date:'2026-11-08',currency:'EUR',
+   securitiesCents:368096,cashCents:13829,totalCents:null,partial:true}
+ }};
+ const ledger={value:0,hasFx:true,fx:1.5732,fxDate:'2026-11-06'};
+ const html=tile({a,p:ledger});
+ assert.match(html,/EUR:3819\\.25/,'sum of read-only broker securities and cash is visible');
+ assert.match(html,/CAD:6008\\./,'EUR/CAD reference is not a fabricated 0');
+ assert.match(html,/Titres \\+ espèces de la capture/);
+ assert.match(html,/non rapprochée/);
+ assert.doesNotMatch(html,/EUR:0\\.00|CAD:0\\.00/);
+ const noCapture={...a,investments201:{...a.investments201,brokerCapture:null}};
+ assert.match(tile({a:noCapture,p:ledger}),/À rapprocher/);
+ assert.doesNotMatch(tile({a:noCapture,p:ledger}),/EUR:0\\.00/);
+ const verified={...a,investments201:{...a.investments201,status:'verified'}};
+ assert.match(tile({a:verified,p:ledger}),/EUR:3819\\.25/);
+ const withoutTracking={...a,investments201:null};
+ assert.match(tile({a:withoutTracking,p:ledger}),/À initialiser/);
+ assert.match(wealth,/portefeuille.*rapproché/);
+});
