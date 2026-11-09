@@ -235,6 +235,11 @@
     'Suivi en préparation · non intégré au patrimoine net')+'</span></div>'+
    (legacy?'<p class="w201-warning">Des mouvements existent déjà dans ce compte. Pour éviter les doublons, utilise le journal historique TRACE ; la reprise avancée reste en lecture seule.</p>':
     '<p class="w201-note">Les comptes bancaires, budgets et autres éléments du Patrimoine ne sont pas modifiés. Les cours manuels ne sont pas des cours en direct.</p>')+
+   (p.brokerCapture?'<section class="wcap-capture-note"><strong>Dernière capture vérifiée manuellement · '+e(p.brokerCapture.date)+'</strong>'+
+    '<span>Référence courtier : '+e(fmt(p.brokerCapture.totalCents,p.currency))+' · Espèces lues : '+
+     e(fmt(p.brokerCapture.cashCents,p.currency))+'</span>'+
+    '<small>Capture'+(p.brokerCapture.partial?' partielle':'')+' : '+(p.brokerCapture.rows?.length||0)+
+     ' ligne(s) conservée(s) · rapprochement encore nécessaire, sans création de transactions.</small></section>':'')+
    '<div class="w201-tabs" role="group" aria-label="Détails des investissements">'+
    [['positions','Positions'],['operations','Opérations'],['analysis','Analyses']].map(([id,name])=>
     '<button type="button" data-w201="tab" data-id="'+id+'" aria-pressed="'+(screen===id)+'">'+name+'</button>').join('')+'</div>';
