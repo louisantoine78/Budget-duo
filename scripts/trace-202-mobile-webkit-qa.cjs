@@ -23,8 +23,8 @@ const server=http.createServer((req,res)=>{
    const html=`<!doctype html><html lang="fr"><head>
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <link rel="stylesheet" href="/v5-5.31.17.css"><link rel="stylesheet" href="/trace-wealth-201.css">
-    <style>body{margin:0;padding:15px;background:#f7f8f5}#sheetBody{max-width:640px;margin:auto}</style></head>
-    <body><div id="sheetBody"></div>
+    <style>body{margin:0;padding:15px;background:#f7f8f5}#lab-stage{max-width:640px;margin:auto}</style></head>
+    <body><div id="lab-stage"><div id="sheetBody"></div></div>
     <script src="/trace-wealth-201-engine.js"></script>
     <script src="/trace-portfolio-capture-parser-1.0.0.js"></script>
     <script>
