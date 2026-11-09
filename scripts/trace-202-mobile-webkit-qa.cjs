@@ -387,7 +387,7 @@ async function run(){
     assert.equal(savedCapture.operations.length,0);
     assert.equal(savedCapture.status,'draft');
     assert.ok(savedCapture.brokerCapture.partial);
-    assert.deepEqual(external,[],label+' attempted external network request');
+    assert.deepEqual(external.filter(url=>!url.startsWith('blob:')),[],label+' attempted external network request');
     assert.deepEqual(errors,[],label+' page error');
     console.log('QA_MOBILE_PASS '+label);
    }finally{await context.close();}
