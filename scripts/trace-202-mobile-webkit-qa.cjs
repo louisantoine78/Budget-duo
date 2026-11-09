@@ -367,8 +367,8 @@ async function run(){
     await page.locator('#wcapFile').setInputFiles({name:'fictional-pea.png',mimeType:'image/png',buffer:png});
     await page.locator('#wcapDate').fill('2026-11-08');
     await page.locator('#wcapText').fill(
-     'PEA\\n3 819,25 €\\nÉvaluation Titres 3 680,96 €\\nEspèces 138,29 €\\n'+
-     'AIR LIQUIDE\\n187,78 EUR 06/11 -1,02 %\\n3 PRU 159,123 563,34 €');
+     'PEA\n3 819,25 €\nÉvaluation Titres 3 680,96 €\nEspèces 138,29 €\n'+
+     'AIR LIQUIDE\n187,78 EUR 06/11 -1,02 %\n3 PRU 159,123 563,34 €');
     await page.locator('#wcapAnalyze').tap();
     assert.equal(await page.locator('[data-capture-row]').count(),1);
     assert.equal(await page.locator('#wcapQuantity0').inputValue(),'3');
