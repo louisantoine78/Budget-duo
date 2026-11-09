@@ -377,6 +377,8 @@ async function run(){
     await assertLayout(page,label,'capture-import-review');
     await saveImage(page,label,'capture-import-review');
     await page.locator('#wcapApprove').check();
+    // A cropped statement is never imported without explicit acknowledgement.
+    await page.locator('#wcapOmissionsAck').check();
     await page.locator('#wcapSave').tap();
     await page.waitForFunction(()=>!!window.__SAVED_CAPTURE__);
     const savedCapture=await page.evaluate(()=>window.__SAVED_CAPTURE__);
