@@ -5871,7 +5871,10 @@ function renderWealth(){
  const sId=scope(wealthScope),owners=sId==='couple'?['la','partner']:[sId],bk=bank(sId),accounts=state.investmentAccounts.filter(a=>owners.includes(a.owner));
  requestInternationalRates(accounts.map(a=>window.TraceInternational.currency(a)));
  const ports=accounts.map(a=>({a,p:portfolioLedger(a)}));
- const missing=ports.filter(x=>!x.p.hasFx||x.a.savingsTracking==='linked'&&!x.p.configured);
+ // A screenshot is external evidence, not a verified financial ledger.
+ // Keep the net-worth total incomplete while captured positions await reconciliation.
+ const missing=ports.filter(x=>!x.p.hasFx||x.a.savingsTracking==='linked'&&!x.p.configured||
+  x.a.investments201?.brokerCapture&&x.a.investments201?.status!=='verified');
  const investments=ports.reduce((sum,x)=>sum+(x.p.cad||0),0),
   banks=state.accounts.filter(a=>owners.includes(a.owner)&&!a.archived&&['checking','card'].includes(accountType(a))),
   bankValues=banks.map(a=>{const native=accountEstimate(a),currency=window.TraceInternational.currency(a);
