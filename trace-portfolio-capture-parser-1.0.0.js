@@ -57,6 +57,7 @@
  }
  function parse(text,captureDate=''){
   const lines=String(text??'').split(/\r?\n/).map(tidy).filter(Boolean).slice(0,400);
+  const currency=lines.some(line=>/\bEUR\b|€/.test(line))?'EUR':null;
   const securitiesCents=valueAfterLabel(lines,/EVALUATION\s+TITRES?/);
   const cashCents=valueAfterLabel(lines,/^ESPECES\b/);
   let totalCents=valueAfterLabel(lines,/^(?:VALEUR|VALORISATION|TOTAL)\b/);
@@ -99,7 +100,7 @@
     totalCents!==cashCents+securitiesCents)
    warnings.push('Le total n’est pas égal aux titres plus espèces : contrôle obligatoire.');
   if(!rows.length)warnings.push('Aucune ligne de titre fiable reconnue. Corrige le texte OCR ou ajoute les lignes manuellement.');
-  return{rows,lines:lines.length,summary:{totalCents,cashCents,securitiesCents,visibleLinesCents:sum,partial},warnings};
+  return{rows,currency,lines:lines.length,summary:{totalCents,cashCents,securitiesCents,visibleLinesCents:sum,partial},warnings};
  }
  return Object.freeze({parse,decimal,moneyCents,captureQuoteDate,normalized,looksLikeName});
 });
