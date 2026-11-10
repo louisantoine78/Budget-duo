@@ -562,6 +562,18 @@ function extractFrenchBankScreenshot(raw,hintDate=''){
  }
  return headings>=2?{candidates,flagged,lines:lines.length,source:'fr-bank-screenshot'}:null;
 }
+// Shared pure hints for both import UIs. Never infer the source-account
+// currency from a foreign purchase inside a CAD Mastercard PDF.
+function sourceAccountHints(raw){
+ const txt=String(raw||'');
+ const cardStatement=/DESJARDINS[\s\S]{0,220}(?:MASTERCARD|ODYSSEE|ODYSS[EÉ]E)|TRANSACTIONS EFFECTU[EÉ]ES AVEC LA CARTE/i.test(txt);
+ const eur=(txt.match(/\d[\d\s\u202f]*[,\.]\d{2}\s*€/g)||[]).length;
+ const cad=(txt.match(/\d[\d\s\u202f]*[,\.]\d{2}\s*\$/g)||[]).length;
+ const currency=cardStatement?'CAD':eur&&!cad?'EUR':cad&&!eur?'CAD':'';
+ const kind=cardStatement||/\bPAIEMENT\s+CAISSE\b/i.test(txt)?'card':
+  /COMPTE DE CH[EÈ]QUES|COMPTE COURANT BNP|COMPTE DE D[EÉ]P[OÔ]T/i.test(txt)?'checking':'';
+ return Object.freeze({currency,kind});
+}
 function extractCandidates(raw,locale='dmy'){
  const txt=String(raw||'');
  const french=extractFrenchBankScreenshot(txt);
@@ -580,5 +592,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.2'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.2'};
 })();
