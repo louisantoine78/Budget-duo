@@ -543,11 +543,17 @@ function desjardinsStatementCheck(raw,candidates,paymentCents){
  };
  const result={};
  for(const [key,label] of Object.entries(labels)){
-  const line=lines.find(x=>label.test(x)&&/[\d]\s*[,\.]\s*\d{2}/.test(x));
+  // Read the amount in the summary row, never a nearby interest RATE.
+  // For example "Avances d'argent: 21,90 %" is an APR, not a 21,90 $ advance.
+  const line=lines.map(x=>{
+   if(!label.test(x))return null;
+   const tail=x.replace(label,'').trim();
+   if(/^:/.test(tail))return null;
+   const m=tail.match(/^[+\-=]?\s*(\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})(?!\s*%)/);
+   return m?m[1]:null;
+  }).find(Boolean);
   if(!line)continue;
-  const tail=line.replace(label,'').replace(/^\s*[+\-=]\s*/,'');
-  const m=tail.match(/(\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})/);
-  const amount=m?cleanAmount(m[1]):null;
+  const amount=cleanAmount(line);
   if(amount!==null&&Number.isFinite(amount)&&amount>=0)result[key]=Math.round(amount*100);
  }
  if(Object.keys(result).length!==6)return{status:'unavailable',reason:'Sommaire du relevé incomplet'};
