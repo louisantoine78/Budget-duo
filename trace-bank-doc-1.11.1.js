@@ -114,7 +114,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
   return picked[0]?.w||null;
  };
  const rows=[];
- const newRow=(date,merchant,price,top,dateY=null)=>{
+ const newRow=(date,merchant,price,top,dateY=null,origin='screenshot-layout')=>{
   const name=cleanOcrMerchant(String(merchant).replace(/\b\d+(?:[.,]\d+)?\s*%\b/g,''));
   if(name.length<4||/^(?:transactions?|total|solde|compte|ouvrir|accueil|modifier|octobre|verification|v[eé]rifier)\b/i.test(name))return;
   if(rows.some(r=>Math.abs(r.box.y-top)<width*.048))return;
@@ -128,10 +128,44 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
   rows.push({date:date||'',name,amount:'',type:bankDirection==='in'?'unknown':'expense',
    bankDirection,selected:false,ambiguous:true,
    needsDateReview:!date,columnRaw:price?.text||'',ocrPriceConfidence:price?.confidence??null,
-   source:'screenshot-layout',raw:name+' | '+(date||'date à lire'),
+   source:origin,raw:name+' | '+(date||'date à lire'),
    box:{y:top,dateY,price:price?{left:price.left,top:price.top,width:price.width,height:price.height}:null},
    index:rows.length+1});
  };
+ // Some French banks show one date ABOVE several transactions. Identify
+ // weekday headings by coordinates; associating every operation with the
+ // NEXT date would silently shift all dates and corrupt the ledger.
+ const headingWords=l=>l.words.filter(w=>w.left>width*.035&&w.left<width*.76)
+  .sort((a,b)=>a.left-b.left).map(w=>w.text);
+ const groupedHeaders=lines.map(l=>{
+   const tokens=headingWords(l);
+   const headline=tokens.slice(0,5).join(' ');
+   if(!/^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/i.test(headline))return null;
+   for(let n=2;n<=Math.min(tokens.length,5);n++){
+    const date=parseBankDayOCR(tokens.slice(0,n).join(' '),hintDate);
+    if(date)return{date,y:l.y};
+   }
+   return null;
+  }).filter(Boolean);
+ if(groupedHeaders.length>=2){
+  for(let i=0;i<groupedHeaders.length;i++){
+   const header=groupedHeaders[i],to=groupedHeaders[i+1]?.y??height*.96;
+   // A header can govern several payments, never fuse them into one row.
+   const group=lines.filter(l=>l.y>header.y+width*.018&&l.y<to-width*.015);
+   for(const line of group){
+    const price=selectPrice(amountWords(line));
+    if(!price)continue;
+    const words=labelWords(line);
+    if(!words.length)continue;
+    const name=words.map(w=>w.text).join(' ');
+    // Do not invent a signed direction if the sign was lost in OCR.
+    newRow(header.date,name,price,line.y,null,'screenshot-french-grouped');
+   }
+  }
+  // If date-group structure exists but prices are unreadable, no automatic
+  // transaction may be inferred from a neighbouring date or monetary total.
+  return rows.sort((a,b)=>a.box.y-b.box.y).slice(0,65);
+ }
  // Bank screenshots often wrap a single statement row over 3-5 visual lines:
  // the payment amount is beside line 1, while the date is under line 4.
  // Anchor by explicit printed date and then read the entire preceding block.
