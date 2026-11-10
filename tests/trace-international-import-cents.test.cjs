@@ -170,6 +170,45 @@ async function run(){
   assert.ok(part.indexOf('const booking=window.TraceInternational.resolveBooking(')<part.indexOf('const existing=findSimilarTransaction(probe)'));
   assert.ok(part.includes('amountCAD:booking.amountCAD'));
  });
+
+ await test('positioned OCR reconstructs multiple BNP transactions under their PRECEDING date',()=>{
+  const vm=require('node:vm'),env={window:{},document:{},console};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8'),env);
+  const p=env.window.TraceBankDocuments;
+  const makeTsv=items=>['level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext',
+   ...items.map((r,i)=>['5',1,1,1,1,i+1,r[1],r[2],r[3]||90,29,93,r[0]].join('\t'))].join('\n');
+  const items=[
+   ['Lundi',40,190,110],['02',165,190,30],['novembre',205,190,145],
+   ['Commissions',110,275,205],['Cotisation',322,275,165],['-',820,275,16],['17,30',850,275,113],['€',980,275,25],
+   ['Dimanche',43,480,175],['01',225,480,32],['novembre',265,480,146],
+   ['BNP',110,545,65],['Paribas',185,545,105],['Cardif',300,545,96],['-',820,545,15],['50,00',850,545,114],['€',980,545,25],
+   ['Jeudi',43,690,90],['29',145,690,36],['octobre',200,690,135],
+   ['Netflix',110,754,128],['-',820,754,15],['14,99',852,754,114],['€',982,754,23],
+   ['SNCF',110,835,95],['-',820,835,15],['89,00',852,835,114],['€',982,835,23],
+   ['Mardi',43,1010,95],['27',145,1010,40],['octobre',200,1010,135],
+   ['Virement',110,1080,155],['reçu',275,1080,74],['+',820,1080,15],['300,00',852,1080,135],['€',1000,1080,23]
+  ];
+  const candidates=p.screenshotLayoutCandidates(makeTsv(items),1179,2556,'2026-11-10');
+  assert.equal(candidates.length,5);
+  assert.deepEqual(Array.from(candidates.map(x=>x.date)),['2026-11-02','2026-11-01','2026-10-29','2026-10-29','2026-10-27']);
+  assert.deepEqual(Array.from(candidates.map(x=>x.bankDirection)),['out','out','out','out','in']);
+  assert.ok(candidates.every(x=>x.source==='screenshot-french-grouped'));
+  assert.equal(candidates[2].name,'Netflix');
+  assert.equal(candidates[3].name,'SNCF');
+ });
+ await test('OCR price consensus refuses contradictory sign, zero amount and clipped right columns',()=>{
+  const vm=require('node:vm'),env={window:{},document:{},console};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8'),env);
+  const p=env.window.TraceBankDocuments;
+  assert.equal(p.priceEvidence('0,00'),null);
+  assert.equal(p.priceEvidence('-0,00'),null);
+  assert.equal(p.reconcileBankDirection([{text:'+300,00'},{text:'-300,00'}],'in',true).review,true);
+  assert.equal(p.reconcileBankDirection([{text:'300,00'}],'',true).review,true);
+  assert.equal(p.reconcileBankDirection([{text:'-17,30'},{text:'-17,30'}],'',true).direction,'out');
+  const crop=p.priceImageRegion({width:1179,height:2556},{box:{price:{left:1035,top:800,width:84,height:24}}});
+  assert.ok(crop.left<=965&&crop.right>=1120);
+  assert.ok(crop.right<=1179&&crop.left>=0);
+ });
  console.log(count+' import cent-precision and card reconciliation checks passed');
 }
 run().catch(e=>{console.error('FAIL',e);process.exitCode=1;});
