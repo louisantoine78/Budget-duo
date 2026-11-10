@@ -51,10 +51,21 @@ function readOcrTsv(tsv){
 function parseBankDayOCR(text,hintDate=''){
  const compact=String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
   .replace(/[|!]/g,'1').replace(/[^A-Z0-9]/g,'').replace(/^([0-3]?\d)0(?=CT)/,'$1O');
- const m=compact.match(/^([0-3]?\d)(JANV?|FEVR?|FEV|MARS?|AVRIL|AVR|MAI|JUIN?|JUIL?|JUN|AOUT?|AOU|SEPT?|SEP|OCT|NOV|DEC)$/);
+ // A screenshot can show "Lundi 02 novembre", "9 NOV", or "Jeudi 29 octobre".
+ const m=compact.match(/^(?:LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)?([0-3]?\d)(JANVIER|JANV|JAN|FEVRIER|FEVR|FEV|MARS|MAR|AVRIL|AVR|MAI|JUIN|JUN|JUILLET|JUIL|JUL|AOUT|AOU|SEPTEMBRE|SEPT|SEP|OCTOBRE|OCT|NOVEMBRE|NOV|DECEMBRE|DEC)(20\d{2})?$/);
  if(!m)return null;
- const month=monthsFR[m[2]],year=/^\d{4}-/.test(hintDate)?Number(hintDate.slice(0,4)):new Date().getFullYear();
- return month?isoDate(m[1]+'/'+month+'/'+year,'dmy'):null;
+ const long={JANVIER:1,FEVRIER:2,MARS:3,AVRIL:4,MAI:5,JUIN:6,JUILLET:7,AOUT:8,
+  SEPTEMBRE:9,OCTOBRE:10,NOVEMBRE:11,DECEMBRE:12};
+ const month=long[m[2]]||monthsFR[m[2]];
+ let year=Number(m[3]||(/^\d{4}-/.test(hintDate)?hintDate.slice(0,4):new Date().getFullYear()));
+ if(!month)return null;
+ let value=isoDate(m[1]+'/'+month+'/'+year,'dmy');
+ // Late-year statements opened in January may show December of prior year.
+ if(!m[3]&&/^20\d{2}-\d\d-\d\d$/.test(hintDate)&&value&&
+  Date.parse(value+'T12:00:00Z')-Date.parse(hintDate+'T12:00:00Z')>32*86400000){
+  year--;value=isoDate(m[1]+'/'+month+'/'+year,'dmy');
+ }
+ return value;
 }
 function screenshotDateEvidence(words,width,hintDate=''){
  const ws=words.filter(w=>w.left>width*.05&&w.left<width*.55).sort((a,b)=>a.y-b.y||a.left-b.left);
@@ -483,14 +494,16 @@ function readMobileScreenshotText(raw,hintDate=''){
   const month=monthsFR[dateParts[2]],date=month?isoDate(dateParts[1]+'/'+month+'/'+year,'dmy'):null;
   if(!date)continue;
   const rawMerchant=lines[i-1].replace(/^\s*[=−\-–]+\s*/,'').replace(/\s*[›>]\s*$/,'').trim();
-  const priceSuffix=rawMerchant.match(/(?:^|\s)(\d{1,6}[.,]\d{2})\s*[S$€]?\s*$/);
+  const priceSuffix=rawMerchant.match(/(?:^|\s)([+\-−]?\s*\d{1,6}[.,]\d{2})\s*[S$€]?\s*$/);
   const uncertainSuffix=rawMerchant.match(/\s+\d{2,8}[S$€]\s*$/i);
   let amount='',name=rawMerchant;
-  if(priceSuffix){amount=cleanAmount(priceSuffix[1]);name=rawMerchant.slice(0,priceSuffix.index).trim();}
+  if(priceSuffix){amount=Math.abs(cleanAmount(priceSuffix[1]));name=rawMerchant.slice(0,priceSuffix.index).trim();}
   else if(uncertainSuffix){name=rawMerchant.slice(0,uncertainSuffix.index).trim();}
   name=name.replace(/^[=\s]+/,'').replace(/\s+/g,' ').slice(0,80);
   if(!name||name.length<3)continue;
-  candidates.push({date,name,amount,type:'expense',selected:Number.isFinite(amount)&&amount>0,ambiguous:!(amount>0),
+  const signed=priceSuffix?String(priceSuffix[1]).trim():'';
+  const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
+  candidates.push({date,name,amount,type:bankDirection==='in'?'refund':'expense',bankDirection,selected:Number.isFinite(amount)&&amount>0,ambiguous:!(amount>0),
    raw:lines.slice(i-1,i+1).join(' | '),index:i+1,source:'screenshot-text'});
  }
  return{candidates,lines:lines.length,flagged:0};
@@ -498,7 +511,7 @@ function readMobileScreenshotText(raw,hintDate=''){
 function extractScreenshotTransactions(raw){
  const lines=String(raw||'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean);
  const date=/^(\d{1,2})\s*(JANV?|F[ÉE]VR?|MARS?|AVR(?:IL)?|MAI|JUIN?|JUIL?|AO[UÛ]T?|SEPT?|OCT|NOV|D[ÉE]C)\.?$/i;
- const money=/(\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})\s*\$?\s*[›>]*$/;
+ const money=/([+\-−]?\s*\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})\s*[$€]?\s*[›>]*$/;
  const candidates=[];const year=(raw.match(/\b(20\d{2})\b/)||[])[1]||new Date().getFullYear();
  for(let i=1;i<lines.length;i++){
   const match=lines[i].match(date);if(!match)continue;
@@ -508,13 +521,51 @@ function extractScreenshotTransactions(raw){
   let before=lines[i-1],m=before.match(money),name=m?before.slice(0,m.index).trim():'';
   if((!m||!name)&&i>=2){if(m)name=lines[i-2];else{m=lines[i-2].match(money);name=m?lines[i-2].slice(0,m.index).trim():'';}}
   if(!m||!name||/^transactions?$/i.test(name))continue;
-  const amount=cleanAmount(m[1]);if(!(amount>0))continue;
-  candidates.push({date:dateISO,name:name.replace(/[›>]+$/,'').trim().slice(0,80),amount,type:'expense',selected:true,ambiguous:false,raw:lines.slice(Math.max(0,i-2),i+1).join(' | '),index:i+1,source:'screenshot'});
+  const signed=String(m[1]).trim(),amount=Math.abs(cleanAmount(signed));
+  if(!(amount>0))continue;
+  const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
+  candidates.push({date:dateISO,name:name.replace(/[+\-−\s›>]+$/,'').trim().slice(0,80),
+   amount,type:bankDirection==='in'?'refund':'expense',bankDirection,
+   selected:true,ambiguous:false,raw:lines.slice(Math.max(0,i-2),i+1).join(' | '),index:i+1,source:'screenshot'});
  }
  return{candidates,flagged:0,lines:lines.length};
 }
+// French account screenshots group several signed transactions below full
+// weekday/date headers. Do not confuse inline purchase dates (e.g. "du 02/10")
+// with posting dates, or synthesize dates when a header is missing.
+function extractFrenchBankScreenshot(raw,hintDate=''){
+ const lines=String(raw||'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean);
+ if(!/[€]|\bEUR\b/i.test(raw))return null;
+ let date='',headings=0,flagged=0;
+ const candidates=[];
+ const weekday=/^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+\d{1,2}\s+\p{L}+/iu;
+ const amountRe=/([+\-−])\s*(\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})\s*(?:€|EUR)\s*$/i;
+ for(let i=0;i<lines.length;i++){
+  const line=lines[i];
+  if(weekday.test(line)){
+   const next=parseBankDayOCR(line,hintDate);
+   if(next){date=next;headings++;}
+   else{date='';flagged++;}
+   continue;
+  }
+  if(!date)continue;
+  const m=line.match(amountRe);
+  if(!m)continue;
+  const name=line.slice(0,m.index).replace(/[›>\-−\s]+$/,'').trim();
+  if(name.length<3){flagged++;continue;}
+  const value=Math.abs(cleanAmount(m[1]+m[2]));
+  if(!(value>0)){flagged++;continue;}
+  const bankDirection=m[1]==='+'?'in':'out';
+  candidates.push({date,name:name.slice(0,90),amount:value,
+   type:bankDirection==='in'?'income':'expense',bankDirection,
+   selected:true,ambiguous:false,raw:line,index:i+1,source:'fr-bank-screenshot'});
+ }
+ return headings>=2?{candidates,flagged,lines:lines.length,source:'fr-bank-screenshot'}:null;
+}
 function extractCandidates(raw,locale='dmy'){
  const txt=String(raw||'');
+ const french=extractFrenchBankScreenshot(txt);
+ if(french&&(french.candidates.length||french.flagged))return french;
  if(/DESJARDINS/i.test(txt)&&/BONIDOLLARS|ODYSSEE|ODYSSE[EÉ]E|Transactions effectuées avec la carte|PAIEMENT CAISSE/i.test(txt)){
   const r=extractDesjardins(txt);
   if(r.candidates.length>0)return r;
@@ -529,5 +580,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.1'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.2'};
 })();
