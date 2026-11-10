@@ -135,7 +135,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  // Some French banks show one date ABOVE several transactions. Identify
  // weekday headings by coordinates; associating every operation with the
  // NEXT date would silently shift all dates and corrupt the ledger.
- const headingWords=l=>l.words.filter(w=>w.left>width*.035&&w.left<width*.76)
+ const headingWords=l=>l.words.filter(w=>w.left>width*.012&&w.left<width*.76)
   .sort((a,b)=>a.left-b.left).map(w=>w.text);
  const groupedHeaders=lines.map(l=>{
    const tokens=headingWords(l);
