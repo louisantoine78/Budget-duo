@@ -529,13 +529,47 @@ function extractGenericCandidates(raw,locale='dmy'){
  return{candidates:out,flagged,lines:lines.length};
 }
 
+// Statement arithmetic is independent evidence, never a substitute for reading
+// every transaction. Inconsistent or missing statement totals require review.
+function desjardinsStatementCheck(raw,candidates,paymentCents){
+ const lines=String(raw||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ const labels={
+  previous:/^Solde\s+pr[eé]c[eé]dent\b/i,
+  purchases:/^Achats\s*\/\s*d[eé]bits\b/i,
+  advances:/^Avances\s+d.argent\b/i,
+  fees:/^Frais\s+de\s+cr[eé]dit\b/i,
+  payments:/^Paiements\s*\/\s*cr[eé]dits\b/i,
+  closing:/^Nouveau\s+solde\s+courant\b/i
+ };
+ const result={};
+ for(const [key,label] of Object.entries(labels)){
+  const line=lines.find(x=>label.test(x)&&/[\d]\s*[,\.]\s*\d{2}/.test(x));
+  if(!line)continue;
+  const tail=line.replace(label,'').replace(/^\s*[+\-=]\s*/,'');
+  const m=tail.match(/(\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})/);
+  const amount=m?cleanAmount(m[1]):null;
+  if(amount!==null&&Number.isFinite(amount)&&amount>=0)result[key]=Math.round(amount*100);
+ }
+ if(Object.keys(result).length!==6)return{status:'unavailable',reason:'Sommaire du relevé incomplet'};
+ const debits=candidates.filter(x=>x.type==='expense').reduce((n,x)=>n+Math.round(Number(x.amount)*100),0);
+ const merchantCredits=candidates.filter(x=>x.type==='refund').reduce((n,x)=>n+Math.round(Number(x.amount)*100),0);
+ const linesBalanced=debits===result.purchases+result.advances+result.fees&&
+  merchantCredits+paymentCents===result.payments;
+ const balanceBalanced=result.previous+result.purchases+result.advances+result.fees-
+  result.payments===result.closing;
+ return {status:linesBalanced&&balanceBalanced?'matched':'mismatch',
+  reason:!balanceBalanced?'Sommaire bancaire incohérent':
+   !linesBalanced?'Des opérations du relevé semblent manquantes ou répétées':'',
+  extractedDebitsCents:debits,extractedCreditsCents:merchantCredits+paymentCents,
+  closingCents:result.closing};
+}
 /* Verified against Desjardins Mastercard statement layout (date, posting date, merchant, reward %, CAD amount). */
 function extractDesjardins(raw){
  const lines=String(raw||'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean);
  const stamp=String(raw).match(/\b(\d{1,2})\s+(\d{1,2})\s+(20\d{2})\b/);
  const year=stamp?Number(stamp[3]):null,statementMonth=stamp?Number(stamp[2]):null;
  const re=/^(\d{1,2})\s+(\d{1,2})\s+(\d{1,2})\s+(\d{1,2})\s+(.+?)\s+(\d{1,3}(?:[ \u00a0\u202f]\d{3})*,\d{2})(CR)?$/i;
- const candidates=[];let skippedPayments=0,flagged=0;
+ const candidates=[];let skippedPayments=0,paymentCents=0,flagged=0;
  for(const [i,line] of lines.entries()){
   const m=line.match(re);if(!m)continue;
   const day=Number(m[1]),month=Number(m[2]),postingMonth=Number(m[4]);
@@ -547,12 +581,13 @@ function extractDesjardins(raw){
   if(!date){flagged++;continue;}
   const whole=m[5].trim(),amount=cleanAmount(m[6]);
   if(!Number.isFinite(amount)||amount<=0){flagged++;continue;}
-  if(/^(?:PAIEMENT CAISSE|PAIEMENT PAR|PAYMENT RECEIVED|PAIEMENT REÇU)/i.test(whole)){skippedPayments++;continue;}
+  if(/^(?:PAIEMENT CAISSE|PAIEMENT PAR|PAYMENT RECEIVED|PAIEMENT REÇU)/i.test(whole)){skippedPayments++;paymentCents+=Math.round(amount*100);continue;}
   const name=whole.replace(/\s+\d{1,2},\d{2}\s*%\s*$/,'').replace(/\s+/g,' ').trim().slice(0,80);
   const credit=!!m[7];
   candidates.push({date,name,amount,type:credit?'refund':'expense',selected:true,ambiguous:false,raw:line,index:i+1,source:'desjardins'});
  }
- return{candidates,flagged,lines:lines.length,skippedPayments};
+ return{candidates,flagged,lines:lines.length,skippedPayments,
+  statementCheck:desjardinsStatementCheck(raw,candidates,paymentCents)};
 }
 const monthsFR={JAN:1,JANV:1,FEV:2,FEVR:2,MAR:3,MARS:3,AVR:4,AVRIL:4,MAI:5,JUN:6,JUIN:6,JUL:7,JUIL:7,AOU:8,AOUT:8,SEP:9,SEPT:9,OCT:10,NOV:11,DEC:12};
 /* Text-only OCR fallback for card-list screenshots.
@@ -667,5 +702,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.3'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.3'};
 })();
