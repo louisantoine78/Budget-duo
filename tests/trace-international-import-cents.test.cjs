@@ -162,7 +162,7 @@ async function run(){
   const smart=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.5.0.js'),'utf8');
   assert.ok(bankUi.includes('docAccountConfirmed'));
   assert.ok(bankUi.includes('if(accountMismatch)'));
-  assert.ok(bankUi.includes("bankCurrency==='CAD'?approvals.filter"));
+  assert.ok(bankUi.includes("bankCurrency==='CAD'&&!documentNeedsReview?"));
   assert.ok(smart.includes('evidence.currency!==bank.currency'));
   assert.ok(smart.includes('evidence.kind!==bank.type'));
   const part=app.slice(app.indexOf('async submit(rows,accountId,fileName,method,scopeDay=null){'));
