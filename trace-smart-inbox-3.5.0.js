@@ -86,7 +86,10 @@ async function loadFiles(files){
    if(!records.length)throw Error('Aucune opération identifiée. Utilise une capture plus lisible.');
    const result=await bridge().smartStageRows(batchAccount,file.name,records);
    added+=result.added;recovered+=Number(result.recovered)||0;matched+=Number(result.matched)||0;suppressed+=Number(result.suppressed)||0;
-   log.innerHTML+='<p class="trace-smart-log-ok">✓ '+esc(file.name)+' · '+result.added+' nouvelle(s), '+(result.matched||0)+' déjà préparée(s), '+(result.suppressed||0)+' exclue(s) conservée(s)</p>';
+   log.innerHTML+='<p class="trace-smart-log-ok">✓ '+esc(file.name)+' · '+result.added+' nouvelle(s), '+(result.matched||0)+' déjà préparée(s), '+(result.suppressed||0)+' exclue(s) conservée(s)</p>'+
+    (data.quality?.reviewRequired?'<p class="trace-smart-log-error">Attention : '+Number(data.quality.textRows)+
+    ' ligne(s) possibles dans le texte OCR mais '+Number(data.quality.layoutRows)+
+    ' reconstruite(s) : compare toute la capture avant validation. Aucune ligne n’est confirmée automatiquement.</p>':'');
   }catch(error){failed++;log.innerHTML+='<p class="trace-smart-log-error">'+esc(file.name)+' : '+esc(error?.message||'Lecture impossible')+'</p>';}
  }
  busy=false;
