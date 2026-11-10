@@ -164,7 +164,8 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
   }
   // If date-group structure exists but prices are unreadable, no automatic
   // transaction may be inferred from a neighbouring date or monetary total.
-  return rows.sort((a,b)=>a.box.y-b.box.y).slice(0,65);
+  if(rows.length>65)throw Error('Capture trop longue : sépare les opérations en plusieurs images plus lisibles.');
+ return rows.sort((a,b)=>a.box.y-b.box.y);
  }
  // Bank screenshots often wrap a single statement row over 3-5 visual lines:
  // the payment amount is beside line 1, while the date is under line 4.
@@ -202,7 +203,8 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  }
  // Conservative fallback: when no prices were readable but explicit dates exist,
  // preserve those rows for human review without fabricating an amount.
- return rows.sort((a,b)=>a.box.y-b.box.y).slice(0,65);
+ if(rows.length>65)throw Error('Capture trop longue : sépare les opérations en plusieurs images plus lisibles.');
+ return rows.sort((a,b)=>a.box.y-b.box.y);
 }
 async function decodeImageForOcr(file){
  if(typeof createImageBitmap==='function'){
@@ -232,8 +234,14 @@ function priceEvidence(raw){
  const m=compact.match(/^[+-]?\s*(\d{1,7}(?:[.,]\d{2})?)\s*(?:[$S€][\s$S€]*(?:[5>›])?)?$/i);
  if(!m)return null;
  const s=m[1];
- if(/^\d{1,6}[,.]\d{2}$/.test(s))return{amount:parseReliablePrice(s),explicit:true,digits:s.replace(/\D/g,'')};
- if(/^\d{3,7}$/.test(s))return{amount:Number(s.slice(0,-2)+'.'+s.slice(-2)),explicit:false,digits:s};
+ if(/^\d{1,6}[,.]\d{2}$/.test(s)){
+  const amount=parseReliablePrice(s);
+  return amount!==null?{amount,explicit:true,digits:s.replace(/\D/g,'')}:null;
+ }
+ if(/^\d{3,7}$/.test(s)){
+  const amount=Number(s.slice(0,-2)+'.'+s.slice(-2));
+  return amount>0&&amount<1000000?{amount,explicit:false,digits:s}:null;
+ }
  return null;
 }
 function reconcilePriceReadings(readings,columnRaw){
@@ -273,12 +281,30 @@ function reconcilePriceReadings(readings,columnRaw){
 }
 
 
+// Bank debit/credit signs are independent evidence from the OCR amount.
+// Conflicting signs must not silently turn repayments into expenses.
+function reconcileBankDirection(readings,sourceDirection='',mustHaveSign=false){
+ const signs=readings.map(r=>{
+   const text=String(r?.text||'').trim();
+   const m=text.match(/^([+\-−])\s*\d/);
+   return m?(m[1]==='+'?'in':'out'):'';
+ }).filter(Boolean);
+ const contradictory=signs.includes('in')&&signs.includes('out')||
+  sourceDirection&&signs.some(s=>s!==sourceDirection);
+ const agreement=signs.length>=2&&signs.every(s=>s===signs[0]);
+ const direction=sourceDirection||(agreement?signs[0]:'');
+ return{direction,review:Boolean(contradictory||mustHaveSign&&!sourceDirection&&!agreement),
+  reason:contradictory?'Signes bancaires contradictoires':
+   mustHaveSign&&!direction?'Signe bancaire illisible':''};
+}
 function priceImageRegion(frame,row){
  const w=frame.width,h=frame.height,p=row.box?.price;
  const mid=p?p.top+p.height/2:row.box?.y||0;
  const pad=Math.max(27,Math.min(36,w*.03));
- const left=Math.max(0,Math.floor(p?Math.max(w*.635,p.left-w*.026):w*.66));
- const right=Math.min(w,Math.ceil(p?Math.min(w*.914,p.left+p.width+w*.03):w*.90));
+ // Include separated bank sign and rightmost cents. Previous crop could
+ // truncate the final digit when the amount touched the right side.
+ const left=Math.max(0,Math.floor(p?Math.max(w*.60,p.left-w*.08):w*.62));
+ const right=Math.min(w,Math.ceil(p?Math.min(w*.975,p.left+p.width+w*.045):w*.97));
  return{left,right,top:Math.max(0,Math.floor(mid-pad)),bottom:Math.min(h,Math.ceil(mid+pad))};
 }
 function makeRowSnippet(frame,row,nextY){
@@ -376,22 +402,26 @@ async function recognizeStructuredScreenshot(file,worker,base,onProgress=()=>{},
      const original=await worker.recognize(canvas);
      readings.push(original?.data);
      let resolution=reconcilePriceReadings(readings,r.columnRaw);
-     // Only unclear or contradictory prices require an additional OCR pass.
-     if(resolution.review||resolution.amount===null){
+     let direction=reconcileBankDirection(readings,r.bankDirection,r.source==='screenshot-french-grouped');
+     // Only unclear or contradictory evidence requires another OCR pass.
+     if(resolution.review||resolution.amount===null||direction.review){
       ctx.filter='grayscale(1) contrast(2)';
       ctx.drawImage(frame.image,left,top,w,h,0,0,canvas.width,canvas.height);
       ctx.filter='none';
       const contrasting=await worker.recognize(canvas);
       readings.push(contrasting?.data);
       resolution=reconcilePriceReadings(readings,r.columnRaw);
+      direction=reconcileBankDirection(readings,r.bankDirection,r.source==='screenshot-french-grouped');
      }
      r.amount=resolution.amount??'';
-     r.needsReview=resolution.review||r.needsDateReview;
+     r.bankDirection=direction.direction;
+     r.type=direction.direction==='in'?'unknown':'expense';
+     r.needsReview=resolution.review||direction.review||r.needsDateReview;
      r.selected=!r.needsReview&&r.amount>0&&!!r.date;
      r.ambiguous=r.needsReview;
      r.priceCandidates=resolution.candidates||[];
-     r.priceReviewReason=resolution.review?resolution.reason:'';
-     if(r.needsReview)r.raw+=' | '+resolution.reason;
+     r.priceReviewReason=direction.review?direction.reason:resolution.review?resolution.reason:'';
+     if(r.needsReview)r.raw+=' | '+(r.priceReviewReason||'Date à vérifier');
     }catch(error){r.needsReview=true;r.selected=false;r.raw+=' | OCR du montant à vérifier';}
     canvas.width=canvas.height=1;
     delete r.box;
@@ -626,5 +656,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.2'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.2'};
 })();
