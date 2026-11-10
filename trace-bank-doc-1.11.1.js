@@ -125,7 +125,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
     /^[+\-−]$/.test(String(w.text||'').trim()))?.text||'';
   const prefix=(String(price?.text||'').trim().match(/^[+\-−]/)||[])[0]||nearbySign;
   const bankDirection=prefix==='+'?'in':prefix==='-'||prefix==='−'?'out':'';
-  rows.push({date:date||'',name,amount:'',type:bankDirection==='in'?'refund':'expense',
+  rows.push({date:date||'',name,amount:'',type:bankDirection==='in'?'unknown':'expense',
    bankDirection,selected:false,ambiguous:true,
    needsDateReview:!date,columnRaw:price?.text||'',ocrPriceConfidence:price?.confidence??null,
    source:'screenshot-layout',raw:name+' | '+(date||'date à lire'),
@@ -503,7 +503,7 @@ function readMobileScreenshotText(raw,hintDate=''){
   if(!name||name.length<3)continue;
   const signed=priceSuffix?String(priceSuffix[1]).trim():'';
   const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
-  candidates.push({date,name,amount,type:bankDirection==='in'?'refund':'expense',bankDirection,selected:Number.isFinite(amount)&&amount>0,ambiguous:!(amount>0),
+  candidates.push({date,name,amount,type:bankDirection==='in'?'unknown':'expense',bankDirection,selected:Number.isFinite(amount)&&amount>0,ambiguous:!(amount>0),
    raw:lines.slice(i-1,i+1).join(' | '),index:i+1,source:'screenshot-text'});
  }
  return{candidates,lines:lines.length,flagged:0};
@@ -525,7 +525,7 @@ function extractScreenshotTransactions(raw){
   if(!(amount>0))continue;
   const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
   candidates.push({date:dateISO,name:name.replace(/[+\-−\s›>]+$/,'').trim().slice(0,80),
-   amount,type:bankDirection==='in'?'refund':'expense',bankDirection,
+   amount,type:bankDirection==='in'?'unknown':'expense',bankDirection,
    selected:true,ambiguous:false,raw:lines.slice(Math.max(0,i-2),i+1).join(' | '),index:i+1,source:'screenshot'});
  }
  return{candidates,flagged:0,lines:lines.length};
@@ -557,7 +557,7 @@ function extractFrenchBankScreenshot(raw,hintDate=''){
   if(!(value>0)){flagged++;continue;}
   const bankDirection=m[1]==='+'?'in':'out';
   candidates.push({date,name:name.slice(0,90),amount:value,
-   type:bankDirection==='in'?'income':'expense',bankDirection,
+   type:bankDirection==='in'?'unknown':'expense',bankDirection,
    selected:true,ambiguous:false,raw:line,index:i+1,source:'fr-bank-screenshot'});
  }
  return headings>=2?{candidates,flagged,lines:lines.length,source:'fr-bank-screenshot'}:null;
