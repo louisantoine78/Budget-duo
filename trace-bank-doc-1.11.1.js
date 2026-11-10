@@ -65,6 +65,13 @@ function parseBankDayOCR(text,hintDate=''){
   Date.parse(value+'T12:00:00Z')-Date.parse(hintDate+'T12:00:00Z')>32*86400000){
   year--;value=isoDate(m[1]+'/'+month+'/'+year,'dmy');
  }
+ // The printed weekday is independent evidence: reject an impossible
+ // combination rather than assigning a valid-looking but wrong bank date.
+ const weekdayPrefix=compact.match(/^(LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)/);
+ if(value&&weekdayPrefix){
+  const weekdayNumber={DIMANCHE:0,LUNDI:1,MARDI:2,MERCREDI:3,JEUDI:4,VENDREDI:5,SAMEDI:6};
+  if(new Date(value+'T12:00:00Z').getUTCDay()!==weekdayNumber[weekdayPrefix[1]])return null;
+ }
  return value;
 }
 function screenshotDateEvidence(words,width,hintDate=''){
