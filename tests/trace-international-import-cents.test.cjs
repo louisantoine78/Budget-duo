@@ -209,6 +209,41 @@ async function run(){
   assert.ok(crop.left<=965&&crop.right>=1120);
   assert.ok(crop.right<=1179&&crop.left>=0);
  });
+
+ await test('Desjardins PDF totals: extracted purchases, credits, payments and statement must match',()=>{
+  const vm=require('node:vm'),env={window:{},document:{},console};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8'),env);
+  const p=env.window.TraceBankDocuments;
+  const input=['DESJARDINS ODYSSEE WORLDELITE MASTERCARD','Date du relevé 08 10 2026',
+   'Solde précédent 832,98','Achats / débits + 14,94',"Avances d'argent + 0,00",
+   'Frais de crédit + 0,00','Paiements / crédits - 102,87',
+   'Nouveau solde courant = 745,05','10 09 11 09 EPICERIE TEST MONTREAL QC 1,00 % 14,94',
+   '07 10 08 10 RETOUR TEST TORONTO ON 2,87CR','15 09 15 09 PAIEMENT CAISSE 100,00CR'].join('\n');
+  const good=p.extractCandidates(input);
+  assert.equal(good.statementCheck.status,'matched');
+  assert.equal(good.skippedPayments,1);
+  const wrong=p.extractCandidates(input.replace('745,05','700,00'));
+  assert.equal(wrong.statementCheck.status,'mismatch');
+  const annualRate=p.extractCandidates(input.replace("Avances d'argent + 0,00",
+   "Avances d'argent: 21,90 %\nAvances d'argent + 0,00"));
+  assert.equal(annualRate.statementCheck.status,'matched');
+ });
+ await test('weekday cross-check and independent coverage warnings prevent false confidence',()=>{
+  const vm=require('node:vm'),env={window:{},document:{},console};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8'),env);
+  const p=env.window.TraceBankDocuments;
+  assert.equal(p.parseBankDayOCR('Lundi 02 novembre','2026-11-10'),'2026-11-02');
+  assert.equal(p.parseBankDayOCR('Lundi 03 novembre','2026-11-10'),null);
+  assert.equal(p.parseBankDayOCR('Mardi 27 octobre','2026-11-10'),'2026-10-27');
+  const source=fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8');
+  const review=fs.readFileSync(path.join(__dirname,'..','trace-bank-ui-5.37.0.js'),'utf8');
+  const smart=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.5.0.js'),'utf8');
+  assert.ok(source.includes('quality={textRows:textCandidates,layoutRows:structuredCandidates.length'));
+  assert.ok(review.includes('data.quality?.reviewRequired'));
+  assert.ok(review.includes('summary?.status===\'mismatch\''));
+  assert.ok(review.includes('!documentNeedsReview?'));
+  assert.ok(smart.includes('data.quality?.reviewRequired'));
+ });
  console.log(count+' import cent-precision and card reconciliation checks passed');
 }
 run().catch(e=>{console.error('FAIL',e);process.exitCode=1;});
