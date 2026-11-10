@@ -199,7 +199,7 @@ function renderCandidateRows(file,data){
   '<div class="trace-smart-row-money"><input class="input docAmount" type="text" inputmode="decimal" value="'+(amount!==''?esc(Number(amount).toFixed(2).replace('.',',')):'')+'" placeholder="0,00" aria-label="Montant '+esc(bankCurrency)+' '+esc(r.name)+'"><small>'+esc(bankCurrency)+'</small></div></div>'+
   (needsReview?'<div class="trace-smart-needs">'+(status.amountConflict?'Montant différent d’une opération existante.':r.needsDateReview?'Date illisible : précise-la dans les détails.':needsAmount?'Montant non reconnu.':'Lectures incertaines du montant.')+' Vérifie uniquement ce point.</div>':'')+
   originalPrice+
-  (Array.isArray(r.priceCandidates)&&r.priceCandidates.length>1?'<div class="trace-smart-alternatives"><small>Montants possibles</small>'+r.priceCandidates.slice(0,3).map(n=>'<button type="button" class="trace-price-choice" data-suggest-amount="'+esc(n)+'">'+esc(Number(n).toFixed(2).replace('.',','))+' $</button>').join('')+'</div>':'')+
+  (Array.isArray(r.priceCandidates)&&r.priceCandidates.length>1?'<div class="trace-smart-alternatives"><small>Montants possibles</small>'+r.priceCandidates.slice(0,3).map(n=>'<button type="button" class="trace-price-choice" data-suggest-amount="'+esc(n)+'">'+esc(Number(n).toFixed(2).replace('.',','))+' '+esc(bankCurrency)+'</button>').join('')+'</div>':'')+
   (status.amountConflict?'<p class="trace-suspected-warning">Cette capture peut correspondre à une dépense étrangère déjà estimée. Compare le débit réel avec le montant enregistré ; aucune correction automatique.</p>':
    status.status==='possible'?'<p class="trace-suspected-warning">Doublon possible : contrôle l’opération avant de la sélectionner.</p>':'')+
   (status.matchName?'<div class="trace-smart-match">'+(status.status==='already'?'Déjà enregistrée : ':'À comparer avec : ')+esc(status.matchName)+' ('+esc(status.matchDate)+')</div>':'')+
@@ -223,14 +223,15 @@ function renderCandidateRows(file,data){
  '<select class="docWho trace-native-who" aria-label="Répartition de '+esc(r.name)+'"><option value="">À répartir</option>'+
  recipients.filter(p=>bankCurrency==='CAD'||p.id!=='custom').map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select>'+
  '<div class="trace-share-choices" role="group" aria-label="Répartition de '+esc(r.name)+'">'+
- recipients.map((p,j)=>'<button type="button" class="trace-share-choice" data-quick-share="'+esc(p.id)+'" aria-pressed="false">'+
+ recipients.filter(p=>bankCurrency==='CAD'||p.id!=='custom').map((p,j)=>'<button type="button" class="trace-share-choice" data-quick-share="'+esc(p.id)+'" aria-pressed="false">'+
  esc(p.id==='custom'?'Amis +':p.id==='couple'?'Nous deux':j===0?'Moi':p.name.split(' ')[0])+'</button>').join('')+'</div></div>'+
  '<div class="trace-custom-row hidden"><div class="trace-custom-row-inner">'+
  '<label>Part des amis ($)<input class="input docFriendsAmount" type="number" inputmode="decimal" min="0" step="0.01" value="0"></label>'+
  '<label>Part de '+esc(recipients.find(p=>p.id!=="couple"&&p.id!=="custom"&&p.id!==recipients[0].id)?.name||"ton partenaire")+' ($)<input class="input docPartnerAmount" type="number" inputmode="decimal" min="0" step="0.01" value="0"></label></div>'+
  '<small class="trace-custom-preview">Le reste sera ta part. Les amis ne sont pas comptés dans le partage du couple.</small></div></div>';
  }).join('')+'</div>'+
- (records.length?'<button type="button" class="primary full trace-smart-confirm" id="docSave"'+(accountMismatch?' disabled':'')+'>Importer et valider les opérations sélectionnées</button>':
+ (records.length?'<button type="button" class="primary full trace-smart-confirm" id="docSave"'+(accountMismatch?' disabled':'')+'>'+
+ (bankCurrency==='CAD'?'Importer et valider les opérations sélectionnées':'Importer en attente de vérification EUR/CAD')+'</button>':
  '<div class="trace-smart-empty">'+(scoped&&otherDates.length?'Aucune opération du '+esc(formatBankDay(preferredDate))+' dans cette capture. Les journées visibles ('+esc(otherDates.map(formatBankDay).join(', '))+') ne seront pas importées.':'Aucune opération'+(scoped?' du '+esc(formatBankDay(preferredDate)):'')+' reconnue. Réessaie avec une capture plus nette ou corrige le texte dans les options avancées.')+'</div>')+
  '<button type="button" class="secondary full trace-smart-skip" id="docSkip">'+(pendingFiles.length?'Passer à la capture suivante':'Fermer cet import')+'</button>'+
  '<div class="trace-feedback" id="docError" role="status"></div></div>';
@@ -264,6 +265,7 @@ function renderCandidateRows(file,data){
     const evidence=bankKind==='card'&&G.cardStatementSettlementLabel(line.querySelector('.docName').value);
     line.querySelector('.trace-doc-card-warning').hidden=!evidence;
     line.querySelector('.trace-doc-impact').textContent=evidence?'À rapprocher : aucune nouvelle transaction.':
+     bankCurrency!=='CAD'?'Montant '+bankCurrency+' · conversion CAD datée et vérification nécessaires.':
      def&&total>0?bridge.movementPreview(nature,total,def.budget==='none'||def.budget==='income'?recipients[0]?.id||'la':who.value,friends,partner):
      'Choisis la nature et vérifie le montant.';
    };
@@ -275,7 +277,7 @@ function renderCandidateRows(file,data){
     line.querySelector('.trace-doc-nature-help').textContent=def?.help||'Choisis la nature réelle de ce mouvement.';
     const category=line.querySelector('.docCategory'),old=category.value;
     const cats=budget?bridge.importCategoryOptions(def?.budget==='income'?'income':'expense'):[];
-    const guess=budget?bridge.suggestImportCategory({name:line.querySelector('.docName').value,type:def?.type||'expense',
+    const guess=budget&&bankCurrency==='CAD'?bridge.suggestImportCategory({name:line.querySelector('.docName').value,type:def?.type||'expense',
      amountCAD:Number(String(line.querySelector('.docAmount').value).replace(',','.'))}):'';
     category.innerHTML='<option value="">Choisir une catégorie</option>'+cats.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
     category.value=cats.some(c=>c.id===old)?old:cats.some(c=>c.id===guess)?guess:'';
