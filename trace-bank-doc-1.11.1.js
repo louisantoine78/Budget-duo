@@ -147,7 +147,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
    }
    return null;
   }).filter(Boolean);
- if(groupedHeaders.length>=2){
+ if(groupedHeaders.length>=1){
   for(let i=0;i<groupedHeaders.length;i++){
    const header=groupedHeaders[i],to=groupedHeaders[i+1]?.y??height*.96;
    // A header can govern several payments, never fuse them into one row.
@@ -466,7 +466,11 @@ async function extract(file,onProgress=()=>{},options={}){
   }finally{await doc.destroy();}
  }else{
   onProgress('Analyse de l’image sur ton appareil…');
-  const w=await getOcrWorker('eng');
+  // Bilingual OCR improves French weekday headings and merchant names,
+  // while preserving English Desjardins and international merchants.
+  let w;
+  try{w=await getOcrWorker('fra+eng');}
+  catch(error){console.info('OCR bilingue indisponible, repli anglais');w=await getOcrWorker('eng');}
   // TSV contains coordinates even when the OCR reading order is incorrect.
   const base=await w.recognize(file,{}, {text:true,tsv:true});
   result=String(base?.data?.text||'');
@@ -656,5 +660,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.2'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.3'};
 })();
