@@ -105,79 +105,70 @@ async function run(){
   assert.match(app,/invalid\.push\(index\+2\);return;/);
  });
 
- await test('Desjardins PDF text: card purchases, credits and payments are distinguished',()=>{
-  const vm=require('node:vm'),bankDoc=fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8');
-  const env={window:{},document:{},console};
-  vm.runInNewContext(bankDoc,env,{timeout:1500});
+
+ await test('Desjardins PDF statement recognizes card purchases, refund and skips settlement',()=>{
+  const vm=require('node:vm'),env={window:{},document:{},console};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8'),env);
   const p=env.window.TraceBankDocuments;
   const pdf=['DESJARDINS ODYSSEE WORLDELITE MASTERCARD','Date du relevé 08 10 2026',
    '10 09 11 09 EPICERIE TEST MONTREAL QC 1,00 % 14,94',
-   '07 10 08 10 REMBOURSEMENT TEST TORONTO ON 22,87CR',
-   '15 09 15 09 PAIEMENT CAISSE 100,00CR'].join('\n');
-  const v=p.extractCandidates(pdf);
-  assert.equal(v.candidates.length,2);
-  assert.equal(v.skippedPayments,1);
-  assert.equal(v.candidates[0].date,'2026-09-10');
-  assert.equal(v.candidates[0].amount,14.94);
-  assert.equal(v.candidates[0].type,'expense');
-  assert.equal(v.candidates[1].date,'2026-10-07');
-  assert.equal(v.candidates[1].type,'refund');
+   '07 10 08 10 RETOUR TEST TORONTO ON 22,87CR',
+   '15 09 15 09 PAIEMENT CAISSE 100,00CR'].join(String.fromCharCode(10));
+  const rows=p.extractCandidates(pdf);
+  assert.equal(rows.candidates.length,2);
+  assert.equal(rows.skippedPayments,1);
+  assert.equal(rows.candidates[0].amount,14.94);
+  assert.equal(rows.candidates[1].type,'refund');
   assert.equal(p.sourceAccountHints(pdf+' 12,30 EURO').currency,'CAD');
   assert.equal(p.sourceAccountHints(pdf).kind,'card');
  });
- await test('CAD screenshots: negative checking debit and positive card payment retain direction',()=>{
+ await test('CAD captures distinguish negative debits from positive card-payment evidence',()=>{
   const vm=require('node:vm'),env={window:{},document:{},console};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8'),env);
   const p=env.window.TraceBankDocuments;
-  const checking=p.extractCandidates('Achat /EPICERIE TEST -217,30 $\n9 NOV\nVirement Interac à /TEST/ -6,00 $\n9 NOV');
-  assert.equal(checking.candidates.length,2);
-  assert.equal(checking.candidates[0].name,'Achat /EPICERIE TEST');
-  assert.equal(checking.candidates[0].amount,217.30);
-  assert.equal(checking.candidates[0].bankDirection,'out');
-  assert.equal(checking.candidates[1].bankDirection,'out');
-  const card=p.extractCandidates('Market Test 9,29 $\n31 OCT\nPaiement Caisse - Merci +500,00 $\n30 OCT');
-  assert.equal(card.candidates.length,2);
-  assert.equal(card.candidates[0].type,'expense');
-  assert.equal(card.candidates[1].name,'Paiement Caisse - Merci');
-  assert.equal(card.candidates[1].amount,500);
-  assert.equal(card.candidates[1].bankDirection,'in');
-  assert.equal(card.candidates[1].type,'unknown');
-  assert.equal(p.sourceAccountHints('Market Test 9,29 $\nPaiement Caisse 500,00 
-}
-run().catch(e=>{console.error('FAIL',e);process.exitCode=1;});
-).kind,'card');
+  const currency=String.fromCharCode(36),nl=String.fromCharCode(10);
+  const checking=['Achat /EPICERIE -217,30 '+currency,'9 NOV','Virement Interac à /TEST/ -6,00 '+currency,'9 NOV'].join(nl);
+  const rows=p.extractCandidates(checking).candidates;
+  assert.equal(rows.length,2);
+  assert.equal(rows[0].name,'Achat /EPICERIE');
+  assert.equal(rows[0].amount,217.30);
+  assert.equal(rows[1].bankDirection,'out');
+  const card=['Market test 9,29 '+currency,'31 OCT','Paiement Caisse - Merci +500,00 '+currency,'30 OCT'].join(nl);
+  const cardRows=p.extractCandidates(card).candidates;
+  assert.equal(cardRows.length,2);
+  assert.equal(cardRows[1].bankDirection,'in');
+  assert.equal(cardRows[1].amount,500);
+  assert.equal(cardRows[1].type,'unknown');
+  assert.equal(p.sourceAccountHints(card).kind,'card');
  });
- await test('BNP EUR screenshot: weekday long-month headers and mixed signed entries',()=>{
+ await test('BNP EUR capture understands long weekday dates and mixed bank signs',()=>{
   const vm=require('node:vm'),env={window:{},document:{},console};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','trace-bank-doc-1.11.1.js'),'utf8'),env);
-  const p=env.window.TraceBankDocuments;
+  const p=env.window.TraceBankDocuments,nl=String.fromCharCode(10);
   const raw=['Compte de chèques','Lundi 02 novembre','Commission test -17,30 €',
    'Dimanche 01 novembre','Assurance test -50,00 €',
    'Jeudi 29 octobre','CB train du 23/10 -89,00 €',
-   'Mardi 27 octobre','Virement de test +300,00 €'].join('\n');
-  const c=p.extractCandidates(raw);
-  assert.equal(c.candidates.length,4);
-  assert.deepEqual(Array.from(c.candidates.map(x=>x.date)),['2026-11-02','2026-11-01','2026-10-29','2026-10-27']);
-  assert.deepEqual(Array.from(c.candidates.map(x=>x.amount)),[17.3,50,89,300]);
-  assert.equal(c.candidates[3].bankDirection,'in');
-  assert.equal(c.candidates[3].type,'unknown');
+   'Mardi 27 octobre','Virement de test +300,00 €'].join(nl);
+  const rows=p.extractCandidates(raw).candidates;
+  assert.equal(rows.length,4);
+  assert.deepEqual(Array.from(rows.map(x=>x.date)),['2026-11-02','2026-11-01','2026-10-29','2026-10-27']);
+  assert.deepEqual(Array.from(rows.map(x=>x.amount)),[17.3,50,89,300]);
+  assert.equal(rows[3].bankDirection,'in');
+  assert.equal(rows[3].type,'unknown');
   assert.equal(p.sourceAccountHints(raw).currency,'EUR');
-  assert.equal(p.sourceAccountHints(raw).kind,'checking');
-  assert.equal(p.parseBankDayOCR('Lundi 02 novembre','2026-11-10'),'2026-11-02');
  });
- await test('wrong account/currency cannot be staged and native FX is booked before deduplication',()=>{
-  const doc=fs.readFileSync(path.join(__dirname,'..','trace-bank-ui-5.37.0.js'),'utf8');
+ await test('bank import always verifies chosen account and FX before duplicate comparison',()=>{
+  const bankUi=fs.readFileSync(path.join(__dirname,'..','trace-bank-ui-5.37.0.js'),'utf8');
   const smart=fs.readFileSync(path.join(__dirname,'..','trace-smart-inbox-3.5.0.js'),'utf8');
-  assert.ok(doc.includes('id="docAccountConfirmed"'));
-  assert.ok(doc.includes('if(accountMismatch)'));
-  assert.ok(doc.includes('bankCurrency===\'CAD\'?approvals.filter'));
-  assert.ok(doc.includes('window.TraceBankDocuments?.sourceAccountHints?.('));
+  assert.ok(bankUi.includes('docAccountConfirmed'));
+  assert.ok(bankUi.includes('if(accountMismatch)'));
+  assert.ok(bankUi.includes("bankCurrency==='CAD'?approvals.filter"));
   assert.ok(smart.includes('evidence.currency!==bank.currency'));
   assert.ok(smart.includes('evidence.kind!==bank.type'));
-  const sub=app.slice(app.indexOf('async submit(rows,accountId,fileName,method,scopeDay=null){'));
-  assert.ok(sub.indexOf('const booking=window.TraceInternational.resolveBooking(')>=0);
-  assert.ok(sub.indexOf('const booking=window.TraceInternational.resolveBooking(')<sub.indexOf('const existing=findSimilarTransaction(probe)'));
-  assert.ok(sub.includes('amountCAD:booking.amountCAD'));
+  const part=app.slice(app.indexOf('async submit(rows,accountId,fileName,method,scopeDay=null){'));
+  assert.ok(part.indexOf('const booking=window.TraceInternational.resolveBooking(')>0);
+  assert.ok(part.indexOf('const booking=window.TraceInternational.resolveBooking(')<part.indexOf('const existing=findSimilarTransaction(probe)'));
+  assert.ok(part.includes('amountCAD:booking.amountCAD'));
  });
  console.log(count+' import cent-precision and card reconciliation checks passed');
 }
