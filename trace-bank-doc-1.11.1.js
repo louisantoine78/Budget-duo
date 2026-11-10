@@ -444,7 +444,7 @@ async function extract(file,onProgress=()=>{},options={}){
  const isImage=file.type.startsWith('image/')||/\.(png|jpe?g|webp|bmp|heic)$/i.test(name);
  if(!isPdf&&!isImage)throw new Error('Format non pris en charge : choisis une image, un PDF ou un CSV.');
  if(file.size>12*1024*1024)throw new Error('Document trop volumineux (maximum 12 Mo).');
- let result='',pageCount=1,ocrPages=0,structuredCandidates=[];
+ let result='',pageCount=1,ocrPages=0,structuredCandidates=[],quality=null;
  if(isPdf){
   onProgress('Ouverture du PDF sur cet appareil…');
   let pdfjs;
@@ -484,9 +484,14 @@ async function extract(file,onProgress=()=>{},options={}){
   ocrPages=1;
   onProgress('Analyse des lignes de transactions…');
   if(base?.data?.tsv)structuredCandidates=await recognizeStructuredScreenshot(file,w,base.data,onProgress,options.hintDate||'');
+  // Independent OCR text vs spatial lines: a mismatch is NOT proof of
+  // missing rows, but enough risk to prohibit automatic confirmations.
+  const textCandidates=extractCandidates(result).candidates.length;
+  quality={textRows:textCandidates,layoutRows:structuredCandidates.length,
+   reviewRequired:textCandidates>structuredCandidates.length&&textCandidates>0};
  }
  if(!result.trim()&&!structuredCandidates.length)throw new Error('Aucun texte lisible. Envoie une capture plus nette ou un PDF contenant du texte.');
- return {text:result.slice(0,120000),pageCount,ocrPages,structuredCandidates,source:structuredCandidates.length?'OCR local · lignes et montants relus':ocrPages?'OCR local + PDF':'PDF texte'};
+ return {text:result.slice(0,120000),pageCount,ocrPages,structuredCandidates,quality,source:structuredCandidates.length?'OCR local · lignes et montants relus':ocrPages?'OCR local + PDF':'PDF texte'};
 }
 const dateRe=/\b(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.](?:20)?\d{2})\b/;
 const moneyRe=/[-−+]?\(?\d{1,7}(?:[ \u00a0\u202f.,]\d{3})*(?:[.,]\d{2})\)?\s*(?:\$|€|CAD|USD|EUR)?/gi;
@@ -708,5 +713,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.3'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.4'};
 })();
