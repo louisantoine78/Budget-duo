@@ -131,6 +131,8 @@ function renderCandidateRows(file,data){
  const parsed=layoutReady?
  {candidates:data.structuredCandidates,flagged:0,lines:data.structuredCandidates.length,skippedPayments:0}:
  importer.extractCandidates(raw,$('#docFormat').value);
+ const summary=parsed.statementCheck||null;
+ const documentNeedsReview=summary?.status==='mismatch'||data.quality?.reviewRequired===true;
  const accountId=$('#docAccount').value,scoped=Boolean(preferredDate);
  const linkedAccount=bridge.accounts().find(a=>a.id===accountId);
  const hints=traceDocumentBankHints(file,data);
@@ -154,6 +156,9 @@ function renderCandidateRows(file,data){
  node.innerHTML='<div class="trace-smart-results">'+
  '<div class="trace-smart-count"><b>'+records.length+' opération'+(records.length>1?'s':'')+' détectée'+(records.length>1?'s':'')+'</b>'+
  '<small>'+esc(scoped?formatBankDay(preferredDate):isPdf?'Relevé bancaire':'Capture bancaire')+'</small></div>'+
+ (summary?.status==='matched'?'<p class="trace-smart-check" role="status">Contrôle du relevé : sommes des opérations, paiements et solde final concordants. Vérifie toujours les lignes avant import.</p>':'')+
+ (summary?.status==='mismatch'?'<p class="trace-smart-warning" role="alert">Sommes du relevé incohérentes avec les opérations détectées. Import en attente de vérification uniquement ; compare toutes les pages avant validation.</p>':'')+
+ (data.quality?.reviewRequired?'<p class="trace-smart-warning" role="alert">L’OCR textuel repère '+Number(data.quality.textRows)+' ligne(s) possibles, contre '+Number(data.quality.layoutRows)+' reconstruite(s) : risque de lignes manquantes. Vérifie la capture entière ; aucune confirmation automatique.</p>':'')+
  (accountMismatch?'<p class="trace-smart-warning" role="alert">Compte sélectionné incompatible avec la source : '+
   esc(hints.currency||'devise non confirmée')+' · '+esc(hints.kind==='card'?'carte de crédit':hints.kind==='checking'?'compte courant':'type non confirmé')+
   '. Choisis le compte approprié avant tout import.</p>':'')+
@@ -168,7 +173,7 @@ function renderCandidateRows(file,data){
  '<div class="trace-smart-rows">'+
  records.map((r,i)=>{
   const status=statuses[i];
-  const defaultChecked=status.status==='missing'&&r.selected&&!r.needsReview&&!r.needsDateReview&&Number(r.amount)>0;
+  const defaultChecked=status.status==='missing'&&r.selected&&!r.needsReview&&!r.needsDateReview&&Number(r.amount)>0&&!documentNeedsReview;
   const stateLabel={missing:'À importer',already:'Déjà importée',possible:status.amountConflict?'Montant contradictoire':'Doublon possible',historical:'Hors solde initial'}[status.status]||'À vérifier';
   const amount=Number(r.amount)>0?Number(r.amount):'';
   const needsAmount=amount==='';const needsReview=needsAmount||Boolean(r.needsReview)||Boolean(r.needsDateReview)||Boolean(status.amountConflict);
@@ -372,7 +377,8 @@ function renderCandidateRows(file,data){
     needsManualReview:['possible','already','historical'].includes(statuses[Number(chosen[pair.rowIndex].dataset.record)]?.status)}));
    // Similar, conflicting or historical rows are preserved pending until explicitly checked.
    // EUR drafts must be checked against the dated FX value before they affect budgets.
-  const safeApprovals=bankCurrency==='CAD'?approvals.filter(row=>!row.needsManualReview):[];
+  const safeApprovals=bankCurrency==='CAD'&&!documentNeedsReview?
+   approvals.filter(row=>!row.needsManualReview):[];
    let outcome={confirmed:0,pending:approvals.length};
    try{
     const checked=await bridge.quickFinalizeApproved(safeApprovals);
