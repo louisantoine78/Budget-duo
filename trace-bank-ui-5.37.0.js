@@ -90,14 +90,7 @@ async function readDocument(file){
 // Source hints are suggestions; the chosen bank account must still be confirmed.
 // A Desjardins card statement may mention EUR purchases while remaining CAD.
 function traceDocumentBankHints(file,data){
- const raw=String(data?.text||'');
- const cardStatement=/DESJARDINS[\s\S]{0,220}(?:MASTERCARD|ODYSSEE|ODYSS[EÉ]E)|TRANSACTIONS EFFECTU[EÉ]ES AVEC LA CARTE/i.test(raw);
- const euro=(raw.match(/\d[\d\s\u202f]*[,\.]\d{2}\s*€/g)||[]).length;
- const cad=(raw.match(/\d[\d\s\u202f]*[,\.]\d{2}\s*\$/g)||[]).length;
- const currency=cardStatement?'CAD':euro&&!cad?'EUR':cad&&!euro?'CAD':'';
- const kind=cardStatement||/\bPAIEMENT\s+CAISSE\b/i.test(raw)?'card':
-  /COMPTE DE CH[EÈ]QUES|COMPTE COURANT BNP|COMPTE DE D[EÉ]P[OÔ]T/i.test(raw)?'checking':'';
- return{currency,kind};
+ return window.TraceBankDocuments?.sourceAccountHints?.(String(data?.text||''))||{currency:'',kind:''};
 }
 function showDocumentReview(file,data){
  const root=$('#importResult'),accounts=window.TraceBankBridge.accounts();
