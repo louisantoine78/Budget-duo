@@ -87,6 +87,18 @@ async function readDocument(file){
  }catch(error){target.innerHTML='<div class="empty-note">'+esc(error.message)+'</div><button type="button" class="secondary full" id="skipFailedCapture">Ignorer et continuer</button>';$('#skipFailedCapture').onclick=nextCapture;}
 }
 
+// Source hints are suggestions; the chosen bank account must still be confirmed.
+// A Desjardins card statement may mention EUR purchases while remaining CAD.
+function traceDocumentBankHints(file,data){
+ const raw=String(data?.text||'');
+ const cardStatement=/DESJARDINS[\s\S]{0,220}(?:MASTERCARD|ODYSSEE|ODYSS[EÉ]E)|TRANSACTIONS EFFECTU[EÉ]ES AVEC LA CARTE/i.test(raw);
+ const euro=(raw.match(/\d[\d\s\u202f]*[,\.]\d{2}\s*€/g)||[]).length;
+ const cad=(raw.match(/\d[\d\s\u202f]*[,\.]\d{2}\s*\$/g)||[]).length;
+ const currency=cardStatement?'CAD':euro&&!cad?'EUR':cad&&!euro?'CAD':'';
+ const kind=cardStatement||/\bPAIEMENT\s+CAISSE\b/i.test(raw)?'card':
+  /COMPTE DE CH[EÈ]QUES|COMPTE COURANT BNP|COMPTE DE D[EÉ]P[OÔ]T/i.test(raw)?'checking':'';
+ return{currency,kind};
+}
 function showDocumentReview(file,data){
  const root=$('#importResult'),accounts=window.TraceBankBridge.accounts();
  const isPdf=/\.pdf$/i.test(file.name)||file.type==='application/pdf';
@@ -95,7 +107,7 @@ function showDocumentReview(file,data){
  '<div class="trace-smart-head"><span class="trace-kicker">'+(batchTotal>1?'CAPTURE '+batchNumber+' SUR '+batchTotal:isPdf?'CONTRÔLE MENSUEL':'IMPORT DE CAPTURE')+'</span>'+
  '<h3>Opérations détectées</h3><p>'+esc(file.name)+'</p></div>'+
  '<label class="label2" for="docAccount">Compte concerné</label>'+
- '<select class="input trace-smart-account" id="docAccount">'+accounts.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>').join('')+'</select>'+
+ '<select class="input trace-smart-account" id="docAccount">'+accounts.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+' · '+esc(a.currency)+' · '+esc(a.type==='card'?'Carte':'Compte')+'</option>').join('')+'</select>'+
  (preferredDate?'<div class="trace-smart-day">Journée du <strong>'+esc(preferredDate)+'</strong> · seules ses transactions seront proposées.</div>':'')+
  '<div id="docRows" aria-live="polite"></div>'+
  (activeImageUrl?'<details class="trace-original-screenshot"><summary><span>Voir la capture complète</span><small>Pour vérifier un détail sans retourner dans Photos</small></summary>'+
@@ -107,9 +119,10 @@ function showDocumentReview(file,data){
  '<label class="label2" for="docFormat">Format de date</label><select id="docFormat" class="input"><option value="dmy">JJ/MM/AAAA</option><option value="mdy">MM/JJ/AAAA</option></select>'+
  '<button type="button" class="secondary full" id="docParse" style="margin-top:9px">Réanalyser le texte corrigé</button></div></details>'+
  '</article>';
- const current=accounts.find(a=>a.id===preferredAccount);
- const card=accounts.find(a=>a.type==='card');
- const chosen=current||card||accounts[0];
+ const current=accounts.find(a=>a.id===preferredAccount),hints=traceDocumentBankHints(file,data);
+ const compatible=accounts.filter(a=>(!hints.currency||a.currency===hints.currency)&&
+  (!hints.kind||a.type===hints.kind));
+ const chosen=current||compatible[0]||accounts[0];
  if(chosen)$('#docAccount').value=chosen.id;
  $('#docAccount').onchange=()=>renderCandidateRows(file,data);
  $('#docParse').onclick=()=>renderCandidateRows(file,data);
@@ -126,13 +139,18 @@ function renderCandidateRows(file,data){
  {candidates:data.structuredCandidates,flagged:0,lines:data.structuredCandidates.length,skippedPayments:0}:
  importer.extractCandidates(raw,$('#docFormat').value);
  const accountId=$('#docAccount').value,scoped=Boolean(preferredDate);
+ const linkedAccount=bridge.accounts().find(a=>a.id===accountId);
+ const hints=traceDocumentBankHints(file,data);
+ const accountMismatch=Boolean(!linkedAccount||
+  hints.currency&&hints.currency!==linkedAccount.currency||
+  hints.kind&&hints.kind!==linkedAccount.type);
  const dayCandidates=scoped?parsed.candidates.filter(r=>r.date===preferredDate||(!r.date&&r.needsDateReview)):parsed.candidates;
  const skipped=scoped?parsed.candidates.length-dayCandidates.length:0;
  const otherDates=[...new Set(parsed.candidates.filter(r=>!scoped||r.date!==preferredDate).map(r=>r.date).filter(Boolean))].sort();
  const records=dayCandidates.slice(0,150);
- const bankKind=bridge.accounts().find(a=>a.id===accountId)?.type||'checking';
+ const bankKind=linkedAccount?.type||'checking',bankCurrency=linkedAccount?.currency||'CAD';
  const M=window.TraceMovement,G=window.TraceImportGuide,U=window.TraceOperationUI;
- const statuses=bridge.inspect(records,accountId);
+ const statuses=linkedAccount?bridge.inspect(records,accountId):records.map(()=>({status:'date'}));
  const alreadyCount=statuses.filter(s=>s.status==='already').length;
  const possibleCount=statuses.filter(s=>s.status==='possible').length;
  const actionable=records.filter((r,i)=>statuses[i].status==='missing'&&r.selected&&Number(r.amount)>0).length;
@@ -143,6 +161,10 @@ function renderCandidateRows(file,data){
  node.innerHTML='<div class="trace-smart-results">'+
  '<div class="trace-smart-count"><b>'+records.length+' opération'+(records.length>1?'s':'')+' détectée'+(records.length>1?'s':'')+'</b>'+
  '<small>'+esc(scoped?formatBankDay(preferredDate):isPdf?'Relevé bancaire':'Capture bancaire')+'</small></div>'+
+ (accountMismatch?'<p class="trace-smart-warning" role="alert">Compte sélectionné incompatible avec la source : '+
+  esc(hints.currency||'devise non confirmée')+' · '+esc(hints.kind==='card'?'carte de crédit':hints.kind==='checking'?'compte courant':'type non confirmé')+
+  '. Choisis le compte approprié avant tout import.</p>':'')+
+ '<label class="trace-smart-account-confirm"><input id="docAccountConfirmed" type="checkbox"> Je confirme que ce document provient bien de '+esc(linkedAccount?.name||'ce compte')+' ('+esc(bankCurrency)+').</label>'+
  (skipped?'<p class="trace-smart-omitted">'+skipped+' opération(s) d’autres journées laissée(s) de côté ('+otherDates.map(formatBankDay).join(', ')+').</p>':'')+
  (uncertain?'<p class="trace-smart-warning">'+uncertain+' ligne(s) à vérifier (date ou montant). Les opérations fiables restent présélectionnées.</p>':'')+
  (alreadyCount||possibleCount?'<section class="trace-duplicate-summary" role="status" aria-live="polite">'+
@@ -161,18 +183,20 @@ function renderCandidateRows(file,data){
   const originalPrice=crop?(needsReview?'<div class="trace-price-source" aria-label="Montant sur la capture"><span>Montant sur ta capture</span><img src="'+crop+'" alt="Extrait du montant bancaire original" loading="lazy"></div>':
    '<details class="trace-price-source trace-price-source-collapsed"><summary>Vérifier le montant original</summary><img src="'+crop+'" alt="Extrait du montant bancaire original" loading="lazy"></details>'):'';
 
-  const dir=G.direction(r.type,bankKind,r.name)||(r.type==='income'||r.type==='refund'?'in':'out');
+  const dir=['in','out'].includes(r.bankDirection)?r.bankDirection:
+   G.direction(r.type,bankKind,r.name)||(r.type==='income'||r.type==='refund'?'in':'out');
   const proposed=G.suggest(bankKind,r.type,r.name);
   const nature=G.allowed(proposed,bankKind,dir)?proposed:'';
   const def=M.get(nature),budget=Boolean(def&&def.budget!=='none');
   const expense=def?.budget==='expense'||def?.budget==='refund';
   const categories=bridge.importCategoryOptions(def?.budget==='income'?'income':'expense');
-  const guess=budget?bridge.suggestImportCategory({...r,type:def?.type||r.type,amountCAD:r.amount}):'';
+  // Never use a raw EUR amount as though it were a CAD budget amount.
+  const guess=budget&&bankCurrency==='CAD'?bridge.suggestImportCategory({...r,type:def?.type||r.type,amountCAD:r.amount}):'';
   return '<div class="trace-smart-row'+(status.status==='already'?' trace-smart-duplicate':'')+(status.status==='possible'?' trace-smart-suspected':'')+'" data-record="'+i+'">'+
-  '<div class="trace-smart-row-main"><label class="trace-smart-row-check"><input class="docSelected" type="checkbox" '+(defaultChecked?'checked':'')+' aria-label="Sélectionner '+esc(r.name)+'"></label>'+
+  '<div class="trace-smart-row-main"><label class="trace-smart-row-check"><input class="docSelected" type="checkbox" '+(defaultChecked&&!accountMismatch?'checked':'')+' aria-label="Sélectionner '+esc(r.name)+'"></label>'+
   '<div class="trace-smart-row-description"><strong>'+esc(r.name)+'</strong>'+
   '<small>'+esc(r.date?formatBankDay(r.date):'Date à confirmer')+' · <span class="trace-smart-status">'+esc(stateLabel)+'</span></small></div>'+
-  '<div class="trace-smart-row-money"><input class="input docAmount" type="text" inputmode="decimal" value="'+(amount!==''?esc(Number(amount).toFixed(2).replace('.',',')):'')+'" placeholder="0,00" aria-label="Montant CAD '+esc(r.name)+'"><small>CAD</small></div></div>'+
+  '<div class="trace-smart-row-money"><input class="input docAmount" type="text" inputmode="decimal" value="'+(amount!==''?esc(Number(amount).toFixed(2).replace('.',',')):'')+'" placeholder="0,00" aria-label="Montant '+esc(bankCurrency)+' '+esc(r.name)+'"><small>'+esc(bankCurrency)+'</small></div></div>'+
   (needsReview?'<div class="trace-smart-needs">'+(status.amountConflict?'Montant différent d’une opération existante.':r.needsDateReview?'Date illisible : précise-la dans les détails.':needsAmount?'Montant non reconnu.':'Lectures incertaines du montant.')+' Vérifie uniquement ce point.</div>':'')+
   originalPrice+
   (Array.isArray(r.priceCandidates)&&r.priceCandidates.length>1?'<div class="trace-smart-alternatives"><small>Montants possibles</small>'+r.priceCandidates.slice(0,3).map(n=>'<button type="button" class="trace-price-choice" data-suggest-amount="'+esc(n)+'">'+esc(Number(n).toFixed(2).replace('.',','))+' $</button>').join('')+'</div>':'')+
@@ -197,7 +221,7 @@ function renderCandidateRows(file,data){
  '</div></details>'+
  '<div class="trace-fast-sharing docShareWrap"'+(expense?'':' hidden')+'><span class="trace-fast-sharing-label">Pour qui ?</span>'+
  '<select class="docWho trace-native-who" aria-label="Répartition de '+esc(r.name)+'"><option value="">À répartir</option>'+
- recipients.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select>'+
+ recipients.filter(p=>bankCurrency==='CAD'||p.id!=='custom').map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select>'+
  '<div class="trace-share-choices" role="group" aria-label="Répartition de '+esc(r.name)+'">'+
  recipients.map((p,j)=>'<button type="button" class="trace-share-choice" data-quick-share="'+esc(p.id)+'" aria-pressed="false">'+
  esc(p.id==='custom'?'Amis +':p.id==='couple'?'Nous deux':j===0?'Moi':p.name.split(' ')[0])+'</button>').join('')+'</div></div>'+
@@ -206,7 +230,7 @@ function renderCandidateRows(file,data){
  '<label>Part de '+esc(recipients.find(p=>p.id!=="couple"&&p.id!=="custom"&&p.id!==recipients[0].id)?.name||"ton partenaire")+' ($)<input class="input docPartnerAmount" type="number" inputmode="decimal" min="0" step="0.01" value="0"></label></div>'+
  '<small class="trace-custom-preview">Le reste sera ta part. Les amis ne sont pas comptés dans le partage du couple.</small></div></div>';
  }).join('')+'</div>'+
- (records.length?'<button type="button" class="primary full trace-smart-confirm" id="docSave">Importer et valider les opérations sélectionnées</button>':
+ (records.length?'<button type="button" class="primary full trace-smart-confirm" id="docSave"'+(accountMismatch?' disabled':'')+'>Importer et valider les opérations sélectionnées</button>':
  '<div class="trace-smart-empty">'+(scoped&&otherDates.length?'Aucune opération du '+esc(formatBankDay(preferredDate))+' dans cette capture. Les journées visibles ('+esc(otherDates.map(formatBankDay).join(', '))+') ne seront pas importées.':'Aucune opération'+(scoped?' du '+esc(formatBankDay(preferredDate)):'')+' reconnue. Réessaie avec une capture plus nette ou corrige le texte dans les options avancées.')+'</div>')+
  '<button type="button" class="secondary full trace-smart-skip" id="docSkip">'+(pendingFiles.length?'Passer à la capture suivante':'Fermer cet import')+'</button>'+
  '<div class="trace-feedback" id="docError" role="status"></div></div>';
@@ -229,7 +253,7 @@ function renderCandidateRows(file,data){
    const who=line.querySelector('.docWho'),fields=line.querySelector('.trace-custom-row');
    const update=()=>{
     const nature=line.querySelector('.docNature').value,def=M.get(nature);
-    const custom=who.value==='custom'&&Boolean(def&&(def.budget==='expense'||def.budget==='refund'));
+    const custom=bankCurrency==='CAD'&&who.value==='custom'&&Boolean(def&&(def.budget==='expense'||def.budget==='refund'));
     fields.classList.toggle('hidden',!custom);
     const total=Number(String(line.querySelector('.docAmount').value).replace(',','.'));
     const friends=Number(line.querySelector('.docFriendsAmount').value),partner=Number(line.querySelector('.docPartnerAmount').value);
@@ -316,6 +340,12 @@ function renderCandidateRows(file,data){
  $('#docSave').onclick=async()=>{
   const chosen=[...node.querySelectorAll('[data-record]')].filter(el=>el.querySelector('.docSelected').checked);
   if(!chosen.length){$('#docError').textContent='Sélectionne au moins une opération.';return;}
+  if(!$('#docAccountConfirmed')?.checked){
+   $('#docError').textContent='Confirme explicitement le compte bancaire et sa devise avant l’import.';return;
+  }
+  if(accountMismatch){
+   $('#docError').textContent='La devise ou le type du document ne correspondent pas au compte sélectionné.';return;
+  }
   const rows=chosen.map(el=>{
    const i=Number(el.dataset.record),st=statuses[i];
    return{date:el.querySelector('.docDate').value,name:el.querySelector('.docName').value.trim(),amount:Number(String(el.querySelector('.docAmount').value).replace(',','.').replace(/\s/g,'')),
@@ -346,7 +376,8 @@ function renderCandidateRows(file,data){
    const approvals=(result.savedRows||[]).map(pair=>({id:pair.id,categoryId:rows[pair.rowIndex].categoryId,beneficiary:rows[pair.rowIndex].beneficiary,friendsAmount:rows[pair.rowIndex].friendsAmount,partnerAmount:rows[pair.rowIndex].partnerAmount,
     needsManualReview:['possible','already','historical'].includes(statuses[Number(chosen[pair.rowIndex].dataset.record)]?.status)}));
    // Similar, conflicting or historical rows are preserved pending until explicitly checked.
-   const safeApprovals=approvals.filter(row=>!row.needsManualReview);
+   // EUR drafts must be checked against the dated FX value before they affect budgets.
+  const safeApprovals=bankCurrency==='CAD'?approvals.filter(row=>!row.needsManualReview):[];
    let outcome={confirmed:0,pending:approvals.length};
    try{
     const checked=await bridge.quickFinalizeApproved(safeApprovals);
