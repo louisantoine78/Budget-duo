@@ -66,6 +66,11 @@ async function loadFiles(files){
   progress.textContent='Capture '+(i+1)+' sur '+files.length+' · '+file.name;
   try{
    const data=await window.TraceBankDocuments.extract(file,msg=>{if($('#smartProgress'))$('#smartProgress').textContent='Capture '+(i+1)+'/'+files.length+' · '+msg;},{hintDate:bridge().month()+'-01'});
+   const evidence=window.TraceBankDocuments?.sourceAccountHints?.(data.text||'')||{currency:'',kind:''};
+   if(evidence.currency&&evidence.currency!==bank.currency)
+    throw Error('Capture en '+evidence.currency+' : le compte sélectionné est en '+bank.currency+'. Aucune transaction enregistrée.');
+   if(evidence.kind&&evidence.kind!==bank.type)
+    throw Error('Type de compte incompatible : la capture semble provenir '+(evidence.kind==='card'?'d’une carte de crédit.':'d’un compte courant.')+' Aucune transaction enregistrée.');
    const parsed=Array.isArray(data.structuredCandidates)&&data.structuredCandidates.length?data.structuredCandidates:window.TraceBankDocuments.extractCandidates(data.text||'').candidates;
    const records=parsed.map(row=>({
     date:row.date||'',name:row.name||'',
