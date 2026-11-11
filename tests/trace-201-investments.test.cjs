@@ -670,7 +670,9 @@ test('Patrimoine account management is owner-only and safe for empty accounts',(
   state[field]=[];
  }
  assert.equal(state.investmentAccounts.length,1,'checking eligibility never changes state');
- assert.ok(app.includes("await removeDocument('investment_accounts',account.id)"));
+ assert.ok(app.includes("await traceDeleteEmptyInvestmentAccount(account)"));
+ assert.ok(app.includes("client.rpc('trace_delete_empty_investment_account'"));
+ assert.ok(!app.includes("await removeDocument('investment_accounts',account.id)"));
  assert.ok(app.includes("state.investmentAccounts=state.investmentAccounts.filter(a=>a.id!==account.id)"));
  assert.ok(app.includes('id="traceInvDeleteConfirm"'),'confirmation checkbox required');
  assert.ok(app.includes("account?.owner===me)openInvestmentAccountManage(account)"));
