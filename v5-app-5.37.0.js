@@ -2425,6 +2425,7 @@ function openInvestmentAccountAdd(){
     '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. Mon PEA, assurance-vie, CELI">'+
     '<div class="formrow"><div><label class="label2">Type</label><select class="input" id="investmentAccountType"><option value="CELI">CELI</option><option value="Épargne">Épargne</option><option value="Livret">Livret</option><option value="PEA">PEA</option><option value="Assurance-vie">Assurance-vie</option><option value="REER">REER</option><option value="Courtage">Courtage</option><option value="Autre">Autre</option></select></div>'+
     '<div><label class="label2">Devise</label><select class="input" id="investmentAccountCurrency"><option value="CAD">CAD</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="CHF">CHF</option></select></div></div>'+
+    '<p class="trace-intl-help" id="investmentTypeHelp" role="status"></p>'+
     '<div id="newSavingsReference" class="trace-savings-reference"><div class="empty-note">Les transferts confirmés alimenteront ce compte d’épargne. Pour commencer à calculer son solde, indique sa référence bancaire.</div>'+
     '<label class="label2">Date du solde initial</label><input id="newSavingsDate" class="input" type="date" value="'+localDateISO()+'">'+
     '<label class="label2" id="newSavingsAmountLabel">Solde réel à cette date (CAD)</label><input id="newSavingsAmount" class="input" type="number" step=".01" min="0" inputmode="decimal" placeholder="Tu peux le compléter plus tard"></div>'+
@@ -2436,6 +2437,9 @@ function openInvestmentAccountAdd(){
   const refreshSavings=()=>{
    const saving=['CELI','Épargne','Livret'].includes($('#investmentAccountType').value);
    $('#newSavingsReference').classList.toggle('hidden',!saving);
+   const chosen=$('#investmentAccountType').value;
+   $('#investmentTypeHelp').textContent=chosen==='Assurance-vie'?
+    'Assurance-vie : placement en fonds euros et/ou unités de compte. Ajoute les supports et leur valorisation de rachat dans le suivi des investissements ; ce n’est pas un compte courant.':'';
    $('#newSavingsAmountLabel').textContent='Solde réel à cette date ('+$('#investmentAccountCurrency').value+')';
   };
   $('#investmentAccountType').onchange=refreshSavings;
