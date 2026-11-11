@@ -7469,6 +7469,28 @@ function traceInvestmentDeleteEligibility(account){
   return{allowed:false,reason:'Ce compte contient déjà un solde, des titres ou un relevé. Pour éviter toute perte, TRACE n’autorise pas sa suppression directe.'};
  return{allowed:true,reason:''};
 }
+// A separate server-side authorization rule is required: the generic CAS
+// deletion endpoint intentionally refuses investment_accounts.
+async function traceDeleteEmptyInvestmentAccount(account){
+ if(internationalPreviewMode())throw Error('La suppression est désactivée dans cet aperçu.');
+ if(!session?.user?.id||!household?.id)throw Error('Session TRACE absente.');
+ if(traceWritesBlocked)throw Error('Synchronisation bloquée : recharge TRACE.');
+ const key=traceWriteKey('investment_accounts',account.id);
+ if(!traceDocRevisions.has(key))throw Error('Compte non synchronisé. Actualise TRACE avant de le supprimer.');
+ return traceSerialWrite(key,async()=>{
+  const expectedRevision=traceRevision(traceDocRevisions.get(key));
+  sync('saving');
+  const {data,error}=await client.rpc('trace_delete_empty_investment_account',{
+   p_household_id:household.id,p_item_id:String(account.id),
+   p_expected_revision:expectedRevision
+  });
+  if(error)throw traceSaveFailure(error);
+  if(data!==true)throw Error('Suppression non confirmée par TRACE.');
+  traceDocRevisions.delete(key);traceUnsavedWriteKeys.delete(key);
+  traceSyncConfirmed();
+  return true;
+ });
+}
 function openInvestmentAccountManage(account){
  if(!account)return;
  const permission=traceInvestmentDeleteEligibility(account);
@@ -7499,7 +7521,7 @@ function openInvestmentAccountManage(account){
    if(!nextCheck.allowed)throw Error(nextCheck.reason);
    if(traceWriteQueues.has(traceWriteKey('investment_accounts',account.id))||fxSyncPromise)
     throw Error('Une synchronisation de patrimoine est en cours. Réessaie ensuite.');
-   await removeDocument('investment_accounts',account.id);
+   await traceDeleteEmptyInvestmentAccount(account);
    state.investmentAccounts=state.investmentAccounts.filter(a=>a.id!==account.id);
    closeSheet();renderWealth();
   }catch(err){
