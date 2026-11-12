@@ -191,7 +191,7 @@ async function assertLayout(page,label,step){
  const metrics=await page.evaluate(()=>{
   const root=document.documentElement;
   const body=document.body;
-  const stage=document.querySelector('#lab-stage');
+  const stage=document.querySelector('#lab-stage')||document.querySelector('#w201-root');
   const cards=[...document.querySelectorAll('.w201-account, .w201-position, .w201-card')];
   const fields=[...document.querySelectorAll('.w201-field input, .w201-field select')];
   return{
