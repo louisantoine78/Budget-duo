@@ -5941,6 +5941,7 @@ function renderWealth(){
    !state.investmentOperations.some(o=>o.accountId===a.id)&&p.value===0;
   const evidence=!isSavings?a.investments201?.brokerCapture:null;
   const detailed=a.investments201;
+  const hasInsurance=!isSavings&&a.type==='Assurance-vie'&&Boolean(detailed?.insurance);
   const hasDetailedPositions=!isSavings&&Array.isArray(detailed?.positions)&&
    detailed.positions.length>0&&!state.investmentOperations.some(o=>o.accountId===a.id);
   const explicitTotal=Number.isSafeInteger(evidence?.totalCents)&&evidence.totalCents>=0?
@@ -5960,13 +5961,21 @@ function renderWealth(){
     if(verified?.ready&&Number.isFinite(verified.value))detailedVerified=verified.value;
    }catch(error){console.warn('Valorisation détaillée à vérifier :',error.message);}
   }
-  const pendingDetails=hasDetailedPositions&&!p.netReady;
+  const pendingDetails=(hasDetailedPositions||hasInsurance)&&!p.netReady;
   const shownValue=p.reviewRequired?'Mouvement à vérifier':
    isSavings&&!p.configured?'À configurer':needsSetup?'À initialiser':
    captured?nativeMoney(referenceCents/100,a.currency):
+   hasInsurance&&p.netReady?nativeMoney(p.value,a.currency):
+   hasInsurance&&pendingDetails&&Number.isSafeInteger(detailed.insurance.totalCents)?
+     nativeMoney(detailed.insurance.totalCents/100,a.currency):
    detailedVerified!==null?nativeMoney(detailedVerified,a.currency):
    pendingDetails?'À rapprocher':nativeMoney(p.value,a.currency);
-  const shownDetail=needsSetup?'Renseigner les positions et les espèces ›':
+  const shownDetail=needsSetup?(a.type==='Assurance-vie'?
+      'Renseigner fonds en euros et unités de compte ›':'Renseigner les positions et les espèces ›'):
+   hasInsurance?(p.netReady?
+     'Fonds euros + unités de compte · au '+esc(detailed.insurance.date)+' · contre-valeur CAD vérifiée':
+     'Fonds euros + unités de compte · valorisation du '+esc(detailed.insurance.date||'relevé')+
+     ' · '+esc(p.fxStatus||'conversion à vérifier')):
    captured?(explicitTotal===null?'Titres + espèces de la capture':'Valeur lue sur la capture')+
     ' · '+(referenceCad?'≈ '+referenceCad+' CAD · taux du '+esc(p.fxDate||'non daté')+' · ':'')+'non rapprochée':
    detailedVerified!==null?'Suivi rapproché · intégration au patrimoine net à confirmer':
@@ -7459,7 +7468,7 @@ function traceInvestmentDeleteEligibility(account){
  if(referenced)return{allowed:false,reason:'Des opérations, imports ou rapprochements sont liés à ce compte. Leurs données sont protégées : retire ou réaffecte ces mouvements avant de supprimer le compte.'};
  const p=account.investments201;
  const hasPortfolioEvidence=Boolean(p&&(p.status==='verified'||p.brokerVerification||
-  p.brokerCapture||p.openingCashConfirmed||
+  p.brokerCapture||p.insurance||p.openingCashConfirmed||
   Number(p.openingCashCents||0)!==0||
   ['positions','catalog','operations','snapshots'].some(k=>Array.isArray(p[k])&&p[k].length>0)||
   Object.keys(p.quotes||{}).length>0||
