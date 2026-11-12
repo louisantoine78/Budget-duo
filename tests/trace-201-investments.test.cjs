@@ -684,3 +684,47 @@ test('Patrimoine account management is owner-only and safe for empty accounts',(
  assert.ok(css.includes('.trace-wealth-account-manage'));
  assert.ok(css.includes('.trace-wealth-account-shell'));
 });
+
+
+test('Assurance-vie: two source-backed monetary supports, no invented stock positions',()=>{
+ const a={id:'av-sample',owner:'la',name:'Contrat fictif',type:'Assurance-vie',
+  currency:'EUR',fxCadPerUnit:'1.57000000',fxRateDate:new Date().toISOString().slice(0,10),
+  fxRateProvider:'Banque du Canada (test)'};
+ const p=W.blank(a),date=new Date().toISOString().slice(0,10);
+ p.openingDate=date;
+ p.insurance={schema:1,status:'confirmed',date,source:'BNP Paribas (test)',
+  euroCents:27301,unitsCents:27740,totalCents:55041,unitsDetail:''};
+ p.snapshots=[{date,valueCents:55041,source:'Assurance-vie : BNP Paribas (test)',estimated:false}];
+ assert.equal(W.insuranceSummary(p).ready,true);
+ assert.equal(W.insuranceSummary(p).totalCents,55041);
+ assert.equal(E.evaluate(p).positions.length,0,'no synthetic stocks/shares');
+ const account={...a,investments201:p};
+ const bridge=W.netWorthBridge(account,false,date);
+ assert.equal(bridge.mode,'insurance');
+ assert.equal(bridge.ready,true);
+ assert.equal(bridge.nativeCents,55041);
+ assert.equal(bridge.cadCents,E.cadValue(55041,'EUR',{
+  cadPerUnit:a.fxCadPerUnit,date:a.fxRateDate,source:a.fxRateProvider},date).valueCents);
+ assert.equal(W.netWorthBridge(account,true,date).ready,false,'legacy journals cannot be double-counted');
+ assert.equal(W.netWorthBridge({...account,fxRateDate:'2026-10-01'},false,date).ready,false,
+  'stale exchange rates must never count as live net worth');
+ assert.equal(W.insuranceSummary({...p,insurance:{...p.insurance,totalCents:55042}}).ready,false);
+ assert.equal(W.insuranceSummary({...p,snapshots:[]}).ready,false);
+ assert.equal(W.insuranceSummary({...p,positions:[{
+  id:'legacy',name:'Legacy unit',quantityMicro:E.quantity(1),costBasisCents:100,
+  symbol:'LEGACY',isin:'',marketMic:'',assetType:'Fonds'
+ }]}).ready,false,'legacy positions and insurance supports are conflicting');
+ assert.equal(W.insuranceSummary({...p,insurance:{...p.insurance,
+  status:'draft'}}).ready,false,'unconfirmed valuations cannot count');
+ assert.equal(W.insuranceSummary({...p,insurance:{...p.insurance,
+  euroCents:0,unitsCents:0,totalCents:0}}).ready,false,'empty valuation not verified');
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const source=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ assert.match(source,/Fonds en euros/);
+ assert.match(source,/Unités de compte/);
+ assert.match(source,/Précision sur les fonds UC \(facultatif\)/);
+ assert.match(source,/if\(fd\.get\('approved'\)!=='on'\)/);
+ assert.match(source,/await save\(a,next\)/);
+ assert.match(app,/p\.brokerCapture\|\|p\.insurance/);
+ assert.match(app,/hasInsurance&&p\.netReady/);
+});
