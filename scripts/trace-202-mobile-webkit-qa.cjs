@@ -127,7 +127,7 @@ const server=http.createServer((req,res)=>{
     <h1 id="fixtureTitle">Investissements CSP</h1><div id="fixtureBody"></div>
     <script src="/__trace202_csp_host.js"></script>
     <script src="/trace-wealth-201-engine.js"></script>
-    <script src="/trace-wealth-201.js?v=2.0.2.2"></script>
+    <script src="/trace-wealth-201.js?v=2.0.2.3"></script>
     </body></html>`;
    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(html);return;
   }
@@ -135,7 +135,7 @@ const server=http.createServer((req,res)=>{
    const js=[
     "window.__CSP_TEST_OPEN_COUNT__=0;",
     "window.Trace201Host={",
-    " context(){return {active:true,viewer:'la',scope:'mine',accounts:[{id:'pea-fictif',owner:'la',name:'PEA de test',type:'PEA',currency:'EUR'}],operations:[]};},",
+    " context(){return {active:true,viewer:'la',scope:'mine',accounts:[{id:'pea-fictif',owner:'la',name:'PEA de test',type:'PEA',currency:'EUR'},{id:'av-fictif',owner:'la',name:'Assurance-vie fictive',type:'Assurance-vie',currency:'EUR'}],operations:[]};},",
     " async save(){throw Error('Fixture locale : aucun enregistrement');},",
     " openSheet(title,html){window.__CSP_TEST_OPEN_COUNT__++;document.querySelector('#fixtureTitle').textContent=title;document.querySelector('#fixtureBody').innerHTML=html;}",
     "};"
@@ -322,7 +322,7 @@ async function run(){
     // external module connects to an authenticated fixture under strict CSP.
     await page.goto(origin+'/__trace202_csp_bridge.html',{waitUntil:'load'});
     assert.equal(await page.evaluate(()=>typeof window.TraceWealth201?.open),'function');
-    assert.equal(await page.evaluate(()=>window.TraceWealth201.dashboardSummary().portfolios),1);
+    assert.equal(await page.evaluate(()=>window.TraceWealth201.dashboardSummary().portfolios),2);
     await page.evaluate(()=>window.TraceWealth201.open());
     await page.locator('#fixtureBody .w201-account').waitFor();
     assert.match(await page.locator('#fixtureTitle').innerText(),/Investissements/);
@@ -330,6 +330,24 @@ async function run(){
     assert.match(await page.locator('#fixtureTitle').innerText(),/TRACE 2.0.2/);
     assert.match(await page.locator('#fixtureBody').innerText(),/PEA de test/);
     assert.ok(await page.evaluate(()=>window.__CSP_TEST_OPEN_COUNT__>=2));
+    // Insurance-only iPhone workflow: two fund balances, optional unit-linked details,
+    // and an explicitly refused fake save. No bank connection or actual Supabase writes.
+    await page.evaluate(()=>window.TraceWealth201.open('av-fictif'));
+    await page.getByText('Fonds en euros').waitFor();
+    await page.getByText('Unités de compte').waitFor();
+    await assertLayout(page,label,'insurance-summary');
+    await page.locator('[data-w201="insurance"]').tap();
+    await page.locator('#w201-form input[name="euro"]').fill('273,01');
+    await page.locator('#w201-form input[name="units"]').fill('277,40');
+    await page.locator('#w201-form input[name="date"]').fill('2026-11-04');
+    await page.locator('#w201-form input[name="source"]').fill('BNP fictif');
+    await page.locator('#w201-form input[name="approved"]').check();
+    await assertLayout(page,label,'insurance-form');
+    await page.locator('#w201-save').tap();
+    await page.waitForFunction(()=>document.querySelector('#w201-error')?.textContent.includes('Fixture locale'));
+    assert.equal(await page.locator('#w201-save').isEnabled(),true);
+    assert.equal(await page.locator('#w201-form input[name="euro"]').inputValue(),'273,01');
+    await saveImage(page,label,'insurance-review');
     // Real Patrimoine HTML, stylesheet and renderWealth(), with fictional
     // accounts and real delegated touch routing — no Supabase or bank access.
     await page.goto(origin+'/__trace203_wealth_layout.html',{waitUntil:'load'});
