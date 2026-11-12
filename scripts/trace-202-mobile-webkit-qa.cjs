@@ -324,9 +324,9 @@ async function run(){
     assert.equal(await page.evaluate(()=>typeof window.TraceWealth201?.open),'function');
     assert.equal(await page.evaluate(()=>window.TraceWealth201.dashboardSummary().portfolios),2);
     await page.evaluate(()=>window.TraceWealth201.open());
-    await page.locator('#fixtureBody .w201-account').waitFor();
+    await page.locator('#fixtureBody .w201-account').first().waitFor();
     assert.match(await page.locator('#fixtureTitle').innerText(),/Investissements/);
-    await page.locator('#fixtureBody .w201-account').tap();
+    await page.locator('#fixtureBody .w201-account').first().tap();
     assert.match(await page.locator('#fixtureTitle').innerText(),/TRACE 2.0.2/);
     assert.match(await page.locator('#fixtureBody').innerText(),/PEA de test/);
     assert.ok(await page.evaluate(()=>window.__CSP_TEST_OPEN_COUNT__>=2));
