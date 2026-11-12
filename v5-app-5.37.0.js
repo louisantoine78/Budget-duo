@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.8';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.10';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -2422,9 +2422,10 @@ function openManualTransaction(preferredKind='expense'){
 function openInvestmentAccountAdd(){
   openSheet('Ajouter un compte',
     '<div class="settings-hero"><span class="pico large">'+uiIcon('chart')+'</span><div><b>Nouveau compte de patrimoine</b><small>Ajoute le compte maintenant ; les opérations et la valorisation viendront ensuite.</small></div></div>'+
-    '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. Mon PEA, Compte-titres, CELI">'+
-    '<div class="formrow"><div><label class="label2">Type</label><select class="input" id="investmentAccountType"><option value="CELI">CELI</option><option value="Épargne">Épargne</option><option value="Livret">Livret</option><option value="PEA">PEA</option><option value="REER">REER</option><option value="Courtage">Courtage</option><option value="Autre">Autre</option></select></div>'+
+    '<label class="label2">Nom du compte</label><input class="input" id="investmentAccountName" type="text" maxlength="60" placeholder="Ex. Mon PEA, assurance-vie, CELI">'+
+    '<div class="formrow"><div><label class="label2">Type</label><select class="input" id="investmentAccountType"><option value="CELI">CELI</option><option value="Épargne">Épargne</option><option value="Livret">Livret</option><option value="PEA">PEA</option><option value="Assurance-vie">Assurance-vie</option><option value="REER">REER</option><option value="Courtage">Courtage</option><option value="Autre">Autre</option></select></div>'+
     '<div><label class="label2">Devise</label><select class="input" id="investmentAccountCurrency"><option value="CAD">CAD</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="CHF">CHF</option></select></div></div>'+
+    '<p class="trace-intl-help" id="investmentTypeHelp" role="status"></p>'+
     '<div id="newSavingsReference" class="trace-savings-reference"><div class="empty-note">Les transferts confirmés alimenteront ce compte d’épargne. Pour commencer à calculer son solde, indique sa référence bancaire.</div>'+
     '<label class="label2">Date du solde initial</label><input id="newSavingsDate" class="input" type="date" value="'+localDateISO()+'">'+
     '<label class="label2" id="newSavingsAmountLabel">Solde réel à cette date (CAD)</label><input id="newSavingsAmount" class="input" type="number" step=".01" min="0" inputmode="decimal" placeholder="Tu peux le compléter plus tard"></div>'+
@@ -2436,6 +2437,9 @@ function openInvestmentAccountAdd(){
   const refreshSavings=()=>{
    const saving=['CELI','Épargne','Livret'].includes($('#investmentAccountType').value);
    $('#newSavingsReference').classList.toggle('hidden',!saving);
+   const chosen=$('#investmentAccountType').value;
+   $('#investmentTypeHelp').textContent=chosen==='Assurance-vie'?
+    'Assurance-vie : placement en fonds euros et/ou unités de compte. Ajoute les supports et leur valorisation de rachat dans le suivi des investissements ; ce n’est pas un compte courant.':'';
    $('#newSavingsAmountLabel').textContent='Solde réel à cette date ('+$('#investmentAccountCurrency').value+')';
   };
   $('#investmentAccountType').onchange=refreshSavings;
@@ -5969,9 +5973,12 @@ function renderWealth(){
    pendingDetails?'Positions suivies · '+esc(p.fxStatus||'valeur non rapprochée'):
    p.hasFx?(isSavings?'Solde estimé · ':'')+'Équiv. '+money(p.cad)+' CAD'+
     (p.fxDate?' · taux du '+esc(p.fxDate):''):'Conversion CAD indisponible';
-  return '<button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
+  return '<div class="trace-wealth-account-shell"><button class="asset-card" type="button" data-inv-account="'+esc(a.id)+'" aria-label="'+
    esc('Consulter '+(a.name||a.type||'Investissement'))+'"><span class="a-icon" aria-hidden="true">◇</span><span>'+esc(a.name||a.type||'Investissement')+'</span><b>'+
-   shownValue+'</b><small>'+shownDetail+'</small></button>';
+   shownValue+'</b><small>'+shownDetail+'</small></button>'+
+    (a.owner===me?'<button class="trace-wealth-account-manage" type="button" data-manage-investment="'+esc(a.id)+
+      '" aria-label="Gérer le compte '+esc(a.name||a.type||'Placement')+'" title="Gérer le compte">⋯</button>':'')+
+    '</div>';
  };
  // Display account counts, never inferred valuations, in the quick navigation.
  // Counts follow the selected Moi/Couple scope and cannot affect ledger totals.
@@ -7435,6 +7442,98 @@ if(document.readyState==='loading'){
 }
 // Stable handlers are declared at the end of the runtime to avoid changing
 // existing renderer extraction boundaries; function declarations are hoisted.
+// User-owned Patrimoine accounts can be deleted only when the synced account
+// has no financial evidence and nothing in bank/portfolio ledgers refers to it.
+// In-use accounts stay protected. Deleting a container must never delete
+// movements, positions, category/budget data or the partner's accounts.
+function traceInvestmentDeleteEligibility(account){
+ if(!account||!state.investmentAccounts.some(a=>a.id===account.id))
+  return{allowed:false,reason:'Compte introuvable. Recharge TRACE.'};
+ if(account.owner!==me)
+  return{allowed:false,reason:'Seul le titulaire peut supprimer ce compte.'};
+ const referenced=state.transactions.some(t=>t.investmentAccountId===account.id||
+     t.accountId===account.id||t.toAccountId===account.id)||
+  state.investmentOperations.some(o=>o.accountId===account.id)||
+  state.smartImports.some(o=>o.accountId===account.id||o.investmentAccountId===account.id)||
+  state.reconciliations.some(o=>o.accountId===account.id);
+ if(referenced)return{allowed:false,reason:'Des opérations, imports ou rapprochements sont liés à ce compte. Leurs données sont protégées : retire ou réaffecte ces mouvements avant de supprimer le compte.'};
+ const p=account.investments201;
+ const hasPortfolioEvidence=Boolean(p&&(p.status==='verified'||p.brokerVerification||
+  p.brokerCapture||p.openingCashConfirmed||
+  Number(p.openingCashCents||0)!==0||
+  ['positions','catalog','operations','snapshots'].some(k=>Array.isArray(p[k])&&p[k].length>0)||
+  Object.keys(p.quotes||{}).length>0||
+  Object.keys(p.quoteHistory||{}).length>0));
+ const opening=account.openingBalance;
+ const hasSavingsValue=opening!==null&&opening!==undefined&&
+  (window.TraceInternational.exactMoney(opening)===null||
+   Number(opening)!==0);
+ const hasValue=Number(account.valueCad||0)!==0||Number(account.currentValueCad||0)!==0;
+ if(hasPortfolioEvidence||hasSavingsValue||hasValue)
+  return{allowed:false,reason:'Ce compte contient déjà un solde, des titres ou un relevé. Pour éviter toute perte, TRACE n’autorise pas sa suppression directe.'};
+ return{allowed:true,reason:''};
+}
+// A separate server-side authorization rule is required: the generic CAS
+// deletion endpoint intentionally refuses investment_accounts.
+async function traceDeleteEmptyInvestmentAccount(account){
+ if(internationalPreviewMode())throw Error('La suppression est désactivée dans cet aperçu.');
+ if(!session?.user?.id||!household?.id)throw Error('Session TRACE absente.');
+ if(traceWritesBlocked)throw Error('Synchronisation bloquée : recharge TRACE.');
+ const key=traceWriteKey('investment_accounts',account.id);
+ if(!traceDocRevisions.has(key))throw Error('Compte non synchronisé. Actualise TRACE avant de le supprimer.');
+ return traceSerialWrite(key,async()=>{
+  const expectedRevision=traceRevision(traceDocRevisions.get(key));
+  sync('saving');
+  const {data,error}=await client.rpc('trace_delete_empty_investment_account',{
+   p_household_id:household.id,p_item_id:String(account.id),
+   p_expected_revision:expectedRevision
+  });
+  if(error)throw traceSaveFailure(error);
+  if(data!==true)throw Error('Suppression non confirmée par TRACE.');
+  traceDocRevisions.delete(key);traceUnsavedWriteKeys.delete(key);
+  traceSyncConfirmed();
+  return true;
+ });
+}
+function openInvestmentAccountManage(account){
+ if(!account)return;
+ const permission=traceInvestmentDeleteEligibility(account);
+ const name=esc(account.name||account.type||'Placement');
+ openSheet('Gérer un compte de patrimoine',
+  '<div class="settings-hero"><span class="pico large">'+uiIcon('chart')+'</span><div><b>'+name+
+   '</b><small>'+esc(account.type||'Placement')+' · '+esc(account.currency||'CAD')+'</small></div></div>'+
+  (permission.allowed?
+   '<p class="trace-intl-help">Ce compte est vide. Sa suppression retire uniquement sa fiche ; les catégories, les autres comptes et les données de ton partenaire restent inchangés.</p>'+
+   '<p class="trace-intl-help">Cette action ne peut pas être annulée depuis TRACE.</p>':
+   '<p class="empty-note" role="status">'+esc(permission.reason)+'</p>')+
+  (permission.allowed?'<label class="trace-wealth-delete-confirm"><input type="checkbox" id="traceInvDeleteConfirm"> Je confirme la suppression de ce compte vide.</label>'+
+   '<button class="secondary full trace-danger" type="button" id="traceInvDeleteAccount" disabled>Supprimer définitivement ce compte</button>':'')+
+  '<div id="traceInvDeleteError" class="trace-savings-error" role="alert"></div>'+
+  '<button class="secondary full" id="traceInvManageBack" type="button">Retour au patrimoine</button>');
+ $('#traceInvManageBack').onclick=()=>{closeSheet();renderWealth();};
+ if(!permission.allowed)return;
+ const checkbox=$('#traceInvDeleteConfirm'),button=$('#traceInvDeleteAccount');
+ checkbox.onchange=()=>{button.disabled=!checkbox.checked;};
+ button.onclick=async()=>{
+  button.disabled=true;checkbox.disabled=true;
+  const error=$('#traceInvDeleteError');
+  try{
+   // Fail closed on concurrent local writes or a reload of the account.
+   if(state.investmentAccounts.find(a=>a.id===account.id)!==account)
+    throw Error('Le compte a été actualisé. Recharge TRACE et recommence.');
+   const nextCheck=traceInvestmentDeleteEligibility(account);
+   if(!nextCheck.allowed)throw Error(nextCheck.reason);
+   if(traceWriteQueues.has(traceWriteKey('investment_accounts',account.id))||fxSyncPromise)
+    throw Error('Une synchronisation de patrimoine est en cours. Réessaie ensuite.');
+   await traceDeleteEmptyInvestmentAccount(account);
+   state.investmentAccounts=state.investmentAccounts.filter(a=>a.id!==account.id);
+   closeSheet();renderWealth();
+  }catch(err){
+   error.textContent=String(err?.message||'Suppression non confirmée. Réessaie.');
+   button.disabled=false;checkbox.disabled=false;
+  }
+ };
+}
 function trace202OpenTracking(accountId=''){
  try{
   if(typeof window.TraceWealth201?.open!=='function')
@@ -7474,6 +7573,11 @@ function trace202BindWealthActions(){
   }
   if(button.matches('#wealthLiquidityCard,[data-foreign-bank]')){
    openAccountSettings();return;
+  }
+  if(button.matches('[data-manage-investment]')){
+   const account=state.investmentAccounts.find(a=>a.id===button.dataset.manageInvestment);
+   if(account?.owner===me)openInvestmentAccountManage(account);
+   return;
   }
   if(button.matches('[data-inv-account]')){
    const account=state.investmentAccounts.find(a=>a.id===button.dataset.invAccount);

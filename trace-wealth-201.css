@@ -395,6 +395,33 @@
  .page[data-page="wealth"] #wealthReviewAction{width:100%;text-align:center}
 }
 
+/* TRACE Patrimoine · per-account management, never a nested button. */
+.page[data-page="wealth"] .trace-wealth-account-shell{
+ position:relative;min-width:0;max-width:100%;
+}
+.page[data-page="wealth"] .trace-wealth-account-shell>.asset-card{
+ width:100%;padding-right:48px;box-sizing:border-box;
+}
+.page[data-page="wealth"] .trace-wealth-account-manage{
+ position:absolute;top:7px;right:7px;display:flex;align-items:center;justify-content:center;
+ width:36px;height:36px;min-width:36px;min-height:36px;
+ border:1px solid #d6e6d8;border-radius:11px;background:#f5faf4;
+ color:#285d42;font-size:24px;line-height:1;cursor:pointer;
+ touch-action:manipulation;z-index:1;
+}
+.page[data-page="wealth"] .trace-wealth-account-manage:focus-visible{
+ outline:3px solid #70b98f;outline-offset:2px;
+}
+.trace-wealth-delete-confirm{
+ display:flex;gap:10px;align-items:flex-start;
+ margin:16px 0;padding:13px;border:1px solid #e5d6cf;
+ border-radius:12px;font-size:13px;line-height:1.5;
+}
+.trace-wealth-delete-confirm input{flex:none;width:19px;height:19px;margin:1px 0 0}
+@media(max-width:370px){
+ .page[data-page="wealth"] .trace-wealth-account-shell>.asset-card{padding-right:45px}
+}
+
 /* TRACE 2.0.2 · captured brokerage statements; scoped to the sheet. */
 #wcap-root.wcap{color:#1d4e38;font-size:12px;line-height:1.55;padding:0 1px 15px}
 .wcap-intro{margin:0 0 15px;color:#557662}

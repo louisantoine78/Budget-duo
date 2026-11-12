@@ -71,9 +71,9 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.8');
+ assert.equal(version.build,'5.37.10');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.8'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.10'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
@@ -406,14 +406,14 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.8');
+ assert.equal(version.build,'5.37.10');
  assert.ok(version.release.startsWith('TRACE 2.0.2'));
- assert.ok(app.includes("window.__TRACE_BUILD__='5.37.8';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
- assert.ok(html.includes('<meta name="trace-build" content="5.37.8">'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.10';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.10">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
-  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.2':asset==='trace-wealth-201.css'?'2.0.2.4':'2.0.2')),'Missing cache-bust: '+asset);
+  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.2':asset==='trace-wealth-201.css'?'2.0.2.5':'2.0.2')),'Missing cache-bust: '+asset);
  }
- assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.8'));
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.10'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
 });
 
@@ -491,7 +491,7 @@ test('CSP-safe production bridge connects real investment module without inline 
  assert.ok(!html.includes('window.TraceWealth201?.connect(window.Trace201Host)'));
  assert.ok(js.includes('if(root.Trace201Host)api.connect(root.Trace201Host);'));
  assert.ok(app.includes('window.Trace201Host=Object.freeze({'));
- assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.8"')<
+ assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.10"')<
    html.indexOf('src="trace-wealth-201.js?v=2.0.2.2"'));
  assert.ok(!js.includes('createClient('));
  assert.ok(!js.includes('localStorage'));
@@ -549,8 +549,8 @@ test('TRACE 2.0.2 Patrimoine never shows an invented zero for imported broker ho
  const nativeMoney=(n,c)=>c+':'+Number(n).toFixed(2);
  const money=n=>'CAD:'+Number(n).toFixed(2);
  const window={TraceWealth201:{productionSummary:()=>({ready:true,value:3819.25})}};
- const tile=Function('state','window','nativeMoney','money','esc',
-  'return ('+expression+');')(state,window,nativeMoney,money,x=>String(x));
+ const tile=Function('state','window','nativeMoney','money','esc','me',
+  'return ('+expression+');')(state,window,nativeMoney,money,x=>String(x),'la');
  const a={id:'pea',name:'PEA TEST',type:'PEA',currency:'EUR',investments201:{
   status:'draft',positions:[{id:'air'},{id:'cda'},{id:'sp'},{id:'dsy'}],
   brokerCapture:{date:'2026-11-08',currency:'EUR',
@@ -633,4 +633,54 @@ test('net-worth renderer and financial analysis use the same one-ledger bridge',
  assert.match(app,/ready:p\.netReady===true/);
  for(const forbidden of ['saveDocument(', 'removeDocument(', 'createClient('])
   assert.ok(!bridge.includes(forbidden),'wealth bridge must not write persistent financial data');
+});
+
+test('Patrimoine account management is owner-only and safe for empty accounts',()=>{
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const source=app.slice(app.indexOf('function traceInvestmentDeleteEligibility('),
+   app.indexOf('function openInvestmentAccountManage('));
+ assert.ok(source.startsWith('function traceInvestmentDeleteEligibility('));
+ const a={id:'test-av',name:'Assurance-vie fictive',owner:'la',type:'Assurance-vie',
+  currency:'EUR',openingBalance:null,currentValueCad:0,valueCad:0};
+ const state={investmentAccounts:[a],transactions:[],investmentOperations:[],smartImports:[],
+   reconciliations:[]};
+ const testDelete=Function('state','me','window',source+';return traceInvestmentDeleteEligibility;')(
+   state,'la',{TraceInternational:{exactMoney:x=>{const n=Number(x);return Number.isFinite(n)?n:null;}}});
+ assert.equal(testDelete(a).allowed,true,'unused insurance account can be deleted');
+ assert.equal(testDelete({...a,owner:'partner'}).allowed,false,'partner account is read-only');
+ assert.equal(testDelete({...a,openingBalance:2800}).allowed,false,'funded savings are protected');
+ assert.equal(testDelete({...a,valueCad:400}).allowed,false,'valued investments are protected');
+ assert.equal(testDelete({...a,investments201:{
+  status:'draft',positions:[],catalog:[],operations:[],quotes:{},quoteHistory:{},
+  snapshots:[],openingCashConfirmed:false,openingCashCents:0}}).allowed,true,
+  'an opened but still blank detailed ledger may be removed');
+ assert.equal(testDelete({...a,investments201:{
+  status:'draft',positions:[{id:'etf'}],operations:[]}}).allowed,false);
+ assert.equal(testDelete({...a,investments201:{
+  status:'draft',positions:[],brokerCapture:{partial:true}}}).allowed,false);
+ const refs=[
+  ['transactions',{investmentAccountId:a.id}],
+  ['investmentOperations',{accountId:a.id}],
+  ['smartImports',{investmentAccountId:a.id}],
+  ['reconciliations',{accountId:a.id}]
+ ];
+ for(const [field,entry] of refs){
+  state[field].push(entry);
+  assert.equal(testDelete(a).allowed,false,field+' references block deletion');
+  state[field]=[];
+ }
+ assert.equal(state.investmentAccounts.length,1,'checking eligibility never changes state');
+ assert.ok(app.includes("await traceDeleteEmptyInvestmentAccount(account)"));
+ assert.ok(app.includes("client.rpc('trace_delete_empty_investment_account'"));
+ assert.ok(!app.includes("await removeDocument('investment_accounts',account.id)"));
+ assert.ok(app.includes("state.investmentAccounts=state.investmentAccounts.filter(a=>a.id!==account.id)"));
+ assert.ok(app.includes('id="traceInvDeleteConfirm"'),'confirmation checkbox required');
+ assert.ok(app.includes("account?.owner===me)openInvestmentAccountManage(account)"));
+ assert.ok(app.includes("button.matches('[data-manage-investment]')"));
+ assert.ok(app.includes('<option value="Assurance-vie">Assurance-vie</option>'));
+ assert.ok(app.includes("['CELI','Épargne','Livret'].includes(type)"),
+  'insurance contracts must not become linked savings/bank accounts');
+ const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
+ assert.ok(css.includes('.trace-wealth-account-manage'));
+ assert.ok(css.includes('.trace-wealth-account-shell'));
 });
