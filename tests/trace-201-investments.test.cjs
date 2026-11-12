@@ -71,9 +71,9 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.10');
+ assert.equal(version.build,'5.37.11');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.10'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.11'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
@@ -406,14 +406,14 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.10');
+ assert.equal(version.build,'5.37.11');
  assert.ok(version.release.startsWith('TRACE 2.0.2'));
- assert.ok(app.includes("window.__TRACE_BUILD__='5.37.10';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
- assert.ok(html.includes('<meta name="trace-build" content="5.37.10">'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.11';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.11">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
-  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.2':asset==='trace-wealth-201.css'?'2.0.2.5':'2.0.2')),'Missing cache-bust: '+asset);
+  assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.3':asset==='trace-wealth-201.css'?'2.0.2.6':'2.0.2')),'Missing cache-bust: '+asset);
  }
- assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.10'));
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.11'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
 });
 
@@ -487,12 +487,12 @@ test('CSP-safe production bridge connects real investment module without inline 
  assert.match(html,/Content-Security-Policy/);
  assert.match(html,/script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
  assert.doesNotMatch(html,/script-src[^;"]*'unsafe-inline'/);
- assert.ok(html.includes('trace-wealth-201.js?v=2.0.2.2'));
+ assert.ok(html.includes('trace-wealth-201.js?v=2.0.2.3'));
  assert.ok(!html.includes('window.TraceWealth201?.connect(window.Trace201Host)'));
  assert.ok(js.includes('if(root.Trace201Host)api.connect(root.Trace201Host);'));
  assert.ok(app.includes('window.Trace201Host=Object.freeze({'));
- assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.10"')<
-   html.indexOf('src="trace-wealth-201.js?v=2.0.2.2"'));
+ assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.11"')<
+   html.indexOf('src="trace-wealth-201.js?v=2.0.2.3"'));
  assert.ok(!js.includes('createClient('));
  assert.ok(!js.includes('localStorage'));
 });
@@ -683,4 +683,48 @@ test('Patrimoine account management is owner-only and safe for empty accounts',(
  const css=fs.readFileSync(path.join(root,'trace-wealth-201.css'),'utf8');
  assert.ok(css.includes('.trace-wealth-account-manage'));
  assert.ok(css.includes('.trace-wealth-account-shell'));
+});
+
+
+test('Assurance-vie: two source-backed monetary supports, no invented stock positions',()=>{
+ const a={id:'av-sample',owner:'la',name:'Contrat fictif',type:'Assurance-vie',
+  currency:'EUR',fxCadPerUnit:'1.57000000',fxRateDate:new Date().toISOString().slice(0,10),
+  fxRateProvider:'Banque du Canada (test)'};
+ const p=W.blank(a),date=new Date().toISOString().slice(0,10);
+ p.openingDate=date;
+ p.insurance={schema:1,status:'confirmed',date,source:'BNP Paribas (test)',
+  euroCents:27301,unitsCents:27740,totalCents:55041,unitsDetail:''};
+ p.snapshots=[{date,valueCents:55041,source:'Assurance-vie : BNP Paribas (test)',estimated:false}];
+ assert.equal(W.insuranceSummary(p).ready,true);
+ assert.equal(W.insuranceSummary(p).totalCents,55041);
+ assert.equal(E.evaluate(p).positions.length,0,'no synthetic stocks/shares');
+ const account={...a,investments201:p};
+ const bridge=W.netWorthBridge(account,false,date);
+ assert.equal(bridge.mode,'insurance');
+ assert.equal(bridge.ready,true);
+ assert.equal(bridge.nativeCents,55041);
+ assert.equal(bridge.cadCents,E.cadValue(55041,'EUR',{
+  cadPerUnit:a.fxCadPerUnit,date:a.fxRateDate,source:a.fxRateProvider},date).valueCents);
+ assert.equal(W.netWorthBridge(account,true,date).ready,false,'legacy journals cannot be double-counted');
+ assert.equal(W.netWorthBridge({...account,fxRateDate:'2026-10-01'},false,date).ready,false,
+  'stale exchange rates must never count as live net worth');
+ assert.equal(W.insuranceSummary({...p,insurance:{...p.insurance,totalCents:55042}}).ready,false);
+ assert.equal(W.insuranceSummary({...p,snapshots:[]}).ready,false);
+ assert.equal(W.insuranceSummary({...p,positions:[{
+  id:'legacy',name:'Legacy unit',quantityMicro:E.quantity(1),costBasisCents:100,
+  symbol:'LEGACY',isin:'',marketMic:'',assetType:'Fonds'
+ }]}).ready,false,'legacy positions and insurance supports are conflicting');
+ assert.equal(W.insuranceSummary({...p,insurance:{...p.insurance,
+  status:'draft'}}).ready,false,'unconfirmed valuations cannot count');
+ assert.equal(W.insuranceSummary({...p,insurance:{...p.insurance,
+  euroCents:0,unitsCents:0,totalCents:0}}).ready,false,'empty valuation not verified');
+ const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
+ const source=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
+ assert.match(source,/Fonds en euros/);
+ assert.match(source,/Unités de compte/);
+ assert.match(source,/Précision sur les fonds UC \(facultatif\)/);
+ assert.match(source,/if\(fd\.get\('approved'\)!=='on'\)/);
+ assert.match(source,/await save\(a,next\)/);
+ assert.match(app,/p\.brokerCapture\|\|p\.insurance/);
+ assert.match(app,/hasInsurance&&p\.netReady/);
 });

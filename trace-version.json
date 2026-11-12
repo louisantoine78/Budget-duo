@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.37.10",
-  "release": "TRACE 2.0.2 — Gestion des comptes Patrimoine et assurance-vie"
+  "build": "5.37.11",
+  "release": "TRACE 2.0.2 — Assurance-vie à deux supports (fonds euros et UC)"
 }

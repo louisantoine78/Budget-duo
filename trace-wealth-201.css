@@ -459,3 +459,23 @@
 @media(max-width:370px){.wcap-pair{grid-template-columns:minmax(0,1fr)}
  .wcap-row{padding:11px}}
 @media(prefers-reduced-motion:reduce){#wcap-root *{scroll-behavior:auto;transition:none}}
+
+/* TRACE assurance-vie: only two amount-based supports; no artificial shares. */
+.w201-insurance-grid{display:grid;gap:10px;margin:14px 0}
+.w201-insurance-support{display:grid;grid-template-columns:13px minmax(0,1fr) auto;gap:10px;
+ align-items:center;padding:15px 13px;border:1px solid #dce9dd;border-radius:15px;background:#fffefa}
+.w201-insurance-support>div{min-width:0}
+.w201-insurance-support b{display:block;font-size:12px;color:#21543a}
+.w201-insurance-support small{display:block;font-size:10px;color:#718777;line-height:1.45;overflow-wrap:anywhere}
+.w201-insurance-support>strong{font-size:14px;white-space:nowrap;color:#215d42;font-variant-numeric:tabular-nums}
+.w201-insurance-dot{height:12px;width:12px;border-radius:5px;background:#79e5af}
+.w201-insurance-dot.units{background:#3e9d71}
+.w201-insurance-pct{padding:10px 12px;background:#eff7ee;color:#315e47;
+ font-size:11px;border-radius:11px}
+.w201-insurance-entry{border:1px solid #dae9dd;border-radius:15px;background:#f9fcf8;
+ padding:14px;margin:12px 0}
+.w201-insurance-entry>b{display:block;color:#26583f;font-size:14px;margin:0 0 3px}
+.w201-insurance-entry>small{display:block;color:#708878;font-size:11px;line-height:1.5}
+.w201-insurance-entry .w201-field{margin-bottom:2px}
+@media(max-width:370px){.w201-insurance-support{grid-template-columns:12px minmax(0,1fr);gap:8px}
+ .w201-insurance-support>strong{grid-column:2;font-size:15px}}

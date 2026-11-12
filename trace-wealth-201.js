@@ -43,6 +43,82 @@
   E.evaluate(p);
   return p;
  }
+
+ // An assurance-vie is valued from two actual contract balances rather than
+ // fictional shares, ISINs, purchase prices, or a cash journal.
+ function insuranceSummary(p){
+  const i=p?.insurance;
+  if(!i)return Object.freeze({ready:false,reason:'Valorizations assurance-vie à renseigner'});
+  if(p.positions?.length||p.operations?.length||p.catalog?.length||
+     p.brokerCapture||p.brokerVerification||Object.keys(p.quotes||{}).length||
+     Object.keys(p.quoteHistory||{}).length||p.openingCashCents!==0||p.openingCashConfirmed)
+   return Object.freeze({ready:false,reason:'Anciennes positions et assurance-vie à rapprocher séparément'});
+  if(i.schema!==1||i.status!=='confirmed'||!E.dateValid(i.date)||i.date>today()||
+   typeof i.source!=='string'||!i.source.trim()||i.source.length>100||
+   !Number.isSafeInteger(i.euroCents)||i.euroCents<0||
+   !Number.isSafeInteger(i.unitsCents)||i.unitsCents<0||
+   !Number.isSafeInteger(i.totalCents)||i.totalCents<=0||
+   i.totalCents!==i.euroCents+i.unitsCents||
+   typeof(i.unitsDetail||'')!=='string'||String(i.unitsDetail||'').length>180)
+   return Object.freeze({ready:false,reason:'Montants, date ou source du relevé incohérents'});
+  const sameDate=p.snapshots?.find(x=>x.date===i.date&&x.source==='Assurance-vie : '+i.source);
+  if(!sameDate||sameDate.valueCents!==i.totalCents)
+   return Object.freeze({ready:false,reason:'La valorisation saisie ne correspond plus au relevé'});
+  return Object.freeze({ready:true,euroCents:i.euroCents,unitsCents:i.unitsCents,
+   totalCents:i.totalCents,date:i.date,source:i.source,unitsDetail:i.unitsDetail||''});
+ }
+ function renderInsuranceAccount(){
+  const a=pick(),p=load(a),data=insuranceSummary(p),owned=own(a),
+   existing=p.insurance||null;
+  const v=data.ready?data:existing;
+  const money=(c)=>Number.isSafeInteger(c)&&c>=0?fmt(c,p.currency):'À renseigner';
+  const total=data.ready?money(data.totalCents):'À compléter';
+  let html='<div class="w201-kicker">PATRIMOINE · ASSURANCE-VIE · '+e(p.currency)+'</div>'+
+   '<h2 class="w201-headline">'+e(a.name||'Assurance-vie')+'</h2>'+
+   '<p class="w201-muted">Un suivi simple par nature de support. Aucun titre ou prix de revient obligatoire.</p>'+
+   '<div class="w201-hero"><small>Valeur totale du contrat</small><strong>'+e(total)+'</strong>'+
+   '<span>'+(data.ready?'Au '+e(data.date)+' · '+e(data.source)+' · déclaration manuelle':
+     'Saisis les valeurs de ton dernier relevé, sans créer de transaction fictive.')+'</span></div>';
+  if(!data.ready&&existing)html+='<p class="w201-warning">'+e(data.reason)+'. Les anciennes données sont conservées mais exclues du patrimoine net.</p>';
+  html+='<div class="w201-insurance-grid">'+
+   '<section class="w201-insurance-support"><span class="w201-insurance-dot euros"></span>'+
+    '<div><b>Fonds en euros</b><small>Valeur indiquée par ton assureur</small></div>'+
+    '<strong>'+e(data.ready?money(data.euroCents):'—')+'</strong></section>'+
+   '<section class="w201-insurance-support"><span class="w201-insurance-dot units"></span>'+
+    '<div><b>Unités de compte</b><small>'+(data.ready&&data.unitsDetail?e(data.unitsDetail):
+      'Total des supports UC · détail facultatif')+'</small></div>'+
+    '<strong>'+e(data.ready?money(data.unitsCents):'—')+'</strong></section></div>'+
+   (data.ready&&data.totalCents>0?'<div class="w201-insurance-pct">Fonds en euros : '+
+    (100*data.euroCents/data.totalCents).toFixed(1).replace('.',',')+' % · Unités de compte : '+
+    (100*data.unitsCents/data.totalCents).toFixed(1).replace('.',',')+' %</div>':'')+
+   '<p class="w201-fine">Ces montants proviennent du relevé de l’assureur, pas de cotations en direct. Les performances et les détails des fonds ne sont pas déduits automatiquement.</p>';
+  if(owned&&!isLegacy(a)&&!saving)html+='<div class="w201-actionbar">'+btn(data.ready?'Actualiser la valorisation':'Renseigner mes supports','insurance','','primary')+'</div>';
+  else if(isLegacy(a))html+='<p class="w201-warning">Un journal historique existe. Aucun solde ne sera ajouté deux fois.</p>';
+  html+='<div class="w201-footer">'+btn('‹ Mes portefeuilles','home','','link')+'</div>';
+  return html;
+ }
+ function renderInsuranceForm(){
+  const a=pick(),p=load(a),i=p.insurance;
+  if(a.type!=='Assurance-vie'||!own(a)||isLegacy(a))
+   return '<p class="w201-warning">Modification de l’assurance-vie indisponible.</p>'+btn('Retour','account');
+  const amount=c=>Number.isSafeInteger(c)?(c/100).toFixed(2):'';
+  return '<div class="w201-kicker">ASSURANCE-VIE · '+e(a.currency)+'</div>'+
+   '<h2 class="w201-headline">Mes deux types de supports</h2>'+
+   '<p class="w201-muted">Renseigne simplement leur valeur actuelle. Le détail des unités de compte est facultatif ; aucun achat fictif n’est créé.</p>'+
+   '<form id="w201-form" data-kind="insurance">'+
+   '<div class="w201-insurance-entry"><b>Fonds en euros</b><small>Capital sur le fonds garanti selon le contrat (montant affiché par BNP)</small>'+
+    fld('Valorisation ('+a.currency+')','euro',amount(i?.euroCents),'text','required inputmode="decimal"')+'</div>'+
+   '<div class="w201-insurance-entry"><b>Unités de compte</b><small>Valeur totale de toutes tes unités de compte</small>'+
+    fld('Valorisation ('+a.currency+')','units',amount(i?.unitsCents),'text','required inputmode="decimal"')+
+    fld('Précision sur les fonds UC (facultatif)','unitsDetail',i?.unitsDetail||'','text','maxlength="180"')+'</div>'+
+   fld('Date du relevé','date',i?.date||today(),'date','required')+
+   fld('Source (ex. BNP Paribas)','source',i?.source||'','text','required maxlength="100"')+
+   '<label class="w201-confirm"><input type="checkbox" name="approved" required> Je confirme que les deux montants correspondent au relevé du contrat, et qu’il ne s’agit pas de mouvements bancaires.</label>'+
+   '<p class="w201-fine">Le total sera calculé automatiquement. L’équivalent CAD ne sera intégré au patrimoine net que si un taux de change daté et valide est disponible.</p>'+
+   '<p id="w201-error" class="w201-error" role="alert"></p>'+
+   '<div class="w201-actionbar"><button type="submit" class="w201-btn primary" id="w201-save">Enregistrer les deux supports</button>'+
+    btn('Annuler','cancel','','soft')+'</div></form>';
+ }
  function reconcile(p,record){
   if(!p.openingCashConfirmed||!p.positions.length)
    throw Error('Renseigne les espèces et au moins une position avant de rapprocher le portefeuille.');
@@ -110,7 +186,7 @@
    try{
     const p=load(account),evaluation=E.evaluate(p);
     positions+=evaluation.positions.length;
-    if(p.positions.length||p.operations.length)initialized++;
+    if(p.positions.length||p.operations.length||p.insurance)initialized++;
     if(netWorthBridge(account,false).ready)verified++;
    }catch{invalid++;}
   }
@@ -136,11 +212,11 @@
     record.fx={ready:true,rate:bridge.fx,date:bridge.fxDate,source:bridge.fxSource};
     record.verified=true;record.status='Rapproché';
     try{
-     const p=load(a),measured=E.periodPerformance(p,'all');
+     const p=load(a),measured=a.type==='Assurance-vie'?null:E.periodPerformance(p,'all');
      if(measured&&Number.isFinite(measured.percent))record.performance=measured;
     }catch{}
    }else record.status=/taux|conversion/i.test(bridge.reason)?'Taux à vérifier':
-    a.investments201?.positions?.length?'À rapprocher':'À initialiser';
+    (a.investments201?.positions?.length||a.investments201?.insurance)?'À rapprocher':'À initialiser';
    records.push(record);
   }
   const verified=records.filter(x=>x.verified).length;
@@ -159,6 +235,18 @@
    nativeCents:null,cadCents:null,fx:null,fxDate:null});
   if(!account?.investments201)return Object.freeze({mode:'legacy',ready:false,reason:'Journal TRACE historique'});
   if(hasLegacyJournal)return blocked('Ancien journal et nouveau suivi présents : rapprochement nécessaire','conflict');
+  if(account.type==='Assurance-vie'&&account.investments201.insurance){
+   try{
+    const p=load(account),i=insuranceSummary(p);
+    if(!i.ready)return blocked(i.reason,'insurance');
+    const fx=E.cadValue(i.totalCents,p.currency,p.currency==='CAD'?null:{
+     cadPerUnit:account.fxCadPerUnit,date:account.fxRateDate,source:account.fxRateProvider
+    },asOf);
+    if(!fx.ready)return blocked(fx.reason||'Conversion CAD indisponible','insurance');
+    return Object.freeze({mode:'insurance',ready:true,reason:'',nativeCents:i.totalCents,
+     cadCents:fx.valueCents,fx:fx.rate,fxDate:fx.date,fxSource:fx.source});
+   }catch(error){return blocked('Assurance-vie à vérifier : '+String(error?.message||error),'insurance');}
+  }
   try{
    const p=load(account);
    if(!p.positions.length||!p.openingCashConfirmed)return blocked('Positions ou espèces non confirmées');
@@ -253,6 +341,7 @@
  const percentText=n=>Number.isFinite(n)?n.toFixed(1).replace('.',',')+'\u00a0%':'—';
  const signedMoney=(c,cur)=>c>0?'+'+fmt(c,cur):fmt(c,cur);
  function renderAccount(){
+  if(pick().type==='Assurance-vie')return renderInsuranceAccount();
   const a=pick(),p=load(a),v=E.evaluate(p),legacy=isLegacy(a),owned=own(a);
   let html='<div class="w201-kicker">PATRIMOINE · '+e(a.type)+' · '+e(p.currency)+'</div>'+
    '<h2 class="w201-headline">'+e(a.name||p.name)+'</h2>'+
@@ -448,6 +537,7 @@
  function html(){
   if(screen==='home')return renderHome();
   if(screen==='position')return renderPosition();
+  if(screen==='form-insurance')return renderInsuranceForm();
   if(screen.startsWith('form-'))return renderForm();
   return renderAccount();
  }
@@ -523,7 +613,29 @@
  async function submit(form){
   const a=pick(),p=load(a),fd=new FormData(form),get=k=>String(fd.get(k)||'').trim(),kind=form.dataset.kind;
   let next=p;
-  if(kind==='cash'){
+  if(kind==='insurance'){
+   if(a.type!=='Assurance-vie'||isLegacy(a))throw Error('Ce compte n’est pas une assurance-vie modifiable.');
+   if(p.positions.length||p.operations.length||p.catalog.length||p.brokerCapture||
+      p.brokerVerification||Object.keys(p.quotes||{}).length||
+      Object.keys(p.quoteHistory||{}).length||p.openingCashConfirmed||
+      p.openingCashCents!==0)
+    throw Error('Ce compte contient déjà un ancien portefeuille : impossible de mélanger les valorisations.');
+   const date=get('date'),source=get('source'),unitsDetail=get('unitsDetail');
+   if(!E.dateValid(date)||date>today())throw Error('Date du relevé invalide.');
+   if(!source||source.length>100||unitsDetail.length>180)
+    throw Error('Source du relevé obligatoire et précisions limitées à 180 caractères.');
+   if(fd.get('approved')!=='on')throw Error('Confirme la comparaison avec ton relevé.');
+   const euroCents=E.cents(get('euro')),unitsCents=E.cents(get('units'));
+   const totalCents=euroCents+unitsCents;
+   if(!Number.isSafeInteger(totalCents)||totalCents<=0)throw Error('Indique au moins un support avec un montant positif.');
+   const insurance={schema:1,status:'confirmed',date,source,unitsDetail,euroCents,unitsCents,totalCents};
+   const snapshots=(p.snapshots||[]).filter(x=>!String(x.source||'').startsWith('Assurance-vie : ')||x.date!==date);
+   snapshots.push({date,valueCents:totalCents,source:'Assurance-vie : '+source,estimated:false});
+   next={...p,openingDate:p.insurance?p.openingDate:date,insurance,
+    snapshots:snapshots.sort((a,b)=>a.date.localeCompare(b.date)),status:'draft'};
+   const check=insuranceSummary(next);
+   if(!check.ready)throw Error(check.reason);
+  }else if(kind==='cash'){
    const date=get('date'),cash=E.cents(get('cash'));
    if(!E.dateValid(date)||date>today())throw Error('Date du relevé invalide.');
    if(p.operations.some(o=>o.date<date))throw Error('Le solde initial ne peut pas être déplacé après les opérations.');
@@ -596,6 +708,7 @@
   await save(a,next);
   screen=kind==='quote'||kind==='strategy'||kind==='edit-position'?'position':'positions';
   if(kind==='operation')screen='operations';
+  if(kind==='insurance')screen='positions';
   if(kind==='snapshot'||kind==='reconcile')screen='analysis';
   draw();
  }
@@ -611,6 +724,10 @@
   if(action==='cancel'){screen=selected?'position':'positions';draw();return;}
   const p=load(pick()),a=pick();
   if(!own(a)||isLegacy(a))return showError(Error('Compte en consultation seule.'));
+  if(action==='insurance'){
+   if(a.type!=='Assurance-vie')return showError(Error('Type de compte incompatible.'));
+   screen='form-insurance';selected='';draw();return;
+  }
   if(['cash','new-position','edit-position','quote','strategy','snapshot','reconcile'].includes(action)){
    if(['quote','strategy','edit-position'].includes(action))selected=id||selected;
    screen='form-'+action;draw();return;
@@ -628,5 +745,5 @@
   selected='';error='';filter='all';chartPeriod='all';draw();
  }
  function connect(h){if(!h||typeof h.context!=='function'||typeof h.save!=='function'||typeof h.openSheet!=='function')throw Error('Hôte TRACE 2.0.2 incomplet');host=h;return true;}
- return Object.freeze({connect,open,blank,load,reconcile,productionSummary,evaluateStrict,dashboardSummary,portfolioOverview,netWorthBridge});
+ return Object.freeze({connect,open,blank,load,reconcile,insuranceSummary,productionSummary,evaluateStrict,dashboardSummary,portfolioOverview,netWorthBridge});
 });
