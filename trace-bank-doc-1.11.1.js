@@ -706,6 +706,36 @@ function sourceAccountHints(raw){
   /COMPTE DE CH[EÈ]QUES|COMPTE COURANT BNP|COMPTE DE D[EÉ]P[OÔ]T/i.test(txt)?'checking':'';
  return Object.freeze({currency,kind});
 }
+// Last-resort text fallback when iOS/Safari returns OCR text but cannot
+// return TSV word coordinates. Dates anchor candidate rows; ambiguous amount
+// columns are NEVER associated by guesswork and remain unselected.
+function extractScreenshotDateBlocks(raw,hintDate=''){
+ const lines=String(raw||'').replace(/\r/g,'').split('\n').map(v=>v.trim()).filter(Boolean);
+ const year=(String(raw).match(/\b20\d{2}\b/)||[])[0]||String(new Date().getFullYear());
+ const dated=[],start=/^(?:[A-Za-zÀ-ÿ]+\s+)?[0-3]?\d\s*(?:JANV|F[EÉ]V|MAR|AVR|MAI|JUIN|JUIL|AO[UÛ]|SEP|OCT|NOV|D[EÉ]C)/i;
+ for(let i=0;i<lines.length;i++){
+  const value=lines[i];
+  if(!start.test(value))continue;
+  const d=parseBankDayOCR(value,hintDate||year+'-11-01');
+  if(d)dated.push({date:d,index:i});
+ }
+ if(!dated.length)return null;
+ const candidates=[];
+ for(let k=0;k<dated.length;k++){
+  const anchor=dated[k],begin=k?dated[k-1].index+1:0;
+  const preceding=lines.slice(begin,anchor.index)
+   .filter(x=>!(/^(?:janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\s+20\d{2}$/i.test(x)))
+   .filter(x=>!/^[-−+]?\s*\d[\d\s,\.]*\s*[$€]?\s*[›>]*$/.test(x))
+   .filter(x=>!/^[-−+]?\s*\d[\d\s,\.]*\s*[$€]?\s*[›>]*$/.test(x.replace(/\s+/g,'')));
+  const name=cleanOcrMerchant(preceding.join(' ').replace(/\s+/g,' '));
+  if(name.length<4||/^transactions?\b/i.test(name))continue;
+  candidates.push({date:anchor.date,name,amount:'',type:'unknown',
+   selected:false,ambiguous:true,needsReview:true,needsDateReview:false,
+   bankDirection:'',source:'screenshot-date-fallback',
+   raw:'Date et libellé repérés ; montant à lire manuellement',index:anchor.index+1});
+ }
+ return candidates.length?{candidates,flagged:0,lines:lines.length}:null;
+}
 function extractCandidates(raw,locale='dmy'){
  const txt=String(raw||'');
  const french=extractFrenchBankScreenshot(txt);
@@ -720,9 +750,11 @@ function extractCandidates(raw,locale='dmy'){
   const mobile=readMobileScreenshotText(txt);
   if(mobile.candidates.length)return mobile;
  }
+ const conservative=extractScreenshotDateBlocks(txt);
+ if(conservative)return conservative;
  return extractGenericCandidates(raw,locale);
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.5'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,extractScreenshotDateBlocks,version:'1.11.6'};
 })();
