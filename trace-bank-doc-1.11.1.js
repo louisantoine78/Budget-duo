@@ -17,7 +17,14 @@ async function ocrReady(){
 async function getOcrWorker(lang='fra+eng'){
  if(workers.has(lang))return workers.get(lang);
  const t=await ocrReady();
- const w=await t.createWorker(lang);
+ // CSP worker-src 'self' intentionally blocks the library's default blob
+ // worker. A pinned first-party worker entrypoint is mandatory on Safari.
+ let w;
+ try{w=await t.createWorker(lang,1,{
+   workerPath:'/trace-ocr-worker-5.1.1.js',workerBlobURL:false
+ });}catch(error){
+   throw new Error('Le moteur OCR ne peut pas démarrer sur cet appareil. Vérifie ta connexion et actualise TRACE. '+String(error?.message||''));
+ }
  workers.set(lang,w);return w;
 }
 async function recognize(data){
@@ -51,10 +58,28 @@ function readOcrTsv(tsv){
 function parseBankDayOCR(text,hintDate=''){
  const compact=String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
   .replace(/[|!]/g,'1').replace(/[^A-Z0-9]/g,'').replace(/^([0-3]?\d)0(?=CT)/,'$1O');
- const m=compact.match(/^([0-3]?\d)(JANV?|FEVR?|FEV|MARS?|AVRIL|AVR|MAI|JUIN?|JUIL?|JUN|AOUT?|AOU|SEPT?|SEP|OCT|NOV|DEC)$/);
+ // A screenshot can show "Lundi 02 novembre", "9 NOV", or "Jeudi 29 octobre".
+ const m=compact.match(/^(?:LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)?([0-3]?\d)(JANVIER|JANV|JAN|FEVRIER|FEVR|FEV|MARS|MAR|AVRIL|AVR|MAI|JUIN|JUN|JUILLET|JUIL|JUL|AOUT|AOU|SEPTEMBRE|SEPT|SEP|OCTOBRE|OCT|NOVEMBRE|NOV|DECEMBRE|DEC)(20\d{2})?$/);
  if(!m)return null;
- const month=monthsFR[m[2]],year=/^\d{4}-/.test(hintDate)?Number(hintDate.slice(0,4)):new Date().getFullYear();
- return month?isoDate(m[1]+'/'+month+'/'+year,'dmy'):null;
+ const long={JANVIER:1,FEVRIER:2,MARS:3,AVRIL:4,MAI:5,JUIN:6,JUILLET:7,AOUT:8,
+  SEPTEMBRE:9,OCTOBRE:10,NOVEMBRE:11,DECEMBRE:12};
+ const month=long[m[2]]||monthsFR[m[2]];
+ let year=Number(m[3]||(/^\d{4}-/.test(hintDate)?hintDate.slice(0,4):new Date().getFullYear()));
+ if(!month)return null;
+ let value=isoDate(m[1]+'/'+month+'/'+year,'dmy');
+ // Late-year statements opened in January may show December of prior year.
+ if(!m[3]&&/^20\d{2}-\d\d-\d\d$/.test(hintDate)&&value&&
+  Date.parse(value+'T12:00:00Z')-Date.parse(hintDate+'T12:00:00Z')>32*86400000){
+  year--;value=isoDate(m[1]+'/'+month+'/'+year,'dmy');
+ }
+ // The printed weekday is independent evidence: reject an impossible
+ // combination rather than assigning a valid-looking but wrong bank date.
+ const weekdayPrefix=compact.match(/^(LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)/);
+ if(value&&weekdayPrefix){
+  const weekdayNumber={DIMANCHE:0,LUNDI:1,MARDI:2,MERCREDI:3,JEUDI:4,VENDREDI:5,SAMEDI:6};
+  if(new Date(value+'T12:00:00Z').getUTCDay()!==weekdayNumber[weekdayPrefix[1]])return null;
+ }
+ return value;
 }
 function screenshotDateEvidence(words,width,hintDate=''){
  const ws=words.filter(w=>w.left>width*.05&&w.left<width*.55).sort((a,b)=>a.y-b.y||a.left-b.left);
@@ -103,7 +128,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
   return picked[0]?.w||null;
  };
  const rows=[];
- const newRow=(date,merchant,price,top,dateY=null)=>{
+ const newRow=(date,merchant,price,top,dateY=null,origin='screenshot-layout')=>{
   const name=cleanOcrMerchant(String(merchant).replace(/\b\d+(?:[.,]\d+)?\s*%\b/g,''));
   if(name.length<4||/^(?:transactions?|total|solde|compte|ouvrir|accueil|modifier|octobre|verification|v[eé]rifier)\b/i.test(name))return;
   if(rows.some(r=>Math.abs(r.box.y-top)<width*.048))return;
@@ -114,22 +139,61 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
     /^[+\-−]$/.test(String(w.text||'').trim()))?.text||'';
   const prefix=(String(price?.text||'').trim().match(/^[+\-−]/)||[])[0]||nearbySign;
   const bankDirection=prefix==='+'?'in':prefix==='-'||prefix==='−'?'out':'';
-  rows.push({date:date||'',name,amount:'',type:bankDirection==='in'?'refund':'expense',
+  rows.push({date:date||'',name,amount:'',type:bankDirection==='in'?'unknown':'expense',
    bankDirection,selected:false,ambiguous:true,
    needsDateReview:!date,columnRaw:price?.text||'',ocrPriceConfidence:price?.confidence??null,
-   source:'screenshot-layout',raw:name+' | '+(date||'date à lire'),
+   source:origin,raw:name+' | '+(date||'date à lire'),
    box:{y:top,dateY,price:price?{left:price.left,top:price.top,width:price.width,height:price.height}:null},
    index:rows.length+1});
  };
+ // Some French banks show one date ABOVE several transactions. Identify
+ // weekday headings by coordinates; associating every operation with the
+ // NEXT date would silently shift all dates and corrupt the ledger.
+ const headingWords=l=>l.words.filter(w=>w.left>width*.012&&w.left<width*.76)
+  .sort((a,b)=>a.left-b.left).map(w=>w.text);
+ const groupedHeaders=lines.map(l=>{
+   const tokens=headingWords(l);
+   const headline=tokens.slice(0,5).join(' ');
+   if(!/^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/i.test(headline))return null;
+   for(let n=2;n<=Math.min(tokens.length,5);n++){
+    const date=parseBankDayOCR(tokens.slice(0,n).join(' '),hintDate);
+    if(date)return{date,y:l.y};
+   }
+   return null;
+  }).filter(Boolean);
+ if(groupedHeaders.length>=1){
+  for(let i=0;i<groupedHeaders.length;i++){
+   const header=groupedHeaders[i],to=groupedHeaders[i+1]?.y??height*.96;
+   // A header can govern several payments, never fuse them into one row.
+   const group=lines.filter(l=>l.y>header.y+width*.018&&l.y<to-width*.015);
+   for(const line of group){
+    const price=selectPrice(amountWords(line));
+    if(!price)continue;
+    const words=labelWords(line);
+    if(!words.length)continue;
+    const name=words.map(w=>w.text).join(' ');
+    // Do not invent a signed direction if the sign was lost in OCR.
+    newRow(header.date,name,price,line.y,null,'screenshot-french-grouped');
+   }
+  }
+  // If date-group structure exists but prices are unreadable, no automatic
+  // transaction may be inferred from a neighbouring date or monetary total.
+  if(rows.length>65)throw Error('Capture trop longue : sépare les opérations en plusieurs images plus lisibles.');
+ return rows.sort((a,b)=>a.box.y-b.box.y);
+ }
  // Bank screenshots often wrap a single statement row over 3-5 visual lines:
  // the payment amount is beside line 1, while the date is under line 4.
  // Anchor by explicit printed date and then read the entire preceding block.
  if(markers.length){
   for(let k=0;k<markers.length;k++){
    const d=markers[k],previous=k?markers[k-1].y:height*.075;
-   const from=Math.max(k===0?height*.057:previous+width*.028,d.y-width*.41),to=d.y-width*.026;
+   // Cropped iPhone screenshots may begin directly on an operation at y=0.
+   // Do not discard it just because a fixed top-header margin was assumed.
+   const from=k===0?Math.max(0,d.y-width*.41):Math.max(previous+width*.028,d.y-width*.41),to=d.y-width*.026;
    const block=lines.filter(l=>l.y>=from&&l.y<to);
-   const merchantLines=block.filter(l=>labelWords(l).length>0&&!/^(?:transactions?|solde|comptes?|accueil|relevés?)$/i.test(labelWords(l).map(w=>w.text).join(' ').trim()));
+   const merchantLines=block.filter(l=>{const name=labelWords(l).map(w=>w.text).join(' ').trim();
+    return name&&!/^(?:transactions?|solde|comptes?|accueil|relevés?|janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)(?:\s+20\d{2})?$/i.test(name);
+   });
    if(!merchantLines.length)continue;
    const name=merchantLines.map(l=>labelWords(l).map(w=>w.text).join(' ')).join(' ');
    const price=selectPrice(block.flatMap(amountWords));
@@ -157,7 +221,8 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  }
  // Conservative fallback: when no prices were readable but explicit dates exist,
  // preserve those rows for human review without fabricating an amount.
- return rows.sort((a,b)=>a.box.y-b.box.y).slice(0,65);
+ if(rows.length>65)throw Error('Capture trop longue : sépare les opérations en plusieurs images plus lisibles.');
+ return rows.sort((a,b)=>a.box.y-b.box.y);
 }
 async function decodeImageForOcr(file){
  if(typeof createImageBitmap==='function'){
@@ -187,8 +252,14 @@ function priceEvidence(raw){
  const m=compact.match(/^[+-]?\s*(\d{1,7}(?:[.,]\d{2})?)\s*(?:[$S€][\s$S€]*(?:[5>›])?)?$/i);
  if(!m)return null;
  const s=m[1];
- if(/^\d{1,6}[,.]\d{2}$/.test(s))return{amount:parseReliablePrice(s),explicit:true,digits:s.replace(/\D/g,'')};
- if(/^\d{3,7}$/.test(s))return{amount:Number(s.slice(0,-2)+'.'+s.slice(-2)),explicit:false,digits:s};
+ if(/^\d{1,6}[,.]\d{2}$/.test(s)){
+  const amount=parseReliablePrice(s);
+  return amount!==null?{amount,explicit:true,digits:s.replace(/\D/g,'')}:null;
+ }
+ if(/^\d{3,7}$/.test(s)){
+  const amount=Number(s.slice(0,-2)+'.'+s.slice(-2));
+  return amount>0&&amount<1000000?{amount,explicit:false,digits:s}:null;
+ }
  return null;
 }
 function reconcilePriceReadings(readings,columnRaw){
@@ -228,12 +299,30 @@ function reconcilePriceReadings(readings,columnRaw){
 }
 
 
+// Bank debit/credit signs are independent evidence from the OCR amount.
+// Conflicting signs must not silently turn repayments into expenses.
+function reconcileBankDirection(readings,sourceDirection='',mustHaveSign=false){
+ const signs=readings.map(r=>{
+   const text=String(r?.text||'').trim();
+   const m=text.match(/^([+\-−])\s*\d/);
+   return m?(m[1]==='+'?'in':'out'):'';
+ }).filter(Boolean);
+ const contradictory=signs.includes('in')&&signs.includes('out')||
+  sourceDirection&&signs.some(s=>s!==sourceDirection);
+ const agreement=signs.length>=2&&signs.every(s=>s===signs[0]);
+ const direction=sourceDirection||(agreement?signs[0]:'');
+ return{direction,review:Boolean(contradictory||mustHaveSign&&!sourceDirection&&!agreement),
+  reason:contradictory?'Signes bancaires contradictoires':
+   mustHaveSign&&!direction?'Signe bancaire illisible':''};
+}
 function priceImageRegion(frame,row){
  const w=frame.width,h=frame.height,p=row.box?.price;
  const mid=p?p.top+p.height/2:row.box?.y||0;
  const pad=Math.max(27,Math.min(36,w*.03));
- const left=Math.max(0,Math.floor(p?Math.max(w*.635,p.left-w*.026):w*.66));
- const right=Math.min(w,Math.ceil(p?Math.min(w*.914,p.left+p.width+w*.03):w*.90));
+ // Include separated bank sign and rightmost cents. Previous crop could
+ // truncate the final digit when the amount touched the right side.
+ const left=Math.max(0,Math.floor(p?Math.max(w*.60,p.left-w*.08):w*.62));
+ const right=Math.min(w,Math.ceil(p?Math.min(w*.975,p.left+p.width+w*.045):w*.97));
  return{left,right,top:Math.max(0,Math.floor(mid-pad)),bottom:Math.min(h,Math.ceil(mid+pad))};
 }
 function makeRowSnippet(frame,row,nextY){
@@ -331,22 +420,26 @@ async function recognizeStructuredScreenshot(file,worker,base,onProgress=()=>{},
      const original=await worker.recognize(canvas);
      readings.push(original?.data);
      let resolution=reconcilePriceReadings(readings,r.columnRaw);
-     // Only unclear or contradictory prices require an additional OCR pass.
-     if(resolution.review||resolution.amount===null){
+     let direction=reconcileBankDirection(readings,r.bankDirection,r.source==='screenshot-french-grouped');
+     // Only unclear or contradictory evidence requires another OCR pass.
+     if(resolution.review||resolution.amount===null||direction.review){
       ctx.filter='grayscale(1) contrast(2)';
       ctx.drawImage(frame.image,left,top,w,h,0,0,canvas.width,canvas.height);
       ctx.filter='none';
       const contrasting=await worker.recognize(canvas);
       readings.push(contrasting?.data);
       resolution=reconcilePriceReadings(readings,r.columnRaw);
+      direction=reconcileBankDirection(readings,r.bankDirection,r.source==='screenshot-french-grouped');
      }
      r.amount=resolution.amount??'';
-     r.needsReview=resolution.review||r.needsDateReview;
+     r.bankDirection=direction.direction;
+     r.type=direction.direction==='in'?'unknown':'expense';
+     r.needsReview=resolution.review||direction.review||r.needsDateReview;
      r.selected=!r.needsReview&&r.amount>0&&!!r.date;
      r.ambiguous=r.needsReview;
      r.priceCandidates=resolution.candidates||[];
-     r.priceReviewReason=resolution.review?resolution.reason:'';
-     if(r.needsReview)r.raw+=' | '+resolution.reason;
+     r.priceReviewReason=direction.review?direction.reason:resolution.review?resolution.reason:'';
+     if(r.needsReview)r.raw+=' | '+(r.priceReviewReason||'Date à vérifier');
     }catch(error){r.needsReview=true;r.selected=false;r.raw+=' | OCR du montant à vérifier';}
     canvas.width=canvas.height=1;
     delete r.box;
@@ -362,7 +455,7 @@ async function extract(file,onProgress=()=>{},options={}){
  const isImage=file.type.startsWith('image/')||/\.(png|jpe?g|webp|bmp|heic)$/i.test(name);
  if(!isPdf&&!isImage)throw new Error('Format non pris en charge : choisis une image, un PDF ou un CSV.');
  if(file.size>12*1024*1024)throw new Error('Document trop volumineux (maximum 12 Mo).');
- let result='',pageCount=1,ocrPages=0,structuredCandidates=[];
+ let result='',pageCount=1,ocrPages=0,structuredCandidates=[],quality=null;
  if(isPdf){
   onProgress('Ouverture du PDF sur cet appareil…');
   let pdfjs;
@@ -391,16 +484,25 @@ async function extract(file,onProgress=()=>{},options={}){
   }finally{await doc.destroy();}
  }else{
   onProgress('Analyse de l’image sur ton appareil…');
-  const w=await getOcrWorker('eng');
+  // Bilingual OCR improves French weekday headings and merchant names,
+  // while preserving English Desjardins and international merchants.
+  let w;
+  try{w=await getOcrWorker('fra+eng');}
+  catch(error){console.info('OCR bilingue indisponible, repli anglais');w=await getOcrWorker('eng');}
   // TSV contains coordinates even when the OCR reading order is incorrect.
   const base=await w.recognize(file,{}, {text:true,tsv:true});
   result=String(base?.data?.text||'');
   ocrPages=1;
   onProgress('Analyse des lignes de transactions…');
   if(base?.data?.tsv)structuredCandidates=await recognizeStructuredScreenshot(file,w,base.data,onProgress,options.hintDate||'');
+  // Independent OCR text vs spatial lines: a mismatch is NOT proof of
+  // missing rows, but enough risk to prohibit automatic confirmations.
+  const textCandidates=extractCandidates(result).candidates.length;
+  quality={textRows:textCandidates,layoutRows:structuredCandidates.length,
+   reviewRequired:textCandidates>structuredCandidates.length&&textCandidates>0};
  }
  if(!result.trim()&&!structuredCandidates.length)throw new Error('Aucun texte lisible. Envoie une capture plus nette ou un PDF contenant du texte.');
- return {text:result.slice(0,120000),pageCount,ocrPages,structuredCandidates,source:structuredCandidates.length?'OCR local · lignes et montants relus':ocrPages?'OCR local + PDF':'PDF texte'};
+ return {text:result.slice(0,120000),pageCount,ocrPages,structuredCandidates,quality,source:structuredCandidates.length?'OCR local · lignes et montants relus':ocrPages?'OCR local + PDF':'PDF texte'};
 }
 const dateRe=/\b(?:20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.](?:20)?\d{2})\b/;
 const moneyRe=/[-−+]?\(?\d{1,7}(?:[ \u00a0\u202f.,]\d{3})*(?:[.,]\d{2})\)?\s*(?:\$|€|CAD|USD|EUR)?/gi;
@@ -443,13 +545,53 @@ function extractGenericCandidates(raw,locale='dmy'){
  return{candidates:out,flagged,lines:lines.length};
 }
 
+// Statement arithmetic is independent evidence, never a substitute for reading
+// every transaction. Inconsistent or missing statement totals require review.
+function desjardinsStatementCheck(raw,candidates,paymentCents){
+ const lines=String(raw||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ const labels={
+  previous:/^Solde\s+pr[eé]c[eé]dent\b/i,
+  purchases:/^Achats\s*\/\s*d[eé]bits\b/i,
+  advances:/^Avances\s+d.argent\b/i,
+  fees:/^Frais\s+de\s+cr[eé]dit\b/i,
+  payments:/^Paiements\s*\/\s*cr[eé]dits\b/i,
+  closing:/^Nouveau\s+solde\s+courant\b/i
+ };
+ const result={};
+ for(const [key,label] of Object.entries(labels)){
+  // Read the amount in the summary row, never a nearby interest RATE.
+  // For example "Avances d'argent: 21,90 %" is an APR, not a 21,90 $ advance.
+  const line=lines.map(x=>{
+   if(!label.test(x))return null;
+   const tail=x.replace(label,'').trim();
+   if(/^:/.test(tail))return null;
+   const m=tail.match(/^[+\-=]?\s*(\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})(?!\s*%)/);
+   return m?m[1]:null;
+  }).find(Boolean);
+  if(!line)continue;
+  const amount=cleanAmount(line);
+  if(amount!==null&&Number.isFinite(amount)&&amount>=0)result[key]=Math.round(amount*100);
+ }
+ if(Object.keys(result).length!==6)return{status:'unavailable',reason:'Sommaire du relevé incomplet'};
+ const debits=candidates.filter(x=>x.type==='expense').reduce((n,x)=>n+Math.round(Number(x.amount)*100),0);
+ const merchantCredits=candidates.filter(x=>x.type==='refund').reduce((n,x)=>n+Math.round(Number(x.amount)*100),0);
+ const linesBalanced=debits===result.purchases+result.advances+result.fees&&
+  merchantCredits+paymentCents===result.payments;
+ const balanceBalanced=result.previous+result.purchases+result.advances+result.fees-
+  result.payments===result.closing;
+ return {status:linesBalanced&&balanceBalanced?'matched':'mismatch',
+  reason:!balanceBalanced?'Sommaire bancaire incohérent':
+   !linesBalanced?'Des opérations du relevé semblent manquantes ou répétées':'',
+  extractedDebitsCents:debits,extractedCreditsCents:merchantCredits+paymentCents,
+  closingCents:result.closing};
+}
 /* Verified against Desjardins Mastercard statement layout (date, posting date, merchant, reward %, CAD amount). */
 function extractDesjardins(raw){
  const lines=String(raw||'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean);
  const stamp=String(raw).match(/\b(\d{1,2})\s+(\d{1,2})\s+(20\d{2})\b/);
  const year=stamp?Number(stamp[3]):null,statementMonth=stamp?Number(stamp[2]):null;
  const re=/^(\d{1,2})\s+(\d{1,2})\s+(\d{1,2})\s+(\d{1,2})\s+(.+?)\s+(\d{1,3}(?:[ \u00a0\u202f]\d{3})*,\d{2})(CR)?$/i;
- const candidates=[];let skippedPayments=0,flagged=0;
+ const candidates=[];let skippedPayments=0,paymentCents=0,flagged=0;
  for(const [i,line] of lines.entries()){
   const m=line.match(re);if(!m)continue;
   const day=Number(m[1]),month=Number(m[2]),postingMonth=Number(m[4]);
@@ -461,12 +603,13 @@ function extractDesjardins(raw){
   if(!date){flagged++;continue;}
   const whole=m[5].trim(),amount=cleanAmount(m[6]);
   if(!Number.isFinite(amount)||amount<=0){flagged++;continue;}
-  if(/^(?:PAIEMENT CAISSE|PAIEMENT PAR|PAYMENT RECEIVED|PAIEMENT REÇU)/i.test(whole)){skippedPayments++;continue;}
+  if(/^(?:PAIEMENT CAISSE|PAIEMENT PAR|PAYMENT RECEIVED|PAIEMENT REÇU)/i.test(whole)){skippedPayments++;paymentCents+=Math.round(amount*100);continue;}
   const name=whole.replace(/\s+\d{1,2},\d{2}\s*%\s*$/,'').replace(/\s+/g,' ').trim().slice(0,80);
   const credit=!!m[7];
   candidates.push({date,name,amount,type:credit?'refund':'expense',selected:true,ambiguous:false,raw:line,index:i+1,source:'desjardins'});
  }
- return{candidates,flagged,lines:lines.length,skippedPayments};
+ return{candidates,flagged,lines:lines.length,skippedPayments,
+  statementCheck:desjardinsStatementCheck(raw,candidates,paymentCents)};
 }
 const monthsFR={JAN:1,JANV:1,FEV:2,FEVR:2,MAR:3,MARS:3,AVR:4,AVRIL:4,MAI:5,JUN:6,JUIN:6,JUL:7,JUIL:7,AOU:8,AOUT:8,SEP:9,SEPT:9,OCT:10,NOV:11,DEC:12};
 /* Text-only OCR fallback for card-list screenshots.
@@ -483,14 +626,16 @@ function readMobileScreenshotText(raw,hintDate=''){
   const month=monthsFR[dateParts[2]],date=month?isoDate(dateParts[1]+'/'+month+'/'+year,'dmy'):null;
   if(!date)continue;
   const rawMerchant=lines[i-1].replace(/^\s*[=−\-–]+\s*/,'').replace(/\s*[›>]\s*$/,'').trim();
-  const priceSuffix=rawMerchant.match(/(?:^|\s)(\d{1,6}[.,]\d{2})\s*[S$€]?\s*$/);
+  const priceSuffix=rawMerchant.match(/(?:^|\s)([+\-−]?\s*\d{1,6}[.,]\d{2})\s*[S$€]?\s*$/);
   const uncertainSuffix=rawMerchant.match(/\s+\d{2,8}[S$€]\s*$/i);
   let amount='',name=rawMerchant;
-  if(priceSuffix){amount=cleanAmount(priceSuffix[1]);name=rawMerchant.slice(0,priceSuffix.index).trim();}
+  if(priceSuffix){amount=Math.abs(cleanAmount(priceSuffix[1]));name=rawMerchant.slice(0,priceSuffix.index).trim();}
   else if(uncertainSuffix){name=rawMerchant.slice(0,uncertainSuffix.index).trim();}
   name=name.replace(/^[=\s]+/,'').replace(/\s+/g,' ').slice(0,80);
   if(!name||name.length<3)continue;
-  candidates.push({date,name,amount,type:'expense',selected:Number.isFinite(amount)&&amount>0,ambiguous:!(amount>0),
+  const signed=priceSuffix?String(priceSuffix[1]).trim():'';
+  const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
+  candidates.push({date,name,amount,type:bankDirection==='in'?'unknown':'expense',bankDirection,selected:Number.isFinite(amount)&&amount>0,ambiguous:!(amount>0),
    raw:lines.slice(i-1,i+1).join(' | '),index:i+1,source:'screenshot-text'});
  }
  return{candidates,lines:lines.length,flagged:0};
@@ -498,7 +643,7 @@ function readMobileScreenshotText(raw,hintDate=''){
 function extractScreenshotTransactions(raw){
  const lines=String(raw||'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean);
  const date=/^(\d{1,2})\s*(JANV?|F[ÉE]VR?|MARS?|AVR(?:IL)?|MAI|JUIN?|JUIL?|AO[UÛ]T?|SEPT?|OCT|NOV|D[ÉE]C)\.?$/i;
- const money=/(\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})\s*\$?\s*[›>]*$/;
+ const money=/([+\-−]?\s*\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})\s*[$€]?\s*[›>]*$/;
  const candidates=[];const year=(raw.match(/\b(20\d{2})\b/)||[])[1]||new Date().getFullYear();
  for(let i=1;i<lines.length;i++){
   const match=lines[i].match(date);if(!match)continue;
@@ -508,26 +653,113 @@ function extractScreenshotTransactions(raw){
   let before=lines[i-1],m=before.match(money),name=m?before.slice(0,m.index).trim():'';
   if((!m||!name)&&i>=2){if(m)name=lines[i-2];else{m=lines[i-2].match(money);name=m?lines[i-2].slice(0,m.index).trim():'';}}
   if(!m||!name||/^transactions?$/i.test(name))continue;
-  const amount=cleanAmount(m[1]);if(!(amount>0))continue;
-  candidates.push({date:dateISO,name:name.replace(/[›>]+$/,'').trim().slice(0,80),amount,type:'expense',selected:true,ambiguous:false,raw:lines.slice(Math.max(0,i-2),i+1).join(' | '),index:i+1,source:'screenshot'});
+  const signed=String(m[1]).trim(),amount=Math.abs(cleanAmount(signed));
+  if(!(amount>0))continue;
+  const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
+  candidates.push({date:dateISO,name:name.replace(/[+\-−\s›>]+$/,'').trim().slice(0,80),
+   amount,type:bankDirection==='in'?'unknown':'expense',bankDirection,
+   selected:true,ambiguous:false,raw:lines.slice(Math.max(0,i-2),i+1).join(' | '),index:i+1,source:'screenshot'});
  }
  return{candidates,flagged:0,lines:lines.length};
 }
+// French account screenshots group several signed transactions below full
+// weekday/date headers. Do not confuse inline purchase dates (e.g. "du 02/10")
+// with posting dates, or synthesize dates when a header is missing.
+function extractFrenchBankScreenshot(raw,hintDate=''){
+ const lines=String(raw||'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean);
+ if(!/[€]|\bEUR\b/i.test(raw))return null;
+ let date='',headings=0,flagged=0;
+ const candidates=[];
+ const weekday=/^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+\d{1,2}\s+\p{L}+/iu;
+ const amountRe=/([+\-−])\s*(\d{1,6}(?:[ \u00a0\u202f]\d{3})*[,\.]\d{2})\s*(?:€|EUR)\s*$/i;
+ for(let i=0;i<lines.length;i++){
+  const line=lines[i];
+  if(weekday.test(line)){
+   const next=parseBankDayOCR(line,hintDate);
+   if(next){date=next;headings++;}
+   else{date='';flagged++;}
+   continue;
+  }
+  if(!date)continue;
+  const m=line.match(amountRe);
+  if(!m)continue;
+  const name=line.slice(0,m.index).replace(/[›>\-−\s]+$/,'').trim();
+  if(name.length<3){flagged++;continue;}
+  const value=Math.abs(cleanAmount(m[1]+m[2]));
+  if(!(value>0)){flagged++;continue;}
+  const bankDirection=m[1]==='+'?'in':'out';
+  candidates.push({date,name:name.slice(0,90),amount:value,
+   type:bankDirection==='in'?'unknown':'expense',bankDirection,
+   selected:true,ambiguous:false,raw:line,index:i+1,source:'fr-bank-screenshot'});
+ }
+ return headings>=2?{candidates,flagged,lines:lines.length,source:'fr-bank-screenshot'}:null;
+}
+// Shared pure hints for both import UIs. Never infer the source-account
+// currency from a foreign purchase inside a CAD Mastercard PDF.
+function sourceAccountHints(raw){
+ const txt=String(raw||'');
+ const cardStatement=/DESJARDINS[\s\S]{0,220}(?:MASTERCARD|ODYSSEE|ODYSS[EÉ]E)|TRANSACTIONS EFFECTU[EÉ]ES AVEC LA CARTE/i.test(txt);
+ const eur=(txt.match(/\d[\d\s\u202f]*[,\.]\d{2}\s*€/g)||[]).length;
+ const cad=(txt.match(/\d[\d\s\u202f]*[,\.]\d{2}\s*\$/g)||[]).length;
+ const currency=cardStatement?'CAD':eur&&!cad?'EUR':cad&&!eur?'CAD':'';
+ const kind=cardStatement||/\bPAIEMENT\s+CAISSE\b/i.test(txt)?'card':
+  /COMPTE DE CH[EÈ]QUES|COMPTE COURANT BNP|COMPTE DE D[EÉ]P[OÔ]T/i.test(txt)?'checking':'';
+ return Object.freeze({currency,kind});
+}
+// Last-resort text fallback when iOS/Safari returns OCR text but cannot
+// return TSV word coordinates. Dates anchor candidate rows; ambiguous amount
+// columns are NEVER associated by guesswork and remain unselected.
+function extractScreenshotDateBlocks(raw,hintDate=''){
+ const lines=String(raw||'').replace(/\r/g,'').split('\n').map(v=>v.trim()).filter(Boolean);
+ const year=(String(raw).match(/\b20\d{2}\b/)||[])[0]||String(new Date().getFullYear());
+ const dated=[],start=/^(?:[A-Za-zÀ-ÿ]+\s+)?[0-3]?\d\s*(?:JANV|F[EÉ]V|MAR|AVR|MAI|JUIN|JUIL|AO[UÛ]|SEP|OCT|NOV|D[EÉ]C)/i;
+ for(let i=0;i<lines.length;i++){
+  const value=lines[i];
+  if(!start.test(value))continue;
+  const d=parseBankDayOCR(value,hintDate||year+'-11-01');
+  if(d)dated.push({date:d,index:i});
+ }
+ if(!dated.length)return null;
+ const candidates=[];
+ for(let k=0;k<dated.length;k++){
+  const anchor=dated[k],begin=k?dated[k-1].index+1:0;
+  const preceding=lines.slice(begin,anchor.index)
+   .filter(x=>!(/^(?:janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\s+20\d{2}$/i.test(x)))
+   .filter(x=>!/^[-−+]?\s*\d[\d\s,\.]*\s*[$€]?\s*[›>]*$/.test(x))
+   .filter(x=>!/^[-−+]?\s*\d[\d\s,\.]*\s*[$€]?\s*[›>]*$/.test(x.replace(/\s+/g,'')));
+  const name=cleanOcrMerchant(preceding.join(' ').replace(/\s+/g,' '));
+  if(name.length<4||/^transactions?\b/i.test(name))continue;
+  candidates.push({date:anchor.date,name,amount:'',type:'unknown',
+   selected:false,ambiguous:true,needsReview:true,needsDateReview:false,
+   bankDirection:'',source:'screenshot-date-fallback',
+   raw:'Date et libellé repérés ; montant à lire manuellement',index:anchor.index+1});
+ }
+ return candidates.length?{candidates,flagged:0,lines:lines.length}:null;
+}
 function extractCandidates(raw,locale='dmy'){
  const txt=String(raw||'');
+ const french=extractFrenchBankScreenshot(txt);
+ if(french&&(french.candidates.length||french.flagged))return french;
  if(/DESJARDINS/i.test(txt)&&/BONIDOLLARS|ODYSSEE|ODYSSE[EÉ]E|Transactions effectuées avec la carte|PAIEMENT CAISSE/i.test(txt)){
   const r=extractDesjardins(txt);
   if(r.candidates.length>0)return r;
  }
  if(/(?:OCT|NOV|SEP|SEPT|JAN|FEV|FÉV|DÉC)/i.test(txt)){
   const r=extractScreenshotTransactions(txt);
+  const conservative=extractScreenshotDateBlocks(txt);
+  // If OCR text exposes more date markers than structured purchases, do
+  // not silently drop the other rows. All remain unvalued for review.
+  if(conservative&&conservative.candidates.length>r.candidates.length)return conservative;
   if(r.candidates.length>0)return r;
+  if(conservative)return conservative;
   const mobile=readMobileScreenshotText(txt);
   if(mobile.candidates.length)return mobile;
  }
+ const conservative=extractScreenshotDateBlocks(txt);
+ if(conservative)return conservative;
  return extractGenericCandidates(raw,locale);
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.1'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,extractScreenshotDateBlocks,version:'1.11.6'};
 })();
