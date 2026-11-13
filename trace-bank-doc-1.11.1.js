@@ -187,9 +187,13 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  if(markers.length){
   for(let k=0;k<markers.length;k++){
    const d=markers[k],previous=k?markers[k-1].y:height*.075;
-   const from=Math.max(k===0?height*.057:previous+width*.028,d.y-width*.41),to=d.y-width*.026;
+   // Cropped iPhone screenshots may begin directly on an operation at y=0.
+   // Do not discard it just because a fixed top-header margin was assumed.
+   const from=k===0?Math.max(0,d.y-width*.41):Math.max(previous+width*.028,d.y-width*.41),to=d.y-width*.026;
    const block=lines.filter(l=>l.y>=from&&l.y<to);
-   const merchantLines=block.filter(l=>labelWords(l).length>0&&!/^(?:transactions?|solde|comptes?|accueil|relevés?)$/i.test(labelWords(l).map(w=>w.text).join(' ').trim()));
+   const merchantLines=block.filter(l=>{const name=labelWords(l).map(w=>w.text).join(' ').trim();
+    return name&&!/^(?:transactions?|solde|comptes?|accueil|relevés?|janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)(?:\s+20\d{2})?$/i.test(name);
+   });
    if(!merchantLines.length)continue;
    const name=merchantLines.map(l=>labelWords(l).map(w=>w.text).join(' ')).join(' ');
    const price=selectPrice(block.flatMap(amountWords));
