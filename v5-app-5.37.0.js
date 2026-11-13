@@ -7372,21 +7372,21 @@ window.TraceBankBridge={
     throw new Error('Choisis une Nature du mouvement compatible avec ce compte et le sens bancaire.');
    if(accountType(bank)==='card'&&window.TraceImportGuide.cardStatementSettlementLabel(name))
     throw new Error('Ce paiement de carte doit être rapproché avec le compte courant, sans nouvelle transaction.');
-   const probe={date,name,type,bankAmount:amount,amountCAD:amount,accountId};
-   if(method==='image')dates.add(date);
-   const existing=findSimilarTransaction(probe);
-   // Never create a second expense because a screenshot shows the actual CAD
-   // debit instead of the estimate already stored on an earlier purchase.
-   // The operator must first open and explicitly correct the existing entry.
-   if(method==='image'&&type==='expense'&&
-      tracePossibleForeignDebitCorrection(probe,accountId))
-    throw new Error('Montant bancaire différent d’une dépense étrangère déjà enregistrée. Ouvre la dépense existante et vérifie son débit réel avant de réimporter la capture ; aucun doublon créé.');
-   if(existing?.status==='exact'||csvImportedDuplicate(probe,state.transactions)){duplicates++;continue;}
-   if(existing?.status==='possible'&&!row.allowPossibleDuplicate)throw new Error('Correspondance possible dans Trace : '+existing.t.name+' du '+existing.t.date+'. Vérifie-la explicitement avant ajout.');
+   // Always compare bank-native money AFTER verified dated CAD conversion.
    const booking=window.TraceInternational.resolveBooking({
     account:bank,bankAmount:amount,date,quote:nativeCurrency==='CAD'?null:quotes.get(date),
     originalCurrency:row.purchaseCurrency||nativeCurrency,
     originalAmount:row.purchaseAmount||null});
+   const probe={date,name,type,bankAmount:booking.bankAmount,
+    bankCurrency:nativeCurrency,amountCAD:booking.amountCAD,accountId};
+   if(method==='image')dates.add(date);
+   const existing=findSimilarTransaction(probe);
+   if(nativeCurrency==='CAD'&&method==='image'&&type==='expense'&&
+      tracePossibleForeignDebitCorrection(probe,accountId))
+    throw new Error('Montant bancaire différent d’une dépense étrangère déjà enregistrée. Ouvre la dépense existante et vérifie son débit réel avant de réimporter la capture ; aucun doublon créé.');
+   if(existing?.status==='exact'||csvImportedDuplicate(probe,state.transactions)){duplicates++;continue;}
+   if(existing?.status==='possible'&&!row.allowPossibleDuplicate)
+    throw new Error('Correspondance possible dans Trace : '+existing.t.name+' du '+existing.t.date+'. Vérifie-la explicitement avant ajout.');
    const share=nature.budget==='none'||nature.budget==='income'?
     {beneficiary:me,...traceSplit(me,booking.amountCAD)}:
     traceImportSplit({...row,beneficiary:row.beneficiary||me},{amountCAD:booking.amountCAD});
