@@ -17,7 +17,14 @@ async function ocrReady(){
 async function getOcrWorker(lang='fra+eng'){
  if(workers.has(lang))return workers.get(lang);
  const t=await ocrReady();
- const w=await t.createWorker(lang);
+ // CSP worker-src 'self' intentionally blocks the library's default blob
+ // worker. A pinned first-party worker entrypoint is mandatory on Safari.
+ let w;
+ try{w=await t.createWorker(lang,1,{
+   workerPath:'/trace-ocr-worker-5.1.1.js',workerBlobURL:false
+ });}catch(error){
+   throw new Error('Le moteur OCR ne peut pas démarrer sur cet appareil. Vérifie ta connexion et actualise TRACE. '+String(error?.message||''));
+ }
  workers.set(lang,w);return w;
 }
 async function recognize(data){
@@ -713,5 +720,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.4'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,version:'1.11.5'};
 })();
