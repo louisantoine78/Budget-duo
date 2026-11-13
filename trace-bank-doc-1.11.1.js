@@ -746,7 +746,12 @@ function extractCandidates(raw,locale='dmy'){
  }
  if(/(?:OCT|NOV|SEP|SEPT|JAN|FEV|FÉV|DÉC)/i.test(txt)){
   const r=extractScreenshotTransactions(txt);
+  const conservative=extractScreenshotDateBlocks(txt);
+  // If OCR text exposes more date markers than structured purchases, do
+  // not silently drop the other rows. All remain unvalued for review.
+  if(conservative&&conservative.candidates.length>r.candidates.length)return conservative;
   if(r.candidates.length>0)return r;
+  if(conservative)return conservative;
   const mobile=readMobileScreenshotText(txt);
   if(mobile.candidates.length)return mobile;
  }
