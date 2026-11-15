@@ -102,6 +102,23 @@ function screenshotDateEvidence(words,width,hintDate=''){
  }
  return markers.sort((a,b)=>a.y-b.y);
 }
+// Strict screenshot chrome classifier. Do not mistake account headings,
+ // month labels, totals, or navigation for bank transactions.
+function screenshotNonTransactionKind(raw){
+ const t=String(raw||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .toUpperCase().replace(/[\u00a0\u202f]/g,' ').replace(/[–—]/g,'-')
+  .replace(/\s+/g,' ').trim();
+ if(!t)return '';
+ const month='(?:JANVIER|FEVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOUT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DECEMBRE)';
+ if(new RegExp('^'+month+'(?:\\s+20\\d{2})?$').test(t)||
+    new RegExp('^FACTUR(?:EES?|ES?)\\s+EN\\s+'+month+'(?:\\s+20\\d{2})?$').test(t)||
+    /^(?:TRANSACTIONS?|OPERATIONS|MOUVEMENTS|HISTORIQUE(?: DES TRANSACTIONS)?|FACTUREES?|EN ATTENTE|A VENIR|RELEVE DE COMPTE)$/.test(t))
+  return 'header';
+ if(/^(?:TOTAL|SOUS[\s-]?TOTAL|MONTANT TOTAL)(?:$|[\s:]+(?:[+\-]?\s*\d|[+\-]?\s*[$€]|A PAYER\b|DU\b|DES?\b|GENERAL\b|MENSUEL\b|CUMULE\b))/.test(t)||
+    /^SOLDE(?:\s+(?:COURANT|PRECEDENT|INITIAL|FINAL|DISPONIBLE|TOTAL|A PAYER|DU))\b/.test(t))
+  return 'summary';
+ return '';
+}
 function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  const words=readOcrTsv(tsv);
  if(words.length<5||width<200||height<200)return[];
@@ -114,8 +131,15 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  }
  lines.forEach(l=>l.words.sort((a,b)=>a.left-b.left));
  const markers=screenshotDateEvidence(words,width,hintDate);
- const labelWords=l=>l.words.filter(w=>w.left>width*.065&&w.left<width*.655&&
-   /[A-Za-zÀ-ÿ]{2}/.test(w.text)&&!parseBankDayOCR(w.text,hintDate));
+ const labelWords=l=>{
+  const col=l.words.filter(w=>w.left>width*.065&&w.left<width*.655);
+  const hasName=col.some(w=>/[A-Za-zÀ-ÿ]{2}/.test(w.text));
+  return col.filter(w=>(/[A-Za-zÀ-ÿ]{2}/.test(w.text)||
+    (hasName&&/^[A-Za-zÀ-ÿ]$/.test(w.text)&&w.confidence>=30))&&
+    !parseBankDayOCR(w.text,hintDate));
+ };
+ const lineText=l=>l.words.map(w=>w.text).join(' ');
+ const isChrome=l=>Boolean(screenshotNonTransactionKind(lineText(l)));
  // Banking amounts live in the right column. Cashback / BoniDollars percentages
  // underneath are informational and must never enter the financial ledger.
  const cashbackWord=w=>/%|pourcent|cashback|boni.?dollars|recompense/i.test(String(w.text||''));
@@ -761,5 +785,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,extractScreenshotDateBlocks,version:'1.11.6'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,extractScreenshotDateBlocks,screenshotNonTransactionKind,version:'1.11.7'};
 })();
