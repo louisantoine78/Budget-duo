@@ -56,7 +56,7 @@ test('Safari uses same-origin OCR worker without loosening CSP',()=>{
  assert.ok(worker.includes("importScripts('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js')"));
  assert.ok(html.includes("worker-src 'self'"));
  assert.ok(!html.includes("worker-src 'self' blob:"));
- assert.ok(html.includes('trace-bank-doc-1.11.1.js?v=1.11.6'));
+ assert.ok(html.includes('trace-bank-doc-1.11.1.js?v=1.11.7'));
  assert.ok(html.includes('trace-bank-ui-5.37.0.js?v=1.11.6'));
  assert.ok(html.includes('trace-smart-inbox-3.5.0.js?v=1.11.6'));
 });
