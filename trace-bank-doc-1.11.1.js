@@ -102,6 +102,24 @@ function screenshotDateEvidence(words,width,hintDate=''){
  }
  return markers.sort((a,b)=>a.y-b.y);
 }
+// Strict screenshot chrome classifier. Do not mistake account headings,
+ // month labels, totals, or navigation for bank transactions.
+function screenshotNonTransactionKind(raw){
+ const t=String(raw||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .toUpperCase().replace(/[\u00a0\u202f]/g,' ').replace(/[–—]/g,'-')
+  .replace(/\s+/g,' ').trim();
+ if(!t)return '';
+ const month='(?:JANVIER|FEVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOUT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DECEMBRE)';
+ if(new RegExp('^'+month+'(?:\\s+20\\d{2})?$').test(t)||
+    new RegExp('^EN\\s+'+month+'(?:\\s+20\\d{2})?$').test(t)||
+    new RegExp('^FACTUR(?:EES?|ES?)\\s+EN\\s+'+month+'(?:\\s+20\\d{2})?$').test(t)||
+    /^(?:TRANSACTIONS?|OPERATIONS|MOUVEMENTS|HISTORIQUE(?: DES TRANSACTIONS)?|FACTUREES?|EN ATTENTE|A VENIR|RELEVE DE COMPTE)$/.test(t))
+  return 'header';
+ if(/^(?:TOTAL|SOUS[\s-]?TOTAL|MONTANT TOTAL)(?:$|[\s:]+(?:[+\-]?\s*\d|[+\-]?\s*[$€]|A PAYER\b|DU\b|DES?\b|GENERAL\b|MENSUEL\b|CUMULE\b))/.test(t)||
+    /^SOLDE(?:\s+(?:COURANT|PRECEDENT|INITIAL|FINAL|DISPONIBLE|TOTAL|A PAYER|DU))\b/.test(t))
+  return 'summary';
+ return '';
+}
 function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  const words=readOcrTsv(tsv);
  if(words.length<5||width<200||height<200)return[];
@@ -114,8 +132,15 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  }
  lines.forEach(l=>l.words.sort((a,b)=>a.left-b.left));
  const markers=screenshotDateEvidence(words,width,hintDate);
- const labelWords=l=>l.words.filter(w=>w.left>width*.065&&w.left<width*.655&&
-   /[A-Za-zÀ-ÿ]{2}/.test(w.text)&&!parseBankDayOCR(w.text,hintDate));
+ const labelWords=l=>{
+  const col=l.words.filter(w=>w.left>width*.065&&w.left<width*.655);
+  const hasName=col.some(w=>/[A-Za-zÀ-ÿ]{2}/.test(w.text));
+  return col.filter(w=>(/[A-Za-zÀ-ÿ]{2}/.test(w.text)||
+    (hasName&&/^[A-Za-zÀ-ÿ]$/.test(w.text)&&w.confidence>=30))&&
+    !parseBankDayOCR(w.text,hintDate));
+ };
+ const lineText=l=>l.words.map(w=>w.text).join(' ');
+ const isChrome=l=>Boolean(screenshotNonTransactionKind(lineText(l)));
  // Banking amounts live in the right column. Cashback / BoniDollars percentages
  // underneath are informational and must never enter the financial ledger.
  const cashbackWord=w=>/%|pourcent|cashback|boni.?dollars|recompense/i.test(String(w.text||''));
@@ -130,7 +155,8 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  const rows=[];
  const newRow=(date,merchant,price,top,dateY=null,origin='screenshot-layout')=>{
   const name=cleanOcrMerchant(String(merchant).replace(/\b\d+(?:[.,]\d+)?\s*%\b/g,''));
-  if(name.length<4||/^(?:transactions?|total|solde|compte|ouvrir|accueil|modifier|octobre|verification|v[eé]rifier)\b/i.test(name))return;
+  if(name.length<4||screenshotNonTransactionKind(name)||
+      /^(?:ouvrir|accueil|modifier|verification|v[eé]rifier)\b/i.test(name))return;
   if(rows.some(r=>Math.abs(r.box.y-top)<width*.048))return;
   // Preserve a bank-side + or - only when OCR sees it attached to the amount
   // or as a separate, immediately adjacent symbol in the same price row.
@@ -167,6 +193,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
    // A header can govern several payments, never fuse them into one row.
    const group=lines.filter(l=>l.y>header.y+width*.018&&l.y<to-width*.015);
    for(const line of group){
+    if(isChrome(line))continue;
     const price=selectPrice(amountWords(line));
     if(!price)continue;
     const words=labelWords(line);
@@ -190,21 +217,26 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
    // Cropped iPhone screenshots may begin directly on an operation at y=0.
    // Do not discard it just because a fixed top-header margin was assumed.
    const from=k===0?Math.max(0,d.y-width*.41):Math.max(previous+width*.028,d.y-width*.41),to=d.y-width*.026;
-   const block=lines.filter(l=>l.y>=from&&l.y<to);
-   const merchantLines=block.filter(l=>{const name=labelWords(l).map(w=>w.text).join(' ').trim();
-    return name&&!/^(?:transactions?|solde|comptes?|accueil|relevés?|janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)(?:\s+20\d{2})?$/i.test(name);
-   });
+   const incoming=lines.filter(l=>l.y>=from&&l.y<to);
+   // A new month section or a TOTAL can fall between consecutive dates.
+   // Only merchant text AFTER the last section/summary belongs to this row.
+   const boundary=incoming.filter(isChrome).reduce((max,l)=>Math.max(max,l.y),-1);
+   const block=incoming.filter(l=>l.y>boundary+threshold*.5&&!isChrome(l));
+   const merchantLines=block.filter(l=>labelWords(l).length>0);
    if(!merchantLines.length)continue;
    const name=merchantLines.map(l=>labelWords(l).map(w=>w.text).join(' ')).join(' ');
-   const price=selectPrice(block.flatMap(amountWords));
-   // Never use the next transaction's amount to fill the previous transaction.
-   if(!price&&merchantLines.length<1)continue;
+   // A total or an unrelated earlier amount must not be assigned to a
+   // merchant. Ambiguous prices remain blank for human verification.
+   const nearbyPrices=block.flatMap(l=>amountWords(l)
+    .filter(w=>Math.abs(l.y-merchantLines[0].y)<=width*.14&&priceEvidence(w.text)));
+   const price=nearbyPrices.length===1?nearbyPrices[0]:null;
    newRow(d.date,name,price,merchantLines[0].y,d.y);
   }
  }
  // Recover price-anchored transactions only when the printed date was unreadable;
  // avoid duplicating any already reconstructed date block.
  for(const line of lines){
+  if(isChrome(line))continue;
   const price=selectPrice(amountWords(line));if(!price)continue;
   if(rows.some(r=>line.y>=r.box.y-width*.03&&
     line.y<=Math.max(r.box.dateY||r.box.y,r.box.y+width*.08)))continue;
@@ -214,7 +246,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
   if(near&&rows.some(r=>r.date===nextDate.date&&r.box.y>line.y-width*.08))continue;
   // Include following merchant sublines, but never a subsequent price-anchored row.
   const continuation=lines.filter(l=>l.y>line.y&&l.y<line.y+width*.23&&
-   !amountWords(l).some(w=>priceEvidence(w.text))&&labelWords(l).length>0&&
+   !isChrome(l)&&!amountWords(l).some(w=>priceEvidence(w.text))&&labelWords(l).length>0&&
    (!nextDate||l.y<nextDate.y-width*.015)).slice(0,4);
   const name=[line,...continuation].map(l=>labelWords(l).map(w=>w.text).join(' ')).join(' ');
   newRow('',name,price,line.y,null);
@@ -279,6 +311,9 @@ function reconcilePriceReadings(readings,columnRaw){
  });
  const [winner,evidence]=sorted[0];
  const agreed=evidence.length>=2 && evidence.some(e=>e.fullImage||e.explicit);
+ // Comma-less amounts (e.g. 9295S) can mean 9,29 or 92,95 depending
+ // on the missing digit. Never autoapprove without a decimal in a crop.
+ const explicitCrop=evidence.some(e=>e.explicit&&!e.fullImage);
  const competing=sorted.length>1;
  const other=sorted.slice(1);
  const weight=xs=>xs.reduce((n,x)=>n+(x.explicit?2:1)+(x.fullImage?1:0),0);
@@ -293,8 +328,9 @@ function reconcilePriceReadings(readings,columnRaw){
    (leadingDigitDropped&&weight(evidence)>=weight(competitors)+1));
  // A full-image price with a missing comma is evidence, but can never alone
  // override two crops. In conflicting cases, keep the row unchecked.
- return{amount:Number(winner),review:competing&&!decisive||!agreed,
-  reason:competing?'Lectures contradictoires':agreed?'Lectures concordantes':'Montant à confirmer',
+ return{amount:Number(winner),review:!explicitCrop||competing&&!decisive||!agreed,
+  reason:!explicitCrop?'Décimales non confirmées':competing?'Lectures contradictoires':
+    agreed?'Lectures concordantes':'Montant à confirmer',
   candidates:sorted.map(([amount])=>amount)};
 }
 
@@ -632,7 +668,7 @@ function readMobileScreenshotText(raw,hintDate=''){
   if(priceSuffix){amount=Math.abs(cleanAmount(priceSuffix[1]));name=rawMerchant.slice(0,priceSuffix.index).trim();}
   else if(uncertainSuffix){name=rawMerchant.slice(0,uncertainSuffix.index).trim();}
   name=name.replace(/^[=\s]+/,'').replace(/\s+/g,' ').slice(0,80);
-  if(!name||name.length<3)continue;
+  if(!name||name.length<3||screenshotNonTransactionKind(name))continue;
   const signed=priceSuffix?String(priceSuffix[1]).trim():'';
   const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
   candidates.push({date,name,amount,type:bankDirection==='in'?'unknown':'expense',bankDirection,selected:Number.isFinite(amount)&&amount>0,ambiguous:!(amount>0),
@@ -652,7 +688,7 @@ function extractScreenshotTransactions(raw){
   if(!dateISO)continue;
   let before=lines[i-1],m=before.match(money),name=m?before.slice(0,m.index).trim():'';
   if((!m||!name)&&i>=2){if(m)name=lines[i-2];else{m=lines[i-2].match(money);name=m?lines[i-2].slice(0,m.index).trim():'';}}
-  if(!m||!name||/^transactions?$/i.test(name))continue;
+  if(!m||!name||screenshotNonTransactionKind(name))continue;
   const signed=String(m[1]).trim(),amount=Math.abs(cleanAmount(signed));
   if(!(amount>0))continue;
   const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
@@ -684,7 +720,7 @@ function extractFrenchBankScreenshot(raw,hintDate=''){
   const m=line.match(amountRe);
   if(!m)continue;
   const name=line.slice(0,m.index).replace(/[›>\-−\s]+$/,'').trim();
-  if(name.length<3){flagged++;continue;}
+  if(name.length<3||screenshotNonTransactionKind(name)){flagged++;continue;}
   const value=Math.abs(cleanAmount(m[1]+m[2]));
   if(!(value>0)){flagged++;continue;}
   const bankDirection=m[1]==='+'?'in':'out';
@@ -723,12 +759,15 @@ function extractScreenshotDateBlocks(raw,hintDate=''){
  const candidates=[];
  for(let k=0;k<dated.length;k++){
   const anchor=dated[k],begin=k?dated[k-1].index+1:0;
-  const preceding=lines.slice(begin,anchor.index)
+  const segment=lines.slice(begin,anchor.index);
+  const lastChrome=segment.reduce((n,x,j)=>screenshotNonTransactionKind(x)?j:n,-1);
+  const preceding=segment.slice(lastChrome+1)
+   .filter(x=>!screenshotNonTransactionKind(x))
    .filter(x=>!(/^(?:janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\s+20\d{2}$/i.test(x)))
    .filter(x=>!/^[-−+]?\s*\d[\d\s,\.]*\s*[$€]?\s*[›>]*$/.test(x))
    .filter(x=>!/^[-−+]?\s*\d[\d\s,\.]*\s*[$€]?\s*[›>]*$/.test(x.replace(/\s+/g,'')));
   const name=cleanOcrMerchant(preceding.join(' ').replace(/\s+/g,' '));
-  if(name.length<4||/^transactions?\b/i.test(name))continue;
+  if(name.length<4||screenshotNonTransactionKind(name))continue;
   candidates.push({date:anchor.date,name,amount:'',type:'unknown',
    selected:false,ambiguous:true,needsReview:true,needsDateReview:false,
    bankDirection:'',source:'screenshot-date-fallback',
@@ -761,5 +800,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,extractScreenshotDateBlocks,version:'1.11.6'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,extractScreenshotDateBlocks,screenshotNonTransactionKind,version:'1.11.7'};
 })();

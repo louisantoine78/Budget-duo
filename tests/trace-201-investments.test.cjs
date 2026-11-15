@@ -71,9 +71,9 @@ test('version, assets, original wealth sections, live host bridge and conservati
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const main=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const version=JSON.parse(fs.readFileSync(path.join(root,'trace-version.json'),'utf8'));
- assert.equal(version.build,'5.37.12');
+ assert.equal(version.build,'5.37.13');
  assert.ok(version.release.includes('2.0.2'));
- assert.ok(main.includes("window.__TRACE_BUILD__='5.37.12'"));
+ assert.ok(main.includes("window.__TRACE_BUILD__='5.37.13'"));
  assert.match(html,/id="trace201Entry"/);
  assert.ok(html.includes('trace-wealth-201-engine.js?v=2.0.2'));
  assert.ok(html.includes('trace-wealth-201.js?v=2.0.2'));
@@ -406,14 +406,14 @@ test('TRACE 2.0.2 release stamp, runtime and investment assets remain aligned',(
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'v5-app-5.37.0.js'),'utf8');
  const ui=fs.readFileSync(path.join(root,'trace-wealth-201.js'),'utf8');
- assert.equal(version.build,'5.37.12');
+ assert.equal(version.build,'5.37.13');
  assert.ok(version.release.startsWith('TRACE 2.0.2'));
- assert.ok(app.includes("window.__TRACE_BUILD__='5.37.12';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
- assert.ok(html.includes('<meta name="trace-build" content="5.37.12">'));
+ assert.ok(app.includes("window.__TRACE_BUILD__='5.37.13';window.__TRACE_PUBLIC_RELEASE__='2.0.2';"));
+ assert.ok(html.includes('<meta name="trace-build" content="5.37.13">'));
  for(const asset of ['trace-wealth-201.css','trace-wealth-201-engine.js','trace-wealth-201.js']){
   assert.ok(html.includes(asset+'?v='+(asset==='trace-wealth-201.js'?'2.0.2.3':asset==='trace-wealth-201.css'?'2.0.2.6':'2.0.2')),'Missing cache-bust: '+asset);
  }
- assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.12'));
+ assert.ok(html.includes('v5-app-5.37.0.js?v=5.37.13'));
  assert.ok(ui.includes("host.openSheet('Investissements · TRACE 2.0.2'"));
 });
 
@@ -491,7 +491,7 @@ test('CSP-safe production bridge connects real investment module without inline 
  assert.ok(!html.includes('window.TraceWealth201?.connect(window.Trace201Host)'));
  assert.ok(js.includes('if(root.Trace201Host)api.connect(root.Trace201Host);'));
  assert.ok(app.includes('window.Trace201Host=Object.freeze({'));
- assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.12"')<
+ assert.ok(html.indexOf('src="v5-app-5.37.0.js?v=5.37.13"')<
    html.indexOf('src="trace-wealth-201.js?v=2.0.2.3"'));
  assert.ok(!js.includes('createClient('));
  assert.ok(!js.includes('localStorage'));
@@ -604,8 +604,10 @@ test('verified new investment ledger contributes exactly once, while draft, FX a
  assert.equal(W.netWorthBridge({...a,investments201:tampered},false,'2026-11-08').ready,false,
   'a stale verified flag must not survive a changed broker baseline');
  assert.equal(JSON.stringify(a),copy,'the net bridge must never mutate account data');
- // A dated, sourced CAD-equivalent value is consistently visible in summary.
- W.connect({context(){return{active:true,viewer:'la',scope:'mine',accounts:[a],operations:[]};},
+ // For a live dashboard, the market FX must be current on the test date.
+ // Keep the fixed 2026-11-08 cases above to test historical/future rates.
+ const currentFxAccount={...a,fxRateDate:new Date().toISOString().slice(0,10)};
+ W.connect({context(){return{active:true,viewer:'la',scope:'mine',accounts:[currentFxAccount],operations:[]};},
   openSheet(){},async save(){throw Error('Read-only test');}});
  const overview=W.portfolioOverview();
  assert.equal(overview.verified,1);

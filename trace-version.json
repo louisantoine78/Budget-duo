@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.37.12",
-  "release": "TRACE 2.0.2 — OCR bancaire Safari et captures Desjardins fiables"
+  "build": "5.37.13",
+  "release": "TRACE 2.0.2 — OCR bancaire : transactions seules, hors en-têtes et totaux"
 }
