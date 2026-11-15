@@ -311,6 +311,9 @@ function reconcilePriceReadings(readings,columnRaw){
  });
  const [winner,evidence]=sorted[0];
  const agreed=evidence.length>=2 && evidence.some(e=>e.fullImage||e.explicit);
+ // Comma-less amounts (e.g. 9295S) can mean 9,29 or 92,95 depending
+ // on the missing digit. Never autoapprove without a decimal in a crop.
+ const explicitCrop=evidence.some(e=>e.explicit&&!e.fullImage);
  const competing=sorted.length>1;
  const other=sorted.slice(1);
  const weight=xs=>xs.reduce((n,x)=>n+(x.explicit?2:1)+(x.fullImage?1:0),0);
@@ -325,8 +328,9 @@ function reconcilePriceReadings(readings,columnRaw){
    (leadingDigitDropped&&weight(evidence)>=weight(competitors)+1));
  // A full-image price with a missing comma is evidence, but can never alone
  // override two crops. In conflicting cases, keep the row unchecked.
- return{amount:Number(winner),review:competing&&!decisive||!agreed,
-  reason:competing?'Lectures contradictoires':agreed?'Lectures concordantes':'Montant à confirmer',
+ return{amount:Number(winner),review:!explicitCrop||competing&&!decisive||!agreed,
+  reason:!explicitCrop?'Décimales non confirmées':competing?'Lectures contradictoires':
+    agreed?'Lectures concordantes':'Montant à confirmer',
   candidates:sorted.map(([amount])=>amount)};
 }
 
