@@ -122,3 +122,18 @@ test('Text-only fallback excludes summary and month header without losing Market
  const summaryOnly=D.extractCandidates('Total +78,18 $\n31 OCT');
  assert.equal(summaryOnly.candidates.length,0,'a total cannot be imported as a transaction');
 });
+
+
+test('Amounts without a clear decimal mark remain unapproved even if OCR agrees',()=>{
+ const implicit=D.reconcilePriceReadings(
+  [{text:'9295S',confidence:99},{text:'9295S',confidence:98}],'9295S');
+ assert.equal(implicit.review,true);
+ assert.equal(implicit.reason,'Décimales non confirmées');
+ const explicit=D.reconcilePriceReadings(
+  [{text:'9,29$',confidence:99},{text:'9,29$',confidence:98}],'9,29$');
+ assert.equal(explicit.amount,9.29);
+ assert.equal(explicit.review,false);
+ const mismatch=D.reconcilePriceReadings(
+  [{text:'9,29$',confidence:99},{text:'9,29$',confidence:98}],'9295S');
+ assert.equal(mismatch.review,true,'contradicting full-image amount requires review');
+});
