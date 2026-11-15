@@ -111,6 +111,7 @@ function screenshotNonTransactionKind(raw){
  if(!t)return '';
  const month='(?:JANVIER|FEVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOUT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DECEMBRE)';
  if(new RegExp('^'+month+'(?:\\s+20\\d{2})?$').test(t)||
+    new RegExp('^EN\\s+'+month+'(?:\\s+20\\d{2})?$').test(t)||
     new RegExp('^FACTUR(?:EES?|ES?)\\s+EN\\s+'+month+'(?:\\s+20\\d{2})?$').test(t)||
     /^(?:TRANSACTIONS?|OPERATIONS|MOUVEMENTS|HISTORIQUE(?: DES TRANSACTIONS)?|FACTUREES?|EN ATTENTE|A VENIR|RELEVE DE COMPTE)$/.test(t))
   return 'header';
@@ -754,12 +755,15 @@ function extractScreenshotDateBlocks(raw,hintDate=''){
  const candidates=[];
  for(let k=0;k<dated.length;k++){
   const anchor=dated[k],begin=k?dated[k-1].index+1:0;
-  const preceding=lines.slice(begin,anchor.index)
+  const segment=lines.slice(begin,anchor.index);
+  const lastChrome=segment.reduce((n,x,j)=>screenshotNonTransactionKind(x)?j:n,-1);
+  const preceding=segment.slice(lastChrome+1)
+   .filter(x=>!screenshotNonTransactionKind(x))
    .filter(x=>!(/^(?:janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\s+20\d{2}$/i.test(x)))
    .filter(x=>!/^[-−+]?\s*\d[\d\s,\.]*\s*[$€]?\s*[›>]*$/.test(x))
    .filter(x=>!/^[-−+]?\s*\d[\d\s,\.]*\s*[$€]?\s*[›>]*$/.test(x.replace(/\s+/g,'')));
   const name=cleanOcrMerchant(preceding.join(' ').replace(/\s+/g,' '));
-  if(name.length<4||/^transactions?\b/i.test(name))continue;
+  if(name.length<4||screenshotNonTransactionKind(name))continue;
   candidates.push({date:anchor.date,name,amount:'',type:'unknown',
    selected:false,ambiguous:true,needsReview:true,needsDateReview:false,
    bankDirection:'',source:'screenshot-date-fallback',
