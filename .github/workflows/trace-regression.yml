@@ -51,6 +51,7 @@ jobs:
           node tests/trace-international-legacy-ledger.test.cjs
           node tests/trace-international-financial-guards.test.cjs
           node tests/trace-international-bank-investment.test.cjs
+          node --test tests/trace-201-investments.test.cjs
           node tests/trace-international-native-flow.test.cjs
           node tests/trace-international-friend-allocations.test.cjs
           node tests/trace-international-manual-repayments.test.cjs
