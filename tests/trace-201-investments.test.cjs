@@ -604,8 +604,10 @@ test('verified new investment ledger contributes exactly once, while draft, FX a
  assert.equal(W.netWorthBridge({...a,investments201:tampered},false,'2026-11-08').ready,false,
   'a stale verified flag must not survive a changed broker baseline');
  assert.equal(JSON.stringify(a),copy,'the net bridge must never mutate account data');
- // A dated, sourced CAD-equivalent value is consistently visible in summary.
- W.connect({context(){return{active:true,viewer:'la',scope:'mine',accounts:[a],operations:[]};},
+ // For a live dashboard, the market FX must be current on the test date.
+ // Keep the fixed 2026-11-08 cases above to test historical/future rates.
+ const currentFxAccount={...a,fxRateDate:new Date().toISOString().slice(0,10)};
+ W.connect({context(){return{active:true,viewer:'la',scope:'mine',accounts:[currentFxAccount],operations:[]};},
   openSheet(){},async save(){throw Error('Read-only test');}});
  const overview=W.portfolioOverview();
  assert.equal(overview.verified,1);
