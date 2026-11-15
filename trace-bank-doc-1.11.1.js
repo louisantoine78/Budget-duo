@@ -154,7 +154,8 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  const rows=[];
  const newRow=(date,merchant,price,top,dateY=null,origin='screenshot-layout')=>{
   const name=cleanOcrMerchant(String(merchant).replace(/\b\d+(?:[.,]\d+)?\s*%\b/g,''));
-  if(name.length<4||/^(?:transactions?|total|solde|compte|ouvrir|accueil|modifier|octobre|verification|v[eé]rifier)\b/i.test(name))return;
+  if(name.length<4||screenshotNonTransactionKind(name)||
+      /^(?:ouvrir|accueil|modifier|verification|v[eé]rifier)\b/i.test(name))return;
   if(rows.some(r=>Math.abs(r.box.y-top)<width*.048))return;
   // Preserve a bank-side + or - only when OCR sees it attached to the amount
   // or as a separate, immediately adjacent symbol in the same price row.
@@ -191,6 +192,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
    // A header can govern several payments, never fuse them into one row.
    const group=lines.filter(l=>l.y>header.y+width*.018&&l.y<to-width*.015);
    for(const line of group){
+    if(isChrome(line))continue;
     const price=selectPrice(amountWords(line));
     if(!price)continue;
     const words=labelWords(line);
@@ -214,21 +216,26 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
    // Cropped iPhone screenshots may begin directly on an operation at y=0.
    // Do not discard it just because a fixed top-header margin was assumed.
    const from=k===0?Math.max(0,d.y-width*.41):Math.max(previous+width*.028,d.y-width*.41),to=d.y-width*.026;
-   const block=lines.filter(l=>l.y>=from&&l.y<to);
-   const merchantLines=block.filter(l=>{const name=labelWords(l).map(w=>w.text).join(' ').trim();
-    return name&&!/^(?:transactions?|solde|comptes?|accueil|relevés?|janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)(?:\s+20\d{2})?$/i.test(name);
-   });
+   const incoming=lines.filter(l=>l.y>=from&&l.y<to);
+   // A new month section or a TOTAL can fall between consecutive dates.
+   // Only merchant text AFTER the last section/summary belongs to this row.
+   const boundary=incoming.filter(isChrome).reduce((max,l)=>Math.max(max,l.y),-1);
+   const block=incoming.filter(l=>l.y>boundary+threshold*.5&&!isChrome(l));
+   const merchantLines=block.filter(l=>labelWords(l).length>0);
    if(!merchantLines.length)continue;
    const name=merchantLines.map(l=>labelWords(l).map(w=>w.text).join(' ')).join(' ');
-   const price=selectPrice(block.flatMap(amountWords));
-   // Never use the next transaction's amount to fill the previous transaction.
-   if(!price&&merchantLines.length<1)continue;
+   // A total or an unrelated earlier amount must not be assigned to a
+   // merchant. Ambiguous prices remain blank for human verification.
+   const nearbyPrices=block.flatMap(l=>amountWords(l)
+    .filter(w=>Math.abs(l.y-merchantLines[0].y)<=width*.14&&priceEvidence(w.text)));
+   const price=nearbyPrices.length===1?nearbyPrices[0]:null;
    newRow(d.date,name,price,merchantLines[0].y,d.y);
   }
  }
  // Recover price-anchored transactions only when the printed date was unreadable;
  // avoid duplicating any already reconstructed date block.
  for(const line of lines){
+  if(isChrome(line))continue;
   const price=selectPrice(amountWords(line));if(!price)continue;
   if(rows.some(r=>line.y>=r.box.y-width*.03&&
     line.y<=Math.max(r.box.dateY||r.box.y,r.box.y+width*.08)))continue;
@@ -238,7 +245,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
   if(near&&rows.some(r=>r.date===nextDate.date&&r.box.y>line.y-width*.08))continue;
   // Include following merchant sublines, but never a subsequent price-anchored row.
   const continuation=lines.filter(l=>l.y>line.y&&l.y<line.y+width*.23&&
-   !amountWords(l).some(w=>priceEvidence(w.text))&&labelWords(l).length>0&&
+   !isChrome(l)&&!amountWords(l).some(w=>priceEvidence(w.text))&&labelWords(l).length>0&&
    (!nextDate||l.y<nextDate.y-width*.015)).slice(0,4);
   const name=[line,...continuation].map(l=>labelWords(l).map(w=>w.text).join(' ')).join(' ');
   newRow('',name,price,line.y,null);
@@ -656,7 +663,7 @@ function readMobileScreenshotText(raw,hintDate=''){
   if(priceSuffix){amount=Math.abs(cleanAmount(priceSuffix[1]));name=rawMerchant.slice(0,priceSuffix.index).trim();}
   else if(uncertainSuffix){name=rawMerchant.slice(0,uncertainSuffix.index).trim();}
   name=name.replace(/^[=\s]+/,'').replace(/\s+/g,' ').slice(0,80);
-  if(!name||name.length<3)continue;
+  if(!name||name.length<3||screenshotNonTransactionKind(name))continue;
   const signed=priceSuffix?String(priceSuffix[1]).trim():'';
   const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
   candidates.push({date,name,amount,type:bankDirection==='in'?'unknown':'expense',bankDirection,selected:Number.isFinite(amount)&&amount>0,ambiguous:!(amount>0),
@@ -676,7 +683,7 @@ function extractScreenshotTransactions(raw){
   if(!dateISO)continue;
   let before=lines[i-1],m=before.match(money),name=m?before.slice(0,m.index).trim():'';
   if((!m||!name)&&i>=2){if(m)name=lines[i-2];else{m=lines[i-2].match(money);name=m?lines[i-2].slice(0,m.index).trim():'';}}
-  if(!m||!name||/^transactions?$/i.test(name))continue;
+  if(!m||!name||screenshotNonTransactionKind(name))continue;
   const signed=String(m[1]).trim(),amount=Math.abs(cleanAmount(signed));
   if(!(amount>0))continue;
   const bankDirection=/^\+/.test(signed)?'in':/^[-−]/.test(signed)?'out':'';
@@ -708,7 +715,7 @@ function extractFrenchBankScreenshot(raw,hintDate=''){
   const m=line.match(amountRe);
   if(!m)continue;
   const name=line.slice(0,m.index).replace(/[›>\-−\s]+$/,'').trim();
-  if(name.length<3){flagged++;continue;}
+  if(name.length<3||screenshotNonTransactionKind(name)){flagged++;continue;}
   const value=Math.abs(cleanAmount(m[1]+m[2]));
   if(!(value>0)){flagged++;continue;}
   const bankDirection=m[1]==='+'?'in':'out';
