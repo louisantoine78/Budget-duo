@@ -344,12 +344,23 @@ function openingBoundary(accountId){
  return{date:d,mode};
 }
 function afterBoundary(date,boundary){return !boundary?.date||(boundary.mode==='end'?String(date||'')>boundary.date:String(date||'')>=boundary.date);}
+/* Budget start is independent of each bank account's dated balance.
+ * Never use the household budget start to decide whether a bank import
+ * affects its native account ledger. */
 function isFinancialPeriod(t){
- const date=String(t.date||''),start=state.household.referenceDate||'';
- const acc=t.accountId||t.toAccountId;
- if(start&&date<start&&window.TraceInternational.currency(state.accounts.find(a=>a.id===acc))==='CAD')return false;
- if(!acc||!state.accounts.some(a=>a.id===acc))return true;
- return afterBoundary(date,openingBoundary(acc));
+ const start=String(state.household.referenceDate||'');
+ const deferred=(t.type==='expense'&&t.deferredKind==='purchase')||
+  (t.type==='refund'&&t.deferredKind==='merchant_refund');
+ const date=String(deferred&&window.TraceInternational?.calendarDate?.(t.budgetDate)?
+  t.budgetDate:t.date||'');
+ return !start||date>=start;
+}
+/* A bank statement line is historical ONLY relative to this account's
+ * own opening snapshot, not the budget's global reference date. */
+function isBankBalancePeriod(t,accountId){
+ const id=accountId||t.accountId||t.toAccountId;
+ const account=state.accounts.find(a=>a.id===id);
+ return !!account&&afterBoundary(t.date,openingBoundary(account.id));
 }
 function normalizedMerchant(s){
  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(?:montreal|montre|quebec|toronto|canada|ontario|vancouver|qc|on|bc|ca|mtl|inc|lt[dée]|visa|mastercard)\b/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
@@ -479,13 +490,20 @@ function accountEstimate(a){
    (!x.status||['confirmed','complete','matched'].includes(x.status))&&x.confirmed!==false&&
    I.calendarDate(x.date)&&String(x.currency||'CAD').toUpperCase()===code&&
    I.exactMoney(x.actualBalance)!==null).sort((x,y)=>String(y.date).localeCompare(String(x.date)))[0];
- const b=state.household.accountOpeningBalances||{},d=state.household.accountOpeningBalanceDates||{};
- const rawBase=I.exactMoney(r?r.actualBalance:b[a.id]);
+ const b=state.household.accountOpeningBalances||{};
+ const opening=openingBoundary(a.id),openingAmount=I.exactMoney(b[a.id]);
+ // The most recent valid dated balance wins. An old reconciliation must not
+ // silently override a newer snapshot explicitly entered by the account owner.
+ // On the same date, end-of-day is later than start-of-day.
+ const useOpening=openingAmount!==null&&I.calendarDate(opening.date)&&
+  (!r||opening.date>r.date||(opening.date===r.date&&opening.mode==='end'));
+ const rawBase=I.exactMoney(useOpening?openingAmount:r?r.actualBalance:null);
  // Card statements normally show a positive DEBT. TRACE stores a negative
  // financial balance; older settings/reconciliations sometimes stored debt as positive.
  // Interpret those historical amounts without rewriting the user's stored records.
- const base=rawBase===null?null:accountType(a)==='card'&&r?.cardBalanceKind!=='credit'?-Math.abs(rawBase):rawBase;
- const boundary=r?{date:r.date,mode:'end'}:openingBoundary(a.id);
+ const base=rawBase===null?null:accountType(a)==='card'&&
+  (useOpening||r?.cardBalanceKind!=='credit')?-Math.abs(rawBase):rawBase;
+ const boundary=useOpening?opening:r?{date:r.date,mode:'end'}:opening;
  if(base===null||!I.calendarDate(boundary.date))return null;
  const movement=(typeof trace20BalanceTransactions==='function'?trace20BalanceTransactions():state.transactions).filter(t=>t.status==='confirmed'&&(t.accountId===a.id||t.toAccountId===a.id)&&afterBoundary(t.date,boundary)).reduce((x,t)=>{
   if(t.type==='card_statement_evidence')return x;
@@ -1289,8 +1307,13 @@ function traceAccountBankProofNotice(account,lastReconciliationDate=null){
  // Explain unknown native bank balances without inventing a currency,
  // editing a document or exposing a partner's other account records.
  const I=window.TraceInternational,code=I.currency(account);
- const boundary=lastReconciliationDate?
-  {date:lastReconciliationDate,mode:'end'}:openingBoundary(account.id);
+ const opening=openingBoundary(account.id);
+ const hasOpening=I.exactMoney(state.household.accountOpeningBalances?.[account.id])!==null&&
+  I.calendarDate(opening.date);
+ const boundary=lastReconciliationDate&&
+  (!hasOpening||lastReconciliationDate>opening.date||
+   (lastReconciliationDate===opening.date&&opening.mode!=='end'))?
+  {date:lastReconciliationDate,mode:'end'}:opening;
  const afterEvidenceBoundary=date=>afterBoundary(date,boundary);
  const candidate=t=>t&&t.status==='confirmed'&&
   t.type!=='card_statement_evidence'&&
@@ -3916,7 +3939,8 @@ function txRow(t){
   '<span class="tx-icon">'+esc(c.icon||'◇')+'</span>'+
   '<span class="tx-main"><b>'+esc(t.name||t.merchant||'Transaction')+
   '</b><small>'+label+' · '+esc(t.date||'')+
-  (outside?' · Hors solde de départ':'')+indicative+
+  (outside?' · Hors période du budget':'')+
+  (!isBankBalancePeriod(t,nativeAccount?.id)?' · Hors solde du compte':'')+indicative+
   (originalLine?' · '+esc(originalLine):'')+
   (receive?' · Réception '+esc(nativeCode):'')+'</small></span>'+
   '<span class="tx-amt '+(pos?'positive':'')+'">'+
@@ -5013,7 +5037,7 @@ async function smartApproveDraft(id,v){
   ...(type==='transfer'?{toBankAmount:destinationBankAmount,toBankCurrency:destinationBankCurrency}:{}),
   status:'confirmed',categoryId:isBudget?categoryId:'',accountId,payerId:me,
   ...(toAccountId?{toAccountId}:{}),...(movement.purpose?{transferPurpose:movement.purpose}:{}),...(investmentAccountId?{investmentAccountId}:{}),...(related?{relatedExpenseId:related}:{}),...share,source:'image',importFileName:d.sourceFileName,
-  recurring:false,excludedByOpening:!isFinancialPeriod(probe)};
+  recurring:false,excludedByOpening:!isBankBalancePeriod(probe,accountId)};
  tx.importFingerprint=csvFingerprint(tx);
  await saveDocument('transactions',tx);state.transactions.push(tx);
  if(!state.importDays.some(x=>x.accountId===accountId&&x.date===date)){
@@ -6787,7 +6811,7 @@ function openAccountSettings(){
  openSheet('Mes comptes',
   '<div class="trace-bank-scope" role="group" aria-label="Afficher les comptes de"><button type="button" data-bank-scope="mine" class="'+(bankSettingsScope==='mine'?'is-selected':'')+'" aria-pressed="'+(bankSettingsScope==='mine')+'">Moi</button><button type="button" data-bank-scope="couple" class="'+(bankSettingsScope==='couple'?'is-selected':'')+'" aria-pressed="'+(bankSettingsScope==='couple')+'">Couple</button></div>'+
   '<p class="trace-account-settings-help">'+(bankSettingsScope==='couple'?'Vue globale des comptes du foyer. Tu peux modifier tes propres comptes ; ceux du partenaire sont en lecture seule.':
-   'Chaque compte a son propre solde, ses imports et ses opérations. Tu peux les renommer sans perdre leur historique.')+'</p>'+
+   'Chaque compte a sa propre date de solde, indépendante du démarrage du budget. Pour un relevé de clôture, sélectionne « Fin de la journée ». Les anciennes opérations restent dans l’historique sans modifier ce solde.')+'</p>'+
   (accounts.length?accounts.map(a=>{
    const editable=a.owner===me;
    const estimate=accountEstimate(a);
@@ -7328,7 +7352,7 @@ window.TraceBankBridge={
    // a confirmed foreign-purchase estimate on this same CAD bank account can
    // have a different true debit. Surface only a possible match for review.
    const estimatedCorrection=found?null:tracePossibleForeignDebitCorrection(row,accountId);
-   const included=isFinancialPeriod(t);
+   const included=isBankBalancePeriod(t,accountId);
    const match=found?.t||estimatedCorrection;
    const matchRecorded=match?.status==='confirmed';
    return{status:!included?'historical':match?(found&&matchRecorded&&found.status==='exact'?'already':'possible'):'missing',
@@ -7394,7 +7418,7 @@ window.TraceBankBridge={
    const tx={id:txDocId(),date,name,type,transferPurpose:nature.purpose||null,
     natureReviewed:row.natureReviewed===true,...booking,
     status:'pending',categoryId:chosenCategory,accountId,payerId:me,...share,
-    source:method,importFileName:fileName,recurring:false,excludedByOpening:!isFinancialPeriod(probe)};
+    source:method,importFileName:fileName,recurring:false,excludedByOpening:!isBankBalancePeriod(probe,accountId)};
    tx.importFingerprint=csvFingerprint(tx);
    try{await saveDocument('transactions',tx);state.transactions.push(tx);savedIds.push(tx.id);savedRows.push({rowIndex,id:tx.id});added++;}
    catch(error){renderAll();throw error;}
