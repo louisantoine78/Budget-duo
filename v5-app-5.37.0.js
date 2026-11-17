@@ -4713,7 +4713,7 @@ function smartDrafts(accountId,date=null){
 async function smartStageRows(accountId,fileName,rows){
  if(!visibleBankAccounts(me).some(a=>a.id===accountId))throw Error('Compte inaccessible.');
  if(!Array.isArray(rows)||rows.length>100)throw Error('Capture trop longue.');
- let added=0,unknown=0,recovered=0,matched=0,suppressed=0;const dates=new Set(),usedDrafts=new Set();
+ let added=0,unknown=0,recovered=0,matched=0,suppressed=0;const dates=new Set(),usedDrafts=new Set(),usedHandled=new Set();
  for(let i=0;i<rows.length;i++){
   const r=rows[i],name=String(r.name||'').trim().slice(0,85);
   if(name.length<2)continue;
@@ -4776,15 +4776,16 @@ async function smartStageRows(accountId,fileName,rows){
   }
   const signature=[accountId,fileName,i,date,name.toLowerCase(),value].join('|');
   // Re-import of a previously excluded/confirmed line must not resurrect it.
-  const priorHandled=state.smartImports.some(d=>d.kind==='smart_draft'&&d.accountId===accountId&&
+  const priorHandled=state.smartImports.find(d=>d.kind==='smart_draft'&&d.accountId===accountId&&
    fileBase(d.sourceFileName)===fileBase(String(fileName).slice(0,110))&&['ignored','done'].includes(d.status)&&
+   !usedHandled.has(d.id)&&
    (!d.date||!date||d.date===date)&&
    (Number(d.amount)>0||Number(d.suggestedAmount)>0?
       comparableAmount!==null&&Math.abs(Number(d.amount||d.suggestedAmount)-comparableAmount)<.009:
      Number(d.sourceIndex)===i&&merchantOccurrences===1)&&
    (resembles(d.name)||
     (Number(d.sourceIndex)===i&&comparableAmount!==null&&d.date===date)));
-  if(priorHandled){suppressed++;continue;}
+  if(priorHandled){usedHandled.add(priorHandled.id);suppressed++;continue;}
   if(state.smartImports.some(d=>d.kind==='smart_draft'&&d.signature===signature&&d.status!=='reset'))continue;
   const item={id:'smart_'+txDocId(),kind:'smart_draft',accountId,date,name,amount:value,type:String(r.type||'unknown'),
    bankDirection:['in','out'].includes(r.bankDirection)?r.bankDirection:'',
@@ -4792,7 +4793,10 @@ async function smartStageRows(accountId,fileName,rows){
    needsAmountReview:!!r.needsReview||value===null,needsDateReview:!!r.needsDateReview||!date,
    ...(suggestedAmount?{suggestedAmount}:{}),...(preview?{sourcePreview:preview,sourcePreviewVersion:2}:{}),
    raw:String(r.raw||'').slice(0,200),createdAt:new Date().toISOString()};
-  await saveDocument('imports',item);state.smartImports.push(item);added++;
+  await saveDocument('imports',item);state.smartImports.push(item);
+  // Do not collapse two separate rows of the same screenshot with identical
+  // merchant, date, amount and direction (for example two card refunds).
+  usedDrafts.add(item.id);added++;
   if(date)dates.add(date);else unknown++;
  }
  for(const date of dates){try{await recordDayImport(accountId,date,'image');}catch(e){console.warn('Calendrier non mis à jour',e);}}
