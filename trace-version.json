@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.37.14",
-  "release": "TRACE 2.0.2 — soldes et dates de référence indépendants par compte"
+  "build": "5.37.15",
+  "release": "TRACE 2.0.2 — import OCR récupérable et dates de soldes libres par compte"
 }

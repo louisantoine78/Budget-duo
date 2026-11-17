@@ -56,9 +56,9 @@ test('Safari uses same-origin OCR worker without loosening CSP',()=>{
  assert.ok(worker.includes("importScripts('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js')"));
  assert.ok(html.includes("worker-src 'self'"));
  assert.ok(!html.includes("worker-src 'self' blob:"));
- assert.ok(html.includes('trace-bank-doc-1.11.1.js?v=1.11.7'));
+ assert.ok(html.includes('trace-bank-doc-1.11.1.js?v=1.11.8'));
  assert.ok(html.includes('trace-bank-ui-5.37.0.js?v=1.11.6'));
- assert.ok(html.includes('trace-smart-inbox-3.5.0.js?v=1.11.6'));
+ assert.ok(html.includes('trace-smart-inbox-3.5.0.js?v=1.11.8'));
 });
 
 
@@ -136,4 +136,21 @@ test('Amounts without a clear decimal mark remain unapproved even if OCR agrees'
  const mismatch=D.reconcilePriceReadings(
   [{text:'9,29$',confidence:99},{text:'9,29$',confidence:98}],'9295S');
  assert.equal(mismatch.review,true,'contradicting full-image amount requires review');
+});
+
+test('Pending card authorizations stay separate from billed transactions',()=>{
+ const rows=[
+  ['Autorisées',85,80,180],['non',279,80,52],['facturées',347,80,188],
+  ['Dollarama',206,210,186],['20,80$',810,207,138],['15',206,295,35],['NOV',255,295,86],
+  ['Facturées',88,394,200],['en',300,394,49],['novembre',367,394,217],['2026',598,394,92],
+  ['Restaurant',206,510,230],['Nour',448,510,96],['20,98$',812,507,132],
+  ['11',206,595,32],['NOV',253,595,86]
+ ];
+ const out=D.screenshotLayoutCandidates(tsv(rows),1179,960,'2026-11-16');
+ assert.equal(out.length,2);
+ assert.equal(out[0].name,'Dollarama');
+ assert.equal(out[0].authorizationPending,true);
+ assert.equal(out[1].name,'Restaurant Nour');
+ assert.notEqual(out[1].authorizationPending,true);
+ assert.equal(D.screenshotNonTransactionKind('Autorisées non facturées'),'header');
 });

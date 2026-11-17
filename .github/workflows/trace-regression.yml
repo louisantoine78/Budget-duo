@@ -63,6 +63,7 @@ jobs:
           node tests/trace-international-card-friend-cycle.test.cjs
           node tests/trace-international-import-cents.test.cjs
           node --test tests/trace-bank-ocr-iphone.test.cjs
+          node --test tests/trace-smart-inbox-recovery.test.cjs
           node tests/trace-international-csv-bank-review.test.cjs
           node tests/trace-international-csv-source-rows.test.cjs
           node tests/trace-international-csv-column-safety.test.cjs

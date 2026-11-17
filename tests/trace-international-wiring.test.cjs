@@ -93,8 +93,11 @@ const afterBoundary=extractLedgerFunction('afterBoundary','isFinancialPeriod');
 const isFinancialPeriod=extractLedgerFunction('isFinancialPeriod','isBankBalancePeriod',{
  state:bankState,window:{TraceInternational:I}
 });
+const bankBalanceBoundary=extractLedgerFunction('bankBalanceBoundary','openingBoundary',{
+ state:bankState,window:{TraceInternational:I},openingBoundary
+});
 const isBankBalancePeriod=extractLedgerFunction('isBankBalancePeriod','normalizedMerchant',{
- state:bankState,openingBoundary,afterBoundary
+ state:bankState,bankBalanceBoundary,afterBoundary
 });
 const accountEstimate=extractLedgerFunction('accountEstimate','bank',{
  state:bankState,window:{TraceInternational:I},
@@ -148,6 +151,25 @@ test('card statement credit remains a credit when later than the opening snapsho
   currency:'CAD',status:'confirmed'
  });
  assert.equal(accountEstimate(card),50);
+});
+
+
+test('card without an opening balance allows all import dates but has unknown balance',()=>{
+ bankState.reconciliations=[];
+ delete bankState.household.accountOpeningBalances.card;
+ delete bankState.household.accountOpeningBalanceDates.card;
+ assert.equal(openingBoundary('card').date,'');
+ assert.equal(bankBalanceBoundary('card').date,'');
+ assert.equal(isBankBalancePeriod({date:'2026-10-25',accountId:'card'},'card'),true);
+ assert.equal(isBankBalancePeriod({date:'2026-11-02',accountId:'card'},'card'),true);
+ assert.equal(accountEstimate(card),null);
+});
+test('later reconciliation controls import cutoff, not budget start',()=>{
+ bankState.reconciliations=[{accountId:'card',date:'2026-11-08',
+  status:'confirmed',currency:'CAD',actualBalance:150}];
+ assert.equal(bankBalanceBoundary('card').date,'2026-11-08');
+ assert.equal(isBankBalancePeriod({date:'2026-11-08',accountId:'card'},'card'),false);
+ assert.equal(isBankBalancePeriod({date:'2026-11-09',accountId:'card'},'card'),true);
 });
 
 console.log(count+' international wiring guards passed');
