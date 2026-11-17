@@ -58,15 +58,17 @@ function render(){
  let completed=0,pending=0,available=0;const tiles=[];
  for(let p=0;p<weekOffset;p++)tiles.push('<span class="trace-cal-spacer" aria-hidden="true"></span>');
  for(let n=1;n<=daysInMonth;n++){
-  const date=month+'-'+String(n).padStart(2,'0'),future=date>today,earlier=!bridge.afterBoundaryFor(selectedAccount,date),blocked=future||earlier,
+  // A bank balance anchor limits the ledger calculation, not the dates that can be reviewed.
+  // Historical transactions must remain accessible without altering a later snapshot.
+  const date=month+'-'+String(n).padStart(2,'0'),future=date>today,blocked=future,
    info=bridge.importDayInfo(selectedAccount,date),tone=blocked?'inactive':dayTone(info);
   if(!blocked){available++;if(tone==='validated')completed++;if(info.pending)pending++;}
   const markers={missing:'',inprogress:'•',validated:'✓',inactive:''};
-  const accessibleState={missing:'À renseigner',inprogress:'En cours',validated:'Validée',inactive:'Hors période'};
+  const accessibleState={missing:'À renseigner',inprogress:'En cours',validated:'Validée',inactive:'À venir'};
   const selected=date===selectedDay;
-  tiles.push('<button type="button" class="trace-cal-date trace-cal-'+tone+(selected?' is-selected':'')+'" data-select-day="'+date+'" aria-label="'+esc(date+' : '+(blocked?(future?'à venir':'hors période'):accessibleState[tone]))+'" aria-pressed="'+selected+'"'+(blocked?' disabled':'')+'><strong>'+n+'</strong><small>'+markers[tone]+'</small></button>');
+  tiles.push('<button type="button" class="trace-cal-date trace-cal-'+tone+(selected?' is-selected':'')+'" data-select-day="'+date+'" aria-label="'+esc(date+' : '+(blocked?'à venir':accessibleState[tone]+(!bridge.afterBoundaryFor(selectedAccount,date)?' · historique avant solde de référence':'')))+'" aria-pressed="'+selected+'"'+(blocked?' disabled':'')+'><strong>'+n+'</strong><small>'+markers[tone]+'</small></button>');
  }
- if(selectedDay>today||!bridge.afterBoundaryFor(selectedAccount,selectedDay)){const candidate=month+'-01';selectedDay=bridge.afterBoundaryFor(selectedAccount,candidate)&&candidate<=today?candidate:null;}
+ if(selectedDay>today)selectedDay=month+'-01';
  const day=selectedDay,dayInfo=day?bridge.importDayInfo(selectedAccount,day):null,dayRows=day?bridge.dayTransactions(selectedAccount,day):[],
   tone=day?dayTone(dayInfo):'missing';
  const toneLabels={missing:'À renseigner',inprogress:'En cours',validated:'Validée'};
@@ -82,7 +84,7 @@ function render(){
    '<div class="trace-cal-month-control" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 16px" role="group" aria-label="Mois des opérations"><button type="button" class="secondary" id="traceCalPrev" aria-label="Mois précédent">‹</button><strong>'+esc(new Intl.DateTimeFormat('fr-CA',{month:'long',year:'numeric'}).format(new Date(year,m,1)))+'</strong><button type="button" class="secondary" id="traceCalNext" aria-label="Mois suivant"'+(month>=today.slice(0,7)?' disabled':'')+'>›</button></div>'+
   '<p class="trace-daily-sub">Étape 2 · Importe les captures du compte choisi, puis vérifie et valide ses opérations.</p>'+
    (!activeAccount.opening?.date?'<p class="trace-cal-legend-help" role="status">Aucun solde de référence daté sur ce compte : toutes les dates d’import restent accessibles, mais le solde actuel restera inconnu jusqu’à sa saisie. <button type="button" class="secondary" id="traceBankBalanceSetup">Définir mon solde</button></p>':
-   '<p class="trace-cal-legend-help">Solde bancaire de référence : '+esc(dateLabel(activeAccount.opening.date))+' ('+(activeAccount.opening.mode==='end'?'fin de journée':'début de journée')+'). Cela ne change pas le début du budget.</p>')+
+   '<p class="trace-cal-legend-help">Solde bancaire de référence : '+esc(dateLabel(activeAccount.opening.date))+' ('+(activeAccount.opening.mode==='end'?'fin de journée':'début de journée')+'). Tu peux aussi importer les journées antérieures : elles resteront historiques et ne modifieront pas ce solde. Pour les inclure dans le calcul, modifie ou supprime d’abord ce solde de référence dans Mes comptes. Cela ne change pas le début du budget. <button type="button" class="secondary" id="traceBankBalanceSetup">Modifier mon solde</button></p>')+
   '<div class="trace-premium-account-header"><strong>Compte sélectionné</strong><small>Tu peux changer de compte ici</small></div>'+
   '<div class="trace-premium-account-options" role="group" aria-label="Changer le compte à importer">'+accountChoices+'</div>'+
   '<div class="trace-premium-import-area">'+
@@ -115,6 +117,7 @@ function render(){
     '<button type="button" class="trace-day-drawer-close" id="dayActionClose" aria-label="Fermer">×</button></div>'+
     '<div class="trace-drawer-summary"><span class="trace-detail-pill trace-pill-'+tone+'">'+esc(toneLabels[tone])+'</span>'+
     '<span>'+(dayInfo.entry?.captureCount?Number(dayInfo.entry.captureCount)+' capture(s) · ':'')+dayInfo.confirmed+' validée(s) · '+dayInfo.pending+' en attente</span></div>'+ 
+    (!bridge.afterBoundaryFor(selectedAccount,day)?'<p class="trace-cal-legend-help" role="note">Journée historique avant le solde de référence : tu peux importer et vérifier ses opérations, mais elles ne changent pas le solde actuel du compte. Modifie la référence dans Mes comptes si tu veux les intégrer au calcul.</p>':'')+
     (dayInfo.unresolved?'<p class="trace-day-unresolved">'+dayInfo.unresolved+' ligne(s) de capture écartée(s) ou incertaine(s). Vérifie-les avant de terminer la journée.</p>':'')+
     (dayInfo.drafts?'<button type="button" id="smartDayReview" class="primary full trace-day-primary">Vérifier '+dayInfo.drafts+' opération(s) importée(s)</button>'+
      '<button type="button" id="importSelectedDay" class="secondary full trace-day-import-alt">+ Ajouter des captures de ce jour</button>':
