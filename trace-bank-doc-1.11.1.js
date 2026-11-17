@@ -6,12 +6,16 @@ const TESSERACT='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.
 let workers=new Map(), ocrLoader=null;
 async function ocrReady(){
  if(window.Tesseract?.createWorker)return window.Tesseract;
- if(!ocrLoader)ocrLoader=new Promise((resolve,reject)=>{
-  const script=document.createElement('script');script.src=TESSERACT;script.async=true;
-  script.onload=()=>window.Tesseract?.createWorker?resolve(window.Tesseract):reject(new Error('OCR non disponible'));
-  script.onerror=()=>reject(new Error('Impossible de charger le module OCR. Vérifie ta connexion.'));
-  document.head.appendChild(script);
- });
+ if(!ocrLoader){
+  const pending=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');script.src=TESSERACT;script.async=true;
+   script.onload=()=>window.Tesseract?.createWorker?resolve(window.Tesseract):reject(new Error('OCR non disponible'));
+   script.onerror=()=>reject(new Error('Impossible de charger le module OCR. Vérifie ta connexion.'));
+   document.head.appendChild(script);
+  });
+  // Transient network errors must not poison future retries.
+  ocrLoader=pending.catch(error=>{ocrLoader=null;throw error;});
+ }
  return ocrLoader;
 }
 async function getOcrWorker(lang='fra+eng'){
@@ -110,7 +114,8 @@ function screenshotNonTransactionKind(raw){
   .replace(/\s+/g,' ').trim();
  if(!t)return '';
  const month='(?:JANVIER|FEVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOUT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DECEMBRE)';
- if(new RegExp('^'+month+'(?:\\s+20\\d{2})?$').test(t)||
+ if(/^AUTORISEES?\s+NON\s+FACTUREES?\b/.test(t)||
+     new RegExp('^'+month+'(?:\\s+20\\d{2})?$').test(t)||
     new RegExp('^EN\\s+'+month+'(?:\\s+20\\d{2})?$').test(t)||
     new RegExp('^FACTUR(?:EES?|ES?)\\s+EN\\s+'+month+'(?:\\s+20\\d{2})?$').test(t)||
     /^(?:TRANSACTIONS?|OPERATIONS|MOUVEMENTS|HISTORIQUE(?: DES TRANSACTIONS)?|FACTUREES?|EN ATTENTE|A VENIR|RELEVE DE COMPTE)$/.test(t))
@@ -119,6 +124,21 @@ function screenshotNonTransactionKind(raw){
     /^SOLDE(?:\s+(?:COURANT|PRECEDENT|INITIAL|FINAL|DISPONIBLE|TOTAL|A PAYER|DU))\b/.test(t))
   return 'summary';
  return '';
+}
+/* Unbilled authorizations are not posted card transactions. */
+function markUnbilledCardRows(rows,lines){
+ const sections=lines.map(line=>{
+  const value=line.words.map(w=>w.text).join(' ').normalize('NFD')
+   .replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  if(/^AUTORISEES?\s+NON\s+FACTUREES?\b/.test(value))return{y:line.y,pending:true};
+  if(/^FACTUREES?\s+EN\s+[A-Z]+/.test(value))return{y:line.y,pending:false};
+  return null;
+ }).filter(Boolean).sort((a,b)=>a.y-b.y);
+ for(const row of rows){
+  const section=sections.filter(x=>x.y<row.box.y).slice(-1)[0];
+  if(section?.pending)row.authorizationPending=true;
+ }
+ return rows;
 }
 function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  const words=readOcrTsv(tsv);
@@ -206,7 +226,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
   // If date-group structure exists but prices are unreadable, no automatic
   // transaction may be inferred from a neighbouring date or monetary total.
   if(rows.length>65)throw Error('Capture trop longue : sépare les opérations en plusieurs images plus lisibles.');
- return rows.sort((a,b)=>a.box.y-b.box.y);
+ return markUnbilledCardRows(rows.sort((a,b)=>a.box.y-b.box.y),lines);
  }
  // Bank screenshots often wrap a single statement row over 3-5 visual lines:
  // the payment amount is beside line 1, while the date is under line 4.
@@ -254,7 +274,7 @@ function screenshotLayoutCandidates(tsv,width,height,hintDate=''){
  // Conservative fallback: when no prices were readable but explicit dates exist,
  // preserve those rows for human review without fabricating an amount.
  if(rows.length>65)throw Error('Capture trop longue : sépare les opérations en plusieurs images plus lisibles.');
- return rows.sort((a,b)=>a.box.y-b.box.y);
+ return markUnbilledCardRows(rows.sort((a,b)=>a.box.y-b.box.y),lines);
 }
 async function decodeImageForOcr(file){
  if(typeof createImageBitmap==='function'){
@@ -522,20 +542,31 @@ async function extract(file,onProgress=()=>{},options={}){
   onProgress('Analyse de l’image sur ton appareil…');
   // Bilingual OCR improves French weekday headings and merchant names,
   // while preserving English Desjardins and international merchants.
-  let w;
-  try{w=await getOcrWorker('fra+eng');}
-  catch(error){console.info('OCR bilingue indisponible, repli anglais');w=await getOcrWorker('eng');}
-  // TSV contains coordinates even when the OCR reading order is incorrect.
-  const base=await w.recognize(file,{}, {text:true,tsv:true});
+  let w,lang='fra+eng';
+  try{w=await getOcrWorker(lang);}
+  catch(error){console.info('OCR bilingue indisponible, repli anglais');lang='eng';w=await getOcrWorker(lang);}
+  let base;
+  try{base=await w.recognize(file,{}, {text:true,tsv:true});}
+  catch(error){
+   workers.delete(lang);
+   try{await w.terminate();}catch(_){}
+   throw new Error('La reconnaissance OCR a échoué sur cette capture. Réessaie ou utilise la saisie manuelle. '+String(error?.message||''));
+  }
   result=String(base?.data?.text||'');
   ocrPages=1;
   onProgress('Analyse des lignes de transactions…');
-  if(base?.data?.tsv)structuredCandidates=await recognizeStructuredScreenshot(file,w,base.data,onProgress,options.hintDate||'');
-  // Independent OCR text vs spatial lines: a mismatch is NOT proof of
-  // missing rows, but enough risk to prohibit automatic confirmations.
+  let layoutError='';
+  if(base?.data?.tsv){
+   try{structuredCandidates=await recognizeStructuredScreenshot(file,w,base.data,onProgress,options.hintDate||'');}
+   catch(error){
+    layoutError='Relecture détaillée indisponible : vérifie les montants et dates.';
+    console.warn('TRACE OCR layout fallback',String(error?.message||error));
+   }
+  }
   const textCandidates=extractCandidates(result).candidates.length;
   quality={textRows:textCandidates,layoutRows:structuredCandidates.length,
-   reviewRequired:textCandidates>structuredCandidates.length&&textCandidates>0};
+   reviewRequired:Boolean(layoutError)||textCandidates>structuredCandidates.length&&textCandidates>0,
+   ...(layoutError?{warning:layoutError}:{})};
  }
  if(!result.trim()&&!structuredCandidates.length)throw new Error('Aucun texte lisible. Envoie une capture plus nette ou un PDF contenant du texte.');
  return {text:result.slice(0,120000),pageCount,ocrPages,structuredCandidates,quality,source:structuredCandidates.length?'OCR local · lignes et montants relus':ocrPages?'OCR local + PDF':'PDF texte'};
@@ -800,5 +831,5 @@ function extractCandidates(raw,locale='dmy'){
 }
 
 async function cleanup(){const all=[...workers.values()];workers.clear();for(const w of all)await w.terminate();}
-window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,extractScreenshotDateBlocks,screenshotNonTransactionKind,version:'1.11.7'};
+window.TraceBankDocuments={extract,extractCandidates,extractFrenchBankScreenshot,sourceAccountHints,desjardinsStatementCheck,readMobileScreenshotText,isoDate,cleanAmount,cleanup,readOcrTsv,screenshotDateEvidence,screenshotLayoutCandidates,parseReliablePrice,priceEvidence,reconcilePriceReadings,reconcileBankDirection,priceImageRegion,makePriceSnippet,parseBankDayOCR,extractScreenshotDateBlocks,screenshotNonTransactionKind,version:'1.11.8'};
 })();

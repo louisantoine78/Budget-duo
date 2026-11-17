@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.14';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.15';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -338,8 +338,30 @@ function bindBudgetShareFields(scopeSelector,amountSelector){
  };
 }
 /* Solde à l'ouverture du jour: >= date. Solde à la fermeture du jour: > date. */
+/* An account without a bank snapshot has no artificial global budget cutoff.
+ * Later confirmed reconciliations take precedence over older opening balances. */
+function bankBalanceBoundary(accountId){
+ const bank=state.accounts.find(a=>a.id===accountId);
+ if(!bank)return{date:'',mode:'start'};
+ const I=window.TraceInternational,opening=openingBoundary(accountId);
+ const hasOpening=I.exactMoney(state.household.accountOpeningBalances?.[accountId])!==null&&
+  I.calendarDate(opening.date);
+ const reconciled=state.reconciliations.filter(r=>r.accountId===accountId&&
+  (!r.status||['confirmed','complete','matched'].includes(r.status))&&r.confirmed!==false&&
+  I.calendarDate(r.date)&&String(r.currency||'CAD').toUpperCase()===I.currency(bank)&&
+  I.exactMoney(r.actualBalance)!==null)
+  .sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+ if(!reconciled||hasOpening&&(opening.date>reconciled.date||
+    opening.date===reconciled.date&&opening.mode==='end'))return opening;
+ return{date:reconciled.date,mode:'end'};
+}
 function openingBoundary(accountId){
- const d=state.household.accountOpeningBalanceDates?.[accountId]||state.household.referenceDate||'';
+ const amount=state.household.accountOpeningBalances?.[accountId];
+ const numeric=Number(amount);
+ const configured=amount!=null&&amount!==''&&Number.isFinite(numeric)&&
+  Math.abs(numeric*100-Math.round(numeric*100))<.00001;
+ const d=configured?(state.household.accountOpeningBalanceDates?.[accountId]||
+  state.household.referenceDate||''):'';
  const mode=state.household.accountOpeningBalanceModes?.[accountId]==='end'?'end':'start';
  return{date:d,mode};
 }
@@ -360,7 +382,7 @@ function isFinancialPeriod(t){
 function isBankBalancePeriod(t,accountId){
  const id=accountId||t.accountId||t.toAccountId;
  const account=state.accounts.find(a=>a.id===id);
- return !!account&&afterBoundary(t.date,openingBoundary(account.id));
+ return !!account&&afterBoundary(t.date,bankBalanceBoundary(account.id));
 }
 function normalizedMerchant(s){
  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(?:montreal|montre|quebec|toronto|canada|ontario|vancouver|qc|on|bc|ca|mtl|inc|lt[dée]|visa|mastercard)\b/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
@@ -4691,7 +4713,7 @@ function smartDrafts(accountId,date=null){
 async function smartStageRows(accountId,fileName,rows){
  if(!visibleBankAccounts(me).some(a=>a.id===accountId))throw Error('Compte inaccessible.');
  if(!Array.isArray(rows)||rows.length>100)throw Error('Capture trop longue.');
- let added=0,unknown=0,recovered=0,matched=0,suppressed=0;const dates=new Set(),usedDrafts=new Set();
+ let added=0,unknown=0,recovered=0,matched=0,suppressed=0;const dates=new Set(),usedDrafts=new Set(),usedHandled=new Set();
  for(let i=0;i<rows.length;i++){
   const r=rows[i],name=String(r.name||'').trim().slice(0,85);
   if(name.length<2)continue;
@@ -4754,15 +4776,16 @@ async function smartStageRows(accountId,fileName,rows){
   }
   const signature=[accountId,fileName,i,date,name.toLowerCase(),value].join('|');
   // Re-import of a previously excluded/confirmed line must not resurrect it.
-  const priorHandled=state.smartImports.some(d=>d.kind==='smart_draft'&&d.accountId===accountId&&
+  const priorHandled=state.smartImports.find(d=>d.kind==='smart_draft'&&d.accountId===accountId&&
    fileBase(d.sourceFileName)===fileBase(String(fileName).slice(0,110))&&['ignored','done'].includes(d.status)&&
+   !usedHandled.has(d.id)&&
    (!d.date||!date||d.date===date)&&
    (Number(d.amount)>0||Number(d.suggestedAmount)>0?
       comparableAmount!==null&&Math.abs(Number(d.amount||d.suggestedAmount)-comparableAmount)<.009:
      Number(d.sourceIndex)===i&&merchantOccurrences===1)&&
    (resembles(d.name)||
     (Number(d.sourceIndex)===i&&comparableAmount!==null&&d.date===date)));
-  if(priorHandled){suppressed++;continue;}
+  if(priorHandled){usedHandled.add(priorHandled.id);suppressed++;continue;}
   if(state.smartImports.some(d=>d.kind==='smart_draft'&&d.signature===signature&&d.status!=='reset'))continue;
   const item={id:'smart_'+txDocId(),kind:'smart_draft',accountId,date,name,amount:value,type:String(r.type||'unknown'),
    bankDirection:['in','out'].includes(r.bankDirection)?r.bankDirection:'',
@@ -4770,7 +4793,10 @@ async function smartStageRows(accountId,fileName,rows){
    needsAmountReview:!!r.needsReview||value===null,needsDateReview:!!r.needsDateReview||!date,
    ...(suggestedAmount?{suggestedAmount}:{}),...(preview?{sourcePreview:preview,sourcePreviewVersion:2}:{}),
    raw:String(r.raw||'').slice(0,200),createdAt:new Date().toISOString()};
-  await saveDocument('imports',item);state.smartImports.push(item);added++;
+  await saveDocument('imports',item);state.smartImports.push(item);
+  // Do not collapse two separate rows of the same screenshot with identical
+  // merchant, date, amount and direction (for example two card refunds).
+  usedDrafts.add(item.id);added++;
   if(date)dates.add(date);else unknown++;
  }
  for(const date of dates){try{await recordDayImport(accountId,date,'image');}catch(e){console.warn('Calendrier non mis à jour',e);}}
@@ -6811,7 +6837,7 @@ function openAccountSettings(){
  openSheet('Mes comptes',
   '<div class="trace-bank-scope" role="group" aria-label="Afficher les comptes de"><button type="button" data-bank-scope="mine" class="'+(bankSettingsScope==='mine'?'is-selected':'')+'" aria-pressed="'+(bankSettingsScope==='mine')+'">Moi</button><button type="button" data-bank-scope="couple" class="'+(bankSettingsScope==='couple'?'is-selected':'')+'" aria-pressed="'+(bankSettingsScope==='couple')+'">Couple</button></div>'+
   '<p class="trace-account-settings-help">'+(bankSettingsScope==='couple'?'Vue globale des comptes du foyer. Tu peux modifier tes propres comptes ; ceux du partenaire sont en lecture seule.':
-   'Chaque compte a sa propre date de solde, indépendante du démarrage du budget. Pour un relevé de clôture, sélectionne « Fin de la journée ». Les anciennes opérations restent dans l’historique sans modifier ce solde.')+'</p>'+
+   'Chaque compte a sa propre date de solde, indépendante du budget. Pour un relevé de clôture, sélectionne « Fin de la journée ». Sans solde initial, les imports restent possibles, mais aucun solde actuel ne peut encore être calculé.')+'</p>'+
   (accounts.length?accounts.map(a=>{
    const editable=a.owner===me;
    const estimate=accountEstimate(a);
@@ -6827,7 +6853,7 @@ function openAccountSettings(){
       window.TraceInternational.currency(a)+')</label>'+
      '<input class="input account-opening" id="traceBankOpening_'+esc(a.id)+'" data-id="'+esc(a.id)+'" type="number" '+(accountType(a)==='card'?'min="0" ':'')+'step="0.01" value="'+esc(accountType(a)==='card'&&balances[a.id]!=null?Math.abs(Number(balances[a.id])):(balances[a.id]??''))+'">'+
      (accountType(a)==='card'?'<small class="trace-account-amount-info">Entre la dette en positif (ex. 595,90). TRACE la soustrait du compte courant. Aucun paiement ni achat n’est créé.</small>':'')+
-     '<label class="label2" for="traceBankDate_'+esc(a.id)+'">Date de ce solde</label><input id="traceBankDate_'+esc(a.id)+'" class="input account-date" data-id="'+esc(a.id)+'" type="date" value="'+esc(dates[a.id]||state.household.referenceDate||CM+'-01')+'">'+
+     '<label class="label2" for="traceBankDate_'+esc(a.id)+'">Date de ce solde</label><input id="traceBankDate_'+esc(a.id)+'" class="input account-date" data-id="'+esc(a.id)+'" type="date" value="'+esc(balances[a.id]!==undefined&&balances[a.id]!==null?(dates[a.id]||state.household.referenceDate||''):'')+'">'+
      '<label class="label2" for="traceBankMode_'+esc(a.id)+'">Moment du solde</label><select id="traceBankMode_'+esc(a.id)+'" class="input account-mode" data-id="'+esc(a.id)+'">'+
      '<option value="start"'+(modes[a.id]!=='end'?' selected':'')+'>Début de la journée (jour inclus)</option>'+
      '<option value="end"'+(modes[a.id]==='end'?' selected':'')+'>Fin de la journée (jour exclu)</option></select>':
@@ -6884,6 +6910,12 @@ function openAccountSettings(){
   for(const input of $$('.account-mode')){
    if(!visibleBankAccounts(me).some(a=>a.id===input.dataset.id))continue;
    newModes[input.dataset.id]=input.value==='end'?'end':'start';
+  }
+  for(const a of visibleBankAccounts(me)){
+   if(Object.prototype.hasOwnProperty.call(newBalances,a.id)&&
+      !window.TraceInternational.calendarDate(newDates[a.id])){
+    traceNotice(Error('Choisis une date de solde valide pour '+shortAccountLabel(a)+'.'));return;
+   }
   }
   state.household.accountOpeningBalances=newBalances;
   state.household.accountOpeningBalanceDates=newDates;
@@ -7289,7 +7321,8 @@ async function checkCurrentBuild(){
 
 /* Bridge for client-side document recognition; financial writes always go via confirmed preview. */
 window.TraceBankBridge={
- accounts:()=>visibleBankAccounts(me).map(a=>({id:a.id,name:shortAccountLabel(a),type:accountType(a),currency:window.TraceInternational.currency(a),country:a.country||'CA',opening:openingBoundary(a.id)})),
+ accounts:()=>visibleBankAccounts(me).map(a=>({id:a.id,name:shortAccountLabel(a),type:accountType(a),currency:window.TraceInternational.currency(a),country:a.country||'CA',opening:bankBalanceBoundary(a.id)})),
+ openBankSettings:()=>openAccountSettings(),
  movementPreview:movementImpactText,friendLinkCandidates:friendLinkOptions,currentOwner:()=>me,
  smartCardPaymentMatches,smartMatchCardPaymentDraft,
  smartDrafts,smartDuplicateMatches,openForeignDebitCorrection,smartStageRows,smartSaveDraft,smartIgnoreDraft,smartKeepSingleDraft,smartMoveDraftAccount,smartMoveDayDraftsAccount,smartApproveDraft,smartResetDay,smartCreateCategory,
@@ -7340,8 +7373,8 @@ window.TraceBankBridge={
   renderAll();
   return{confirmed,pending:items.length-confirmed};
  },
- afterBoundaryFor:(accountId,date)=>afterBoundary(date,openingBoundary(accountId)),
- getBoundary:(accountId)=>openingBoundary(accountId),
+ afterBoundaryFor:(accountId,date)=>afterBoundary(date,bankBalanceBoundary(accountId)),
+ getBoundary:(accountId)=>bankBalanceBoundary(accountId),
  inspect:(candidates,accountId)=>{
   if(!visibleBankAccounts(me).some(a=>a.id===accountId))throw new Error('Compte non reconnu.');
   return candidates.map(row=>{

@@ -79,7 +79,10 @@ function render(){
 
  root.innerHTML='<section class="trace-daily-panel">'+
   '<div class="trace-daily-top"><div><span class="trace-kicker">JOURNAL BANCAIRE</span><h2>Calendrier des imports</h2></div><span class="trace-daily-progress">'+completed+' / '+available+' jours validés</span></div>'+
+   '<div class="trace-cal-month-control" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 16px" role="group" aria-label="Mois des opérations"><button type="button" class="secondary" id="traceCalPrev" aria-label="Mois précédent">‹</button><strong>'+esc(new Intl.DateTimeFormat('fr-CA',{month:'long',year:'numeric'}).format(new Date(year,m,1)))+'</strong><button type="button" class="secondary" id="traceCalNext" aria-label="Mois suivant"'+(month>=today.slice(0,7)?' disabled':'')+'>›</button></div>'+
   '<p class="trace-daily-sub">Étape 2 · Importe les captures du compte choisi, puis vérifie et valide ses opérations.</p>'+
+   (!activeAccount.opening?.date?'<p class="trace-cal-legend-help" role="status">Aucun solde de référence daté sur ce compte : toutes les dates d’import restent accessibles, mais le solde actuel restera inconnu jusqu’à sa saisie. <button type="button" class="secondary" id="traceBankBalanceSetup">Définir mon solde</button></p>':
+   '<p class="trace-cal-legend-help">Solde bancaire de référence : '+esc(dateLabel(activeAccount.opening.date))+' ('+(activeAccount.opening.mode==='end'?'fin de journée':'début de journée')+'). Cela ne change pas le début du budget.</p>')+
   '<div class="trace-premium-account-header"><strong>Compte sélectionné</strong><small>Tu peux changer de compte ici</small></div>'+
   '<div class="trace-premium-account-options" role="group" aria-label="Changer le compte à importer">'+accountChoices+'</div>'+
   '<div class="trace-premium-import-area">'+
@@ -133,6 +136,15 @@ function render(){
   if(selectedAccount===button.dataset.calendarAccount)return;
   selectedAccount=button.dataset.calendarAccount;selectedDay=null;dayActionsOpen=false;dayOperationsOpen=false;render();
  }));
+ const changeMonth=delta=>{
+  const next=new Date(year,m+delta,1);
+  const value=next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0');
+  if(value>today.slice(0,7))return;
+  bridge.setMonth(value);selectedDay=null;dayActionsOpen=false;dayOperationsOpen=false;render();
+ };
+ $('#traceCalPrev')?.addEventListener('click',()=>changeMonth(-1));
+ $('#traceCalNext')?.addEventListener('click',()=>changeMonth(1));
+ $('#traceBankBalanceSetup')?.addEventListener('click',()=>bridge.openBankSettings?.());
  $('#smartBatchStart')?.addEventListener('click',()=>window.TraceSmartInbox?.start?.(selectedAccount));
  $('#smartBatchOverview')?.addEventListener('click',()=>window.TraceSmartInbox?.overview?.(selectedAccount));
  $('#smartBatchUndated')?.addEventListener('click',()=>window.TraceSmartInbox?.openUnknown?.(selectedAccount));
