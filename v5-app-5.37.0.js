@@ -357,7 +357,9 @@ function bankBalanceBoundary(accountId){
 }
 function openingBoundary(accountId){
  const amount=state.household.accountOpeningBalances?.[accountId];
- const configured=window.TraceInternational?.exactMoney?.(amount)!=null;
+ const numeric=Number(amount);
+ const configured=amount!=null&&amount!==''&&Number.isFinite(numeric)&&
+  Math.abs(numeric*100-Math.round(numeric*100))<.00001;
  const d=configured?(state.household.accountOpeningBalanceDates?.[accountId]||
   state.household.referenceDate||''):'';
  const mode=state.household.accountOpeningBalanceModes?.[accountId]==='end'?'end':'start';

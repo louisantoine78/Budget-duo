@@ -76,7 +76,7 @@ test('no-balance calendar can navigate to prior months and offers setup',()=>{
  const app=fs.readFileSync(path.join(__dirname,'..','v5-app-5.37.0.js'),'utf8');
  const calendar=fs.readFileSync(path.join(__dirname,'..','trace-import-calendar-5.37.0.js'),'utf8');
  assert.match(app,/function bankBalanceBoundary\(accountId\)/);
- assert.match(app,/const configured=window\.TraceInternational\?\.exactMoney\?\.\(amount\)!=null/);
+ assert.match(app,/const configured=amount!=null&&amount!==''&&Number.isFinite\(numeric\)/);
  assert.match(calendar,/id="traceBankBalanceSetup"/);
  assert.match(calendar,/id="traceCalPrev"/);
  assert.match(calendar,/bridge\.setMonth\(value\)/);
