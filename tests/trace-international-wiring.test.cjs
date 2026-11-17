@@ -88,7 +88,7 @@ const I={
  investmentBankAmount:()=>null
 };
 const accountType=a=>a?.type;
-const openingBoundary=extractLedgerFunction('openingBoundary','afterBoundary',{state:bankState});
+const openingBoundary=extractLedgerFunction('openingBoundary','afterBoundary',{state:bankState,window:{TraceInternational:I}});
 const afterBoundary=extractLedgerFunction('afterBoundary','isFinancialPeriod');
 const isFinancialPeriod=extractLedgerFunction('isFinancialPeriod','isBankBalancePeriod',{
  state:bankState,window:{TraceInternational:I}
