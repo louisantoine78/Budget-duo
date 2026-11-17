@@ -4,7 +4,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=n=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD'}).format(Number(n||0));
 const dayLabel=s=>new Intl.DateTimeFormat('fr-CA',{day:'numeric',month:'long',year:'numeric'}).format(new Date(s+'T12:00:00'));
-let account='',busy=false;
+let account='',busy=false,failedCaptures=[],manualImageUrl='';
 const bridge=()=>window.TraceBankBridge;
 function node(){return $('#traceSmartOverlay');}
 function show(title,content){
@@ -17,7 +17,10 @@ function show(title,content){
  $('#smartClose').onclick=()=>{if(!busy)close();};
  root.querySelector('[data-smart-close]').onclick=()=>{if(!busy)close();};
 }
-function close(){node()?.classList.add('hidden');node().innerHTML='';window.TraceImportCalendar?.render?.();}
+function releaseManualImage(){
+ if(manualImageUrl){try{URL.revokeObjectURL(manualImageUrl);}catch(_){}manualImageUrl='';}
+}
+function close(){releaseManualImage();node()?.classList.add('hidden');node().innerHTML='';window.TraceImportCalendar?.render?.();}
 function proposedType(row,accountId=account){
  const a=bridge().accounts().find(z=>z.id===accountId);
  const name=String(row.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -37,64 +40,150 @@ function dateBuckets(){
  return result;
 }
 function outcome(summary){
+ releaseManualImage();
  const buckets=dateBuckets(),keys=Object.keys(buckets).sort((a,b)=>a.localeCompare(b)),unknown=buckets['']?.length||0;
+ const failed=failedCaptures.map((v,i)=>({...v,index:i})).filter(x=>x.accountId===account);
  show('Opérations à examiner',
   '<div class="trace-smart-intro"><span class="trace-kicker">COMPTE SÉLECTIONNÉ</span><b>'+
    esc(bridge().accounts().find(x=>x.id===account)?.name||'Compte bancaire')+'</b>'+
    '<p>'+esc(summary)+'</p></div>'+
+  (failed.length?'<section class="trace-smart-failures" role="alert" aria-label="Captures non analysées">'+
+   '<h3>'+failed.length+' capture(s) à reprendre</h3><p>Les images sont encore disponibles ici, sans avoir été effacées. Aucune dépense n’a été confirmée automatiquement.</p>'+
+   failed.map(item=>'<article class="trace-smart-failure" style="margin:12px 0;padding:14px;border:1px solid #b6c9c1;border-radius:14px">'+
+    '<strong>'+esc(item.file.name||'Capture')+'</strong><p style="overflow-wrap:anywhere">'+esc(item.message)+'</p>'+
+    '<button type="button" class="secondary" data-smart-retry="'+item.index+'">Réessayer la lecture</button> '+
+    '<button type="button" class="secondary" data-smart-manual="'+item.index+'">Saisir depuis cette image</button>'+
+    '</article>').join('')+'</section>':'')+
   '<div class="trace-smart-buckets">'+keys.map(key=>
    '<button type="button" class="trace-smart-bucket" data-smart-day="'+esc(key)+'">'+
     '<span><strong>'+esc(key?dayLabel(key):'Date à identifier')+'</strong><small>'+
       buckets[key].length+' opération(s) à vérifier</small></span><span class="trace-smart-bucket-arrow">›</span></button>').join('')+
-  (keys.length?'':'<p class="trace-smart-empty">Aucune opération en attente pour ce compte.</p>')+'</div>'+
+  (keys.length?'':'<p class="trace-smart-empty">'+(failed.length?'Aucune ligne enregistrée par les captures échouées. Consulte les erreurs et réessaie ci-dessus.':'Aucune opération en attente pour ce compte.')+'</p>')+'</div>'+
   (unknown?'<div class="trace-smart-alert">'+unknown+' ligne(s) sans date à attribuer avant confirmation.</div>':'')+
   '<button type="button" class="secondary full" id="smartDone">Revenir au calendrier</button>');
  $('#smartDone').onclick=close;
  node().querySelectorAll('[data-smart-day]').forEach(b=>b.onclick=()=>openDay(account,b.dataset.smartDay));
+ node().querySelectorAll('[data-smart-retry]').forEach(b=>b.onclick=()=>{
+  const index=Number(b.dataset.smartRetry),item=failedCaptures[index];
+  if(!item||busy)return;
+  failedCaptures.splice(index,1);
+  void loadFiles([item.file]);
+ });
+ node().querySelectorAll('[data-smart-manual]').forEach(b=>b.onclick=()=>openManualCapture(Number(b.dataset.smartManual)));
 }
-
+function openManualCapture(index){
+ if(busy)return;
+ const item=failedCaptures[index];
+ if(!item||item.accountId!==account)return;
+ releaseManualImage();
+ try{manualImageUrl=URL.createObjectURL(item.file);}catch(_){}
+ const row=()=>'<div class="trace-manual-row" style="padding:12px 0;border-bottom:1px solid #d4dfd8">'+
+  '<label class="label2">Date de l’opération<input class="input manual-date" type="date"></label>'+
+  '<label class="label2">Commerçant ou libellé<input class="input manual-name" type="text" maxlength="85" placeholder="Ex. Restaurant" autocomplete="off"></label>'+
+  '<label class="label2">Montant de la transaction<input class="input manual-amount" inputmode="decimal" type="text" placeholder="20,98"></label>'+
+  '<label class="label2">Sens sur le relevé<select class="input manual-direction"><option value="out">Dépense / argent sorti</option><option value="in">Crédit / argent reçu</option></select></label></div>';
+ show('Saisie depuis la capture',
+  '<div class="trace-smart-intro"><b>'+esc(item.file.name||'Capture')+'</b><p>La lecture automatique a échoué : '+esc(item.message)+
+  '. Vérifie chaque date et chaque montant à partir de la photo. Les opérations seront enregistrées <strong>en attente de validation</strong>, jamais directement dans ton solde.</p></div>'+
+  (manualImageUrl?'<details open><summary>Voir la capture originale</summary><img alt="Capture bancaire locale à recopier" src="'+esc(manualImageUrl)+'" style="width:100%;height:auto;max-height:400px;object-fit:contain"></details>':'')+
+  '<p class="trace-smart-alert">Ne saisis pas les achats « Autorisées non facturées » : ils ne sont pas encore comptabilisés. Importe-les lorsqu’ils apparaissent dans la liste facturée.</p>'+
+  '<div id="manualCaptureRows">'+row()+'</div>'+
+  '<button type="button" class="secondary full" id="manualAddRow">+ Ajouter une autre ligne</button>'+
+  '<button type="button" class="primary full" id="manualStageRows">Enregistrer les lignes à vérifier</button>'+
+  '<button type="button" class="secondary full" id="manualCancel">Retour aux captures</button>'+
+  '<p id="manualCaptureError" role="alert"></p>');
+ $('#manualAddRow').onclick=()=>$('#manualCaptureRows').insertAdjacentHTML('beforeend',row());
+ $('#manualCancel').onclick=()=>outcome('Captures à vérifier');
+ $('#manualStageRows').onclick=async()=>{
+  if(busy)return;
+  const rows=[];
+  for(const el of node().querySelectorAll('.trace-manual-row')){
+   const date=el.querySelector('.manual-date').value,name=el.querySelector('.manual-name').value.trim();
+   const raw=el.querySelector('.manual-amount').value.trim().replace(',','.');
+   const direction=el.querySelector('.manual-direction').value;
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||name.length<2||
+      !/^\d{1,7}(?:\.\d{1,2})?$/.test(raw)||!(Number(raw)>0)){
+    $('#manualCaptureError').textContent='Vérifie pour chaque ligne : date, nom et montant positif exact (2 décimales au maximum).';
+    return;
+   }
+   rows.push({date,name,amount:Number(raw),suggestedAmount:Number(raw),bankDirection:direction,
+    type:proposedType({name,bankDirection:direction},account),needsReview:false,needsDateReview:false,
+    raw:'Saisie contrôlée depuis la capture'});
+  }
+  const btn=$('#manualStageRows');busy=true;btn.disabled=true;
+  try{
+   const saved=await bridge().smartStageRows(account,item.file.name,rows);
+   busy=false;failedCaptures.splice(index,1);
+   outcome(saved.added+' ligne(s) saisie(s), à vérifier et confirmer. '+(saved.matched||0)+' ligne(s) déjà présentes.');
+  }catch(error){
+   busy=false;btn.disabled=false;
+   $('#manualCaptureError').textContent=String(error?.message||'Enregistrement impossible. Les champs restent disponibles.');
+  }
+ };
+}
 async function loadFiles(files){
  if(busy)return;
  const batchAccount=account,bank=bridge().accounts().find(a=>a.id===batchAccount);
  if(!bank)return;
  busy=true;
- show('Lecture des captures','<div class="trace-smart-intro"><span class="trace-kicker">COMPTE CHOISI</span><b>'+esc(bank.name)+'</b><p>Chaque capture de ce lot sera rattachée à ce compte. TRACE conserve les journées trouvées et signale les dates ou montants incertains.</p></div>'+
- '<div class="trace-smart-progress" id="smartProgress">Préparation…</div><div id="smartLog"></div>');
- let added=0,recovered=0,matched=0,suppressed=0,failed=0;
+ show('Lecture des captures','<div class="trace-smart-intro"><span class="trace-kicker">COMPTE CHOISI</span><b>'+esc(bank.name)+'</b><p>Chaque capture est traitée séparément. Aucune ligne n’est confirmée sans ton accord.</p></div>'+
+ '<div class="trace-smart-progress" id="smartProgress">Préparation…</div><div id="smartLog" role="status"></div>');
+ let added=0,recovered=0,matched=0,suppressed=0,failed=0,unbilled=0;
  for(let i=0;i<files.length;i++){
-  const file=files[i];const progress=$('#smartProgress'),log=$('#smartLog');
+  const file=files[i],progress=$('#smartProgress'),log=$('#smartLog');
   progress.textContent='Capture '+(i+1)+' sur '+files.length+' · '+file.name;
   try{
-   const data=await window.TraceBankDocuments.extract(file,msg=>{if($('#smartProgress'))$('#smartProgress').textContent='Capture '+(i+1)+'/'+files.length+' · '+msg;},{hintDate:bridge().month()+'-01'});
+   const data=await window.TraceBankDocuments.extract(file,msg=>{
+    if($('#smartProgress'))$('#smartProgress').textContent='Capture '+(i+1)+'/'+files.length+' · '+msg;
+   },{hintDate:bridge().month()+'-01'});
    const evidence=window.TraceBankDocuments?.sourceAccountHints?.(data.text||'')||{currency:'',kind:''};
    if(evidence.currency&&evidence.currency!==bank.currency)
-    throw Error('Capture en '+evidence.currency+' : le compte sélectionné est en '+bank.currency+'. Aucune transaction enregistrée.');
+    throw Error('Capture en '+evidence.currency+' : le compte choisi est en '+bank.currency+'.');
    if(evidence.kind&&evidence.kind!==bank.type)
-    throw Error('Type de compte incompatible : la capture semble provenir '+(evidence.kind==='card'?'d’une carte de crédit.':'d’un compte courant.')+' Aucune transaction enregistrée.');
-   const parsed=Array.isArray(data.structuredCandidates)&&data.structuredCandidates.length?data.structuredCandidates:window.TraceBankDocuments.extractCandidates(data.text||'').candidates;
-   const records=parsed.map(row=>({
+    throw Error('Capture provenant apparemment '+(evidence.kind==='card'?'d’une carte de crédit':'d’un compte courant')+' : vérifie le compte choisi.');
+   const parsed=Array.isArray(data.structuredCandidates)&&data.structuredCandidates.length?
+    data.structuredCandidates:window.TraceBankDocuments.extractCandidates(data.text||'').candidates;
+   const plain=String(data.text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+   const pendingHeading=/AUTORISEES?\s+NON\s+FACTUREES?\b/.test(plain);
+   const postedHeading=/\bFACTUREES?\s+EN\s+(?:JANVIER|FEVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOUT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DECEMBRE)\b/.test(plain);
+   const onlyPending=pendingHeading&&!postedHeading;
+   const authorized=parsed.filter(row=>row.authorizationPending||onlyPending);
+   const candidates=parsed.filter(row=>!row.authorizationPending&&!onlyPending);
+   unbilled+=authorized.length;
+   if(!candidates.length&&authorized.length){
+    log.innerHTML+='<p class="trace-smart-log-ok">'+esc(file.name)+' : '+authorized.length+' autorisation(s) non facturée(s), non ajoutée(s) au solde. Réimporte les achats après facturation.</p>';
+    continue;
+   }
+   const records=candidates.map(row=>({
     date:row.date||'',name:row.name||'',
     amount:row.needsReview?null:row.amount,
     suggestedAmount:Number(row.amount)>0?Number(row.amount):null,
-    sourcePreview:row.sourcePreview||'',
-    needsReview:Boolean(row.needsReview||row.ambiguous),
+    sourcePreview:row.sourcePreview||'',needsReview:Boolean(row.needsReview||row.ambiguous||
+     (pendingHeading&&postedHeading&&!data.structuredCandidates?.length)),
     needsDateReview:Boolean(row.needsDateReview),
     type:proposedType(row,batchAccount),
     bankDirection:['in','out'].includes(row.bankDirection)?row.bankDirection:'',
     raw:row.raw||''
    }));
-   if(!records.length)throw Error('Aucune opération identifiée. Utilise une capture plus lisible.');
+   if(!records.length)throw Error('Aucune opération facturée identifiée. Le texte OCR est insuffisant.');
    const result=await bridge().smartStageRows(batchAccount,file.name,records);
    added+=result.added;recovered+=Number(result.recovered)||0;matched+=Number(result.matched)||0;suppressed+=Number(result.suppressed)||0;
-   log.innerHTML+='<p class="trace-smart-log-ok">✓ '+esc(file.name)+' · '+result.added+' nouvelle(s), '+(result.matched||0)+' déjà préparée(s), '+(result.suppressed||0)+' exclue(s) conservée(s)</p>'+
-    (data.quality?.reviewRequired?'<p class="trace-smart-log-error">Attention : '+Number(data.quality.textRows)+
-    ' ligne(s) possibles dans le texte OCR mais '+Number(data.quality.layoutRows)+
-    ' reconstruite(s) : compare toute la capture avant validation. Aucune ligne n’est confirmée automatiquement.</p>':'');
-  }catch(error){failed++;log.innerHTML+='<p class="trace-smart-log-error">'+esc(file.name)+' : '+esc(error?.message||'Lecture impossible')+'</p>';}
+   failedCaptures=failedCaptures.filter(x=>!(x.accountId===batchAccount&&x.file===file));
+   log.innerHTML+='<p class="trace-smart-log-ok">✓ '+esc(file.name)+' : '+result.added+' nouvelle(s), '+(result.matched||0)+' déjà préparée(s), '+(result.suppressed||0)+' exclue(s) conservée(s)</p>'+
+    (data.quality?.reviewRequired?'<p class="trace-smart-log-error">Lecture à contrôler : '+esc(data.quality.warning||'les lignes textuelles et les montants OCR ne concordent pas toujours. Aucune confirmation automatique.')+'</p>':'');
+  }catch(error){
+   failed++;
+   const message=String(error?.message||'Lecture impossible');
+   failedCaptures.push({file,accountId:batchAccount,message});
+   if(failedCaptures.length>20)failedCaptures.shift();
+   log.innerHTML+='<p class="trace-smart-log-error">'+esc(file.name)+' : '+esc(message)+'</p>';
+  }
  }
- busy=false;
- account=batchAccount;
- outcome(added+' nouvelle(s) opération(s) pour '+bank.name+' · '+matched+' déjà reconnue(s)'+(suppressed?' · '+suppressed+' exclusion(s) respectée(s)':'')+(failed?' · '+failed+' capture(s) à reprendre':'')+'.');
+ busy=false;account=batchAccount;
+ outcome(added+' nouvelle(s) opération(s) pour '+bank.name+' · '+matched+' déjà reconnue(s)'+
+  (suppressed?' · '+suppressed+' exclusion(s) respectée(s)':'')+
+  (unbilled?' · '+unbilled+' autorisation(s) non facturée(s) exclue(s) du solde':'')+
+  (failed?' · '+failed+' capture(s) à reprendre (détails ci-dessous)':'')+'.');
 }
 function start(id){
  if(busy)return;
