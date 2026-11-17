@@ -16,12 +16,12 @@ const html=[
  '</head><body><div id="importCalendar"></div><div id="traceDayNotice"></div>',
  '<div id="traceSmartOverlay" class="hidden"></div>',
  '<input type="file" id="traceSmartFiles" accept="image/*" multiple hidden><script>',
- 'window.__month="2026-11";window.__staged=[];window.__attempts={};',
+ 'window.__month="2026-11";window.__staged=[];window.__attempts={};window.__boundary="";',
  'window.TraceBankBridge={',
- 'accounts(){return[{id:"card",name:"Carte fictive CAD",type:"card",currency:"CAD",opening:{date:"",mode:"start"}}];},',
+ 'accounts(){return[{id:"card",name:"Carte fictive CAD",type:"card",currency:"CAD",opening:{date:window.__boundary,mode:"end"}}];},',
  'month(){return window.__month;},setMonth(m){window.__month=m;},',
  'smartDrafts(id,date){return window.__staged.filter(x=>x.accountId===id&&(date==null||x.date===date));},',
- 'importDays(){return[];},gaps(){return[];},afterBoundaryFor(){return true;},',
+ 'importDays(){return[];},gaps(){return[];},afterBoundaryFor(id,day){return !window.__boundary||day>window.__boundary;},',
  'importDayInfo(){return{entry:null,pending:0,unresolved:0,confirmed:0,drafts:0};},dayTransactions(){return[];},',
  'async smartStageRows(id,name,rows){rows.forEach((row,i)=>window.__staged.push({id:"draft-"+window.__staged.length,',
  'kind:"smart_draft",accountId:id,status:"pending",...row}));',
@@ -75,6 +75,19 @@ async function upload(page,name){
   assert.equal(await page.locator('[data-select-day="2026-10-31"]').isDisabled(),false);
   await page.locator('#traceCalNext').click();
   assert.match(await page.locator('.trace-cal-legend-help').first().innerText(),/Aucun solde de référence/i);
+  // A recorded Nov 9 closing balance must NOT disable historical calendar imports.
+  await page.evaluate(()=>{window.__boundary='2026-11-09';window.TraceImportCalendar.render();});
+  assert.equal(await page.locator('[data-select-day="2026-11-02"]').isDisabled(),false,
+   'November 2 remains accessible even with a November 9 bank snapshot');
+  assert.match(await page.locator('.trace-cal-legend-help').first().innerText(),/journées antérieures/i);
+  await page.locator('[data-select-day="2026-11-02"]').click();
+  assert.match(await page.locator('#traceDayAction').innerText(),/Journée historique avant le solde de référence/i);
+  await page.locator('#dayActionClose').click();
+  await page.locator('#traceCalPrev').click();
+  assert.equal(await page.locator('[data-select-day="2026-10-31"]').isDisabled(),false);
+  await page.locator('#traceCalNext').click();
+  await page.evaluate(()=>{window.__boundary='';window.TraceImportCalendar.render();});
+
   await upload(page,'fail.png');
   await page.locator('.trace-smart-failures').waitFor();
   assert.match(await page.locator('.trace-smart-failures').innerText(),/OCR indisponible sur cette capture test/);
