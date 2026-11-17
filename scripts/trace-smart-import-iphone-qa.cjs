@@ -62,7 +62,7 @@ async function upload(page,name){
   const context=await browser.newContext({viewport:{width:393,height:852},deviceScaleFactor:3,isMobile:true,hasTouch:true});
   const page=await context.newPage();
   await page.route('**/*',route=>{
-   const u=new URL(route.request().url);
+   const u=new URL(route.request().url());
    if(u.hostname!=='127.0.0.1')return route.abort();
    return route.continue();
   });
