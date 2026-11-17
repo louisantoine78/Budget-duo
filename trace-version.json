@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.37.16",
-  "release": "TRACE 2.0.2 — OCR Safari avec repli local et dates de soldes libres par compte"
+  "build": "5.37.17",
+  "release": "TRACE 2.0.2 — imports historiques accessibles sans changer les soldes de référence"
 }
