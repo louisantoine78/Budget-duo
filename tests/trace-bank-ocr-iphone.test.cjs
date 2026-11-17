@@ -50,17 +50,48 @@ test('If OCR coordinates are missing, dates and complete merchants are recoverab
  assert.equal(out.candidates[0].selected,false);
  assert.equal(out.candidates[0].date,'2026-11-11');
 });
-test('Safari uses same-origin OCR worker without loosening CSP',()=>{
+test('Safari prefers same-origin OCR and permits narrowly scoped blob-worker recovery',()=>{
  const doc=read('trace-bank-doc-1.11.1.js'),worker=read('trace-ocr-worker-5.1.1.js'),html=read('index.html');
- assert.ok(doc.includes("workerPath:'/trace-ocr-worker-5.1.1.js',workerBlobURL:false"));
+ assert.ok(doc.includes("workerPath:OCR_LOCAL_WORKER,workerBlobURL:false"));
+ assert.ok(doc.includes("workerPath:OCR_CDN_WORKER,workerBlobURL:true"));
  assert.ok(worker.includes("importScripts('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js')"));
  assert.ok(html.includes("worker-src 'self'"));
- assert.ok(!html.includes("worker-src 'self' blob:"));
- assert.ok(html.includes('trace-bank-doc-1.11.1.js?v=1.11.8'));
+ assert.ok(html.includes("worker-src 'self' blob:"));
+ assert.ok(html.includes('trace-bank-doc-1.11.1.js?v=1.11.9'));
  assert.ok(html.includes('trace-bank-ui-5.37.0.js?v=1.11.6'));
  assert.ok(html.includes('trace-smart-inbox-3.5.0.js?v=1.11.8'));
 });
 
+
+test('iPhone OCR startup retries after local worker fails, including concurrent imports',async()=>{
+ const attempts=[];
+ const worker={recognize:async()=>({data:{text:'Novembre 2026',tsv:''}})};
+ const sandbox={window:{Tesseract:{createWorker:async(lang,oem,options)=>{
+  attempts.push({lang,oem,workerPath:options.workerPath,workerBlobURL:options.workerBlobURL});
+  if(!options.workerBlobURL)throw Error('Local Safari worker refused');
+  return worker;
+ }}},document:{},console:{info(){}}};
+ vm.runInNewContext(read('trace-bank-doc-1.11.1.js'),sandbox,{timeout:1500});
+ const file={name:'fictional.png',type:'image/png',size:1024};
+ const [a,b]=await Promise.all([
+  sandbox.window.TraceBankDocuments.extract(file),
+  sandbox.window.TraceBankDocuments.extract(file)
+ ]);
+ assert.equal(a.ocrPages,1);
+ assert.equal(b.ocrPages,1);
+ assert.equal(attempts.length,2,'same language must share one worker-start promise');
+ assert.equal(attempts[0].workerBlobURL,false);
+ assert.equal(attempts[1].workerBlobURL,true);
+ assert.ok(attempts[1].workerPath.includes('tesseract.js@5.1.1/dist/worker.min.js'));
+});
+test('iPhone OCR reports both startup errors when neither worker can load',async()=>{
+ const sandbox={window:{Tesseract:{createWorker:async()=>{throw Error('worker blocked')}}},document:{},console:{info(){}}};
+ vm.runInNewContext(read('trace-bank-doc-1.11.1.js'),sandbox,{timeout:1500});
+ await assert.rejects(
+  sandbox.window.TraceBankDocuments.extract({name:'fictional.png',type:'image/png',size:128}),
+  /local : worker blocked ; secours Safari : worker blocked/
+ );
+});
 
 test('Monthly header and total are excluded; all eight dated operations survive',()=>{
  // Synthetic word coordinates reproduce the financial layout, not the user's image.

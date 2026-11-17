@@ -3,7 +3,9 @@
 const PDF_JS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
 const PDF_WORKER='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 const TESSERACT='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-let workers=new Map(), ocrLoader=null;
+const OCR_LOCAL_WORKER='/trace-ocr-worker-5.1.1.js';
+const OCR_CDN_WORKER='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js';
+let workers=new Map(), workerStarts=new Map(), ocrLoader=null;
 async function ocrReady(){
  if(window.Tesseract?.createWorker)return window.Tesseract;
  if(!ocrLoader){
@@ -20,16 +22,34 @@ async function ocrReady(){
 }
 async function getOcrWorker(lang='fra+eng'){
  if(workers.has(lang))return workers.get(lang);
- const t=await ocrReady();
- // CSP worker-src 'self' intentionally blocks the library's default blob
- // worker. A pinned first-party worker entrypoint is mandatory on Safari.
- let w;
- try{w=await t.createWorker(lang,1,{
-   workerPath:'/trace-ocr-worker-5.1.1.js',workerBlobURL:false
- });}catch(error){
-   throw new Error('Le moteur OCR ne peut pas démarrer sur cet appareil. Vérifie ta connexion et actualise TRACE. '+String(error?.message||''));
- }
- workers.set(lang,w);return w;
+ if(workerStarts.has(lang))return workerStarts.get(lang);
+ const starting=(async()=>{
+  const t=await ocrReady();
+  // Keep the same-origin worker as the safe default. Some iOS WebKit
+  // contexts reject its nested importScripts; only then use Tesseract's
+  // pinned CDN worker through a CSP-authorized blob worker.
+  const modes=[
+   {name:'local',options:{workerPath:OCR_LOCAL_WORKER,workerBlobURL:false}},
+   {name:'secours Safari',options:{workerPath:OCR_CDN_WORKER,workerBlobURL:true}}
+  ];
+  const failures=[];
+  for(const mode of modes){
+   try{
+    const w=await t.createWorker(lang,1,mode.options);
+    workers.set(lang,w);
+    if(failures.length)console.info('TRACE OCR : mode de secours Safari activé');
+    return w;
+   }catch(error){
+    // Safari may provide an ErrorEvent without a message.
+    const detail=String(error?.message||error?.name||error||'échec inconnu').slice(0,180);
+    failures.push(mode.name+' : '+detail);
+   }
+  }
+  throw new Error('Le moteur OCR ne peut pas démarrer ('+failures.join(' ; ')+
+   '). Réessaie la lecture ou utilise la saisie depuis cette image.');
+ })();
+ workerStarts.set(lang,starting);
+ try{return await starting;}finally{workerStarts.delete(lang);}
 }
 async function recognize(data){
  const w=await getOcrWorker();
