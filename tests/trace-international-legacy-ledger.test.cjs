@@ -62,7 +62,7 @@ const budgetState={household:{defaultSplit:{la:50,partner:50}},budgets:[],catego
 const split=pick('split','alloc',{state:budgetState});
 const alloc=pick('alloc','budgetAmt',{split});
 const traceBudgetPostingMonth=pick('traceBudgetPostingMonth','txs',{window:root});
-const txs=pick('txs','summary',{state:budgetState,isFinancialPeriod:()=>true,split,traceBudgetPostingMonth});
+const txs=pick('txs','summary',{state:budgetState,isBudgetRelevant:()=>true,split,traceBudgetPostingMonth});
 test('débit différé : mois budgétaire distinct de la date de débit bancaire',()=>{
  const purchase={type:'expense',deferredKind:'purchase',date:'2026-11-10',budgetDate:'2026-10-12'};
  assert.equal(traceBudgetPostingMonth(purchase),'2026-10');
