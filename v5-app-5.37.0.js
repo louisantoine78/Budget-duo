@@ -370,12 +370,20 @@ function afterBoundary(date,boundary){return !boundary?.date||(boundary.mode==='
  * Never use the household budget start to decide whether a bank import
  * affects its native account ledger. */
 function isFinancialPeriod(t){
- const start=String(state.household.referenceDate||'');
+ // Budget history is open by default. A reference date for the opening
+ // balances/Partage must never silently exclude earlier imports from budgets.
+ if(state.household.budgetPeriodMode!=='from_date')return true;
+ const start=String(state.household.budgetStartDate||'');
  const deferred=(t.type==='expense'&&t.deferredKind==='purchase')||
   (t.type==='refund'&&t.deferredKind==='merchant_refund');
  const date=String(deferred&&window.TraceInternational?.calendarDate?.(t.budgetDate)?
   t.budgetDate:t.date||'');
  return !start||date>=start;
+}
+function isBudgetRelevant(t){
+ // A legitimate reimbursable company purchase can debit a tracked credit card
+ // without ever becoming personal consumption.
+ return isFinancialPeriod(t)&&!(t.type==='expense'&&t.transferPurpose==='professional_spend');
 }
 /* A bank statement line is historical ONLY relative to this account's
  * own opening snapshot, not the budget's global reference date. */
@@ -427,7 +435,7 @@ function traceBudgetPostingMonth(t){
 }
 function txs(m,s,confirmed=true){
  return state.transactions.filter(t=>traceBudgetPostingMonth(t)===m&&
-  isFinancialPeriod(t)&&(!confirmed||t.status==='confirmed')&&
+  isBudgetRelevant(t)&&(!confirmed||t.status==='confirmed')&&
   (s==='couple'||t.beneficiary===s||t.beneficiary==='couple'||
    (t.beneficiary==='custom'&&split(t,s)>.005)||
    (t.payerId===s&&['income','transfer','external_refund'].includes(t.type))));
@@ -3941,17 +3949,22 @@ function txRow(t){
    accountType(target)==='card'?'Paiement de carte de crédit · hors budget':
    'Transfert entre comptes · hors budget'):
   t.type==='external_transfer'?
-   (t.transferPurpose==='savings'?
+   (t.transferPurpose==='pass_through_payout'?'Reversement à un proche · sans dépense':
+    t.transferPurpose==='external_card_payment'?'Paiement d’une carte non suivie · sans dépense':
+    t.transferPurpose==='savings'?
     (t.investmentAccountId?'Versement vers CELI · '+
      esc(state.investmentAccounts.find(a=>a.id===t.investmentAccountId)?.name||'CELI')+
      ' · compte courant':'Versement vers CELI · CELI à relier'):
     t.transferPurpose==='friend_payment_settlement'?
      'Règlement à un proche · déjà compté':'Virement hors budget'):
   t.type==='external_refund'?
-   (t.transferPurpose==='friend_reimbursement'?
+   (t.transferPurpose==='employer_reimbursement'?'Remboursement professionnel · sans revenu':
+    t.transferPurpose==='pass_through_reimbursement'?'Remboursement destiné à un proche · sans revenu':
+    t.transferPurpose==='friend_reimbursement'?
     'Remboursement d’un proche · hors budget':
     t.transferPurpose==='savings_withdrawal'?
-     'Retrait de CELI · hors budget':'Entrée hors budget'):esc(c.name);
+     'Retrait de CELI · hors budget':'Entrée hors budget'):
+  t.type==='expense'&&t.transferPurpose==='professional_spend'?'Frais professionnels remboursables · hors budget':esc(c.name);
  const cad=I.exactMoney(t.amountCAD);
  const indicative=nativeCode&&nativeCode!=='CAD'&&cad!==null?
   ' · Env. '+money(cad)+' CAD':'';
@@ -3962,7 +3975,7 @@ function txRow(t){
   '<span class="tx-main"><b>'+esc(t.name||t.merchant||'Transaction')+
   '</b><small>'+label+' · '+esc(t.date||'')+
   (outside?' · Hors période du budget':'')+
-  (!isBankBalancePeriod(t,nativeAccount?.id)?' · Hors solde du compte':'')+indicative+
+  (!isBankBalancePeriod(t,nativeAccount?.id)?' · Avant le solde bancaire de référence':'')+indicative+
   (originalLine?' · '+esc(originalLine):'')+
   (receive?' · Réception '+esc(nativeCode):'')+'</small></span>'+
   '<span class="tx-amt '+(pos?'positive':'')+'">'+
@@ -5397,13 +5410,20 @@ function renderActivity(){
  }
  const ts=traceActivityRows();
  const confirmed=ts.filter(t=>t.status==='confirmed');
- const counted=confirmed.filter(isFinancialPeriod);
+ const counted=confirmed.filter(isBudgetRelevant);
  const expenses=counted.filter(t=>['expense','group_expense','person_payment'].includes(t.type)).reduce((v,t)=>v+Number(t.amountCAD||0),0),refunds=counted.filter(t=>t.type==='refund').reduce((v,t)=>v+Number(t.amountCAD||0),0),inc=counted.filter(t=>t.type==='income').reduce((v,t)=>v+Number(t.amountCAD||0),0),exp=Math.max(0,expenses-refunds);
  $('#activityMonthLabel').textContent=monthLabel(activityMonth);$('#activityExpenses').textContent=money(exp);$('#activityIncome').textContent=money(inc);$('#activityNet').textContent=money(inc-exp);
  const shownHistory=ts.slice(0,activityHistoryVisibleCount),
   historyRemaining=ts.length-shownHistory.length;
  const historyHost=$('#transactionList');
- historyHost.innerHTML=traceActivityGroupHTML(shownHistory)+
+ const due=window.TraceMovement.passThroughOutstanding(
+  state.transactions.filter(t=>visibleBankAccounts(me).some(a=>a.id===t.accountId)));
+ const transfersToPassOn=due.filter(x=>x.remainingCAD>0);
+ const owedNotice=transfersToPassOn.length?
+  '<div class="trace-pass-through-reminder" role="note"><strong>Argent reçu pour un proche · à reverser</strong>'+
+  transfersToPassOn.map(x=>'<span>'+esc(x.counterparty)+' : '+money(x.remainingCAD)+'</span>').join('')+
+  '<small>Ces montants ne sont pas des revenus. Lorsque tu fais le virement, classe-le comme « Reverser de l’argent reçu pour un proche » avec le même destinataire.</small></div>':'';
+ historyHost.innerHTML=owedNotice+traceActivityGroupHTML(shownHistory)+
   (historyRemaining>0?
    '<button type="button" id="activityHistoryLoadMore" class="trace-history-more">'+
    'Afficher '+Math.min(60,historyRemaining)+' opérations suivantes · '+
@@ -7100,14 +7120,31 @@ function openTraceSoloDeletion(){
 function openDataSettings(){
   openSheet('Données & confidentialité',
     '<div class="settings-hero"><span class="pico large">'+uiIcon('shield')+'</span><div><b>Données Trace</b><small>Votre espace couple reste privé à ses membres</small></div></div>'+
-    '<label class="label2">Date de référence</label><input id="referenceDateSetting" class="input" type="date" value="'+esc(state.household.referenceDate||CM+'-01')+'">'+
+    '<label class="label2">Historique pris en compte dans mon budget</label><select id="budgetPeriodModeSetting" class="input"><option value="all"'+(state.household.budgetPeriodMode!=='from_date'?' selected':'')+'>Toutes les opérations enregistrées</option><option value="from_date"'+(state.household.budgetPeriodMode==='from_date'?' selected':'')+'>Uniquement à partir d’une date choisie</option></select>'+
+    '<label class="label2" id="budgetStartDateLabel" for="budgetStartDateSetting">Date de début du budget (si choisie)</label><input id="budgetStartDateSetting" class="input" type="date" value="'+esc(state.household.budgetStartDate||state.household.referenceDate||'')+'">'+
+    '<p class="empty-note">Les opérations restent visibles et importables, même avant la date choisie. Seuls les totaux budgétaires changent. Cette option ne modifie pas les dates de tes soldes bancaires.</p>'+
+    '<label class="label2">Date de reprise du Partage (solde initial)</label><input id="referenceDateSetting" class="input" type="date" value="'+esc(state.household.referenceDate||CM+'-01')+'">'+
     '<label class="label2">Solde Partage d’ouverture</label><input id="sharingOpeningSetting" class="input" type="number" step="0.01" value="'+Number(state.household.sharingOpeningBalance||0)+'">'+
     '<label class="label2">Le solde Partage correspond à…</label><select id="sharingOpeningModeSetting" class="input"><option value="start"'+(state.household.sharingOpeningBalanceMode!=='end'?' selected':'')+'>Début de la journée (incluse)</option><option value="end"'+(state.household.sharingOpeningBalanceMode==='end'?' selected':'')+'>Fin de la journée (exclue)</option></select>'+
     '<div class="empty-note" style="margin-top:12px">Valeur positive : '+esc(shortMemberName('partner'))+' doit à '+esc(shortMemberName('la'))+'. Valeur négative : '+esc(shortMemberName('la'))+' doit à '+esc(shortMemberName('partner'))+'. L’historique antérieur reste conservé.</div>'+
     '<div class="setting-summary" style="margin-top:14px"><span>Sauvegarde de migration V5</span><b>Active</b></div>'+
     '<button class="primary full" id="saveDataSettings" style="margin-top:16px">Enregistrer</button>'+settingsBack()
   );
+  const refreshBudgetPeriod=()=>{
+    const active=$('#budgetPeriodModeSetting').value==='from_date';
+    $('#budgetStartDateSetting').disabled=!active;
+    $('#budgetStartDateLabel').classList.toggle('hidden',!active);
+    $('#budgetStartDateSetting').classList.toggle('hidden',!active);
+   };
+  $('#budgetPeriodModeSetting').onchange=refreshBudgetPeriod;refreshBudgetPeriod();
   $('#saveDataSettings').onclick=async()=>{
+    const mode=$('#budgetPeriodModeSetting').value;
+    const budgetStart=$('#budgetStartDateSetting').value;
+    if(mode==='from_date'&&!window.TraceInternational.calendarDate(budgetStart)){
+     traceNotice(Error('Choisis une date valide pour commencer le budget.'));return;
+    }
+    state.household.budgetPeriodMode=mode==='from_date'?'from_date':'all';
+    state.household.budgetStartDate=mode==='from_date'?budgetStart:null;
     state.household.referenceDate=$('#referenceDateSetting').value;
     state.household.sharingOpeningBalance=Number($('#sharingOpeningSetting').value||0);
     state.household.sharingOpeningBalanceMode=$('#sharingOpeningModeSetting').value==='end'?'end':'start';
