@@ -1217,3 +1217,16 @@
 #activityImport #importCalendar .trace-day-hint{
  color:#536b5a;line-height:1.45;
 }
+
+/* TRACE 5.37.18: compact, readable pending third-party reimbursements on iPhone. */
+.trace-pass-through-reminder{
+ display:flex;flex-direction:column;gap:5px;margin:10px 0 14px;
+ padding:12px 14px;border-radius:13px;border:1px solid #cbded3;
+ background:#f4f8f5;color:#225443;font-size:14px;line-height:1.38;
+}
+.trace-pass-through-reminder strong{font-weight:700;font-size:14px;}
+.trace-pass-through-reminder span{font-variant-numeric:tabular-nums;font-weight:600;}
+.trace-pass-through-reminder small{font-size:12px;line-height:1.4;color:#557366;}
+@media(max-width:480px){
+ .trace-pass-through-reminder{margin:8px 0 12px;padding:11px 12px;}
+}
