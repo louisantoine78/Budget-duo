@@ -182,9 +182,11 @@ const passThroughOutstanding=(transactions=[])=>{
   const amount=Number(t.bankAmount??t.amountCAD),minor=Math.round(amount*100);
   if(!(minor>0)||!Number.isSafeInteger(minor)||Math.abs(amount*100-minor)>.000001)continue;
   const who=String(t.counterparty||'').trim()||'Destinataire à préciser';
-  totals.set(who,(totals.get(who)||0)+sign*minor);
+  const key=who.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr');
+  const prev=totals.get(key)||{counterparty:who,cents:0};
+  totals.set(key,{counterparty:prev.counterparty,cents:prev.cents+sign*minor});
  }
- return [...totals].map(([counterparty,cents])=>({counterparty,remainingCAD:cents/100}))
+ return [...totals.values()].map(({counterparty,cents})=>({counterparty,remainingCAD:cents/100}))
   .filter(x=>Math.abs(x.remainingCAD)>.005).sort((a,b)=>b.remainingCAD-a.remainingCAD);
 };
 // Read-only friend receivables. Never infer a person from the label on a
