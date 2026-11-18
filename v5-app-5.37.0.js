@@ -646,7 +646,7 @@ function sharingMovement(t){
 }
 function sharingHistory(){
  const date=state.household.referenceDate||'';
- return state.transactions.filter(t=>t.status==='confirmed'&&(!date||afterBoundary(t.date,{date,mode:state.household.sharingOpeningBalanceMode==='end'?'end':'start'}))&&isFinancialPeriod(t)).map(t=>({t,delta:sharingMovement(t)})).filter(x=>Math.abs(x.delta)>.005).sort((a,b)=>String(b.t.date).localeCompare(String(a.t.date)));
+ return state.transactions.filter(t=>t.status==='confirmed'&&(!date||afterBoundary(t.date,{date,mode:state.household.sharingOpeningBalanceMode==='end'?'end':'start'}))&&isBudgetRelevant(t)).map(t=>({t,delta:sharingMovement(t)})).filter(x=>Math.abs(x.delta)>.005).sort((a,b)=>String(b.t.date).localeCompare(String(a.t.date)));
 }
 
 function editTricountOpening(){
