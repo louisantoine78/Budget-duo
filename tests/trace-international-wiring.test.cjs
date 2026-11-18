@@ -90,8 +90,11 @@ const I={
 const accountType=a=>a?.type;
 const openingBoundary=extractLedgerFunction('openingBoundary','afterBoundary',{state:bankState,window:{TraceInternational:I}});
 const afterBoundary=extractLedgerFunction('afterBoundary','isFinancialPeriod');
-const isFinancialPeriod=extractLedgerFunction('isFinancialPeriod','isBankBalancePeriod',{
+const isFinancialPeriod=extractLedgerFunction('isFinancialPeriod','isBudgetRelevant',{
  state:bankState,window:{TraceInternational:I}
+});
+const isBudgetRelevant=extractLedgerFunction('isBudgetRelevant','isBankBalancePeriod',{
+ isFinancialPeriod
 });
 const bankBalanceBoundary=extractLedgerFunction('bankBalanceBoundary','openingBoundary',{
  state:bankState,window:{TraceInternational:I},openingBoundary
@@ -112,12 +115,21 @@ test('bank dates: October 31 is included for the October 30 checking snapshot',(
  assert.equal(isBankBalancePeriod(bankState.transactions[3],'card'),false);
  assert.equal(isBankBalancePeriod(bankState.transactions[4],'card'),true);
 });
-test('budget start Nov 10 does not move individual bank opening dates',()=>{
+test('budget history includes early imported expenses unless a start date was explicitly chosen',()=>{
+ assert.equal(isFinancialPeriod(bankState.transactions[1]),true);
+ assert.equal(isFinancialPeriod(bankState.transactions[4]),true);
+ assert.equal(isBudgetRelevant(bankState.transactions[1]),true);
+ assert.equal(isBudgetRelevant({date:'2026-10-31',type:'expense',transferPurpose:'professional_spend'}),false);
+});
+test('explicit budget start Nov 10 does not move individual bank opening dates',()=>{
+ bankState.household.budgetPeriodMode='from_date';
+ bankState.household.budgetStartDate='2026-11-10';
  assert.equal(isFinancialPeriod(bankState.transactions[1]),false);
  assert.equal(isFinancialPeriod(bankState.transactions[4]),false);
  assert.equal(isFinancialPeriod(bankState.transactions[5]),true);
  assert.equal(isFinancialPeriod({date:'2026-10-31',type:'expense',accountId:'foreign'}),false);
  assert.equal(isFinancialPeriod({date:'2026-10-15',budgetDate:'2026-11-10',type:'expense',deferredKind:'purchase'}),true);
+ bankState.household.budgetPeriodMode='all';
 });
 test('bank balances respect independent closing dates and count card payment once',()=>{
  assert.equal(accountEstimate(current),1020);

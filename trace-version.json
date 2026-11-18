@@ -1,5 +1,5 @@
 {
   "entry": "index.html",
-  "build": "5.37.17",
-  "release": "TRACE 2.0.2 — imports historiques accessibles sans changer les soldes de référence"
+  "build": "5.37.18",
+  "release": "TRACE 2.0.2 — remboursements neutres et budgets sans date de début imposée"
 }

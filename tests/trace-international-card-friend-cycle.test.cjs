@@ -46,11 +46,12 @@ function scenario(transactions=[],reconciliations=[],accountCatalogue=accounts){
  const alloc=pick('alloc',{split});
  const isFinancialPeriod=pick('isFinancialPeriod',{state,openingBoundary,afterBoundary,window:root});
  const traceBudgetPostingMonth=pick('traceBudgetPostingMonth',{window:root});
- const txs=pick('txs',{state,isFinancialPeriod,split,traceBudgetPostingMonth});
+ const isBudgetRelevant=pick('isBudgetRelevant',{isFinancialPeriod});
+ const txs=pick('txs',{state,isBudgetRelevant,split,traceBudgetPostingMonth});
  const summary=pick('summary',{state,txs,alloc,cat:()=>({type:'expense'}),budgetAmt:()=>0});
  const accountEstimate=pick('accountEstimate',{state,openingBoundary,afterBoundary,accountType,window:root});
  const sharingMovement=pick('sharingMovement',{split});
- const sharingHistory=pick('sharingHistory',{state,afterBoundary,isFinancialPeriod,sharingMovement});
+ const sharingHistory=pick('sharingHistory',{state,afterBoundary,isBudgetRelevant,sharingMovement});
  const coupleBalance=pick('coupleBalance',{state,sharingHistory});
  return{state,accountEstimate,summary,sharingHistory,coupleBalance,
   balance:id=>accountEstimate(accountCatalogue.find(a=>a.id===id)),

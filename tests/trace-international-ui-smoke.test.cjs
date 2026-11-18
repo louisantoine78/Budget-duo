@@ -123,11 +123,11 @@ const activity=compile('renderActivity','\n/* TRACE 5.37 — native Activity/Par
  traceActivityGroupHTML:rows=>rows.length?rows.map(t=>'<button data-tx-open="'+t.id+'"></button>').join(''):
   '<div class="empty-note">Aucune opération confirmée ce mois-ci.</div>',
  accountType:a=>a.type,
- isFinancialPeriod:()=>true,visibleBankAccounts:()=>[{id:'checking'}],
+ isFinancialPeriod:()=>true,isBudgetRelevant:()=>true,visibleBankAccounts:()=>[{id:'checking'}],
  shortAccountLabel:a=>a?.name||'Courant',
  txRow:t=>'<button data-tx-open="'+t.id+'"></button>',
  editTransaction(){},showTab(t){elem('#activityTabCurrent').textContent=t;},
- window:{...ctx.window,TraceInternational:{currency:a=>a?.currency||'CAD',
+ window:{...ctx.window,TraceMovement:{passThroughOutstanding:()=>[]},TraceInternational:{currency:a=>a?.currency||'CAD',
  amountOnAccount:(t,a)=>t.bankAmount??null,money:(v,c)=>v+' '+c},TraceImportCalendar:{render(){elem('#calendarRendered').textContent='yes';}}}
 });
 test('Activity renders existing confirmed expense and income',()=>{
