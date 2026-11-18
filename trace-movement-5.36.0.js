@@ -8,15 +8,20 @@ const families=[
 const kinds=[
 {id:'expense',family:'expenses',label:'Dépense (achat, facture, prélèvement)',type:'expense',direction:-1,budget:'expense',help:'Restaurant, loyer, assurance, courses… La catégorie précise pourquoi tu as payé. Le montant est affecté à ton budget.'},
 {id:'friend_payment_expense',family:'expenses',label:'Virement pour des frais avancés par un proche',type:'expense',purpose:'friend_payment_expense',direction:-1,budget:'expense',help:'Un proche a payé des frais pour toi. Ton virement constitue ta dépense, à classer dans la catégorie de ton choix, puis à répartir.'},
+{id:'professional_spend',family:'expenses',label:'Frais professionnels payés pour mon employeur',type:'expense',purpose:'professional_spend',direction:-1,budget:'none',help:'Achat fait pour l’employeur et remboursable, pas une dépense personnelle. Si tu suis cette carte dans TRACE, le débit bancaire est conservé mais pas ajouté au budget. Rapproche le remboursement lorsqu’il arrive.'},
 {id:'refund',family:'incoming',label:'Remboursement d’un commerçant',type:'refund',direction:1,budget:'refund',help:'Un commerçant te rend de l’argent pour une dépense. Le montant réduit les dépenses de la catégorie et des personnes concernées.'},
 {id:'income',family:'incoming',label:'Salaire ou autre revenu',type:'income',direction:1,budget:'income',help:'Un revenu réellement gagné ou reçu. À affecter à une catégorie de revenus, comme Salaire ou Autres revenus.'},
 {id:'friend_reimbursement',family:'incoming',label:'Virement reçu · remboursement de frais avancés',type:'external_refund',purpose:'friend_reimbursement',direction:1,budget:'none',help:'Tu avais payé une dépense pour des amis. Le remboursement augmente ton solde, sans créer de revenu ni corriger une seconde fois le budget.'},
+{id:'employer_reimbursement',family:'incoming',label:'Remboursement de frais professionnels',type:'external_refund',purpose:'employer_reimbursement',direction:1,budget:'none',help:'Ton employeur rembourse des frais que tu as avancés. Ton compte augmente, mais il ne s’agit pas d’un salaire. Si la dépense d’origine figure dans TRACE, vérifie qu’elle est classée hors budget pour ne pas la compter deux fois.'},
+{id:'pass_through_reimbursement',family:'incoming',label:'Remboursement reçu pour quelqu’un d’autre',type:'external_refund',purpose:'pass_through_reimbursement',direction:1,budget:'none',help:'Tu reçois sur ton compte de l’argent destiné à une autre personne (ex. remboursement médical de ton partenaire). Il reste à lui reverser : aucun revenu ni dépense personnelle.'},
 {id:'friend_advance_return',family:'incoming',label:'Virement reçu · argent prêté rendu',type:'external_refund',purpose:'friend_advance_return',direction:1,budget:'none',help:'Un proche te rend une somme que tu lui avais prêtée. Aucun revenu supplémentaire ni dépense : remboursement de trésorerie.'},
 {id:'external_refund',family:'incoming',label:'Autre entrée sans revenu',type:'external_refund',direction:1,budget:'none',help:'Entrée de trésorerie qui n’est ni une recette du budget ni un remboursement de commerçant. À utiliser après vérification.'},
 {id:'card_payment_received',family:'payments',label:'Paiement reçu sur ma carte · à rapprocher',type:'card_statement_evidence',purpose:'card_payment_received',direction:1,budget:'none',help:'Ce crédit sur le relevé de carte correspond au paiement déjà sorti de ton compte courant. Associe-le au paiement existant : aucun nouveau revenu ni aucune deuxième écriture.'},
 {id:'card_payment',family:'payments',label:'Paiement de ma carte de crédit',type:'transfer',purpose:'card_repayment',direction:-1,budget:'none',help:'Le courant diminue et la dette de carte diminue du même montant. Les achats sur la carte ont déjà été comptés.'},
 {id:'transfer',family:'payments',label:'Virement entre mes comptes suivis',type:'transfer',direction:-1,budget:'none',help:'L’argent passe d’un de tes comptes à un autre. Il ne crée ni revenu ni dépense.'},
 {id:'friend_advance',family:'payments',label:'Virement envoyé · argent prêté à un proche',type:'external_transfer',purpose:'friend_advance',direction:-1,budget:'none',help:'Tu prêtes une somme qui doit te revenir. Le courant diminue, mais ce n’est pas une dépense personnelle.'},
+{id:'pass_through_payout',family:'payments',label:'Reverser de l’argent reçu pour un proche',type:'external_transfer',purpose:'pass_through_payout',direction:-1,budget:'none',help:'Tu reverses à la personne concernée une somme reçue pour elle. Le compte diminue sans créer de dépense, et le montant en attente de reversement peut être rapproché.'},
+{id:'external_card_payment',family:'payments',label:'Payer une carte non suivie dans TRACE',type:'external_transfer',purpose:'external_card_payment',direction:-1,budget:'none',help:'Tu rembourses une carte de crédit qui n’est pas suivie dans TRACE, par exemple une carte professionnelle. Ce paiement diminue le compte courant sans nouvelle dépense budgétaire. Pour une carte suivie, utilise Paiement de ma carte.'},
 {id:'external_transfer',family:'payments',label:'Autre sortie sans dépense',type:'external_transfer',direction:-1,budget:'none',help:'L’argent sort du compte sans constituer une dépense du budget. Vérifie qu’il ne s’agit pas d’un achat ou d’un don.'},
 {id:'friend_payment_settlement',family:'payments',label:'Ancien règlement déjà comptabilisé',type:'external_transfer',purpose:'friend_payment_settlement',direction:-1,budget:'none',legacyOnly:true,help:'Compatibilité des mouvements anciens seulement. Pour un paiement déjà enregistré, retrouve l’opération existante au lieu d’en créer une seconde.'},
 {id:'savings_transfer',family:'savings',label:'Versement vers mon épargne / CELI',type:'external_transfer',purpose:'savings',direction:-1,budget:'none',help:'Le courant diminue et le CELI augmente. Ce versement pourra alimenter un objectif d’épargne distinct des dépenses de consommation.'},
@@ -27,6 +32,11 @@ const family=id=>get(id)?.family||'';
 const choices=id=>kinds.filter(k=>k.family===id);
 const fromStored=t=>{
 const x=String(t?.type||''),p=String(t?.transferPurpose||'');
+if(x==='external_refund'&&p==='employer_reimbursement')return'employer_reimbursement';
+if(x==='external_refund'&&p==='pass_through_reimbursement')return'pass_through_reimbursement';
+if(x==='external_transfer'&&p==='pass_through_payout')return'pass_through_payout';
+if(x==='external_transfer'&&p==='external_card_payment')return'external_card_payment';
+if(x==='expense'&&p==='professional_spend')return'professional_spend';
 if(x==='external_refund'&&p==='friend_reimbursement')return'friend_reimbursement';
 if(x==='external_refund'&&p==='friend_advance_return')return'friend_advance_return';
 if(x==='external_refund'&&p==='savings_withdrawal')return'savings_withdrawal';
@@ -159,6 +169,24 @@ const match=linkable(expenses,transactions,owner,date,amount,excluding).find(x=>
 if(!match||!match.allowed)throw Error('Le remboursement dépasse la part des amis disponible ou la dépense n’est pas admissible.');
 return id;
 }
+/* Read-only amounts received for third parties that have not yet been passed on.
+ * No automatic pairing: only explicit movement nature and counterparty can
+ * change this net balance. Never create a second bank transaction. */
+const passThroughOutstanding=(transactions=[])=>{
+ const totals=new Map();
+ for(const t of transactions){
+  if(t?.status!=='confirmed')continue;
+  const sign=t.type==='external_refund'&&t.transferPurpose==='pass_through_reimbursement'?1:
+   t.type==='external_transfer'&&t.transferPurpose==='pass_through_payout'?-1:0;
+  if(!sign)continue;
+  const amount=Number(t.bankAmount??t.amountCAD),minor=Math.round(amount*100);
+  if(!(minor>0)||!Number.isSafeInteger(minor)||Math.abs(amount*100-minor)>.000001)continue;
+  const who=String(t.counterparty||'').trim()||'Destinataire à préciser';
+  totals.set(who,(totals.get(who)||0)+sign*minor);
+ }
+ return [...totals].map(([counterparty,cents])=>({counterparty,remainingCAD:cents/100}))
+  .filter(x=>Math.abs(x.remainingCAD)>.005).sort((a,b)=>b.remainingCAD-a.remainingCAD);
+};
 // Read-only friend receivables. Never infer a person from the label on a
 // bank receipt: historical expenses often have only an aggregate friends share.
 const friendReceivables=(transactions,owner)=>{
@@ -201,5 +229,5 @@ const friendReceivables=(transactions,owner)=>{
    b.outstandingCAD-a.outstandingCAD||a.name.localeCompare(b.name,'fr'));
 };
 
-root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,amounts,impact,repaymentLines,paidForExpense,validateRepaymentAllocations,linkable,validateLink,friendReceivables,friendShares,parseFriendShares,validateFriendDebtorShares,paidForDebtor});
+root.TraceMovement=Object.freeze({families,kinds,get,family,choices,fromStored,passThroughOutstanding,amounts,impact,repaymentLines,paidForExpense,validateRepaymentAllocations,linkable,validateLink,friendReceivables,friendShares,parseFriendShares,validateFriendDebtorShares,paidForDebtor});
 })(typeof window!=='undefined'?window:globalThis);
