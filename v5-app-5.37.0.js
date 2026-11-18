@@ -1933,6 +1933,7 @@ function openManualTransaction(preferredKind='expense'){
   '<div id="manualFriendDebtorRows" class="trace-friend-debtors"></div></div>'+
   '<div id="manualTargetWrap" class="hidden"><label class="label2">Compte destinataire</label><select class="input" id="manualTarget"></select></div>'+
   '<div id="manualSavingsWrap" class="hidden"><label class="label2" for="manualSavings">Compte épargne / CELI</label><select class="input" id="manualSavings"></select></div>'+
+  '<div id="manualPassThroughWrap" class="hidden"><label class="label2" for="manualPassThroughPerson">Personne concernée</label><input class="input" id="manualPassThroughPerson" maxlength="45" placeholder="Ex. Élise"><small>Ce remboursement et son reversement sont des mouvements de trésorerie, sans impact sur tes dépenses ou revenus.</small></div>'+
   '<div id="manualFriendLink" class="hidden"><label class="label2" for="manualFriendName">Prénom de la personne (facultatif)</label><input class="input" id="manualFriendName" maxlength="45" placeholder="Ex. Camille">'+
   '<label class="label2" for="manualRelatedExpense">Première avance remboursée (facultatif)</label><select class="input" id="manualRelatedExpense"></select>'+
   '<label class="label2" for="manualRelatedAmount">Montant attribué (CAD de référence)</label><input class="input" id="manualRelatedAmount" type="number" min=".01" step=".01" inputmode="decimal" placeholder="Montant total si une seule avance">'+
@@ -2029,13 +2030,14 @@ function openManualTransaction(preferredKind='expense'){
   $m('manualFxRate').hidden=fromCurrency==='CAD';
   const budget=def.budget!=='none',expense=def.budget==='expense'||def.budget==='refund';
   $m('manualCategoryWrap').classList.toggle('hidden',!budget);
-  $m('manualExtraSection').classList.toggle('hidden',!budget&&!['transfer','card_payment','savings_transfer','savings_withdrawal','friend_reimbursement'].includes(kind));
+  $m('manualExtraSection').classList.toggle('hidden',!budget&&!['transfer','card_payment','savings_transfer','savings_withdrawal','friend_reimbursement','pass_through_reimbursement','pass_through_payout'].includes(kind));
   $m('manualExtraSection').querySelector('h3').textContent=budget?U.steps.allocation:U.steps.additional;
   $m('manualWhoWrap').classList.toggle('hidden',!expense);
   $m('manualFriendsGroup').classList.toggle('hidden',!expense||$m('manualTxBeneficiary').value!=='custom');
   $m('manualTargetWrap').classList.toggle('hidden',!['transfer','card_payment'].includes(kind));
   $m('manualSavingsWrap').classList.toggle('hidden',!['savings_transfer','savings_withdrawal'].includes(kind));
   $m('manualFriendLink').classList.toggle('hidden',kind!=='friend_reimbursement');
+  $m('manualPassThroughWrap').classList.toggle('hidden',!['pass_through_reimbursement','pass_through_payout'].includes(kind));
   const previousTarget=$m('manualTarget').value,previousSavings=$m('manualSavings').value;
   $m('manualTarget').innerHTML=bankAccounts.filter(a=>a.id!==$m('manualTxAccount').value&&
    (kind!=='card_payment'||validCardTarget(from,a))).map(a=>'<option value="'+esc(a.id)+'">'+esc(shortAccountLabel(a))+'</option>').join('');
@@ -2452,6 +2454,10 @@ function openManualTransaction(preferredKind='expense'){
    bankQuoteMeta.purchaseCurrency===purchaseCode&&
    bankQuoteMeta.bankCurrency===nativeCurrency&&
    bankQuoteMeta.requestedDate===date?bankQuoteMeta:null;
+  if(['pass_through_reimbursement','pass_through_payout'].includes(kind)&&
+     !$m('manualPassThroughPerson').value.trim()){
+   error.textContent='Indique le destinataire de cet argent.';return;
+  }
   const item={id:txDocId(),date,name,note:'',merchant:'',type:def.type,transferPurpose:def.purpose||null,
    status:'confirmed',...booking,...transferFees,...savingsLeg,
    ...(cadForeignPurchase?{fxBankAmountStatus:bankOverride?'bank_confirmed':'estimated',
@@ -2465,7 +2471,8 @@ function openManualTransaction(preferredKind='expense'){
    ...(['transfer','card_payment'].includes(kind)?{toAccountId:targetId}:{}),
    ...(['savings_transfer','savings_withdrawal'].includes(kind)?{investmentAccountId:investmentId}:{}),
    recurring:false,recurrence:{enabled:false,endDate:null,nextDate:null,frequency:null,autoConfirm:false,needsReview:false},
-   counterparty:kind==='friend_reimbursement'?$m('manualFriendName').value.trim():'',
+   counterparty:kind==='friend_reimbursement'?$m('manualFriendName').value.trim():
+    ['pass_through_reimbursement','pass_through_payout'].includes(kind)?$m('manualPassThroughPerson').value.trim():'',
    externalAmount:0,externalParticipants:[]};
   const btn=$m('saveManualTx');btn.disabled=true;btn.textContent='Enregistrement…';
   try{await saveDocument('transactions',item);state.transactions.push(item);closeSheet();renderAll();navigate('activity');showTab('transactions');}
@@ -3041,6 +3048,7 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
      '<div class="trace-edit-control trace-edit-select-control"><select id="smartMovementCardMatch" class="input"><option value="">Choisir le paiement à rapprocher</option></select></div>'+
      '<p class="trace-bank-inline-tip" id="smartMovementCardMatchHint">Choisis un règlement du même montant déjà débité sur ton compte courant. Aucun deuxième paiement ou revenu ne sera créé.</p></div>'+
      '<div id="smartMovementSavingsWrap" class="trace-bank-extra-box hidden"><label class="label2" for="smartMovementSavingsTo">Compte épargne / CELI</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementSavingsTo" class="input"><option value="">Choisir un compte d’épargne</option>'+eligibleSavings.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+(isReadySavingsAccount(a)?'':' · à configurer')+'</option>').join('')+'</select></div><p class="trace-bank-inline-tip">Le versement change tes soldes bancaires et ton épargne, mais ne crée pas de dépense de consommation.</p></div>'+
+     '<div id="smartMovementPassThroughWrap" class="trace-bank-extra-box hidden"><label class="label2" for="smartMovementPassThroughPerson">Personne concernée</label><input id="smartMovementPassThroughPerson" class="input" maxlength="45" value="'+esc(t.counterparty||'')+'" placeholder="Ex. Élise"><p class="trace-bank-inline-tip">Le remboursement et le virement de reversement restent deux mouvements bancaires distincts, rapprochés par le destinataire. Aucun revenu ou dépense personnelle.</p></div>'+
      '<div id="smartMovementLinkWrap" class="trace-bank-extra-box hidden"><label class="label2" for="smartMovementFriendName">Prénom du proche (facultatif)</label><input id="smartMovementFriendName" class="input" maxlength="45" value="'+esc(t.counterparty||'')+'" placeholder="Ex. Camille">'+
       '<label class="label2" for="smartMovementLink">Première avance remboursée</label><select id="smartMovementLink" class="input"></select>'+
       '<label class="label2" for="smartMovementFirstAmount">Montant attribué (CAD)</label><input id="smartMovementFirstAmount" class="input" type="number" min=".01" step=".01" inputmode="decimal" value="'+esc(window.TraceMovement.repaymentLines(t)[0]?.amountCAD??'')+'">'+
@@ -3121,7 +3129,7 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
   $('#smartMovementHelp').textContent=M.get(id)?.help||'';
   const cardReceived=id==='card_payment_received';
   const hasTarget=['transfer','card_payment'].includes(id);
-  const hasExpense=budget,hasSavings=['savings_transfer','savings_withdrawal'].includes(id),hasFriend=id==='friend_reimbursement';
+  const hasExpense=budget,hasSavings=['savings_transfer','savings_withdrawal'].includes(id),hasFriend=id==='friend_reimbursement',hasPassThrough=['pass_through_reimbursement','pass_through_payout'].includes(id);
   $('#smartMovementToWrap').classList.toggle('hidden',!hasTarget);
   $('#smartMovementExpenseWrap').classList.toggle('hidden',!budget);
   const who=$('#smartMovementWho'),whoLabel=who.closest('.trace-bank-extra-box').querySelector('label[for="smartMovementWho"]');
@@ -3162,10 +3170,11 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
     'Aucun paiement compatible trouvé : enregistre d’abord le transfert depuis ton compte courant vers cette carte.';
   }
   $('#smartMovementSavingsWrap').classList.toggle('hidden',!hasSavings);
-  $('#smartMovementAdditional').classList.toggle('hidden',!(hasTarget||hasExpense||hasSavings||hasFriend||cardReceived));
+  $('#smartMovementAdditional').classList.toggle('hidden',!(hasTarget||hasExpense||hasSavings||hasFriend||hasPassThrough||cardReceived));
   $('#smartMovementCardNote').classList.toggle('hidden',id!=='card_payment');
   $('#smartMovementFriendNote').classList.toggle('hidden',!hasFriend);
   $('#smartMovementLinkWrap').classList.toggle('hidden',id!=='friend_reimbursement');
+  $('#smartMovementPassThroughWrap').classList.toggle('hidden',!hasPassThrough);
    if(id==='friend_reimbursement')renderFriendLinks();
    $('#smartMovementPreview').textContent=cardReceived?
     'Compte courant : déjà débité lors du transfert · Dette de carte : déjà réduite · Budget : 0 $ · Aucun mouvement supplémentaire.':
@@ -3231,6 +3240,10 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
      accountType(state.accounts.find(a=>a.id===accountId))!=='checking'||date<=savingsAccount.openingDate)){
    $('#traceFeedback').textContent='Sélectionne un CELI configuré et un virement depuis ton compte courant, après sa date initiale.';return;
   }
+  if(['pass_through_reimbursement','pass_through_payout'].includes(requestedType)&&
+     !$('#smartMovementPassThroughPerson').value.trim()){
+    $('#traceFeedback').textContent='Indique à qui cet argent est destiné ou reversé.';return;
+   }
   if(requestedType==='card_payment_received'){
    const target=$('#smartMovementCardMatch').value;
    if(t.status==='confirmed'){
@@ -3258,7 +3271,7 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
   if(requestedType==='friend_payment_expense'&&accountType(state.accounts.find(a=>a.id===accountId))!=='checking'){
     $('#traceFeedback').textContent='Choisis le compte courant utilisé pour le paiement à ton amie.';return;
    }
-   if(['friend_reimbursement','friend_advance_return','external_refund','savings_withdrawal'].includes(requestedType)&&accountType(state.accounts.find(a=>a.id===accountId))!=='checking'){
+   if(['friend_reimbursement','friend_advance_return','employer_reimbursement','pass_through_reimbursement','external_refund','savings_withdrawal'].includes(requestedType)&&accountType(state.accounts.find(a=>a.id===accountId))!=='checking'){
     $('#traceFeedback').textContent='Choisis le compte courant pour recevoir ce remboursement.';return;
    }
    let related,repaymentAllocations=null,categoryId='',shares,friendDebtors;
@@ -3294,7 +3307,9 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
    const next={...t,type,date,name,status:'confirmed',natureReviewed:t.status!=='confirmed'?true:t.natureReviewed,amountCAD:Math.round(amount*100)/100,amountOriginal:Math.round(amount*100)/100,
     accountId,toAccountId,categoryId,investmentAccountId,
     transferPurpose:movement.purpose||null,relatedExpenseId:related,repaymentAllocations,
-     counterparty:requestedType==='friend_reimbursement'?$('#smartMovementFriendName').value.trim():(t.counterparty||''),
+     counterparty:requestedType==='friend_reimbursement'?$('#smartMovementFriendName').value.trim():
+      ['pass_through_reimbursement','pass_through_payout'].includes(requestedType)?
+       $('#smartMovementPassThroughPerson').value.trim():(t.counterparty||''),
      importFingerprint:accountId===t.accountId&&date===t.date&&name===t.name&&
       Math.abs(Number(t.bankAmount??t.amountCAD)-amount)<.009?
       (t.importFingerprint??null):null,
@@ -4960,6 +4975,9 @@ async function smartApproveDraft(id,v){
  if(!smartStrictDate(date)||name.length<2||!Number.isFinite(amount)||!(amount>0)||amount>1e7)
   throw Error('Vérifie la date, le libellé et le montant.');
  if(requestedType==='card_payment_received')throw Error('Ce paiement reçu doit être rapproché du virement du compte courant : choisis le paiement correspondant.');
+ if(['pass_through_reimbursement','pass_through_payout'].includes(requestedType)&&
+    !String(v.counterparty||'').trim())
+  throw Error('Indique le destinataire de cet argent avant validation.');
  if(!['expense','income','refund','transfer','external_transfer','external_refund'].includes(type))
   throw Error('Choisis la nature de ce mouvement.');
  const bankAccount=state.accounts.find(a=>a.id===accountId);
@@ -4983,7 +5001,7 @@ async function smartApproveDraft(id,v){
   throw Error('Ce libellé correspond à un paiement de carte. Rapproche-le du compte courant au lieu de créer une deuxième opération.');
  if(type==='external_transfer'&&accountType(state.accounts.find(a=>a.id===accountId))==='card')
   throw Error('Virement hors budget indisponible sur une carte.');
-  if(['friend_reimbursement','friend_advance_return','income','external_refund','savings_withdrawal'].includes(requestedType)&&accountType(state.accounts.find(a=>a.id===accountId))!=='checking')throw Error('Cette entrée doit être créditée au compte courant.');
+  if(['friend_reimbursement','friend_advance_return','employer_reimbursement','pass_through_reimbursement','income','external_refund','savings_withdrawal'].includes(requestedType)&&accountType(state.accounts.find(a=>a.id===accountId))!=='checking')throw Error('Cette entrée doit être créditée au compte courant.');
  const categoryId=String(v.categoryId||''),isBudget=movement?.budget!=='none';
  const beneficiary=movement?.budget==='none'||movement?.budget==='income'?me:String(v.beneficiary||'');
  if(isBudget&&!manualCategories(type).some(c=>c.id===categoryId))throw Error('Choisis une catégorie.');
@@ -5075,7 +5093,9 @@ async function smartApproveDraft(id,v){
  const tx={id:transactionId,date,name,type,...booking,
   ...(type==='transfer'?{toBankAmount:destinationBankAmount,toBankCurrency:destinationBankCurrency}:{}),
   status:'confirmed',categoryId:isBudget?categoryId:'',accountId,payerId:me,
-  ...(toAccountId?{toAccountId}:{}),...(movement.purpose?{transferPurpose:movement.purpose}:{}),...(investmentAccountId?{investmentAccountId}:{}),...(related?{relatedExpenseId:related}:{}),...share,source:'image',importFileName:d.sourceFileName,
+  ...(toAccountId?{toAccountId}:{}),...(movement.purpose?{transferPurpose:movement.purpose}:{}),...(investmentAccountId?{investmentAccountId}:{}),...(related?{relatedExpenseId:related}:{}),
+  ...(['pass_through_reimbursement','pass_through_payout'].includes(requestedType)?{counterparty:String(v.counterparty).trim().slice(0,45)}:{}),
+  ...share,source:'image',importFileName:d.sourceFileName,
   recurring:false,excludedByOpening:!isBankBalancePeriod(probe,accountId)};
  tx.importFingerprint=csvFingerprint(tx);
  await saveDocument('transactions',tx);state.transactions.push(tx);
