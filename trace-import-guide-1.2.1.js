@@ -1,8 +1,8 @@
 /* TRACE 5.33.0 — conservative account-aware movement guide. Pure and read-only. */
 (function(root){'use strict';
-const checkingOut=['expense','friend_payment_expense','friend_advance','card_payment','transfer','external_transfer','savings_transfer'];
-const checkingIn=['income','refund','friend_reimbursement','friend_advance_return','external_refund','savings_withdrawal'];
-const cardOut=['expense'];
+const checkingOut=['expense','professional_spend','friend_payment_expense','friend_advance','card_payment','external_card_payment','pass_through_payout','transfer','external_transfer','savings_transfer'];
+const checkingIn=['income','refund','friend_reimbursement','employer_reimbursement','pass_through_reimbursement','friend_advance_return','external_refund','savings_withdrawal'];
+const cardOut=['expense','professional_spend'];
 const cardIn=['refund','card_payment_received'];
 const all=(kind,dir)=>kind==='card'?(dir==='in'?cardIn:dir==='out'?cardOut:[...cardOut,...cardIn]):
 (dir==='in'?checkingIn:dir==='out'?checkingOut:[...checkingOut,...checkingIn]);
@@ -29,8 +29,8 @@ function direction(type,accountType,name){
   if(/\b(recu|recue|received|entrant|credit)\b/.test(s))return'in';
   if(/\b(envoye|emis|sortant|debit)\b/.test(s))return'out';
  }
- if(t==='income'||t==='refund'||t==='external_refund'||t==='friend_reimbursement'||t==='friend_advance_return'||t==='savings_withdrawal')return'in';
- if(t==='expense'||t==='transfer'||t==='external_transfer'||t==='card_payment'||t==='savings_transfer'||t==='friend_payment_expense'||t==='friend_advance'||t==='friend_payment_settlement')return'out';
+ if(t==='income'||t==='refund'||t==='external_refund'||t==='friend_reimbursement'||t==='employer_reimbursement'||t==='pass_through_reimbursement'||t==='friend_advance_return'||t==='savings_withdrawal')return'in';
+ if(t==='expense'||t==='professional_spend'||t==='transfer'||t==='external_transfer'||t==='card_payment'||t==='external_card_payment'||t==='pass_through_payout'||t==='savings_transfer'||t==='friend_payment_expense'||t==='friend_advance'||t==='friend_payment_settlement')return'out';
  if(accountType==='checking'){
   if(/\b(salaire|paie|payroll|depot direct|virement recu|interac recu|credit recu|reimbursement received)\b/.test(s))return'in';
   if(/\b(virement emis|virement envoye|interac envoye|prelevement|loyer|assurance)\b/.test(s))return'out';
