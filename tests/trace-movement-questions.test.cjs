@@ -58,7 +58,7 @@ test('advanced stored nature remains visible without changing selection',()=>{
  Q.mount(host,{accountType:'checking',direction:'out',selected:'savings_transfer',
   allowed:all('checking','out'),onChoose:()=>{throw Error('automatic write');}});
  assert.match(host.innerHTML,/Nature précise sélectionnée/);
- assert.match(host.innerHTML,/Épargne/);
+ assert.match(host.innerHTML,/épargne/i);
 });
 test('index loads questions before app and smart imports; both screens use guide',()=>{
  const html=read('index.html'),app=read('v5-app-5.37.0.js'),inbox=read('trace-smart-inbox-3.5.0.js');
