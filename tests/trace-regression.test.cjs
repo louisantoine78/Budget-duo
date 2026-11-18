@@ -41,10 +41,33 @@ test('remboursement amis solde créditeur',()=>assert.equal(M.impact('friend_rei
 test('carte hors budget',()=>same(M.impact('card_payment',100,'la').budget,{la:0,partner:0,couple:0}));
 test('carte courant débité',()=>assert.equal(M.impact('card_payment',100,'la').bank,-100));
 test('retour commerçant',()=>same(M.impact('refund',20,'couple','la',{la:50,partner:50}).budget,{la:-10,partner:-10,couple:-20}));
+test('remboursement professionnel jamais revenu',()=>same(M.impact('employer_reimbursement',135.98,'la').budget,{la:0,partner:0,couple:0}));
+test('remboursement professionnel crédit sur compte',()=>assert.equal(M.impact('employer_reimbursement',135.98,'la').bank,135.98));
+test('paiement AMEX hors TRACE jamais dépense',()=>same(M.impact('external_card_payment',132.57,'la').budget,{la:0,partner:0,couple:0}));
+test('paiement AMEX hors TRACE débite le compte',()=>assert.equal(M.impact('external_card_payment',132.57,'la').bank,-132.57));
+test('Sun Life reçu pour partenaire reste hors budget',()=>same(M.impact('pass_through_reimbursement',130,'la').budget,{la:0,partner:0,couple:0}));
+test('reversement au partenaire solde neutre sur les revenus/dépenses',()=>same(M.impact('pass_through_payout',130,'la').budget,{la:0,partner:0,couple:0}));
+test('dépense professionnelle sur carte suivie hors budget',()=>same(M.impact('professional_spend',40,'la').budget,{la:0,partner:0,couple:0}));
+test('les natures de trésorerie restent distinctes après sauvegarde',()=>{
+ assert.equal(M.fromStored({type:'external_refund',transferPurpose:'employer_reimbursement'}),'employer_reimbursement');
+ assert.equal(M.fromStored({type:'external_refund',transferPurpose:'pass_through_reimbursement'}),'pass_through_reimbursement');
+ assert.equal(M.fromStored({type:'external_transfer',transferPurpose:'pass_through_payout'}),'pass_through_payout');
+ assert.equal(M.fromStored({type:'external_transfer',transferPurpose:'external_card_payment'}),'external_card_payment');
+ assert.equal(M.fromStored({type:'expense',transferPurpose:'professional_spend'}),'professional_spend');
+});
+test('130 $ pour Élise puis 130 $ reversés: aucun reste dû',()=>{
+ const transactions=[
+ {id:'insurance',type:'external_refund',transferPurpose:'pass_through_reimbursement',status:'confirmed',amountCAD:130,counterparty:'Élise'},
+ {id:'payout',type:'external_transfer',transferPurpose:'pass_through_payout',status:'confirmed',amountCAD:130,counterparty:'Élise'}
+ ];
+ same(M.passThroughOutstanding(transactions),[]);
+ transactions[1].status='pending';
+ same(M.passThroughOutstanding(transactions),[{counterparty:'Élise',remainingCAD:130}]);
+});
 test('parts amis centimes',()=>same(M.amounts(100,'custom','la',{la:50,partner:50},30,20),{la:50,partner:20,friends:30,couple:70}));
 test('stockage paiement carte',()=>assert.equal(M.fromStored({type:'transfer',transferPurpose:'card_repayment'}),'card_payment'));
 test('stockage CELI',()=>assert.equal(M.fromStored({type:'external_transfer',transferPurpose:'savings'}),'savings_transfer'));
-test('menu compte courant',()=>assert.equal(U.kindsFor('checking','out').length,7));
+test('menu compte courant',()=>assert.equal(U.kindsFor('checking','out').length,11));
 test('menu crédit carte',()=>same(U.kindsFor('card','in').map(x=>x.id),['refund','card_payment_received']));
 const original={id:'e1',type:'expense',status:'confirmed',payerId:'la',beneficiary:'custom',date:'2026-10-01',name:'Hôtel',splitAmounts:{la:30,partner:20,friends:50},amountCAD:100};
 const already={id:'r1',type:'external_refund',status:'confirmed',transferPurpose:'friend_reimbursement',relatedExpenseId:'e1',amountCAD:20};
