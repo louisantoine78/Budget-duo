@@ -5440,10 +5440,10 @@ function renderActivity(){
   state.transactions.filter(t=>visibleBankAccounts(me).some(a=>a.id===t.accountId)));
  const transfersToPassOn=due.filter(x=>x.remainingCAD>0);
  const owedNotice=transfersToPassOn.length?
-  '<div class="trace-pass-through-reminder" role="note"><strong>Argent reçu pour un proche · à reverser</strong>'+
+  '<div class="trace-pass-through-reminder" role="note"><strong>Argent reçu pour un proche · à rapprocher</strong>'+
   transfersToPassOn.map(x=>'<span>'+esc(x.counterparty)+' : '+
    new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD'}).format(x.remainingCAD)+'</span>').join('')+
-  '<small>Ces montants ne sont pas des revenus. Lorsque tu fais le virement, classe-le comme « Reverser de l’argent reçu pour un proche » avec le même destinataire.</small></div>':'';
+  '<small>Ces montants ne sont pas des revenus. Si le reversement a déjà eu lieu, classe la sortie correspondante comme « Reverser de l’argent reçu pour un proche » avec le même destinataire. TRACE ne devine pas ce lien.</small></div>':'';
  historyHost.innerHTML=owedNotice+traceActivityGroupHTML(shownHistory)+
   (historyRemaining>0?
    '<button type="button" id="activityHistoryLoadMore" class="trace-history-more">'+
