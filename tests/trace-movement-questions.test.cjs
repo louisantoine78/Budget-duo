@@ -23,16 +23,16 @@ test('concrete examples are visible only for compatible account/direction',()=>{
   assert.ok(debit.includes(id));
  assert.equal(receive.includes('expense'),false);
  assert.equal(debit.includes('income'),false);
- assert.deepEqual(card,['expense','professional_spend']);
+ assert.equal(card.join('|'),'expense|professional_spend');
 });
 test('a credit-card settlement is a matching flow, never an income',()=>{
  const ids=Q.choices('card','in',all('card','in')).map(x=>x.id);
- assert.deepEqual(ids,['refund','card_payment_received']);
+ assert.equal(ids.join('|'),'refund|card_payment_received');
 });
 test('the suggested options never override server-approved allowed types',()=>{
  const ids=Q.choices('checking','out',['external_card_payment','expense']).map(x=>x.id);
- assert.deepEqual(ids,['expense','external_card_payment']);
- assert.deepEqual(Q.choices('other','out',[]),[]);
+ assert.equal(ids.join('|'),'expense|external_card_payment');
+ assert.equal(Q.choices('other','out',[]).length,0);
 });
 test('mount is purely presentational, and only an explicit button click selects',()=>{
  const events=new Map(),chosen=[],host={
