@@ -1230,3 +1230,62 @@
 @media(max-width:480px){
  .trace-pass-through-reminder{margin:8px 0 12px;padding:11px 12px;}
 }
+
+
+/* TRACE 5.37.19 — Plain-language movement review, intentionally non-decorative. */
+.trace-plain-guide{margin:8px 0 10px;min-width:0}
+.trace-plain-question{font-size:14px;font-weight:720;line-height:1.35;color:#204634;margin:0 0 10px}
+.trace-plain-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.trace-plain-choice{
+ appearance:none;-webkit-appearance:none;border:1px solid #dce7df!important;
+ border-radius:13px;background:#fffefa!important;color:#294d3c!important;
+ box-shadow:none!important;display:flex;flex-direction:column;align-items:flex-start;
+ justify-content:center;gap:4px;min-width:0;min-height:65px;text-align:left!important;
+ padding:11px 12px!important;white-space:normal!important;line-height:1.3;
+ cursor:pointer;
+}
+.trace-plain-choice strong{font-size:12px;font-weight:730;line-height:1.34;color:inherit}
+.trace-plain-choice small{font-size:10px;font-weight:450;color:#718477;line-height:1.35}
+.trace-plain-choice[aria-pressed="true"]{border-color:#2c7654!important;background:#eaf5ed!important;box-shadow:inset 0 0 0 1px #2c7654!important}
+.trace-plain-choice[aria-pressed="true"] strong{color:#164934}
+.trace-plain-choice:focus-visible{outline:3px solid #68a884;outline-offset:2px}
+.trace-plain-other{font-size:11px;color:#4b6a57;margin:8px 0 0}
+.trace-nature-precise{margin:9px 0 5px;padding:0;min-width:0}
+.trace-nature-precise>summary{font-size:12px;font-weight:650;color:#527461;cursor:pointer;padding:8px 0;line-height:1.4}
+.trace-nature-precise[open]>summary{margin-bottom:4px}
+.trace-nature-precise .trace-smart-field{margin-top:6px}
+#sheetBackdrop.trace-premium-movement .trace-bank-edit-layout .trace-edit-card{
+ background:transparent!important;box-shadow:none!important;
+ border:0!important;border-bottom:1px solid #e3ebe3!important;
+ border-radius:0!important;padding:12px 0 15px!important;margin:0!important
+}
+#sheetBackdrop.trace-premium-movement .trace-bank-edit-layout .trace-edit-card-head{margin-bottom:7px!important}
+#sheetBackdrop.trace-premium-movement .trace-bank-edit-layout .trace-edit-card-head p,
+#sheetBackdrop.trace-premium-movement .trace-bank-edit-layout .trace-edit-card-index{display:none}
+#sheetBackdrop.trace-premium-movement .trace-bank-edit-layout .trace-edit-card .label2{
+ margin:10px 0 5px!important;font-size:11px!important
+}
+#sheetBackdrop.trace-premium-movement .trace-bank-edit-layout .trace-edit-control{
+ border-radius:12px!important;min-height:49px!important;background:#f9fbf8!important;
+ box-shadow:none!important;
+}
+#sheetBackdrop.trace-premium-movement .trace-bank-edit-layout .trace-edit-control>.input{
+ min-height:49px!important;height:49px!important;font-size:15px!important;
+ padding:10px 13px!important;font-weight:580!important;
+}
+#sheetBackdrop.trace-premium-movement .trace-bank-edit-layout .trace-edit-money-control input{
+ font-size:18px!important;padding-right:68px!important;
+}
+.trace-smart-draft .trace-smart-proof{padding:11px!important;margin:10px 0!important;border-radius:13px!important}
+.trace-smart-draft .trace-smart-proof>small{font-size:11px;line-height:1.38}
+.trace-smart-draft .trace-smart-grid{gap:9px!important}
+.trace-smart-draft .trace-smart-grid .input{min-height:50px!important;font-size:16px!important}
+.trace-smart-draft .trace-smart-context{padding:9px 11px!important}
+.trace-smart-draft .trace-smart-editor .trace-review-section-title{margin:12px 0 8px!important}
+@media(max-width:390px){
+ .trace-plain-options{gap:7px}
+ .trace-plain-choice{padding:10px!important;min-height:64px}
+ .trace-plain-choice strong{font-size:11.5px}
+ .trace-plain-choice small{font-size:10px}
+ .trace-smart-draft .trace-smart-grid{grid-template-columns:1fr!important}
+}

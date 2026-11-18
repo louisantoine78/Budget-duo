@@ -298,7 +298,9 @@ function rowForm(d,bank,accounts,known,expanded=false){
   '<option value="out"'+(direction==='out'?' selected':'')+'>'+esc(bank.type==='card'?'Achat / débit de carte':'Argent sorti · débit')+'</option>'+
   '<option value="in"'+(direction==='in'?' selected':'')+'>'+esc(bank.type==='card'?'Crédit / remboursement sur carte':'Argent reçu · crédit')+'</option></select></label>'+ 
   '<label class="trace-smart-field">Famille du mouvement<select class="input smart-family"><option value="">Choisir une famille</option>'+M.families.filter(f=>M.choices(f.id).some(k=>supported.includes(k.id))).map(f=>'<option value="'+f.id+'"'+(f.id===initialFamily?' selected':'')+'>'+esc(f.label)+'</option>').join('')+'</select></label>'+ 
-  '<label class="trace-smart-field">Nature du mouvement<select class="input smart-type">'+window.TraceOperationUI.options(window.TraceOperationUI.kindsFor(bank.type,direction),t)+'</select></label>'+ 
+  '<div class="trace-plain-guide smart-nature-guide"></div>'+
+  '<details class="trace-nature-precise smart-nature-precise"><summary>Autre cas ? Choisir une nature précise</summary>'+
+  '<label class="trace-smart-field">Nature précise<select class="input smart-type">'+window.TraceOperationUI.options(window.TraceOperationUI.kindsFor(bank.type,direction),t)+'</select></label></details>'+ 
   '<div class="trace-smart-nature-explain" role="status" aria-live="polite"></div>'+
   '<label class="trace-smart-field smart-pass-through-wrap hidden">Pour quelle personne ?<input class="input smart-pass-through-person" maxlength="45" value="'+esc(d.counterparty||'')+'" placeholder="Ex. Élise"></label>'+
   '<div class="smart-budget-fields"><div class="trace-smart-category-label"><span>Catégorie budgétaire</span>'+
@@ -402,6 +404,16 @@ function synchronizeRow(el){
    '<span>TRACE attend une nature précise avant de modifier le budget ou les soldes.</span>';
  }
  el.querySelector('.smart-approve').disabled=!good;
+ window.TraceMovementQuestions?.mount?.(el.querySelector('.smart-nature-guide'),{
+  accountType:bank?.type,direction:dir,selected:type,
+  allowed:window.TraceOperationUI.kindsFor(bank?.type,dir).map(k=>k.id),
+  onChoose:kind=>{
+   const select=el.querySelector('.smart-type');
+   if(![...select.options].some(o=>o.value===kind))return;
+   select.value=kind;
+   select.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+ });
  el.querySelector('.smart-pass-through-wrap').classList.toggle('hidden',!['pass_through_reimbursement','pass_through_payout'].includes(type));
  const notice=el.querySelector('.trace-smart-context small');
  if(notice)notice.textContent='Source : '+(bank?.name||'Compte bancaire')+(dir?' · '+(dir==='in'?'entrée':'sortie'):' · sens à confirmer');

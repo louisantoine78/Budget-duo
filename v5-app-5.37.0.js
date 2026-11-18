@@ -1,4 +1,4 @@
-(()=>{'use strict';window.__TRACE_BUILD__='5.37.18';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
+(()=>{'use strict';window.__TRACE_BUILD__='5.37.19';window.__TRACE_PUBLIC_RELEASE__='2.0.2';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const now=new Date(),CM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 const money=v=>new Intl.NumberFormat('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}).format(Number(v||0));
@@ -3018,7 +3018,9 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
     '<div class="trace-edit-card-head"><span class="trace-edit-card-index" aria-hidden="true">01</span><div><h3 id="traceBankNatureTitle">Nature du mouvement</h3><p>Ce que représente l’opération</p></div></div>'+
     '<div class="trace-edit-fields">'+
      '<label class="label2" for="smartMovementFamily">Famille</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementFamily" class="input">'+M.families.filter(f=>types.some(k=>k.family===f.id)).map(f=>'<option value="'+f.id+'">'+esc(f.label)+'</option>').join('')+'</select></div>'+
-     '<label class="label2" for="smartMovementType">Nature précise</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementType" class="input"></select></div>'+
+     '<div id="smartMovementQuestions" class="trace-plain-guide"></div>'+
+     '<details class="trace-nature-precise" id="smartMovementPrecise"><summary>Autre cas ? Afficher toutes les natures</summary>'+
+     '<label class="label2" for="smartMovementType">Nature précise</label><div class="trace-edit-control trace-edit-select-control"><select id="smartMovementType" class="input"></select></div></details>'+
      '<p class="trace-movement-help trace-bank-context-note" id="smartMovementHelp" aria-live="polite"></p>'+
     '</div></section>'+
    '<section class="trace-edit-card" aria-labelledby="traceBankDetailsTitle">'+
@@ -3176,6 +3178,17 @@ function editSmartBankMovement(t,requestedKind='',initialDraft=null){
   $('#smartMovementLinkWrap').classList.toggle('hidden',id!=='friend_reimbursement');
   $('#smartMovementPassThroughWrap').classList.toggle('hidden',!hasPassThrough);
    if(id==='friend_reimbursement')renderFriendLinks();
+   window.TraceMovementQuestions?.mount?.($('#smartMovementQuestions'),{
+    accountType:accountType(state.accounts.find(a=>a.id===$('#smartMovementFrom').value)),
+    direction,selected:id,allowed:U.kindsFor(accountType(state.accounts.find(a=>a.id===$('#smartMovementFrom').value)),direction).map(k=>k.id),
+    onChoose:kind=>{
+     const choice=$('#smartMovementType');
+     if(![...choice.options].some(o=>o.value===kind))return;
+     choice.value=kind;
+     $('#smartMovementFamily').value=M.family(kind);
+     refreshAllowed();
+    }
+   });
    $('#smartMovementPreview').textContent=cardReceived?
     'Compte courant : déjà débité lors du transfert · Dette de carte : déjà réduite · Budget : 0 $ · Aucun mouvement supplémentaire.':
     id?movementImpactText(id,Number($('#smartMovementAmount').value),
