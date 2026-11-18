@@ -67,7 +67,7 @@ test('130 $ pour Élise puis 130 $ reversés: aucun reste dû',()=>{
 test('parts amis centimes',()=>same(M.amounts(100,'custom','la',{la:50,partner:50},30,20),{la:50,partner:20,friends:30,couple:70}));
 test('stockage paiement carte',()=>assert.equal(M.fromStored({type:'transfer',transferPurpose:'card_repayment'}),'card_payment'));
 test('stockage CELI',()=>assert.equal(M.fromStored({type:'external_transfer',transferPurpose:'savings'}),'savings_transfer'));
-test('menu compte courant',()=>assert.equal(U.kindsFor('checking','out').length,11));
+test('menu compte courant',()=>assert.equal(U.kindsFor('checking','out').length,10));
 test('menu crédit carte',()=>same(U.kindsFor('card','in').map(x=>x.id),['refund','card_payment_received']));
 const original={id:'e1',type:'expense',status:'confirmed',payerId:'la',beneficiary:'custom',date:'2026-10-01',name:'Hôtel',splitAmounts:{la:30,partner:20,friends:50},amountCAD:100};
 const already={id:'r1',type:'external_refund',status:'confirmed',transferPurpose:'friend_reimbursement',relatedExpenseId:'e1',amountCAD:20};
