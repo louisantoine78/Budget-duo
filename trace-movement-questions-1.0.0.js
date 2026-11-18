@@ -47,10 +47,15 @@
    '<div class="trace-plain-options" role="group" aria-label="Choisir ce que représente le mouvement">'+
    items.map(x=>'<button type="button" class="trace-plain-choice" data-trace-nature="'+escape(x.id)+'" aria-pressed="'+(selected===x.id?'true':'false')+'">'+
     '<strong>'+escape(x.label)+'</strong><small>'+escape(x.detail)+'</small></button>').join('')+
-   '</div>'+(custom?'<p class="trace-plain-other">Nature précise sélectionnée : '+escape(already)+'</p>':'');
+   '</div>'+(items.length===0?'<p class="trace-plain-other">Précise d’abord si l’argent est entré ou sorti du compte.</p>':'')+
+   (custom?'<p class="trace-plain-other">Nature précise sélectionnée : '+escape(already)+'</p>':'');
   host.querySelectorAll('[data-trace-nature]').forEach(btn=>btn.addEventListener('click',()=>{
    const id=btn.dataset.traceNature;
-   if(items.some(x=>x.id===id)&&typeof onChoose==='function')onChoose(id);
+   if(items.some(x=>x.id===id)&&typeof onChoose==='function'){
+    onChoose(id);
+    // The parent form may re-render these buttons; restore keyboard/VoiceOver focus.
+    host.querySelector?.('[data-trace-nature="'+id+'"]')?.focus?.({preventScroll:true});
+   }
   }));
  }
  root.TraceMovementQuestions=Object.freeze({choices,mount});
