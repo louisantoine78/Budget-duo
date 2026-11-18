@@ -300,6 +300,7 @@ function rowForm(d,bank,accounts,known,expanded=false){
   '<label class="trace-smart-field">Famille du mouvement<select class="input smart-family"><option value="">Choisir une famille</option>'+M.families.filter(f=>M.choices(f.id).some(k=>supported.includes(k.id))).map(f=>'<option value="'+f.id+'"'+(f.id===initialFamily?' selected':'')+'>'+esc(f.label)+'</option>').join('')+'</select></label>'+ 
   '<label class="trace-smart-field">Nature du mouvement<select class="input smart-type">'+window.TraceOperationUI.options(window.TraceOperationUI.kindsFor(bank.type,direction),t)+'</select></label>'+ 
   '<div class="trace-smart-nature-explain" role="status" aria-live="polite"></div>'+
+  '<label class="trace-smart-field smart-pass-through-wrap hidden">Pour quelle personne ?<input class="input smart-pass-through-person" maxlength="45" value="'+esc(d.counterparty||'')+'" placeholder="Ex. Élise"></label>'+
   '<div class="smart-budget-fields"><div class="trace-smart-category-label"><span>Catégorie budgétaire</span>'+
   '<button type="button" class="trace-smart-add-category">+ Créer</button></div>'+
   '<select class="input smart-category" aria-label="Catégorie de l’opération"></select>'+
@@ -377,12 +378,15 @@ function applyApprovalConstraints(el){
   safeForeignPurchase=foreign&&type==='expense'&&!directionConflict&&
    !!bank?.owner&&!!currentOwner&&bank.owner===currentOwner&&typeof guide.safeForQuickApproval==='function'&&
    guide.safeForQuickApproval(bank.type,'expense',name),
-  foreignReviewed=safeForeignPurchase&&!!el.querySelector('.smart-foreign-nature-confirm')?.checked;
+  foreignReviewed=safeForeignPurchase&&!!el.querySelector('.smart-foreign-nature-confirm')?.checked,
+  passThrough=['pass_through_reimbursement','pass_through_payout'].includes(type),
+  recipientReady=!passThrough||!!el.querySelector('.smart-pass-through-person')?.value.trim();
  btn.disabled=btn.dataset.duplicateBlocked==='yes'||!duplicateReviewed||!valid||directionConflict||
-  cardMatch||(foreign&&!foreignReviewed);
+  cardMatch||!recipientReady||(foreign&&!foreignReviewed);
  btn.textContent=btn.dataset.duplicateBlocked==='yes'?'Déjà comptabilisée':
   !duplicateReviewed?'Comparer les doublons avant de confirmer':
   directionConflict?'Sens bancaire incompatible · À vérifier':
+  !recipientReady?'Précise à qui appartient cet argent':
   foreign?(safeForeignPurchase?'Confirmer cet achat étranger':'À vérifier · devise étrangère'):
   cardMatch?'Rapproche ce paiement pour éviter un doublon':'Confirmer l’opération';
 }
@@ -398,6 +402,7 @@ function synchronizeRow(el){
    '<span>TRACE attend une nature précise avant de modifier le budget ou les soldes.</span>';
  }
  el.querySelector('.smart-approve').disabled=!good;
+ el.querySelector('.smart-pass-through-wrap').classList.toggle('hidden',!['pass_through_reimbursement','pass_through_payout'].includes(type));
  const notice=el.querySelector('.trace-smart-context small');
  if(notice)notice.textContent='Source : '+(bank?.name||'Compte bancaire')+(dir?' · '+(dir==='in'?'entrée':'sortie'):' · sens à confirmer');
  el.querySelector('.smart-budget-fields').classList.toggle('hidden',!budget);
@@ -554,6 +559,7 @@ function readRow(el){
  const q=x=>el.querySelector(x),d=bridge().smartDrafts(account).find(x=>x.id===el.dataset.smartId);
  return{id:el.dataset.smartId,date:q('.smart-date').value,name:q('.smart-name').value.trim(),
   amount:q('.smart-amount').value,type:q('.smart-type').value,
+  counterparty:q('.smart-pass-through-person')?.value.trim()||'',
   purchaseCurrency:q('.smart-purchase-currency')?.value||'',purchaseAmount:q('.smart-purchase-amount')?.value||'',
   manualFxRate:q('.smart-fx-rate')?.value||'',destinationBankAmount:q('.smart-dest-bank-amount')?.value||'',
   relatedExpenseId:q('.smart-related-expense')?.value||'',
@@ -747,6 +753,7 @@ function openDay(accountId,date){
     });
    });
    el.querySelector('.smart-savings-target')?.addEventListener('change',()=>updateSavingsImpact(el));
+   el.querySelector('.smart-pass-through-person')?.addEventListener('input',()=>applyApprovalConstraints(el));
    el.querySelector('.smart-approve').onclick=async()=>{
     if(busy)return;
     const v=readRow(el),button=el.querySelector('.smart-approve');
